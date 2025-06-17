@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp, collection, query as firestoreQuery, where, documentId } from 'firebase/firestore'; // Added documentId
+import { doc, getDocs, Timestamp, collection, query as firestoreQuery, where, documentId } from 'firebase/firestore'; // Added documentId
 
 type JobFilterType = 'all' | 'applied' | 'saved';
 
@@ -58,7 +58,7 @@ export function MyJobsDisplay() {
           const batchIds = allUniqueIds.slice(i, i + batchSize);
           if (batchIds.length > 0) {
             const q = firestoreQuery(jobsRef, where(documentId(), 'in', batchIds));
-            const querySnapshot = await db.getDocs(q);
+            const querySnapshot = await getDocs(q); // Changed from db.getDocs(q)
             querySnapshot.forEach(docSnap => {
               if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -209,3 +209,4 @@ export function MyJobsDisplay() {
     </div>
   );
 }
+
