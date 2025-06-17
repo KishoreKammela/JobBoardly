@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn, Github, Shell, Chrome } from 'lucide-react'; // Using Shell for Microsoft generic, Chrome for Google
+import { Loader2, LogIn, Github, Shell, Chrome } from 'lucide-react'; 
 import type { FirebaseError } from 'firebase/app';
 import { googleProvider, githubProvider, microsoftProvider } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
@@ -51,7 +51,7 @@ export default function LoginPage() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'jobSeeker'); // Assuming role 'jobSeeker' for this page
+      await signInWithSocial(authProvider, 'jobSeeker'); 
       toast({ title: 'Login Successful', description: `Welcome!` });
       router.push('/profile');
     } catch (error) {

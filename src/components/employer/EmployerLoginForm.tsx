@@ -29,7 +29,7 @@ export function EmployerLoginForm() {
     try {
       await loginUser(email, password);
       toast({ title: 'Login Successful', description: `Welcome back!` });
-      router.push('/employer/post-job'); 
+      router.push('/employer/posted-jobs'); 
     } catch (error) {
        const firebaseError = error as FirebaseError;
        console.error("Login error:", firebaseError.message);
@@ -51,9 +51,9 @@ export function EmployerLoginForm() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'employer'); // Role is employer for this page
+      await signInWithSocial(authProvider, 'employer');
       toast({ title: 'Login Successful', description: `Welcome!` });
-      router.push('/employer/post-job');
+      router.push('/employer/posted-jobs');
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);

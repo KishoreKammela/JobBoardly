@@ -31,8 +31,8 @@ export function EmployerRegisterForm() {
     setIsLoading(true);
     try {
       await registerUser(email, password, companyName, 'employer' as UserRole);
-      toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Start posting jobs.` });
-      router.push('/employer/post-job'); 
+      toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Please complete your company profile.` });
+      router.push('/profile'); 
     } catch (error) {
        const firebaseError = error as FirebaseError;
       console.error("Registration error:", firebaseError.message);
@@ -56,12 +56,9 @@ export function EmployerRegisterForm() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      // For employer registration via social, we might need company name.
-      // Simplification: Use display name from social provider as company name initially.
-      // They can edit it in their profile later.
       await signInWithSocial(authProvider, 'employer');
       toast({ title: 'Sign Up Successful', description: `Welcome! Please complete your company profile.` });
-      router.push('/profile'); // Redirect to profile to complete company details
+      router.push('/profile'); 
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);

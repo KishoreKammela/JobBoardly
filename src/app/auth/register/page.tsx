@@ -55,7 +55,7 @@ export default function RegisterPage() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'jobSeeker'); // Role is jobSeeker for this page
+      await signInWithSocial(authProvider, 'jobSeeker'); 
       toast({ title: 'Sign Up Successful', description: `Welcome to JobBoardly!` });
       router.push('/profile');
     } catch (error) {
