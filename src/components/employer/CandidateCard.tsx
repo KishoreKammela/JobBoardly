@@ -64,8 +64,8 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-4 border-t">
-        <div className="flex gap-2">
+      <CardFooter className="flex flex-wrap justify-between items-center gap-2 pt-4 border-t">
+        <div className="flex flex-wrap gap-2"> {/* Group for Portfolio/LinkedIn - added flex-wrap */}
             {candidate.portfolioUrl && (
                 <Button variant="outline" size="sm" asChild>
                     <a href={candidate.portfolioUrl} target="_blank" rel="noopener noreferrer">
@@ -82,7 +82,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
                 </Button>
             )}
         </div>
-        <Button size="sm" className="w-full sm:w-auto">
+        <Button size="sm" className="w-full sm:w-auto flex-shrink-0"> {/* Ensure contact button doesn't excessively shrink */}
             <Mail className="mr-1.5 h-4 w-4" /> Contact
         </Button>
       </CardFooter>

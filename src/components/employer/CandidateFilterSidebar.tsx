@@ -101,11 +101,11 @@ export function CandidateFilterSidebar({ onFilterChange, initialFilters }: Candi
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
-            <Button type="submit" className="w-full flex-1">
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Button type="submit" className="flex-1 min-w-[120px]">
               <Search className="mr-2 h-4 w-4" /> Apply Filters
             </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto">
               <RotateCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
           </div>
