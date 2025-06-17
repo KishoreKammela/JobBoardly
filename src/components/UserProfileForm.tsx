@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 export function UserProfileForm() {
   const { user, updateUserProfile, loading: authLoading } = useAuth(); // Using updateUserProfile
   const { toast } = useToast();
+  const router = useRouter(); // Initialize router
   
   const initialFormData: Partial<UserProfile> = {
     name: '',
@@ -125,6 +127,9 @@ export function UserProfileForm() {
           title: 'Profile Updated',
           description: 'Your profile information has been successfully updated.',
         });
+        if (user.role === 'jobSeeker') {
+          router.push('/jobs'); // Redirect to job listings for job seekers
+        }
     } catch (error) {
         console.error("Profile update error:", error);
         toast({
