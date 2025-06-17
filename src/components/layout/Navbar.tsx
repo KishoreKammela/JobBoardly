@@ -13,11 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
+import type { UserRole } from '@/types'; // Import UserRole
 
 const navLinks = [
   { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer', 'admin'], alwaysShow: true },
   { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
+  // Employer specific main nav links
   { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/admin', label: 'Admin Panel', icon: <Shield className="h-4 w-4" />, authRequired: true, roles: ['admin'] },
@@ -34,7 +36,7 @@ const userDropdownLinks = {
     { href: '/employer/posted-jobs', label: 'Posted Jobs', icon: <ListChecks className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ],
-  admin: [ // Admin also has a profile and settings
+  admin: [ 
     { href: '/profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
     { href: '/admin', label: 'Admin Dashboard', icon: <Shield className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
@@ -44,6 +46,7 @@ const userDropdownLinks = {
 export function Navbar() {
   const { user, logout, loading } = useAuth(); 
   const router = useRouter();
+  const pathname = usePathname(); // Get current path
 
   const handleLogout = async () => {
     await logout();
@@ -63,6 +66,11 @@ export function Navbar() {
     return "";
   }
 
+  // Determine if current page is employer-specific for contextual login/signup links
+  const isEmployerPage = pathname.startsWith('/employer');
+  const loginLink = isEmployerPage ? "/employer/login" : "/auth/login";
+  const registerLink = isEmployerPage ? "/employer/register" : "/auth/register";
+
   return (
     <header className="bg-card shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -77,10 +85,13 @@ export function Navbar() {
                 display = true;
             } else if (user && link.authRequired && link.roles.includes(user.role)) {
                 display = true;
-            } else if (!user && !link.authRequired ) {
-                // For non-logged in users, show if not authRequired
-                // This might need refinement for which public links to show
             }
+            
+            // Special handling for "For Employers" link to hide if user is already an employer or on employer pages
+            if (link.href === '/employer' && (user?.role === 'employer' || isEmployerPage)) {
+                 // display = false; // Decided to keep "For Employers" link always if not logged in
+            }
+
 
             return display && (
               <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
@@ -89,7 +100,7 @@ export function Navbar() {
               </Link>
             )
           })}
-           {!user && !loading && ( 
+           {!user && !loading && !isEmployerPage && ( // Show "For Employers" only if not on employer pages and not logged in
              <Link href="/employer" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
                 <Building className="h-4 w-4" />
                 <span className="hidden sm:inline">For Employers</span>
@@ -136,12 +147,12 @@ export function Navbar() {
           ) : (
             <div className="flex items-center gap-2">
               <Button variant="ghost" asChild size="sm">
-                <Link href="/auth/login">
+                <Link href={loginLink}>
                   <LogIn className="h-4 w-4 mr-1.5" /> Login
                 </Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/auth/register">
+                <Link href={registerLink}>
                   <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
                 </Link>
               </Button>
