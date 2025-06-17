@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 export function ResumeUploadForm() {
   const { user, updateUser } = useAuth();
