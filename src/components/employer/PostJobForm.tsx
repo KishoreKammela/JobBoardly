@@ -30,7 +30,7 @@ export function PostJobForm() {
     salaryMin: undefined,
     salaryMax: undefined,
     isRemote: false,
-    postedById: user?.id,
+    postedById: user?.uid, // Corrected from user?.id
     companyLogoUrl: user?.role === 'employer' ? user.avatarUrl : undefined,
     applicantIds: [],
   };
@@ -48,7 +48,7 @@ export function PostJobForm() {
         ...prev,
         company: user.name,
         companyLogoUrl: user.avatarUrl,
-        postedById: user.id,
+        postedById: user.uid, // Corrected from user.id
       }));
     }
   }, [user]);
@@ -146,6 +146,10 @@ export function PostJobForm() {
         toast({ title: "Unauthorized", description: "Only employers can post jobs.", variant: "destructive" });
         return;
     }
+    if (!user.uid) { // Additional guard for user.uid
+        toast({ title: "Error", description: "User ID is missing. Cannot post job.", variant: "destructive" });
+        return;
+    }
     if (!jobData.title || !jobData.description) {
         toast({ title: "Missing Fields", description: "Job title and description are required.", variant: "destructive" });
         return;
@@ -154,15 +158,15 @@ export function PostJobForm() {
     
     try {
         const jobPayload: Omit<Job, 'id'> = {
-            ...initialJobData, // Start with defaults
-            ...jobData, // Overlay with form data
-            company: user.name, // Ensure company name is from the logged-in employer
+            ...initialJobData, 
+            ...jobData, 
+            company: user.name, 
             companyLogoUrl: user.avatarUrl,
-            postedById: user.id,
-            postedDate: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD string
+            postedById: user.uid, // Corrected from user.id
+            postedDate: new Date().toISOString().split('T')[0], 
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            applicantIds: [], // Initialize with empty applicants
+            applicantIds: [], 
         };
 
         const jobsCollectionRef = collection(db, "jobs");
@@ -172,8 +176,21 @@ export function PostJobForm() {
           title: 'Job Posted!',
           description: `${jobData.title} has been successfully posted.`,
         });
-        // Reset form
-        setJobData(initialJobData); // Reset to initial state which uses current user details
+        
+        setJobData({ // Reset form, ensuring new initialJobData correctly uses user.uid if user is available
+            title: '',
+            company: user.name,
+            location: '',
+            type: 'Full-time',
+            description: '',
+            skills: [],
+            salaryMin: undefined,
+            salaryMax: undefined,
+            isRemote: false,
+            postedById: user.uid,
+            companyLogoUrl: user.avatarUrl,
+            applicantIds: [],
+        });
         setSkillsInput('');
         setFile(null);
 
@@ -307,7 +324,7 @@ export function PostJobForm() {
             />
           </div>
           
-          <Button type="submit" disabled={isSubmitting || isParsing} className="w-full sm:w-auto">
+          <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid} className="w-full sm:w-auto">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Post Job Opening
           </Button>
