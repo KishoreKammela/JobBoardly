@@ -17,7 +17,7 @@ const ParseJobDescriptionInputSchema = z.object({
   jobDescriptionDataUri: z
     .string()
     .describe(
-      "A job description document (e.g., PDF, DOCX, TXT) as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A job description document (e.g., PDF, DOCX, TXT) as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. For AI parsing with current model, plain text (.txt) is recommended for best results with complex documents."
     ),
 });
 export type ParseJobDescriptionInput = z.infer<typeof ParseJobDescriptionInputSchema>;
@@ -25,7 +25,7 @@ export type ParseJobDescriptionInput = z.infer<typeof ParseJobDescriptionInputSc
 // Define Zod schema based on ParsedJobData from types.ts
 const ParseJobDescriptionOutputSchema = z.object({
   title: z.string().optional().describe('The job title.'),
-  description: z.string().optional().describe('The main body of the job description, including responsibilities and qualifications.'),
+  description: z.string().optional().describe('The main body of the job description, including responsibilities and qualifications. May contain an error message if parsing failed due to file type.'),
   skills: z.array(z.string()).optional().describe('A list of required or preferred skills for the job.'),
   location: z.string().optional().describe('The location of the job (e.g., "San Francisco, CA", "Remote").'),
   jobType: z.enum(['Full-time', 'Part-time', 'Contract', 'Internship']).optional().describe('The type of employment (e.g., Full-time, Contract).'),
@@ -38,7 +38,7 @@ export type ParseJobDescriptionOutput = z.infer<typeof ParseJobDescriptionOutput
 
 
 export async function parseJobDescriptionFlow(input: ParseJobDescriptionInput): Promise<ParseJobDescriptionOutput> {
-  return jobDescriptionParserFlow(input);
+  return jobDescriptionParserFlowInstance(input);
 }
 
 const jobDescriptionParserPrompt = ai.definePrompt({
@@ -61,20 +61,50 @@ Extract the following details and structure them according to the output schema:
 Prioritize accuracy. If some information is not clearly available, omit the field rather than guessing.
 For skills, extract distinct skills. For salary, provide numbers if possible.
 Ensure the output is valid JSON matching the provided schema.
+If the document content appears to be an error message about file processing, summarize that error.
 `,
 });
 
-const jobDescriptionParserFlow = ai.defineFlow(
+const jobDescriptionParserFlowInstance = ai.defineFlow(
   {
     name: 'jobDescriptionParserFlow',
     inputSchema: ParseJobDescriptionInputSchema,
     outputSchema: ParseJobDescriptionOutputSchema,
   },
   async (input: ParseJobDescriptionInput): Promise<ParseJobDescriptionOutput> => {
+    const [header] = input.jobDescriptionDataUri.split(',');
+    const mimeType = header.match(/:(.*?);/)?.[1];
+
+    // Mime types that are typically binary and not directly consumable as 'media' by
+    // text-focused LLMs or models that expect image/video for the {{media}} tag.
+    // text/plain should be fine.
+    const unsupportedMediaMimeTypes = [
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+      'application/pdf', // .pdf
+      'application/vnd.oasis.opendocument.text', // .odt
+    ];
+
+    if (mimeType && unsupportedMediaMimeTypes.includes(mimeType)) {
+      console.warn(
+        `Job Description Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration expecting image/video or plain text for the 'media' tag. ` +
+        `Consider extracting text content from such documents before sending for AI analysis.`
+      );
+      return {
+        // title: undefined, // Fields are optional in schema
+        description: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
+        skills: [],
+        location: undefined,
+        jobType: undefined,
+        salaryMin: undefined,
+        salaryMax: undefined,
+      };
+    }
+    
     const {output} = await jobDescriptionParserPrompt(input);
     
     if (!output) {
-        console.warn('Job description parsing returned no output, returning empty structure.');
+        console.warn('Job description parsing returned no output from AI, returning empty structure.');
         return {
             title: undefined,
             description: undefined,
