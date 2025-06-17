@@ -1,7 +1,7 @@
 
-"use client"; // Made client component to use hooks like useParams easily
+"use client";
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
@@ -32,13 +32,25 @@ import Link from 'next/link';
 export default function CandidateDetailPage() {
   const params = useParams();
   const candidateId = params.candidateId as string;
+  const { user: employerUser, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const currentPathname = usePathname();
+
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user: employerUser } = useAuth(); // Logged in employer
 
   useEffect(() => {
-    if (candidateId) {
+    if (authLoading) return;
+    if (!employerUser) {
+      router.replace(`/auth/login?redirect=${encodeURIComponent(currentPathname)}`);
+    } else if (employerUser.role !== 'employer') {
+      router.replace('/'); 
+    }
+  }, [employerUser, authLoading, router, currentPathname]);
+
+  useEffect(() => {
+    if (candidateId && employerUser && employerUser.role === 'employer') { // Ensure employer is logged in before fetching
       const fetchCandidate = async () => {
         setIsLoading(true);
         setError(null);
@@ -63,10 +75,12 @@ export default function CandidateDetailPage() {
         }
       };
       fetchCandidate();
+    } else if (employerUser && employerUser.role !== 'employer') {
+        setIsLoading(false); // No need to load if user is not employer
     }
-  }, [candidateId]);
+  }, [candidateId, employerUser]);
 
-  if (isLoading) {
+  if (authLoading || isLoading || (!employerUser && !authLoading) || (employerUser && employerUser.role !== 'employer' && !authLoading)) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -90,7 +104,7 @@ export default function CandidateDetailPage() {
   if (!candidate) {
     return (
       <div className="container mx-auto py-10 text-center">
-        <p className="text-xl text-muted-foreground">Candidate profile not found.</p>
+        <p className="text-xl text-muted-foreground">Candidate profile not found or access denied.</p>
       </div>
     );
   }
@@ -202,7 +216,7 @@ export default function CandidateDetailPage() {
           </aside>
         </CardContent>
          <CardFooter className="p-6 border-t bg-muted/20 rounded-b-lg">
-           <p className="text-xs text-muted-foreground">Candidate ID: {candidate.uid}. Member since: {candidate.createdAt ? new Date((candidate.createdAt as Timestamp).seconds * 1000).toLocaleDateString() : 'N/A'}</p>
+           <p className="text-xs text-muted-foreground">Candidate ID: {candidate.uid}. Member since: {candidate.createdAt ? (typeof candidate.createdAt === 'string' ? new Date(candidate.createdAt).toLocaleDateString() : new Date((candidate.createdAt as Timestamp).seconds * 1000).toLocaleDateString()) : 'N/A'}</p>
         </CardFooter>
       </Card>
     </div>

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, Building, Github, Shell, Chrome } from 'lucide-react';
 import type { UserRole } from '@/types';
@@ -24,15 +24,25 @@ export function EmployerRegisterForm() {
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
   const { registerUser, signInWithSocial } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  const handleRegisterSuccess = () => {
+    toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Please complete your company profile.` });
+    const redirectPath = searchParams.get('redirect');
+    if (redirectPath) {
+      router.push(redirectPath);
+    } else {
+      router.push('/profile'); // To complete company profile
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await registerUser(email, password, companyName, 'employer' as UserRole);
-      toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Please complete your company profile.` });
-      router.push('/profile'); 
+      setTimeout(handleRegisterSuccess, 100);
     } catch (error) {
        const firebaseError = error as FirebaseError;
       console.error("Registration error:", firebaseError.message);
@@ -58,7 +68,8 @@ export function EmployerRegisterForm() {
 
       await signInWithSocial(authProvider, 'employer');
       toast({ title: 'Sign Up Successful', description: `Welcome! Please complete your company profile.` });
-      router.push('/profile'); 
+      // Determine company name for toast - might need to fetch from user object after signInWithSocial completes
+      setTimeout(handleRegisterSuccess, 100); // Use a generic success handler
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);

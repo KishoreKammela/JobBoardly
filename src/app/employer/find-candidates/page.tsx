@@ -1,13 +1,19 @@
 
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CandidateSearchResults } from '@/components/employer/CandidateSearchResults';
 import { CandidateFilterSidebar, type CandidateFilters } from '@/components/employer/CandidateFilterSidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function FindCandidatesPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentFilters, setCurrentFilters] = useState<CandidateFilters>({
     searchTerm: '',
@@ -17,9 +23,24 @@ export default function FindCandidatesPage() {
   const [activeFilters, setActiveFilters] = useState<CandidateFilters>(currentFilters);
 
 
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (user.role !== 'employer') {
+      router.replace('/');
+    }
+  }, [user, loading, router, pathname]);
+
+  if (loading || !user || user.role !== 'employer') {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const handleFilterChange = (filters: CandidateFilters) => {
-    // This function might be used if filtering is done client-side or to trigger a new search
-    console.log("Filters changed in parent page:", filters);
     setActiveFilters(filters);
   };
 

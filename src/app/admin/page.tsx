@@ -3,31 +3,51 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, ShieldCheck } from "lucide-react";
+import { AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (user.role !== 'admin') {
+      // If logged in but not an admin, redirect
+      if (user.role === 'jobSeeker') router.replace('/jobs');
+      else if (user.role === 'employer') router.replace('/employer/posted-jobs');
+      else router.replace('/'); // Fallback
+    }
+  }, [user, loading, router, pathname]);
 
-  if (!user || user.role !== 'admin') {
+  if (loading || !user) { // Show loader if still loading or if user is null (will be redirected)
     return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (user.role !== 'admin') { // This case should ideally be handled by the redirect, but as a fallback UI
+     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
-            You do not have permission to view this page. This area is for administrators only.
+            You do not have permission to view this page. This area is for administrators only. Redirecting...
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
-  // Placeholder for admin content
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
@@ -47,7 +67,6 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">(Feature coming soon)</p>
-            {/* Placeholder: Link to user management section */}
           </CardContent>
         </Card>
         <Card>
@@ -57,7 +76,6 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">(Feature coming soon)</p>
-            {/* Placeholder: Link to job moderation section */}
           </CardContent>
         </Card>
         <Card>
@@ -67,7 +85,6 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">(Feature coming soon)</p>
-            {/* Placeholder: Link to analytics section */}
           </CardContent>
         </Card>
       </div>

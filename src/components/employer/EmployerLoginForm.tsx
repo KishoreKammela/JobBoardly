@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, Github, Shell, Chrome } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
@@ -19,17 +19,35 @@ export function EmployerLoginForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
-  const { loginUser, signInWithSocial } = useAuth();
+  const { user, loginUser, signInWithSocial } = useAuth(); // Get user to check role for redirection
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  const handleLoginSuccess = (loggedInUserRole?: string) => { // loggedInUserRole can be passed if known
+    toast({ title: 'Login Successful', description: `Welcome back!` });
+    const redirectPath = searchParams.get('redirect');
+    const finalUserRole = loggedInUserRole || user?.role;
+
+    if (redirectPath) {
+      router.push(redirectPath);
+    } else {
+      if (finalUserRole === 'employer') router.push('/employer/posted-jobs');
+      else if (finalUserRole === 'jobSeeker') router.push('/jobs'); // If somehow a job seeker logs in via employer form
+      else if (finalUserRole === 'admin') router.push('/admin');
+      else router.push('/profile'); // Fallback
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await loginUser(email, password);
-      toast({ title: 'Login Successful', description: `Welcome back!` });
-      router.push('/employer/posted-jobs'); 
+      const loggedInFirebaseUser = await loginUser(email, password);
+      // We need to determine the role. AuthContext updates `user` async.
+      // Fetch user profile immediately to get role for redirection, or rely on AuthContext update
+      // For simplicity, handleLoginSuccess will use the user from AuthContext, might need a slight delay
+      setTimeout(() => handleLoginSuccess(user?.role), 100); 
     } catch (error) {
        const firebaseError = error as FirebaseError;
        console.error("Login error:", firebaseError.message);
@@ -52,8 +70,7 @@ export function EmployerLoginForm() {
       else return;
 
       await signInWithSocial(authProvider, 'employer');
-      toast({ title: 'Login Successful', description: `Welcome!` });
-      router.push('/employer/posted-jobs');
+      setTimeout(() => handleLoginSuccess('employer'), 100); // Assume role is employer for this flow
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);

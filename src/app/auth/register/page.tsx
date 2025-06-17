@@ -1,13 +1,13 @@
 
 "use client";
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, Github, Shell, Chrome } from 'lucide-react';
 import type { UserRole } from '@/types';
@@ -21,17 +21,44 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
-  const { registerUser, signInWithSocial } = useAuth();
+  const { user, loading: authLoading, registerUser, signInWithSocial } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      // If user is already logged in, redirect them
+      const redirectPath = searchParams.get('redirect');
+      if (redirectPath) {
+        router.replace(redirectPath);
+      } else {
+        if (user.role === 'jobSeeker') router.replace('/jobs');
+        else if (user.role === 'employer') router.replace('/employer/posted-jobs');
+        else if (user.role === 'admin') router.replace('/admin');
+        else router.replace('/');
+      }
+    }
+  }, [user, authLoading, router, searchParams]);
+
+  const handleRegisterSuccess = () => {
+    toast({ title: 'Registration Successful', description: `Welcome to JobBoardly! Complete your profile to get started.` });
+    const redirectPath = searchParams.get('redirect');
+    // After registration, usually redirect to profile or a specific onboarding page
+    // For now, let's use the redirectPath if available, or default to profile.
+    if (redirectPath) {
+      router.push(redirectPath);
+    } else {
+      router.push('/profile');
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await registerUser(email, password, name, 'jobSeeker' as UserRole);
-      toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}! Complete your profile to get started.` });
-      router.push('/profile');
+      setTimeout(handleRegisterSuccess, 100);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("Registration error:", firebaseError.message);
@@ -56,8 +83,7 @@ export default function RegisterPage() {
       else return;
 
       await signInWithSocial(authProvider, 'jobSeeker'); 
-      toast({ title: 'Sign Up Successful', description: `Welcome to JobBoardly!` });
-      router.push('/profile');
+      setTimeout(handleRegisterSuccess, 100);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
@@ -65,6 +91,15 @@ export default function RegisterPage() {
     }
     setIsSocialLoading(null);
   };
+
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (user && !authLoading) return null; // Redirected by useEffect
 
   return (
     <div className="flex items-center justify-center py-12">

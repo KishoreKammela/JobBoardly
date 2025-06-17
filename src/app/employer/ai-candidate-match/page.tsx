@@ -16,9 +16,12 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query as firestoreQuery, where, Timestamp } from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function AiCandidateMatchPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -34,32 +37,46 @@ export default function AiCandidateMatchPage() {
   const [matchedCandidateDetails, setMatchedCandidateDetails] = useState<UserProfile[]>([]);
 
   useEffect(() => {
-    const fetchCandidates = async () => {
-      setCandidatesLoading(true);
-      setCandidatesError(null);
-      try {
-        const usersCollectionRef = collection(db, "users");
-        const q = firestoreQuery(usersCollectionRef, where("role", "==", "jobSeeker"));
-        const querySnapshot = await getDocs(q);
-        const candidatesData = querySnapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            uid: docSnap.id,
-            ...data,
-            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
-            updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-          } as UserProfile;
-        });
-        setAllCandidates(candidatesData);
-      } catch (e) {
-        console.error("Error fetching candidates for AI matcher:", e);
-        setCandidatesError("Failed to load candidates for matching. Please try again later.");
-      } finally {
-        setCandidatesLoading(false);
-      }
-    };
-    fetchCandidates();
-  }, []);
+    if (authLoading) return;
+    if (!user) {
+      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (user.role !== 'employer') {
+      router.replace('/');
+    }
+  }, [user, authLoading, router, pathname]);
+
+
+  useEffect(() => {
+    if (user && user.role === 'employer') { // Only fetch if user is an employer
+      const fetchCandidates = async () => {
+        setCandidatesLoading(true);
+        setCandidatesError(null);
+        try {
+          const usersCollectionRef = collection(db, "users");
+          const q = firestoreQuery(usersCollectionRef, where("role", "==", "jobSeeker"));
+          const querySnapshot = await getDocs(q);
+          const candidatesData = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+              uid: docSnap.id,
+              ...data,
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+              updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+            } as UserProfile;
+          });
+          setAllCandidates(candidatesData);
+        } catch (e) {
+          console.error("Error fetching candidates for AI matcher:", e);
+          setCandidatesError("Failed to load candidates for matching. Please try again later.");
+        } finally {
+          setCandidatesLoading(false);
+        }
+      };
+      fetchCandidates();
+    } else {
+        setCandidatesLoading(false); // Not an employer, no need to load
+    }
+  }, [user]); // Rerun if user changes
 
   const formatCandidatesForAI = (candidates: UserProfile[]): string => {
     return candidates.map(c => 
@@ -70,7 +87,7 @@ export default function AiCandidateMatchPage() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setJobDescription(''); // Clear textarea if file is chosen
+      setJobDescription(''); 
     }
   };
   
@@ -89,7 +106,7 @@ export default function AiCandidateMatchPage() {
         
         if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
              toast({ title: "JD Parsing Issue", description: parsedData.description, variant: "destructive", duration: 9000 });
-             setJobDescription( // Still set description with error to inform user, or a generic message
+             setJobDescription(
                 `Error during parsing: ${parsedData.description}\n\nTitle: ${parsedData.title || ''}\nSkills: ${(parsedData.skills || []).join(', ')}`
              );
         } else {
@@ -128,7 +145,7 @@ export default function AiCandidateMatchPage() {
       return;
     }
     if (candidatesLoading) {
-      toast({ title: 'Still loading candidates', description: 'Please wait until all candidates are loaded.', variant: 'default' });
+      toast({ title: 'Still loading candidates', description: 'Please wait until all candidates are loaded.', variant: "default" });
       return;
     }
     if (candidatesError || allCandidates.length === 0) {
@@ -167,14 +184,23 @@ export default function AiCandidateMatchPage() {
     }
   };
   
-  if (user && user.role !== 'employer') {
+  if (authLoading || (!user && !authLoading)) { // Show loader if auth loading or if not logged in (will be redirected)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (user && user.role !== 'employer') { // Logged in, but wrong role (will be redirected by useEffect, but good to have a message)
     return (
         <Card className="w-full max-w-3xl mx-auto shadow-xl">
             <CardHeader><CardTitle className="text-2xl font-headline flex items-center gap-2"><Sparkles className="text-primary h-6 w-6" />AI Candidate Matcher</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">This tool is for employers to find suitable candidates.</p></CardContent>
+            <CardContent><p className="text-muted-foreground">This tool is for employers to find suitable candidates. Redirecting...</p></CardContent>
         </Card>
     )
   }
+
 
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-xl">

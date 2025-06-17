@@ -1,9 +1,39 @@
+
+"use client";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search, Zap } from 'lucide-react';
+import { ArrowRight, Search, Zap, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (user) {
+      if (user.role === 'jobSeeker') {
+        router.replace('/jobs');
+      } else if (user.role === 'employer') {
+        router.replace('/employer/posted-jobs');
+      } else if (user.role === 'admin') {
+        router.replace('/admin');
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading && user) { 
+      return (
+          <div className="flex justify-center items-center h-screen">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+      );
+  }
+
   return (
     <div className="flex flex-col items-center text-center">
       <section className="w-full py-12 md:py-24 lg:py-32">

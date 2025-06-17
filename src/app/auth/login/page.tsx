@@ -1,13 +1,13 @@
 
 "use client";
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, Github, Shell, Chrome } from 'lucide-react'; 
 import type { FirebaseError } from 'firebase/app';
@@ -19,17 +19,51 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
-  const { loginUser, signInWithSocial } = useAuth(); 
+  const { user, loading: authLoading, loginUser, signInWithSocial } = useAuth(); 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      const redirectPath = searchParams.get('redirect');
+      if (redirectPath) {
+        router.replace(redirectPath);
+      } else {
+        if (user.role === 'jobSeeker') router.replace('/jobs');
+        else if (user.role === 'employer') router.replace('/employer/posted-jobs');
+        else if (user.role === 'admin') router.replace('/admin');
+        else router.replace('/'); // Fallback
+      }
+    }
+  }, [user, authLoading, router, searchParams]);
+
+
+  const handleLoginSuccess = () => {
+    toast({ title: 'Login Successful', description: `Welcome back!` });
+    const redirectPath = searchParams.get('redirect');
+    if (redirectPath) {
+      router.push(redirectPath);
+    } else {
+      // Default redirection based on role after login
+      if (user?.role === 'jobSeeker') router.push('/profile'); // or /jobs
+      else if (user?.role === 'employer') router.push('/employer/posted-jobs');
+      else if (user?.role === 'admin') router.push('/admin');
+      else router.push('/profile'); // Fallback
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await loginUser(email, password);
-      toast({ title: 'Login Successful', description: `Welcome back!` });
-      router.push('/profile'); 
+      // Success will be handled by useEffect or explicit call after user state updates
+      // For now, let's assume onAuthStateChanged updates `user` and useEffect handles redirect
+      // Or call handleLoginSuccess if user context might not update immediately for redirect
+      // Forcing a slight delay to allow auth context to update user state if needed for role check in handleLoginSuccess
+      setTimeout(handleLoginSuccess, 100); 
     } catch (error) {
        const firebaseError = error as FirebaseError;
        console.error("Login error:", firebaseError.message);
@@ -52,8 +86,8 @@ export default function LoginPage() {
       else return;
 
       await signInWithSocial(authProvider, 'jobSeeker'); 
-      toast({ title: 'Login Successful', description: `Welcome!` });
-      router.push('/profile');
+      // Similar to email login, relying on user state update and useEffect or explicit call
+      setTimeout(handleLoginSuccess, 100);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
@@ -61,6 +95,18 @@ export default function LoginPage() {
     }
     setIsSocialLoading(null);
   };
+  
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+  // If user is already logged in, useEffect will redirect them.
+  // So, no need to render the form if `user` is present.
+  if (user && !authLoading) return null;
+
 
   return (
     <div className="flex items-center justify-center py-12">
