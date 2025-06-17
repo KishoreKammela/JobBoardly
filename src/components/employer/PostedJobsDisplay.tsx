@@ -20,16 +20,21 @@ export function PostedJobsDisplay() {
 
   useEffect(() => {
     const fetchPostedJobs = async () => {
-      if (!user || user.role !== 'employer') {
+      if (!user || user.role !== 'employer' || !user.uid) { // Added check for user.uid
         setIsLoading(false);
         setPostedJobs([]);
+        if (user && user.role !== 'employer') {
+            // This case is handled by the main return block, but good to be explicit
+        } else if (!user) {
+            // User not logged in, also handled by main return
+        }
         return;
       }
       setIsLoading(true);
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        const q = query(jobsCollectionRef, where("postedById", "==", user.id), orderBy("createdAt", "desc"));
+        const q = query(jobsCollectionRef, where("postedById", "==", user.uid), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -51,7 +56,7 @@ export function PostedJobsDisplay() {
     };
 
     fetchPostedJobs();
-  }, [user]);
+  }, [user]); // useEffect will re-run if the user object changes
 
   if (isLoading) {
     return (
@@ -111,7 +116,7 @@ export function PostedJobsDisplay() {
                 <div>
                     <CardTitle className="text-xl font-headline">{job.title}</CardTitle>
                     <CardDescription>
-                        Posted on: {job.postedDate ? (typeof job.postedDate === 'string' ? job.postedDate : job.postedDate.toDate().toLocaleDateString()) : 'N/A'} - {job.location} ({job.type})
+                        Posted on: {job.postedDate ? (job.postedDate instanceof Timestamp ? job.postedDate.toDate().toLocaleDateString() : job.postedDate.toString().split('T')[0]) : 'N/A'} - {job.location} ({job.type})
                     </CardDescription>
                 </div>
                  <Badge variant={ (job.applicantIds?.length || 0) > 0 ? "default" : "secondary"}>
