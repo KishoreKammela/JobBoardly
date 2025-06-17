@@ -1,4 +1,5 @@
 
+"use client"; // Add this directive
 import { CandidateSearchResults } from '@/components/employer/CandidateSearchResults';
 import { CandidateFilterSidebar } from '@/components/employer/CandidateFilterSidebar';
 import { Separator } from '@/components/ui/separator';
