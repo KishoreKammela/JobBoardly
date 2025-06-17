@@ -107,10 +107,10 @@ export function JobCard({ job, showApplyButton = true }: JobCardProps) {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between items-center pt-4 border-t">
-        <p className="text-xs text-muted-foreground">Posted: {new Date(job.postedDate).toLocaleDateString()}</p>
+      <CardFooter className="flex flex-wrap justify-between items-center pt-4 border-t gap-2">
+        <p className="text-xs text-muted-foreground whitespace-nowrap">Posted: {new Date(job.postedDate).toLocaleDateString()}</p>
         {showApplyButton && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2"> {/* Added flex-wrap here */}
             <Button variant="outline" size="sm" onClick={handleSaveToggle} aria-pressed={isSaved} aria-label={isSaved ? "Unsave job" : "Save job"}>
                 <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-primary text-primary' : ''}`} />
             </Button>
