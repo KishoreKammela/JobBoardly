@@ -1,6 +1,6 @@
 
 "use client";
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
 import type { Job, ParsedJobData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +13,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, Sparkles, Send } from 'lucide-react';
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow'; 
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export function PostJobForm() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [jobData, setJobData] = useState<Partial<Job>>({
+  
+  const initialJobData: Partial<Job> = {
     title: '',
     company: user?.role === 'employer' ? user.name : '',
     location: '',
@@ -29,11 +32,27 @@ export function PostJobForm() {
     isRemote: false,
     postedById: user?.id,
     companyLogoUrl: user?.role === 'employer' ? user.avatarUrl : undefined,
-  });
+    applicantIds: [],
+  };
+
+  const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Update company name and logo if user data changes (e.g., after login)
+    if (user && user.role === 'employer') {
+      setJobData(prev => ({
+        ...prev,
+        company: user.name,
+        companyLogoUrl: user.avatarUrl,
+        postedById: user.id,
+      }));
+    }
+  }, [user]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -77,14 +96,13 @@ export function PostJobForm() {
         if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
             toast({
                 title: "Document Parsing Issue",
-                description: parsedData.description, // Show the specific error from the flow
+                description: parsedData.description,
                 variant: "destructive",
                 duration: 9000, 
             });
-             setJobData(prev => ({ // Still fill other fields if they were parsed
+             setJobData(prev => ({ 
               ...prev,
               title: parsedData.title || prev.title,
-              // Not setting description if it's the error message
               skills: parsedData.skills || prev.skills,
               location: parsedData.location || prev.location,
               type: parsedData.jobType || prev.type,
@@ -108,6 +126,7 @@ export function PostJobForm() {
         if (parsedData.skills && parsedData.skills.length > 0) {
             setSkillsInput(parsedData.skills.join(', '));
         }
+        setFile(null); // Clear file after parsing
       };
       reader.onerror = () => {
         toast({ title: "File Reading Error", description: "Could not read the selected file.", variant: "destructive" });
@@ -127,28 +146,43 @@ export function PostJobForm() {
         toast({ title: "Unauthorized", description: "Only employers can post jobs.", variant: "destructive" });
         return;
     }
+    if (!jobData.title || !jobData.description) {
+        toast({ title: "Missing Fields", description: "Job title and description are required.", variant: "destructive" });
+        return;
+    }
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const finalJobData: Job = {
-        id: `job-${Date.now()}`, 
-        ...jobData,
-        postedDate: new Date().toISOString().split('T')[0], 
-        postedById: user.id,
-        company: user.name, 
-        companyLogoUrl: user.avatarUrl,
-    } as Job; 
-
-    console.log("Submitting Job:", finalJobData); 
     
-    setIsSubmitting(false);
-    toast({
-      title: 'Job Posted!',
-      description: `${finalJobData.title} has been successfully posted.`,
-    });
-    setJobData({ title: '', company: user.name, location: '', type: 'Full-time', description: '', skills: [], isRemote: false, postedById: user.id, companyLogoUrl: user.avatarUrl });
-    setSkillsInput('');
-    setFile(null);
+    try {
+        const jobPayload: Omit<Job, 'id'> = {
+            ...initialJobData, // Start with defaults
+            ...jobData, // Overlay with form data
+            company: user.name, // Ensure company name is from the logged-in employer
+            companyLogoUrl: user.avatarUrl,
+            postedById: user.id,
+            postedDate: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD string
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            applicantIds: [], // Initialize with empty applicants
+        };
+
+        const jobsCollectionRef = collection(db, "jobs");
+        await addDoc(jobsCollectionRef, jobPayload);
+        
+        toast({
+          title: 'Job Posted!',
+          description: `${jobData.title} has been successfully posted.`,
+        });
+        // Reset form
+        setJobData(initialJobData); // Reset to initial state which uses current user details
+        setSkillsInput('');
+        setFile(null);
+
+    } catch (error) {
+        console.error("Error posting job:", error);
+        toast({ title: "Job Posting Failed", description: "Could not post the job. Please try again.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   if (!user || user.role !== 'employer') {

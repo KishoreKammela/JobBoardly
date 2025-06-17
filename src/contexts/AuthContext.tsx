@@ -2,29 +2,35 @@
 "use client";
 import type { UserProfile, UserRole } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { 
+  auth, 
+  db, 
+  googleProvider, 
+  githubProvider, 
+  microsoftProvider 
+} from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
   signOut, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
-  type User as FirebaseUser 
+  signInWithPopup,
+  type User as FirebaseUser,
+  type AuthProvider as FirebaseAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 
 interface AuthContextType {
   user: UserProfile | null;
-  firebaseUser: FirebaseUser | null; // Raw Firebase user
+  firebaseUser: FirebaseUser | null;
   loading: boolean;
-  // login: (userData: UserProfile) => void; // Replaced by Firebase login
   logout: () => Promise<void>;
-  // updateUser: (updatedData: Partial<UserProfile>) => void; // Will be more specific
-  // setUserRole: (role: UserRole) => void; // Role set at registration
   applyForJob: (jobId: string) => Promise<void>;
   hasAppliedForJob: (jobId: string) => boolean;
   registerUser: (email: string, pass: string, name: string, role: UserRole) => Promise<FirebaseUser>;
   loginUser: (email: string, pass: string) => Promise<FirebaseUser>;
   updateUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
+  signInWithSocial: (provider: FirebaseAuthProvider, role: UserRole) => Promise<FirebaseUser>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,20 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        // User is signed in, see docs for a list of available properties
-        // https://firebase.google.com/docs/reference/js/firebase.User
         const userDocRef = doc(db, "users", fbUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           setUser({ uid: fbUser.uid, ...userDocSnap.data() } as UserProfile);
         } else {
-          // This case should ideally not happen if profile is created on registration
-          // Or, handle it by creating a profile if missing, or logging out.
-          console.warn("User profile not found in Firestore for UID:", fbUser.uid);
-          // setUser(null); // Or prompt to create profile
+          // This might happen if a user authenticates but profile creation failed
+          // or for users who existed before profile creation logic was in place.
+          // For social sign-ins, profile is created in signInWithSocial.
+          console.warn("User profile not found in Firestore for UID:", fbUser.uid, "User might need to complete registration or role selection.");
+          // Potentially log out or redirect to a profile completion page
+           setUser(null); // Or handle more gracefully
         }
       } else {
-        // User is signed out
         setUser(null);
       }
       setLoading(false);
@@ -60,36 +65,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  const createUserProfileInFirestore = async (fbUser: FirebaseUser, name: string, role: UserRole, additionalData: Partial<UserProfile> = {}) => {
+    const userDocRef = doc(db, "users", fbUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      const newUserProfile: UserProfile = {
+        uid: fbUser.uid,
+        email: fbUser.email,
+        name: name || fbUser.displayName || "Anonymous User",
+        avatarUrl: fbUser.photoURL || undefined,
+        role,
+        createdAt: serverTimestamp(),
+        appliedJobIds: [],
+        ...(role === 'jobSeeker' && {
+          headline: '', skills: [], experience: '', education: '',
+          availability: 'Flexible', preferredLocations: [], jobSearchStatus: 'activelyLooking',
+        }),
+        ...(role === 'employer' && {
+          companyWebsite: '', companyDescription: '',
+        }),
+        ...additionalData, // For any extra data passed during creation
+      };
+      await setDoc(userDocRef, newUserProfile);
+      setUser(newUserProfile);
+      return newUserProfile;
+    }
+    return userDocSnap.data() as UserProfile;
+  };
+
   const registerUser = async (email: string, pass: string, name: string, role: UserRole): Promise<FirebaseUser> => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
     const fbUser = userCredential.user;
-    
-    // Create user profile in Firestore
-    const userDocRef = doc(db, "users", fbUser.uid);
-    const newUserProfile: Partial<UserProfile> = {
-      uid: fbUser.uid,
-      email: fbUser.email || email, // Use email from auth if available
-      name,
-      role,
-      createdAt: serverTimestamp(),
-      appliedJobIds: [],
-      // Initialize other role-specific fields
-    };
-     if (role === 'jobSeeker') {
-        newUserProfile.headline = '';
-        newUserProfile.skills = [];
-        newUserProfile.experience = '';
-        newUserProfile.education = '';
-        newUserProfile.availability = 'Flexible';
-        newUserProfile.preferredLocations = [];
-        newUserProfile.jobSearchStatus = 'activelyLooking';
-    } else if (role === 'employer') {
-        newUserProfile.companyWebsite = '';
-        newUserProfile.companyDescription = '';
-    }
-
-    await setDoc(userDocRef, newUserProfile);
-    setUser(newUserProfile as UserProfile); // Set local state
+    await createUserProfileInFirestore(fbUser, name, role);
     return fbUser;
   };
 
@@ -98,6 +106,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // onAuthStateChanged will handle fetching the profile
     return userCredential.user;
   };
+  
+  const signInWithSocial = async (provider: FirebaseAuthProvider, role: UserRole): Promise<FirebaseUser> => {
+    const result = await signInWithPopup(auth, provider);
+    const fbUser = result.user;
+    // Check if profile exists, if not, create it
+    const userDocRef = doc(db, "users", fbUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    if (!userDocSnap.exists()) {
+      // New user via social login
+      await createUserProfileInFirestore(fbUser, fbUser.displayName || "New User", role);
+    } else {
+      // Existing user, ensure role matches if necessary or update profile
+      const existingProfile = userDocSnap.data() as UserProfile;
+      if (existingProfile.role !== role) {
+        // Handle role mismatch, e.g., update role or inform user. For now, let's update.
+        // This is a simplification; role changes might need more business logic.
+        await updateDoc(userDocRef, { role, updatedAt: serverTimestamp() });
+        setUser({ ...existingProfile, role } as UserProfile);
+      } else {
+        setUser(existingProfile);
+      }
+    }
+    return fbUser;
+  };
+
 
   const logout = async () => {
     await signOut(auth);
@@ -122,9 +155,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!currentAppliedJobIds.includes(jobId)) {
         const newAppliedJobIds = [...currentAppliedJobIds, jobId];
         await updateUserProfile({ appliedJobIds: newAppliedJobIds });
+        
+        // Also update the job document to include this applicant (optional, can be complex)
+        // const jobDocRef = doc(db, "jobs", jobId);
+        // await updateDoc(jobDocRef, {
+        //   applicantIds: arrayUnion(user.uid) // arrayUnion adds element if not present
+        // });
       }
     } else {
         console.warn("User must be a logged-in job seeker to apply for a job.");
+        // Potentially throw an error or show a toast
     }
   };
 
@@ -145,7 +185,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasAppliedForJob,
         registerUser,
         loginUser,
-        updateUserProfile
+        updateUserProfile,
+        signInWithSocial
     }}>
       {!loading && children}
     </AuthContext.Provider>

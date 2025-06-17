@@ -9,29 +9,28 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Building } from 'lucide-react';
+import { Loader2, UserPlus, Building, Github, Shell, Chrome } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { FirebaseError } from 'firebase/app';
+import { googleProvider, githubProvider, microsoftProvider } from '@/lib/firebase';
+import { Separator } from '@/components/ui/separator';
+
 
 export function EmployerRegisterForm() {
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [companyWebsite, setCompanyWebsite] = useState(''); // Kept for now, could be part of profile update
   const [isLoading, setIsLoading] = useState(false);
-  const { registerUser } = useAuth(); // Changed from login
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const { registerUser, signInWithSocial } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       await registerUser(email, password, companyName, 'employer' as UserRole);
-      // The registerUser function in AuthContext will also create the Firestore profile
-      // with companyName as 'name' and role as 'employer'.
-      // Additional fields like companyWebsite can be added in the profile editing section.
       toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Start posting jobs.` });
       router.push('/employer/post-job'); 
     } catch (error) {
@@ -47,6 +46,30 @@ export function EmployerRegisterForm() {
     }
     setIsLoading(false);
   };
+
+  const handleSocialSignUp = async (providerName: 'google' | 'github' | 'microsoft') => {
+    setIsSocialLoading(providerName);
+    try {
+      let authProvider;
+      if (providerName === 'google') authProvider = googleProvider;
+      else if (providerName === 'github') authProvider = githubProvider;
+      else if (providerName === 'microsoft') authProvider = microsoftProvider;
+      else return;
+
+      // For employer registration via social, we might need company name.
+      // Simplification: Use display name from social provider as company name initially.
+      // They can edit it in their profile later.
+      await signInWithSocial(authProvider, 'employer');
+      toast({ title: 'Sign Up Successful', description: `Welcome! Please complete your company profile.` });
+      router.push('/profile'); // Redirect to profile to complete company details
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      console.error(`${providerName} sign up error:`, firebaseError);
+      toast({ title: 'Social Sign Up Failed', description: `Could not sign up with ${providerName}. ${firebaseError.message}`, variant: 'destructive' });
+    }
+    setIsSocialLoading(null);
+  };
+
 
   return (
     <Card className="w-full max-w-lg shadow-xl">
@@ -82,18 +105,6 @@ export function EmployerRegisterForm() {
               aria-label="Company email address for registration"
             />
           </div>
-           {/* Company website can be added to profile later */}
-          {/* <div className="space-y-2">
-            <Label htmlFor="companyWebsite">Company Website (Optional)</Label>
-            <Input
-              id="companyWebsite"
-              type="url"
-              placeholder="https://yourcompany.com"
-              value={companyWebsite}
-              onChange={(e) => setCompanyWebsite(e.target.value)}
-              aria-label="Company website for registration"
-            />
-          </div> */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -107,11 +118,23 @@ export function EmployerRegisterForm() {
               aria-label="Password for registration"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || !!isSocialLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
             Register Company
           </Button>
         </form>
+        <Separator className="my-6" />
+         <div className="space-y-3">
+             <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('google')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2 h-4 w-4" />} Sign up with Google
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('github')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'github' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Github className="mr-2 h-4 w-4" />} Sign up with GitHub
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('microsoft')} disabled={isLoading || !!isSocialLoading}>
+             {isSocialLoading === 'microsoft' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shell className="mr-2 h-4 w-4" />} Sign up with Microsoft
+            </Button>
+          </div>
       </CardContent>
       <CardFooter className="text-sm flex flex-col items-center space-y-2">
         <p className="w-full text-center">

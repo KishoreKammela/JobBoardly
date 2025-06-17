@@ -9,27 +9,28 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, Github, Shell, Chrome } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { FirebaseError } from 'firebase/app';
+import { googleProvider, githubProvider, microsoftProvider } from '@/lib/firebase';
+import { Separator } from '@/components/ui/separator';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { registerUser } = useAuth(); // Changed from login
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const { registerUser, signInWithSocial } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       await registerUser(email, password, name, 'jobSeeker' as UserRole);
       toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}! Complete your profile to get started.` });
-      // AuthContext's onAuthStateChanged will fetch profile and redirect or update UI
       router.push('/profile');
     } catch (error) {
       const firebaseError = error as FirebaseError;
@@ -43,6 +44,26 @@ export default function RegisterPage() {
       toast({ title: 'Registration Failed', description: friendlyMessage, variant: 'destructive' });
     }
     setIsLoading(false);
+  };
+
+  const handleSocialSignUp = async (providerName: 'google' | 'github' | 'microsoft') => {
+    setIsSocialLoading(providerName);
+    try {
+      let authProvider;
+      if (providerName === 'google') authProvider = googleProvider;
+      else if (providerName === 'github') authProvider = githubProvider;
+      else if (providerName === 'microsoft') authProvider = microsoftProvider;
+      else return;
+
+      await signInWithSocial(authProvider, 'jobSeeker'); // Role is jobSeeker for this page
+      toast({ title: 'Sign Up Successful', description: `Welcome to JobBoardly!` });
+      router.push('/profile');
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      console.error(`${providerName} sign up error:`, firebaseError);
+      toast({ title: 'Social Sign Up Failed', description: `Could not sign up with ${providerName}. ${firebaseError.message}`, variant: 'destructive' });
+    }
+    setIsSocialLoading(null);
   };
 
   return (
@@ -91,11 +112,23 @@ export default function RegisterPage() {
                 aria-label="Password for registration"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || !!isSocialLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
               Sign Up as Job Seeker
             </Button>
           </form>
+          <Separator className="my-6" />
+          <div className="space-y-3">
+             <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('google')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2 h-4 w-4" />} Sign up with Google
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('github')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'github' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Github className="mr-2 h-4 w-4" />} Sign up with GitHub
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('microsoft')} disabled={isLoading || !!isSocialLoading}>
+             {isSocialLoading === 'microsoft' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shell className="mr-2 h-4 w-4" />} Sign up with Microsoft
+            </Button>
+          </div>
         </CardContent>
         <CardFooter className="text-sm flex flex-col items-center space-y-2">
           <p className="w-full text-center">

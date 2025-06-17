@@ -9,24 +9,25 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Github, Shell, Chrome } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
+import { googleProvider, githubProvider, microsoftProvider } from '@/lib/firebase';
+import { Separator } from '@/components/ui/separator';
 
 export function EmployerLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { loginUser } = useAuth(); // Changed from login
+  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const { loginUser, signInWithSocial } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       await loginUser(email, password);
-      // AuthContext's onAuthStateChanged will fetch profile and redirect or update UI
       toast({ title: 'Login Successful', description: `Welcome back!` });
       router.push('/employer/post-job'); 
     } catch (error) {
@@ -39,6 +40,26 @@ export function EmployerLoginForm() {
        toast({ title: 'Login Failed', description: friendlyMessage, variant: 'destructive' });
     }
     setIsLoading(false);
+  };
+
+  const handleSocialLogin = async (providerName: 'google' | 'github' | 'microsoft') => {
+    setIsSocialLoading(providerName);
+    try {
+      let authProvider;
+      if (providerName === 'google') authProvider = googleProvider;
+      else if (providerName === 'github') authProvider = githubProvider;
+      else if (providerName === 'microsoft') authProvider = microsoftProvider;
+      else return;
+
+      await signInWithSocial(authProvider, 'employer'); // Role is employer for this page
+      toast({ title: 'Login Successful', description: `Welcome!` });
+      router.push('/employer/post-job');
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      console.error(`${providerName} login error:`, firebaseError);
+      toast({ title: 'Social Login Failed', description: `Could not sign in with ${providerName}. ${firebaseError.message}`, variant: 'destructive' });
+    }
+    setIsSocialLoading(null);
   };
 
   return (
@@ -73,11 +94,23 @@ export function EmployerLoginForm() {
               aria-label="Password for login"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full" disabled={isLoading || !!isSocialLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" /> }
             Sign In as Employer
           </Button>
         </form>
+        <Separator className="my-6" />
+        <div className="space-y-3">
+            <Button variant="outline" className="w-full" onClick={() => handleSocialLogin('google')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2 h-4 w-4" />} Sign in with Google
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialLogin('github')} disabled={isLoading || !!isSocialLoading}>
+              {isSocialLoading === 'github' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Github className="mr-2 h-4 w-4" />} Sign in with GitHub
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => handleSocialLogin('microsoft')} disabled={isLoading || !!isSocialLoading}>
+             {isSocialLoading === 'microsoft' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shell className="mr-2 h-4 w-4" />} Sign in with Microsoft
+            </Button>
+        </div>
       </CardContent>
       <CardFooter className="text-sm flex flex-col items-center space-y-2">
         <p className="w-full text-center">

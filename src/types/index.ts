@@ -1,16 +1,16 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'jobSeeker' | 'employer';
+export type UserRole = 'jobSeeker' | 'employer' | 'admin'; // Added admin role
 
 export interface Job {
   id: string; // Will be Firestore document ID
   title: string;
-  company: string; // For display; actual company details might come from employer profile
+  company: string; 
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string; // Or Timestamp for Firestore
+  postedDate: string | Timestamp; // Can be ISO string or Firestore Timestamp
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
@@ -25,31 +25,31 @@ export interface Job {
 export interface UserProfile {
   uid: string; // Firebase Auth User ID
   role: UserRole;
-  email: string | null; // From Firebase Auth, can be null
-  name: string; // Full name for jobSeeker, Company Name for employer
-  avatarUrl?: string; // Profile picture for jobSeeker, Company Logo for employer
+  email: string | null; 
+  name: string; 
+  avatarUrl?: string; 
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 
   // Job Seeker specific fields
   headline?: string;
   skills?: string[];
-  experience?: string; // Markdown supported
-  education?: string; // e.g., "B.S. Computer Science", Markdown supported
+  experience?: string; 
+  education?: string; 
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[]; 
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
   desiredSalary?: number; 
-  resumeUrl?: string; // URL from Firebase Storage
+  resumeUrl?: string; 
   resumeFileName?: string;
   parsedResumeText?: string; 
-  appliedJobIds?: string[]; // IDs of jobs (Firestore doc IDs) the seeker applied to
+  appliedJobIds?: string[]; 
 
   // Employer specific fields
   companyWebsite?: string;
-  companyDescription?: string; // Markdown supported
+  companyDescription?: string; 
 }
 
 export interface UserSettings {

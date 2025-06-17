@@ -1,7 +1,7 @@
 
 "use client";
 import Link from 'next/link';
-import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2 } from 'lucide-react';
+import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,10 +16,11 @@ import {
 import { useRouter } from 'next/navigation';
 
 const navLinks = [
-  { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer'], alwaysShow: true },
+  { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer', 'admin'], alwaysShow: true },
   { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
   { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
+  { href: '/admin', label: 'Admin Panel', icon: <Shield className="h-4 w-4" />, authRequired: true, roles: ['admin'] },
 ];
 
 const userDropdownLinks = {
@@ -32,11 +33,16 @@ const userDropdownLinks = {
     { href: '/profile', label: 'Company Profile', icon: <Building className="h-4 w-4" /> },
     { href: '/employer/posted-jobs', label: 'Posted Jobs', icon: <ListChecks className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+  ],
+  admin: [ // Admin also has a profile and settings
+    { href: '/profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
+    { href: '/admin', label: 'Admin Dashboard', icon: <Shield className="h-4 w-4" /> },
+    { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ]
 };
 
 export function Navbar() {
-  const { user, logout, loading } = useAuth(); // Added loading state
+  const { user, logout, loading } = useAuth(); 
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -46,8 +52,15 @@ export function Navbar() {
   
   const getAvatarFallback = () => {
     if (!user) return 'U';
-    // For employer, use first two chars of company name. For seeker, first char of name.
-    return user.name ? user.name.substring(0, user.role === 'employer' ? 2 : 1).toUpperCase() : 'U';
+    return user.name ? user.name.substring(0, user.role === 'employer' ? 2 : 1).toUpperCase() : (user.email ? user.email.substring(0,1).toUpperCase() : 'U');
+  }
+
+  const getRoleDisplayName = (role?: UserRole) => {
+    if (!role) return "";
+    if (role === 'jobSeeker') return "Job Seeker";
+    if (role === 'employer') return "Employer";
+    if (role === 'admin') return "Admin";
+    return "";
   }
 
   return (
@@ -60,13 +73,13 @@ export function Navbar() {
         <nav className="flex items-center gap-3 md:gap-4">
           {navLinks.map((link) => {
             let display = false;
-            if (link.href === '/jobs') { // "Find Jobs" is always visible
-                 display = true;
-            } else if (user && link.roles.includes(user.role)) { // For logged-in users, role must match
+            if (link.alwaysShow) {
                 display = true;
-            } else if (!user && !link.authRequired && link.href !== '/ai-match' && link.href !== '/employer/post-job' && link.href !== '/employer/find-candidates' ) {
-                // For non-logged in users, show if not authRequired and not one of the specific auth-gated links
-                // This logic might need refinement based on exact public/private link requirements
+            } else if (user && link.authRequired && link.roles.includes(user.role)) {
+                display = true;
+            } else if (!user && !link.authRequired ) {
+                // For non-logged in users, show if not authRequired
+                // This might need refinement for which public links to show
             }
 
             return display && (
@@ -76,7 +89,7 @@ export function Navbar() {
               </Link>
             )
           })}
-           {!user && !loading && ( // Show "For Employers" only if not logged in and not loading
+           {!user && !loading && ( 
              <Link href="/employer" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
                 <Building className="h-4 w-4" />
                 <span className="hidden sm:inline">For Employers</span>
@@ -100,7 +113,7 @@ export function Navbar() {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{user.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email} ({user.role === 'jobSeeker' ? "Job Seeker" : "Employer"})
+                      {user.email} ({getRoleDisplayName(user.role)})
                     </p>
                   </div>
                 </DropdownMenuLabel>
