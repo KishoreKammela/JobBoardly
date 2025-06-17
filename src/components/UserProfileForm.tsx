@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect, type FormEvent } from 'react';
 import type { UserProfile } from '@/types';
@@ -16,6 +17,7 @@ export function UserProfileForm() {
   const [formData, setFormData] = useState<Partial<UserProfile>>({
     name: '',
     email: '',
+    avatarUrl: '', // Initialize avatarUrl to an empty string
     skills: [],
     experience: '',
   });
@@ -29,9 +31,19 @@ export function UserProfileForm() {
         email: user.email || '',
         skills: user.skills || [],
         experience: user.experience || '',
-        avatarUrl: user.avatarUrl || '',
+        avatarUrl: user.avatarUrl || '', // Ensure it's always a string
       });
       setSkillsInput((user.skills || []).join(', '));
+    } else {
+      // If user is null, reset form to initial empty string state
+      setFormData({
+        name: '',
+        email: '',
+        avatarUrl: '',
+        skills: [],
+        experience: '',
+      });
+      setSkillsInput('');
     }
   }, [user]);
 
@@ -94,7 +106,7 @@ export function UserProfileForm() {
           </div>
           <div>
             <Label htmlFor="avatarUrl">Avatar URL</Label>
-            <Input id="avatarUrl" name="avatarUrl" placeholder="https://example.com/avatar.png" value={formData.avatarUrl} onChange={handleChange} />
+            <Input id="avatarUrl" name="avatarUrl" placeholder="https://example.com/avatar.png" value={formData.avatarUrl || ''} onChange={handleChange} />
           </div>
           <div>
             <Label htmlFor="skills">Skills (comma-separated)</Label>
