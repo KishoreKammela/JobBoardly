@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -20,34 +21,50 @@ export function AiJobMatcher() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      // Pre-fill profile from authenticated user (if available)
+    if (user && user.role === 'jobSeeker') {
       let profileText = `Name: ${user.name}\nEmail: ${user.email}\n`;
+      if (user.headline) profileText += `Headline: ${user.headline}\n`;
       if (user.skills && user.skills.length > 0) {
         profileText += `Skills: ${user.skills.join(', ')}\n`;
       }
       if (user.experience) {
         profileText += `Experience:\n${user.experience}\n`;
       }
-      if (user.parsedResumeText) {
-         profileText += `\n--- Resume Summary ---\n${user.parsedResumeText}`;
+      if (user.portfolioUrl) profileText += `Portfolio: ${user.portfolioUrl}\n`;
+      if (user.linkedinUrl) profileText += `LinkedIn: ${user.linkedinUrl}\n`;
+      if (user.preferredLocations && user.preferredLocations.length > 0) {
+        profileText += `Preferred Locations: ${user.preferredLocations.join(', ')}\n`;
+      }
+      if (user.jobSearchStatus) profileText += `Job Search Status: ${user.jobSearchStatus}\n`;
+      if (user.desiredSalary) profileText += `Desired Salary: $${user.desiredSalary.toLocaleString()}\n`;
+      
+      if (user.parsedResumeText) { // This might be redundant if experience is well-populated
+         profileText += `\n--- Resume Summary (additional context) ---\n${user.parsedResumeText}`;
       }
       setJobSeekerProfile(profileText.trim());
     }
     
     // Pre-fill job postings with mock data for demonstration
-    const examplePostings = mockJobs.slice(0, 2).map(job => 
-      `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\nSkills: ${job.skills.join(', ')}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\n`
+    const examplePostings = mockJobs.slice(0, 3).map(job => 
+      `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\nSkills: ${job.skills.join(', ')}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nSalary: ${job.salaryMin ? `$${job.salaryMin}-` : ''}${job.salaryMax ? `$${job.salaryMax}` : 'N/A'}\n`
     ).join('\n---\n');
     setJobPostings(examplePostings);
 
   }, [user]);
 
   const handleSubmit = async () => {
+    if (!user || user.role !== 'jobSeeker') {
+      toast({
+        title: 'Access Denied',
+        description: 'AI Job Matcher is for job seekers. Please log in with a job seeker account.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!jobSeekerProfile.trim() || !jobPostings.trim()) {
       toast({
         title: 'Missing Information',
-        description: 'Please provide both your profile and job postings.',
+        description: 'Please ensure your profile information is available and provide job postings.',
         variant: 'destructive',
       });
       return;
@@ -77,6 +94,23 @@ export function AiJobMatcher() {
       setIsLoading(false);
     }
   };
+  
+  if (user && user.role !== 'jobSeeker') {
+    return (
+        <Card className="w-full max-w-3xl mx-auto shadow-xl">
+            <CardHeader>
+                <CardTitle className="text-2xl font-headline flex items-center gap-2">
+                <Sparkles className="text-primary h-6 w-6" />
+                AI-Powered Job Matcher
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground">This feature is available for job seeker accounts. Employers can post jobs and manage applications through the employer portal.</p>
+            </CardContent>
+        </Card>
+    )
+  }
+
 
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
@@ -86,38 +120,39 @@ export function AiJobMatcher() {
           AI-Powered Job Matcher
         </CardTitle>
         <CardDescription>
-          Provide your profile and some job postings to get AI-driven job recommendations.
-          The job postings below are pre-filled with examples from our database.
+          Your profile details (auto-filled if available) and job postings below will be used by our AI to recommend relevant jobs. 
+          The job postings are pre-filled with examples.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="jobSeekerProfile" className="text-lg">Your Profile</Label>
+          <Label htmlFor="jobSeekerProfile" className="text-lg">Your Profile Summary (Auto-Generated)</Label>
           <Textarea
             id="jobSeekerProfile"
             value={jobSeekerProfile}
             onChange={(e) => setJobSeekerProfile(e.target.value)}
-            placeholder="Paste your skills, experience, and job preferences here..."
-            rows={8}
-            className="mt-1"
+            placeholder="Your profile details will appear here. You can edit them if needed before matching."
+            rows={10}
+            className="mt-1 bg-muted/20"
             aria-label="Job Seeker Profile Input"
           />
+           <p className="text-xs text-muted-foreground mt-1">This summary is generated from your profile. You can <Link href="/profile" className="underline text-primary">edit your full profile here</Link>.</p>
         </div>
         <div>
-          <Label htmlFor="jobPostings" className="text-lg">Job Postings</Label>
+          <Label htmlFor="jobPostings" className="text-lg">Job Postings (Example Data)</Label>
           <Textarea
             id="jobPostings"
             value={jobPostings}
             onChange={(e) => setJobPostings(e.target.value)}
             placeholder="Paste job descriptions here, one per line or separated by '---'..."
-            rows={10}
+            rows={12}
             className="mt-1"
             aria-label="Job Postings Input"
           />
         </div>
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-4">
-        <Button onClick={handleSubmit} disabled={isLoading} size="lg">
+        <Button onClick={handleSubmit} disabled={isLoading || !user} size="lg">
           {isLoading ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
@@ -125,6 +160,7 @@ export function AiJobMatcher() {
           )}
           Get Matches
         </Button>
+        {!user && <p className="text-sm text-destructive text-center">Please log in as a job seeker to use the AI Matcher.</p>}
         {error && (
           <div className="p-4 bg-destructive/10 text-destructive rounded-md flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />

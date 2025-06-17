@@ -1,3 +1,4 @@
+
 "use client";
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
@@ -26,8 +27,9 @@ export default function LoginPage() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    // For demo, "user@example.com" is a job seeker
     if (email === "user@example.com" && password === "password") {
-      login({...mockUserProfile, email: email }); // Use mock user data for demo
+      login({...mockUserProfile, email: email, role: 'jobSeeker' }); 
       toast({ title: 'Login Successful', description: `Welcome back, ${mockUserProfile.name}!` });
       router.push('/profile');
     } else {
@@ -40,7 +42,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">Welcome Back!</CardTitle>
+          <CardTitle className="text-2xl font-headline">Job Seeker Login</CardTitle>
           <CardDescription>Sign in to continue to JobBoardly.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,11 +77,17 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center text-sm">
-          <p className="w-full">
+        <CardFooter className="text-sm flex flex-col items-center space-y-2">
+          <p className="w-full text-center">
             Don't have an account?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
               <Link href="/auth/register">Sign up</Link>
+            </Button>
+          </p>
+           <p className="w-full text-center">
+            Are you an employer?{' '}
+            <Button variant="link" asChild className="p-0 h-auto">
+              <Link href="/employer/login">Login here</Link>
             </Button>
           </p>
         </CardFooter>

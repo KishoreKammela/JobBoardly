@@ -1,7 +1,10 @@
+
+export type UserRole = 'jobSeeker' | 'employer';
+
 export interface Job {
   id: string;
   title: string;
-  company: string;
+  company: string; // For display; actual company details might come from employer profile
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
@@ -10,19 +13,33 @@ export interface Job {
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string;
+  companyLogoUrl?: string; // Could be derived from employer profile
+  postedById?: string; // User ID of the employer
 }
 
 export interface UserProfile {
   id: string;
-  name: string;
+  role: UserRole;
   email: string;
-  avatarUrl?: string;
+  name: string; // Full name for jobSeeker, Company Name for employer
+  avatarUrl?: string; // Profile picture for jobSeeker, Company Logo for employer
+
+  // Job Seeker specific fields
+  headline?: string;
   skills?: string[];
-  experience?: string; // Could be markdown or structured data
+  experience?: string; // Markdown supported
+  portfolioUrl?: string;
+  linkedinUrl?: string;
+  preferredLocations?: string[]; // Could be a list of city names or regions
+  jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
+  desiredSalary?: number; // Annual salary expectation
   resumeUrl?: string;
   resumeFileName?: string;
-  parsedResumeText?: string; // Text extracted from resume
+  parsedResumeText?: string; // Full text extracted from resume for reference or AI processing
+
+  // Employer specific fields
+  companyWebsite?: string;
+  companyDescription?: string; // Markdown supported, brief about the company
 }
 
 export interface UserSettings {
@@ -34,6 +51,30 @@ export interface UserSettings {
     applicationStatusUpdates: boolean;
   };
   searchHistory: string[];
+}
+
+// Output from AI resume parsing
+export interface ParsedResumeData {
+  name?: string;
+  email?: string;
+  headline?: string;
+  skills?: string[];
+  experience?: string; // Extracted experience text
+  portfolioUrl?: string;
+  linkedinUrl?: string;
+  // Add other fields as needed, e.g., education
+}
+
+// Output from AI job description parsing
+export interface ParsedJobData {
+  title?: string;
+  description?: string;
+  skills?: string[];
+  location?: string;
+  jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
+  salaryMin?: number;
+  salaryMax?: number;
+  // Add other fields as needed
 }
 
 export interface AIPoweredJobMatchingOutput {

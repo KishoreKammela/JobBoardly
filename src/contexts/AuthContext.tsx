@@ -1,5 +1,6 @@
+
 "use client";
-import type { UserProfile } from '@/types';
+import type { UserProfile, UserRole } from '@/types';
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface AuthContextType {
@@ -7,6 +8,7 @@ interface AuthContextType {
   login: (userData: UserProfile) => void;
   logout: () => void;
   updateUser: (updatedData: Partial<UserProfile>) => void;
+  setUserRole: (role: UserRole) => void; // Allow role to be set, e.g. after registration
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,7 +17,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    // Try to load user from localStorage on initial load
     const storedUser = localStorage.getItem('jobboardly-user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -43,8 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const setUserRole = (role: UserRole) => {
+    if (user) {
+      updateUser({ role });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, setUserRole }}>
       {children}
     </AuthContext.Provider>
   );

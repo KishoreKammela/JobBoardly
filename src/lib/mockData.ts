@@ -1,3 +1,4 @@
+
 import type { Job, UserProfile, UserSettings } from '@/types';
 
 export const mockJobs: Job[] = [
@@ -14,6 +15,7 @@ export const mockJobs: Job[] = [
     salaryMin: 120000,
     salaryMax: 160000,
     companyLogoUrl: 'https://placehold.co/100x100.png?text=IS',
+    postedById: 'employer1',
   },
   {
     id: '2',
@@ -28,6 +30,7 @@ export const mockJobs: Job[] = [
     salaryMin: 150000,
     salaryMax: 190000,
     companyLogoUrl: 'https://placehold.co/100x100.png?text=AI',
+    postedById: 'employer2',
   },
   {
     id: '3',
@@ -40,6 +43,7 @@ export const mockJobs: Job[] = [
     isRemote: true,
     skills: ['UX Design', 'Figma', 'User Research', 'Prototyping'],
     companyLogoUrl: 'https://placehold.co/100x100.png?text=CV',
+    postedById: 'employer1',
   },
   {
     id: '4',
@@ -54,6 +58,7 @@ export const mockJobs: Job[] = [
     salaryMin: 130000,
     salaryMax: 170000,
     companyLogoUrl: 'https://placehold.co/100x100.png?text=CN',
+    postedById: 'employer2',
   },
     {
     id: '5',
@@ -68,6 +73,7 @@ export const mockJobs: Job[] = [
     salaryMin: 110000,
     salaryMax: 150000,
     companyLogoUrl: 'https://placehold.co/100x100.png?text=DI',
+    postedById: 'employer1',
   },
   {
     id: '6',
@@ -80,27 +86,48 @@ export const mockJobs: Job[] = [
     isRemote: true,
     skills: ['Node.js', 'Express', 'React', 'PostgreSQL', 'REST APIs'],
     companyLogoUrl: 'https://placehold.co/100x100.png?text=WW',
+    postedById: 'employer2',
   },
 ];
 
 export const mockUserProfile: UserProfile = {
   id: 'user123',
+  role: 'jobSeeker',
   name: 'Jane Doe',
   email: 'jane.doe@example.com',
   avatarUrl: 'https://placehold.co/100x100.png?text=JD',
-  skills: ['JavaScript', 'React', 'Node.js', 'Project Management'],
+  headline: 'Experienced Full Stack Developer',
+  skills: ['JavaScript', 'React', 'Node.js', 'Project Management', 'TypeScript', 'Next.js'],
   experience: `
 ### Senior Software Engineer at Tech Solutions Inc. (2020 - Present)
-- Led development of key features for a SaaS product.
+- Led development of key features for a SaaS product using React, Node.js, and TypeScript.
 - Mentored junior engineers and improved team coding standards.
+- Contributed to architectural decisions and CI/CD pipeline improvements.
 
 ### Software Engineer at Web Creations LLC (2017 - 2020)
 - Developed and maintained client websites using WordPress and custom PHP.
+- Collaborated with designers to implement responsive and user-friendly interfaces.
   `,
-  resumeUrl: '#',
+  portfolioUrl: 'https://jane.dev',
+  linkedinUrl: 'https://linkedin.com/in/janedoe',
+  preferredLocations: ['San Francisco, CA', 'Remote'],
+  jobSearchStatus: 'activelyLooking',
+  desiredSalary: 140000,
+  resumeUrl: '#', // This would be a real URL in a live app
   resumeFileName: 'JaneDoe_Resume.pdf',
-  parsedResumeText: 'Skills: JavaScript, React, Node.js, Project Management. Experience: Senior Software Engineer at Tech Solutions Inc. ...'
+  parsedResumeText: 'Skills: JavaScript, React, Node.js, Project Management, TypeScript, Next.js. Experience: Senior Software Engineer at Tech Solutions Inc. specializing in full-stack development...'
 };
+
+export const mockEmployerProfile: UserProfile = {
+  id: 'employer123',
+  role: 'employer',
+  name: 'Innovatech Solutions',
+  email: 'hr@innovatech.com',
+  avatarUrl: 'https://placehold.co/100x100.png?text=IS',
+  companyWebsite: 'https://innovatech.com',
+  companyDescription: 'Innovatech Solutions is a leading provider of cutting-edge technology solutions, specializing in AI and cloud computing. We foster a collaborative and innovative work environment.',
+};
+
 
 export const defaultUserSettings: UserSettings = {
   jobBoardDisplay: 'list',

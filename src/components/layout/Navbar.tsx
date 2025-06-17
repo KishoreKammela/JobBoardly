@@ -1,6 +1,7 @@
+
 "use client";
 import Link from 'next/link';
-import { Briefcase, Brain, User, Settings, LogIn, UserPlus } from 'lucide-react';
+import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -15,8 +16,9 @@ import {
 import { useRouter } from 'next/navigation';
 
 const navLinks = [
-  { href: '/jobs', label: 'Find Jobs', icon: <Briefcase className="h-4 w-4" />, authRequired: false },
-  { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true },
+  { href: '/jobs', label: 'Find Jobs', icon: <Briefcase className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer'] },
+  { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
+  { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
 ];
 
 const userNavLinks = [
@@ -32,6 +34,12 @@ export function Navbar() {
     logout();
     router.push('/');
   };
+  
+  const getAvatarFallback = () => {
+    if (!user) return 'U';
+    if (user.role === 'employer' && user.name) return user.name.substring(0,2).toUpperCase();
+    return user.name?.[0]?.toUpperCase() || 'U';
+  }
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-50">
@@ -40,22 +48,31 @@ export function Navbar() {
           <Briefcase className="h-7 w-7" />
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
-        <nav className="flex items-center gap-4 md:gap-6">
-          {navLinks.map((link) => (
-            (!link.authRequired || (link.authRequired && user)) && (
+        <nav className="flex items-center gap-3 md:gap-4">
+          {navLinks.map((link) => {
+            const showLink = (!link.authRequired || (link.authRequired && user)) &&
+                             (!link.roles || (user && link.roles.includes(user.role)));
+            return showLink && (
               <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
                 {link.icon}
                 <span className="hidden sm:inline">{link.label}</span>
               </Link>
             )
-          ))}
+          })}
+           {!user && (
+             <Link href="/employer" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
+                <Building className="h-4 w-4" />
+                <span className="hidden sm:inline">For Employers</span>
+              </Link>
+           )}
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png`} alt={user.name} data-ai-hint="user avatar" />
-                    <AvatarFallback>{user.name?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -64,7 +81,7 @@ export function Navbar() {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{user.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {user.email}
+                      {user.email} ({user.role})
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -86,12 +103,12 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild size="sm">
                 <Link href="/auth/login">
                   <LogIn className="h-4 w-4 mr-1.5" /> Login
                 </Link>
               </Button>
-              <Button asChild>
+              <Button asChild size="sm">
                 <Link href="/auth/register">
                   <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
                 </Link>

@@ -1,3 +1,4 @@
+
 "use client";
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
@@ -9,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
+import type { UserProfile } from '@/types';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -26,17 +28,27 @@ export default function RegisterPage() {
     // Simulate API call for registration
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Create a new user profile (mock)
-    const newUser = {
+    // Create a new user profile (mock for job seeker)
+    const newUser: UserProfile = {
       id: `user-${Date.now()}`, // Simple unique ID
+      role: 'jobSeeker',
       name,
       email,
       avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0,2).toUpperCase()}`,
+      headline: '',
       skills: [],
       experience: '',
+      portfolioUrl: '',
+      linkedinUrl: '',
+      preferredLocations: [],
+      jobSearchStatus: 'activelyLooking',
+      desiredSalary: undefined,
+      resumeUrl: '',
+      resumeFileName: '',
+      parsedResumeText: '',
     };
     login(newUser);
-    toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}!` });
+    toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}! Complete your profile to get started.` });
     router.push('/profile');
     setIsLoading(false);
   };
@@ -45,7 +57,7 @@ export default function RegisterPage() {
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">Create an Account</CardTitle>
+          <CardTitle className="text-2xl font-headline">Create Job Seeker Account</CardTitle>
           <CardDescription>Join JobBoardly to find your next career opportunity.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -89,15 +101,21 @@ export default function RegisterPage() {
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-              Sign Up
+              Sign Up as Job Seeker
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center text-sm">
-          <p className="w-full">
+        <CardFooter className="text-sm flex flex-col items-center space-y-2">
+          <p className="w-full text-center">
             Already have an account?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
               <Link href="/auth/login">Sign in</Link>
+            </Button>
+          </p>
+          <p className="w-full text-center">
+            Are you an employer?{' '}
+            <Button variant="link" asChild className="p-0 h-auto">
+              <Link href="/employer/register">Register here</Link>
             </Button>
           </p>
         </CardFooter>
