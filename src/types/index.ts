@@ -59,7 +59,7 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; // Extracted experience text
+  experience?: string; // Extracted experience text. May contain an error message if parsing failed due to file type.
   portfolioUrl?: string;
   linkedinUrl?: string;
   // Add other fields as needed, e.g., education
@@ -68,7 +68,7 @@ export interface ParsedResumeData {
 // Output from AI job description parsing
 export interface ParsedJobData {
   title?: string;
-  description?: string;
+  description?: string; // May contain an error message if parsing failed due to file type.
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';

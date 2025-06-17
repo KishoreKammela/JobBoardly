@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, FileText, Sparkles, Send } from 'lucide-react';
-import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow'; // Assuming this flow exists
+import { Loader2, UploadCloud, Sparkles, Send } from 'lucide-react';
+import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow'; 
 
 export function PostJobForm() {
   const { user } = useAuth();
@@ -32,7 +32,6 @@ export function PostJobForm() {
   });
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,28 +74,48 @@ export function PostJobForm() {
         const dataUri = reader.result as string;
         const parsedData: ParsedJobData = await parseJobDescriptionFlow({ jobDescriptionDataUri: dataUri });
         
-        // Update form fields with parsed data
-        setJobData(prev => ({
-          ...prev,
-          title: parsedData.title || prev.title,
-          description: parsedData.description || prev.description,
-          skills: parsedData.skills || prev.skills,
-          location: parsedData.location || prev.location,
-          type: parsedData.jobType || prev.type,
-          salaryMin: parsedData.salaryMin || prev.salaryMin,
-          salaryMax: parsedData.salaryMax || prev.salaryMax,
-        }));
+        if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
+            toast({
+                title: "Document Parsing Issue",
+                description: parsedData.description, // Show the specific error from the flow
+                variant: "destructive",
+                duration: 9000, 
+            });
+             setJobData(prev => ({ // Still fill other fields if they were parsed
+              ...prev,
+              title: parsedData.title || prev.title,
+              // Not setting description if it's the error message
+              skills: parsedData.skills || prev.skills,
+              location: parsedData.location || prev.location,
+              type: parsedData.jobType || prev.type,
+              salaryMin: parsedData.salaryMin || prev.salaryMin,
+              salaryMax: parsedData.salaryMax || prev.salaryMax,
+            }));
+        } else {
+            setJobData(prev => ({
+              ...prev,
+              title: parsedData.title || prev.title,
+              description: parsedData.description || prev.description,
+              skills: parsedData.skills || prev.skills,
+              location: parsedData.location || prev.location,
+              type: parsedData.jobType || prev.type,
+              salaryMin: parsedData.salaryMin || prev.salaryMin,
+              salaryMax: parsedData.salaryMax || prev.salaryMax,
+            }));
+            toast({ title: "Document Parsed", description: "Job details have been pre-filled from the document." });
+        }
+
         if (parsedData.skills && parsedData.skills.length > 0) {
             setSkillsInput(parsedData.skills.join(', '));
         }
-        toast({ title: "Document Parsed", description: "Job details have been pre-filled from the document." });
       };
       reader.onerror = () => {
         toast({ title: "File Reading Error", description: "Could not read the selected file.", variant: "destructive" });
       };
     } catch (error) {
       console.error("Error parsing job description:", error);
-      toast({ title: "Parsing Error", description: "Could not parse job details from the document.", variant: "destructive" });
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during parsing."
+      toast({ title: "Parsing Error", description: `Could not parse job details. ${errorMessage}`, variant: "destructive" });
     } finally {
       setIsParsing(false);
     }
@@ -109,28 +128,24 @@ export function PostJobForm() {
         return;
     }
     setIsSubmitting(true);
-    // Simulate API call to save job
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const finalJobData: Job = {
-        id: `job-${Date.now()}`, // Generate a mock ID
+        id: `job-${Date.now()}`, 
         ...jobData,
-        postedDate: new Date().toISOString().split('T')[0], // Set current date
+        postedDate: new Date().toISOString().split('T')[0], 
         postedById: user.id,
-        company: user.name, // Employer's name from profile
+        company: user.name, 
         companyLogoUrl: user.avatarUrl,
-    } as Job; // Type assertion as we're building it piece by piece
+    } as Job; 
 
     console.log("Submitting Job:", finalJobData); 
-    // In a real app, you'd send this to your backend
-    // For now, perhaps add to a global state or localStorage for mockJobs if you want to see it listed
-
+    
     setIsSubmitting(false);
     toast({
       title: 'Job Posted!',
       description: `${finalJobData.title} has been successfully posted.`,
     });
-    // Optionally reset form or redirect
     setJobData({ title: '', company: user.name, location: '', type: 'Full-time', description: '', skills: [], isRemote: false, postedById: user.id, companyLogoUrl: user.avatarUrl });
     setSkillsInput('');
     setFile(null);
@@ -150,8 +165,8 @@ export function PostJobForm() {
       <CardHeader>
         <CardTitle className="text-xl font-headline">Job Details</CardTitle>
         <CardDescription>
-          Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX) 
-          and our AI will try to parse and pre-fill the fields for you.
+          Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT) 
+          and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">

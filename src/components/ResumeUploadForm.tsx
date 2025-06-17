@@ -35,31 +35,50 @@ export function ResumeUploadForm() {
       reader.onload = async () => {
         const dataUri = reader.result as string;
         
-        // Call the Genkit flow to parse the resume
         const parsedData: ParseResumeOutput = await parseResumeFlow({ resumeDataUri: dataUri });
 
-        // Update user profile with parsed data
-        const profileUpdates: Partial<typeof user> = {
-          resumeUrl: URL.createObjectURL(file), // Temporary URL for display if needed, or store actual URL post-upload
-          resumeFileName: file.name,
-          parsedResumeText: parsedData.experience || `Parsed content for ${file.name}. Raw AI output might go here.`, // Fallback
-        };
+        if (parsedData.experience && parsedData.experience.startsWith("Parsing Error:")) {
+            toast({
+                title: 'Resume Parsing Issue',
+                description: parsedData.experience, // Show the specific error from the flow
+                variant: 'destructive',
+                duration: 9000,
+            });
+            // Update other fields if available, but not experience if it's the error message
+            const profileUpdates: Partial<typeof user> = {
+              resumeUrl: URL.createObjectURL(file), 
+              resumeFileName: file.name,
+              // parsedResumeText will not be updated with the error message
+            };
+            if (parsedData.name && !user.name) profileUpdates.name = parsedData.name;
+            if (parsedData.headline) profileUpdates.headline = parsedData.headline;
+            if (parsedData.skills && parsedData.skills.length > 0) profileUpdates.skills = parsedData.skills;
+            // Not updating user.experience or user.parsedResumeText with the error
+            if (parsedData.portfolioUrl) profileUpdates.portfolioUrl = parsedData.portfolioUrl;
+            if (parsedData.linkedinUrl) profileUpdates.linkedinUrl = parsedData.linkedinUrl;
+            updateUser(profileUpdates);
 
-        if (parsedData.name && !user.name) profileUpdates.name = parsedData.name; // Only update if not already set or prefer AI
-        if (parsedData.headline) profileUpdates.headline = parsedData.headline;
-        if (parsedData.skills && parsedData.skills.length > 0) profileUpdates.skills = parsedData.skills;
-        if (parsedData.experience) profileUpdates.experience = parsedData.experience; // Overwrite or append based on preference
-        if (parsedData.portfolioUrl) profileUpdates.portfolioUrl = parsedData.portfolioUrl;
-        if (parsedData.linkedinUrl) profileUpdates.linkedinUrl = parsedData.linkedinUrl;
-        // Could also update email if desired, but user.email is usually fixed post-registration.
+        } else {
+            const profileUpdates: Partial<typeof user> = {
+              resumeUrl: URL.createObjectURL(file),
+              resumeFileName: file.name,
+              parsedResumeText: parsedData.experience || `Parsed content for ${file.name}. Raw AI output might go here.`,
+            };
 
-        updateUser(profileUpdates);
-
-        toast({
-          title: 'Resume Processed',
-          description: `${file.name} has been uploaded and profile details updated based on its content.`,
-        });
-        setFile(null); // Reset file input
+            if (parsedData.name && !user.name) profileUpdates.name = parsedData.name; 
+            if (parsedData.headline) profileUpdates.headline = parsedData.headline;
+            if (parsedData.skills && parsedData.skills.length > 0) profileUpdates.skills = parsedData.skills;
+            if (parsedData.experience) profileUpdates.experience = parsedData.experience; 
+            if (parsedData.portfolioUrl) profileUpdates.portfolioUrl = parsedData.portfolioUrl;
+            if (parsedData.linkedinUrl) profileUpdates.linkedinUrl = parsedData.linkedinUrl;
+            
+            updateUser(profileUpdates);
+            toast({
+              title: 'Resume Processed',
+              description: `${file.name} has been uploaded and profile details updated.`,
+            });
+        }
+        setFile(null); 
       };
       reader.onerror = (error) => {
         console.error("File reading error:", error);
@@ -84,8 +103,6 @@ export function ResumeUploadForm() {
       resumeUrl: undefined,
       resumeFileName: undefined,
       parsedResumeText: undefined,
-      // Optionally clear AI-derived fields too, or leave them for manual editing
-      // skills: [], experience: '', headline: '' 
     });
     toast({
       title: 'Resume Removed',
@@ -98,7 +115,8 @@ export function ResumeUploadForm() {
       <CardHeader>
         <CardTitle className="text-xl font-headline">Manage Resume</CardTitle>
         <CardDescription>
-            Upload your resume (PDF, DOCX). Our AI will attempt to parse it and pre-fill your profile details to save you time.
+            Upload your resume (PDF, DOCX, TXT). Our AI will attempt to parse it. 
+            Plain text (.txt) files yield the best results for AI parsing.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -116,7 +134,7 @@ export function ResumeUploadForm() {
                 <Trash2 className="h-5 w-5 text-destructive" />
               </Button>
             </div>
-            {user.parsedResumeText && ( // Displaying the main experience/summary from parsed text for brevity
+            {user.parsedResumeText && ( 
               <div>
                 <Label className="font-semibold">Parsed Resume Summary (Preview):</Label>
                 <Textarea 
@@ -128,8 +146,8 @@ export function ResumeUploadForm() {
                 />
               </div>
             )}
-             <Button type="button" onClick={() => setFile(null)} disabled={isProcessing} variant="outline" className="w-full sm:w-auto">
-                <UploadCloud className="mr-2 h-4 w-4" /> Upload New Resume
+             <Button type="button" onClick={() => { setFile(null); /* Effectively, allow new upload by clearing current file if one was selected but not submitted */ if(user?.resumeFileName) { /* If a resume already exists, this button means "replace" */ } }} disabled={isProcessing} variant="outline" className="w-full sm:w-auto">
+                <UploadCloud className="mr-2 h-4 w-4" /> Upload New or Replace Resume
             </Button>
           </div>
         ) : (
@@ -146,9 +164,9 @@ export function ResumeUploadForm() {
                     <p className="mb-2 text-sm text-foreground/80">
                       <span className="font-semibold">Click to upload</span> or drag and drop
                     </p>
-                    <p className="text-xs text-muted-foreground">PDF, DOC, DOCX (MAX. 5MB)</p>
+                    <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, TXT (MAX. 5MB)</p>
                   </div>
-                  <Input id="resumeFile" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
+                  <Input id="resumeFile" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" />
                 </label>
               </div>
             </div>

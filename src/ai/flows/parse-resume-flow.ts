@@ -17,7 +17,7 @@ const ParseResumeInputSchema = z.object({
   resumeDataUri: z
     .string()
     .describe(
-      "A resume document (e.g., PDF, DOCX) as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A resume document (e.g., PDF, DOCX) as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'. For AI parsing with current model, plain text (.txt) is recommended for best results."
     ),
 });
 export type ParseResumeInput = z.infer<typeof ParseResumeInputSchema>;
@@ -28,11 +28,9 @@ const ParseResumeOutputSchema = z.object({
   email: z.string().email().optional().describe('The email address of the candidate.'),
   headline: z.string().optional().describe('A professional headline or summary for the candidate (e.g., "Senior Software Engineer").'),
   skills: z.array(z.string()).optional().describe('A list of skills extracted from the resume.'),
-  experience: z.string().optional().describe('A summary of the work experience, preferably in Markdown format if structure can be inferred.'),
+  experience: z.string().optional().describe('A summary of the work experience, preferably in Markdown format if structure can be inferred. May contain an error message if parsing failed due to file type.'),
   portfolioUrl: z.string().url().optional().describe('URL to a personal portfolio, if available.'),
   linkedinUrl: z.string().url().optional().describe('URL to a LinkedIn profile, if available.'),
-  // Add other fields from ParsedResumeData as needed, e.g., education
-  // education: z.array(z.object({ institution: z.string(), degree: z.string(), year: z.string().optional() })).optional().describe("Educational background."),
 }).describe('Structured information extracted from the resume.');
 
 export type ParseResumeOutput = z.infer<typeof ParseResumeOutputSchema>;
@@ -61,6 +59,7 @@ Extract the following details and structure them according to the output schema:
 
 Prioritize accuracy. If some information is not clearly available, omit the field rather than guessing.
 Ensure the output is valid JSON matching the provided schema.
+If the document content appears to be an error message about file processing, summarize that error.
 `,
 });
 
@@ -71,15 +70,36 @@ const resumeParserFlow = ai.defineFlow(
     outputSchema: ParseResumeOutputSchema,
   },
   async (input: ParseResumeInput): Promise<ParseResumeOutput> => {
-    // In a real scenario, you might add pre-processing or post-processing steps here.
-    // For example, converting DOCX to text before sending to LLM if the model handles images/PDFs better.
+    const [header] = input.resumeDataUri.split(',');
+    const mimeType = header.match(/:(.*?);/)?.[1];
+
+    const unsupportedMediaMimeTypes = [
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/msword', // .doc
+      'application/pdf', // .pdf
+      'application/vnd.oasis.opendocument.text', // .odt
+    ];
+
+    if (mimeType && unsupportedMediaMimeTypes.includes(mimeType)) {
+      console.warn(
+        `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration expecting image/video or plain text for the 'media' tag. ` +
+        `Consider extracting text content from such documents before sending for AI analysis.`
+      );
+      return {
+        name: undefined,
+        email: undefined,
+        headline: undefined,
+        skills: [],
+        experience: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
+        portfolioUrl: undefined,
+        linkedinUrl: undefined,
+      };
+    }
     
     const {output} = await resumeParserPrompt(input);
     
     if (!output) {
-        // Fallback to a default structure or mock data if parsing fails or returns nothing
-        // This is important for a better user experience than a hard error.
-        console.warn('Resume parsing returned no output, returning empty structure.');
+        console.warn('Resume parsing returned no output from AI, returning empty structure.');
         return {
             name: undefined,
             email: undefined,
