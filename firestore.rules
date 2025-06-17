@@ -1,0 +1,40 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default to denying all access to encourage explicit rule creation.
+    // For initial development, you might temporarily use:
+    // allow read, write: if request.auth != null;
+    // BUT THIS IS NOT SECURE FOR PRODUCTION.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users can read and write their own profile.
+    // Users can create their own profile document.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // Authenticated users can read jobs.
+    match /jobs/{jobId} {
+      allow read: if request.auth != null;
+      // Employers (identified by checking their role in their own user document) can create jobs.
+      // Note: Checking roles directly in security rules often requires custom claims or reading the user's profile doc.
+      // This rule assumes the 'postedById' field is correctly set to the employer's UID.
+      allow create: if request.auth != null && request.resource.data.postedById == request.auth.uid;
+      // Only the employer who posted the job can update or delete it.
+      allow update, delete: if request.auth != null && resource.data.postedById == request.auth.uid;
+    }
+
+    // Add more specific rules for other collections as your app grows.
+    // For example, for applications:
+    // match /applications/{applicationId} {
+    //   allow create: if request.auth != null; // Job seekers can create
+    //   allow read: if request.auth != null && (request.auth.uid == resource.data.applicantId || request.auth.uid == resource.data.employerId);
+    // }
+  }
+}
