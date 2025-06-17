@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Building, LogIn, UserPlus, FilePlus } from 'lucide-react';
+import { Building, LogIn, UserPlus, FilePlus, Brain } from 'lucide-react';
 import Image from 'next/image';
 
 export default function EmployerLandingPage() {
