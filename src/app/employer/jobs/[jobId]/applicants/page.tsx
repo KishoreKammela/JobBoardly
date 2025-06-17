@@ -7,14 +7,15 @@ import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 
-interface JobApplicantsPageProps {
-  params: {
-    jobId: string;
-  };
-}
+// interface JobApplicantsPageProps {
+//   params: { // No longer needed, params accessed via hook
+//     jobId: string;
+//   };
+// }
 
-export default function JobApplicantsPage({ params }: JobApplicantsPageProps) {
-  const { jobId } = params;
+export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/) { // params removed from props
+  const params = useParams(); // Use the hook
+  const jobId = params.jobId as string; // Extract jobId from hook's return value
   const { user, loading } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
@@ -47,3 +48,4 @@ export default function JobApplicantsPage({ params }: JobApplicantsPageProps) {
     </div>
   );
 }
+
