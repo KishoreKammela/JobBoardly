@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Briefcase, ExternalLink, Mail, Link as LinkIcon, CalendarDays } from 'lucide-react';
 import { Button } from '../ui/button';
+import Link from 'next/link'; // Import Link
 
 interface CandidateCardProps {
   candidate: UserProfile;
@@ -26,8 +27,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
           </Avatar>
           <div>
             <CardTitle className="text-xl font-headline leading-tight hover:text-primary transition-colors">
-              {/* In a real app, this might link to a detailed candidate profile page */}
-              {candidate.name}
+              <Link href={`/employer/candidates/${candidate.uid}`}>{candidate.name}</Link>
             </CardTitle>
             <CardDescription className="text-sm flex items-center gap-1.5 mt-1">
               <Briefcase className="h-3.5 w-3.5" /> {candidate.headline || "Job Seeker"}
@@ -49,7 +49,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
         {candidate.experience && (
             <div className="mt-2">
                 <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">Summary</h4>
-                <p className="text-sm text-foreground/90 line-clamp-3">{candidate.experience.split('\n')[0] || candidate.experience.substring(0,150)}</p>
+                <p className="text-sm text-foreground/90 line-clamp-3">{candidate.experience.split('\\n')[0] || candidate.experience.substring(0,150)}</p>
             </div>
         )}
         {candidate.skills && candidate.skills.length > 0 && (
@@ -65,7 +65,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
         )}
       </CardContent>
       <CardFooter className="flex flex-wrap justify-between items-center gap-2 pt-4 border-t">
-        <div className="flex flex-wrap gap-2"> {/* Group for Portfolio/LinkedIn - added flex-wrap */}
+        <div className="flex flex-wrap gap-2">
             {candidate.portfolioUrl && (
                 <Button variant="outline" size="sm" asChild>
                     <a href={candidate.portfolioUrl} target="_blank" rel="noopener noreferrer">
@@ -82,10 +82,13 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
                 </Button>
             )}
         </div>
-        <Button size="sm" className="w-full sm:w-auto flex-shrink-0"> {/* Ensure contact button doesn't excessively shrink */}
+        <Button size="sm" asChild className="w-full sm:w-auto flex-shrink-0">
+          <Link href={`mailto:${candidate.email || ''}`}>
             <Mail className="mr-1.5 h-4 w-4" /> Contact
+          </Link>
         </Button>
       </CardFooter>
     </Card>
   );
 }
+

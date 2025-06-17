@@ -1,7 +1,7 @@
 
 "use client";
 import Link from 'next/link';
-import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield } from 'lucide-react';
+import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield, Lightbulb } from 'lucide-react'; // Added Lightbulb
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,7 +19,8 @@ import type { UserRole } from '@/types';
 const navLinksBase = [
   { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'admin'], alwaysShowForSeekerOrPublic: true },
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
-  { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
+  { href: '/ai-match', label: 'AI Job Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
+  { href: '/employer/ai-candidate-match', label: 'AI Candidate Matcher', icon: <Lightbulb className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/admin', label: 'Admin Panel', icon: <Shield className="h-4 w-4" />, authRequired: true, roles: ['admin'] },
 ];
@@ -70,23 +71,19 @@ export function Navbar() {
   const registerLink = isEmployerPage ? "/employer/register" : "/auth/register";
 
   const getVisibleNavLinks = () => {
-    if (loading) return []; // No links while loading auth state
+    if (loading) return []; 
 
-    if (user) { // User is logged in
+    if (user) { 
       return navLinksBase.filter(link => {
-        // Case 1: Link is specifically for the user's role (authRequired implies it's not a public-only link)
-        if (link.authRequired && link.roles.includes(user.role)) {
+        if (link.roles.includes(user.role)) {
           return true;
         }
-        // Case 2: Link is a general "public" link (not authRequired) that should also be shown to logged-in seekers/admins
-        // This ensures "Find Jobs" is shown to logged-in job seekers.
         if (!link.authRequired && link.alwaysShowForSeekerOrPublic && (user.role === 'jobSeeker' || user.role === 'admin')) {
           return true;
         }
         return false;
       });
-    } else { // User is logged out
-      // Show only non-authRequired links marked as alwaysShowForSeekerOrPublic
+    } else { 
       return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
     }
   };

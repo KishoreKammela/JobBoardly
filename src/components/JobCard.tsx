@@ -75,7 +75,7 @@ export function JobCard({ job, showApplyButton = true }: JobCardProps) {
           />
           <div>
             <CardTitle className="text-lg font-headline leading-tight hover:text-primary transition-colors">
-              <a href={`/jobs/${job.id}`} target="_blank" rel="noopener noreferrer">{job.title}</a>
+              <Link href={`/jobs/${job.id}`}>{job.title}</Link>
             </CardTitle>
             <CardDescription className="text-sm flex items-center gap-1.5 mt-1">
               <Building className="h-3.5 w-3.5" /> {job.company}
@@ -110,7 +110,7 @@ export function JobCard({ job, showApplyButton = true }: JobCardProps) {
       <CardFooter className="flex flex-wrap justify-between items-center pt-4 border-t gap-2">
         <p className="text-xs text-muted-foreground whitespace-nowrap">Posted: {new Date(job.postedDate).toLocaleDateString()}</p>
         {showApplyButton && (
-            <div className="flex flex-wrap items-center gap-2"> {/* Added flex-wrap here */}
+            <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleSaveToggle} aria-pressed={isSaved} aria-label={isSaved ? "Unsave job" : "Save job"}>
                 <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-primary text-primary' : ''}`} />
             </Button>
@@ -129,3 +129,4 @@ export function JobCard({ job, showApplyButton = true }: JobCardProps) {
     </Card>
   );
 }
+
