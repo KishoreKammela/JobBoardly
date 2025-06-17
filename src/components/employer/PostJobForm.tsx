@@ -15,10 +15,12 @@ import { Loader2, UploadCloud, Sparkles, Send } from 'lucide-react';
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow'; 
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 export function PostJobForm() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   
   const initialJobData: Partial<Job> = {
     title: '',
@@ -30,7 +32,7 @@ export function PostJobForm() {
     salaryMin: undefined,
     salaryMax: undefined,
     isRemote: false,
-    postedById: user?.uid, // Corrected from user?.id
+    postedById: user?.uid,
     companyLogoUrl: user?.role === 'employer' ? user.avatarUrl : undefined,
     applicantIds: [],
   };
@@ -42,13 +44,12 @@ export function PostJobForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Update company name and logo if user data changes (e.g., after login)
     if (user && user.role === 'employer') {
       setJobData(prev => ({
         ...prev,
         company: user.name,
         companyLogoUrl: user.avatarUrl,
-        postedById: user.uid, // Corrected from user.id
+        postedById: user.uid,
       }));
     }
   }, [user]);
@@ -126,7 +127,7 @@ export function PostJobForm() {
         if (parsedData.skills && parsedData.skills.length > 0) {
             setSkillsInput(parsedData.skills.join(', '));
         }
-        setFile(null); // Clear file after parsing
+        setFile(null); 
       };
       reader.onerror = () => {
         toast({ title: "File Reading Error", description: "Could not read the selected file.", variant: "destructive" });
@@ -146,7 +147,7 @@ export function PostJobForm() {
         toast({ title: "Unauthorized", description: "Only employers can post jobs.", variant: "destructive" });
         return;
     }
-    if (!user.uid) { // Additional guard for user.uid
+    if (!user.uid) { 
         toast({ title: "Error", description: "User ID is missing. Cannot post job.", variant: "destructive" });
         return;
     }
@@ -158,15 +159,21 @@ export function PostJobForm() {
     
     try {
         const jobPayload: Omit<Job, 'id'> = {
-            ...initialJobData, 
-            ...jobData, 
-            company: user.name, 
+            title: jobData.title || '',
+            company: user.name || '',
+            location: jobData.location || '',
+            type: jobData.type || 'Full-time',
+            description: jobData.description || '',
+            postedDate: new Date().toISOString().split('T')[0],
+            isRemote: jobData.isRemote || false,
+            skills: jobData.skills || [],
+            salaryMin: jobData.salaryMin,
+            salaryMax: jobData.salaryMax,
             companyLogoUrl: user.avatarUrl,
-            postedById: user.uid, // Corrected from user.id
-            postedDate: new Date().toISOString().split('T')[0], 
+            postedById: user.uid,
+            applicantIds: [],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            applicantIds: [], 
         };
 
         const jobsCollectionRef = collection(db, "jobs");
@@ -177,7 +184,7 @@ export function PostJobForm() {
           description: `${jobData.title} has been successfully posted.`,
         });
         
-        setJobData({ // Reset form, ensuring new initialJobData correctly uses user.uid if user is available
+        setJobData({ 
             title: '',
             company: user.name,
             location: '',
@@ -193,6 +200,7 @@ export function PostJobForm() {
         });
         setSkillsInput('');
         setFile(null);
+        router.push('/employer/posted-jobs'); 
 
     } catch (error) {
         console.error("Error posting job:", error);
