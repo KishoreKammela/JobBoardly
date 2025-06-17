@@ -1,6 +1,115 @@
 
 import type { Job, UserProfile, UserSettings } from '@/types';
 
+export const mockEmployerProfiles: UserProfile[] = [
+  {
+    id: 'employer1',
+    role: 'employer',
+    name: 'Innovatech Solutions',
+    email: 'hr@innovatech.com',
+    avatarUrl: 'https://placehold.co/100x100.png?text=IS',
+    companyWebsite: 'https://innovatech.com',
+    companyDescription: 'Innovatech Solutions is a leading provider of cutting-edge technology solutions, specializing in AI and cloud computing. We foster a collaborative and innovative work environment.',
+  },
+  {
+    id: 'employer2',
+    role: 'employer',
+    name: 'AI Core Inc.',
+    email: 'careers@aicore.com',
+    avatarUrl: 'https://placehold.co/100x100.png?text=AI',
+    companyWebsite: 'https://aicore.com',
+    companyDescription: 'AI Core Inc. is at the forefront of artificial intelligence research and development, building platforms that power the next generation of smart applications.',
+  }
+];
+
+export const mockJobSeekerProfiles: UserProfile[] = [
+  {
+    id: 'user123',
+    role: 'jobSeeker',
+    name: 'Jane Doe',
+    email: 'jane.doe@example.com',
+    avatarUrl: 'https://placehold.co/100x100.png?text=JD',
+    headline: 'Experienced Full Stack Developer',
+    skills: ['JavaScript', 'React', 'Node.js', 'Project Management', 'TypeScript', 'Next.js'],
+    experience: `
+### Senior Software Engineer at Tech Solutions Inc. (2020 - Present)
+- Led development of key features for a SaaS product using React, Node.js, and TypeScript.
+- Mentored junior engineers and improved team coding standards.
+- Contributed to architectural decisions and CI/CD pipeline improvements.
+
+### Software Engineer at Web Creations LLC (2017 - 2020)
+- Developed and maintained client websites using WordPress and custom PHP.
+- Collaborated with designers to implement responsive and user-friendly interfaces.
+  `,
+    education: "B.S. in Computer Science - University of California, Berkeley",
+    availability: "2 Weeks Notice",
+    portfolioUrl: 'https://jane.dev',
+    linkedinUrl: 'https://linkedin.com/in/janedoe',
+    preferredLocations: ['San Francisco, CA', 'Remote'],
+    jobSearchStatus: 'activelyLooking',
+    desiredSalary: 140000,
+    resumeUrl: '#', 
+    resumeFileName: 'JaneDoe_Resume.pdf',
+    parsedResumeText: 'Skills: JavaScript, React, Node.js, Project Management, TypeScript, Next.js. Experience: Senior Software Engineer at Tech Solutions Inc. specializing in full-stack development...',
+    appliedJobIds: ['1'], // Jane has applied to job '1'
+  },
+  {
+    id: 'user456',
+    role: 'jobSeeker',
+    name: 'John Smith',
+    email: 'john.smith@example.com',
+    avatarUrl: 'https://placehold.co/100x100.png?text=JS',
+    headline: 'Creative UX Designer & Researcher',
+    skills: ['UX Design', 'Figma', 'User Research', 'Prototyping', 'Adobe XD', 'Wireframing'],
+    experience: `
+### Lead UX Designer at DesignWorks (2019 - Present)
+- Spearheaded user experience strategy for flagship mobile and web applications.
+- Conducted extensive user research, usability testing, and persona development.
+- Managed a team of 3 junior designers.
+
+### UX/UI Designer at StartupX (2016 - 2019)
+- Designed interfaces for early-stage products, iterating based on user feedback.
+- Created wireframes, mockups, and interactive prototypes.
+  `,
+    education: "M.A. in Human-Computer Interaction - Stanford University",
+    availability: "Immediate",
+    portfolioUrl: 'https://johnsmith.design',
+    linkedinUrl: 'https://linkedin.com/in/johnsmithux',
+    preferredLocations: ['New York, NY', 'Remote'],
+    jobSearchStatus: 'openToOpportunities',
+    desiredSalary: 120000,
+    appliedJobIds: [],
+  },
+  {
+    id: 'user789',
+    role: 'jobSeeker',
+    name: 'Alice Brown',
+    email: 'alice.brown@example.com',
+    avatarUrl: 'https://placehold.co/100x100.png?text=AB',
+    headline: 'Data Scientist | Machine Learning Enthusiast',
+    skills: ['Python', 'R', 'Machine Learning', 'Statistics', 'SQL', 'TensorFlow', 'PyTorch'],
+    experience: `
+### Data Scientist at DataDriven Corp (2021 - Present)
+- Developed and deployed machine learning models for predictive analytics.
+- Performed data mining and statistical analysis to uncover business insights.
+- Communicated complex findings to non-technical stakeholders.
+    `,
+    education: "Ph.D. in Data Science - MIT",
+    availability: "1 Month Notice",
+    portfolioUrl: 'https://alicebrown.data',
+    linkedinUrl: 'https://linkedin.com/in/alicebrowndata',
+    preferredLocations: ['Boston, MA', 'Remote'],
+    jobSearchStatus: 'activelyLooking',
+    desiredSalary: 160000,
+    appliedJobIds: ['5'],
+  }
+];
+
+// For direct use when needed, or for AuthContext's initial login.
+export const mockUserProfile: UserProfile = mockJobSeekerProfiles[0]; 
+export const mockEmployerProfile: UserProfile = mockEmployerProfiles[0];
+
+
 export const mockJobs: Job[] = [
   {
     id: '1',
@@ -14,8 +123,9 @@ export const mockJobs: Job[] = [
     skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
     salaryMin: 120000,
     salaryMax: 160000,
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=IS',
-    postedById: 'employer1',
+    companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
+    postedById: mockEmployerProfiles[0].id,
+    applicantIds: [mockJobSeekerProfiles[0].id, mockJobSeekerProfiles[2].id], // Jane and Alice applied
   },
   {
     id: '2',
@@ -29,26 +139,28 @@ export const mockJobs: Job[] = [
     skills: ['Product Management', 'AI/ML', 'Agile', 'Roadmapping'],
     salaryMin: 150000,
     salaryMax: 190000,
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=AI',
-    postedById: 'employer2',
+    companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
+    postedById: mockEmployerProfiles[1].id,
+    applicantIds: [mockJobSeekerProfiles[1].id], // John applied
   },
   {
     id: '3',
     title: 'UX Designer',
-    company: 'Creative Visions',
+    company: 'Innovatech Solutions', // Changed company to match an employer
     location: 'Remote',
     type: 'Contract',
     description: 'Seeking a talented UX Designer to create intuitive and engaging user experiences for various web and mobile applications.',
     postedDate: '2024-07-22',
     isRemote: true,
     skills: ['UX Design', 'Figma', 'User Research', 'Prototyping'],
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=CV',
-    postedById: 'employer1',
+    companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
+    postedById: mockEmployerProfiles[0].id,
+    applicantIds: [],
   },
   {
     id: '4',
     title: 'DevOps Engineer',
-    company: 'CloudNetics',
+    company: 'AI Core Inc.', // Changed company
     location: 'Austin, TX',
     type: 'Full-time',
     description: 'Implement and manage CI/CD pipelines, monitor infrastructure, and ensure high availability of our cloud services. AWS and Kubernetes expertise is a must.',
@@ -57,13 +169,14 @@ export const mockJobs: Job[] = [
     skills: ['AWS', 'Kubernetes', 'Docker', 'CI/CD', 'Terraform'],
     salaryMin: 130000,
     salaryMax: 170000,
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=CN',
-    postedById: 'employer2',
+    companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
+    postedById: mockEmployerProfiles[1].id,
+    applicantIds: [mockJobSeekerProfiles[0].id],
   },
     {
     id: '5',
     title: 'Data Scientist',
-    company: 'Data Insights Co.',
+    company: 'Innovatech Solutions',
     location: 'Boston, MA',
     type: 'Full-time',
     description: 'Analyze large datasets to extract meaningful insights and build predictive models. Proficiency in Python, R, and machine learning algorithms.',
@@ -72,61 +185,25 @@ export const mockJobs: Job[] = [
     skills: ['Python', 'R', 'Machine Learning', 'Statistics', 'SQL'],
     salaryMin: 110000,
     salaryMax: 150000,
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=DI',
-    postedById: 'employer1',
+    companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
+    postedById: mockEmployerProfiles[0].id,
+    applicantIds: [mockJobSeekerProfiles[2].id],
   },
   {
     id: '6',
     title: 'Full Stack Developer',
-    company: 'Web Wizards LLC',
+    company: 'AI Core Inc.',
     location: 'Remote',
     type: 'Part-time',
     description: 'Develop and maintain web applications using Node.js, Express, React, and PostgreSQL. Opportunity to work on diverse projects.',
     postedDate: '2024-07-23',
     isRemote: true,
     skills: ['Node.js', 'Express', 'React', 'PostgreSQL', 'REST APIs'],
-    companyLogoUrl: 'https://placehold.co/100x100.png?text=WW',
-    postedById: 'employer2',
+    companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
+    postedById: mockEmployerProfiles[1].id,
+    applicantIds: [],
   },
 ];
-
-export const mockUserProfile: UserProfile = {
-  id: 'user123',
-  role: 'jobSeeker',
-  name: 'Jane Doe',
-  email: 'jane.doe@example.com',
-  avatarUrl: 'https://placehold.co/100x100.png?text=JD',
-  headline: 'Experienced Full Stack Developer',
-  skills: ['JavaScript', 'React', 'Node.js', 'Project Management', 'TypeScript', 'Next.js'],
-  experience: `
-### Senior Software Engineer at Tech Solutions Inc. (2020 - Present)
-- Led development of key features for a SaaS product using React, Node.js, and TypeScript.
-- Mentored junior engineers and improved team coding standards.
-- Contributed to architectural decisions and CI/CD pipeline improvements.
-
-### Software Engineer at Web Creations LLC (2017 - 2020)
-- Developed and maintained client websites using WordPress and custom PHP.
-- Collaborated with designers to implement responsive and user-friendly interfaces.
-  `,
-  portfolioUrl: 'https://jane.dev',
-  linkedinUrl: 'https://linkedin.com/in/janedoe',
-  preferredLocations: ['San Francisco, CA', 'Remote'],
-  jobSearchStatus: 'activelyLooking',
-  desiredSalary: 140000,
-  resumeUrl: '#', // This would be a real URL in a live app
-  resumeFileName: 'JaneDoe_Resume.pdf',
-  parsedResumeText: 'Skills: JavaScript, React, Node.js, Project Management, TypeScript, Next.js. Experience: Senior Software Engineer at Tech Solutions Inc. specializing in full-stack development...'
-};
-
-export const mockEmployerProfile: UserProfile = {
-  id: 'employer123',
-  role: 'employer',
-  name: 'Innovatech Solutions',
-  email: 'hr@innovatech.com',
-  avatarUrl: 'https://placehold.co/100x100.png?text=IS',
-  companyWebsite: 'https://innovatech.com',
-  companyDescription: 'Innovatech Solutions is a leading provider of cutting-edge technology solutions, specializing in AI and cloud computing. We foster a collaborative and innovative work environment.',
-};
 
 
 export const defaultUserSettings: UserSettings = {

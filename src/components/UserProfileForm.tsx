@@ -22,6 +22,8 @@ export function UserProfileForm() {
     headline: '',
     skills: [],
     experience: '',
+    education: '',
+    availability: 'Flexible',
     portfolioUrl: '',
     linkedinUrl: '',
     preferredLocations: [],
@@ -41,22 +43,23 @@ export function UserProfileForm() {
         headline: user.headline || '',
         skills: user.skills || [],
         experience: user.experience || '',
+        education: user.education || '',
+        availability: user.availability || 'Flexible',
         portfolioUrl: user.portfolioUrl || '',
         linkedinUrl: user.linkedinUrl || '',
         preferredLocations: user.preferredLocations || [],
         jobSearchStatus: user.jobSearchStatus || 'activelyLooking',
         desiredSalary: user.desiredSalary,
-        // For employer specific fields, if this form were to be reused
         companyName: user.role === 'employer' ? user.name : undefined,
         companyWebsite: user.role === 'employer' ? user.companyWebsite : undefined,
         companyDescription: user.role === 'employer' ? user.companyDescription : undefined,
-
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
     } else {
+       // Reset form if user logs out or is not available
       setFormData({
-        name: '', email: '', avatarUrl: '', headline: '', skills: [], experience: '',
+        name: '', email: '', avatarUrl: '', headline: '', skills: [], experience: '', education: '', availability: 'Flexible',
         portfolioUrl: '', linkedinUrl: '', preferredLocations: [], jobSearchStatus: 'activelyLooking', desiredSalary: undefined,
       });
       setSkillsInput('');
@@ -90,9 +93,8 @@ export function UserProfileForm() {
     if (!user) return;
     setIsLoading(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     
-    // Construct the data to update, ensuring only relevant fields for the role are sent
     const updatePayload: Partial<UserProfile> = {
         name: formData.name,
         avatarUrl: formData.avatarUrl,
@@ -103,6 +105,8 @@ export function UserProfileForm() {
             headline: formData.headline,
             skills: formData.skills,
             experience: formData.experience,
+            education: formData.education,
+            availability: formData.availability,
             portfolioUrl: formData.portfolioUrl,
             linkedinUrl: formData.linkedinUrl,
             preferredLocations: formData.preferredLocations,
@@ -110,7 +114,6 @@ export function UserProfileForm() {
             desiredSalary: formData.desiredSalary,
         });
     } else if (user.role === 'employer') {
-        // name is already companyName for employer from formData
         Object.assign(updatePayload, {
             companyWebsite: formData.companyWebsite,
             companyDescription: formData.companyDescription,
@@ -187,6 +190,17 @@ export function UserProfileForm() {
                   placeholder="Describe your professional experience..."
                 />
               </div>
+              <div>
+                <Label htmlFor="education">Education (Markdown supported)</Label>
+                <Textarea
+                  id="education"
+                  name="education"
+                  value={formData.education || ''}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="e.g., B.S. Computer Science - XYZ University"
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="portfolioUrl">Portfolio URL</Label>
@@ -226,10 +240,24 @@ export function UserProfileForm() {
                   <Input id="desiredSalary" name="desiredSalary" type="number" placeholder="e.g., 90000" value={formData.desiredSalary || ''} onChange={handleChange} />
                 </div>
               </div>
+              <div>
+                  <Label htmlFor="availability">Availability</Label>
+                  <Select value={formData.availability || 'Flexible'} onValueChange={(value) => handleSelectChange('availability', value)}>
+                    <SelectTrigger id="availability">
+                      <SelectValue placeholder="Select availability" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Immediate">Immediate</SelectItem>
+                      <SelectItem value="2 Weeks Notice">2 Weeks Notice</SelectItem>
+                      <SelectItem value="1 Month Notice">1 Month Notice</SelectItem>
+                      <SelectItem value="Flexible">Flexible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
             </>
           )}
 
-          {!isJobSeeker && ( // Employer specific fields
+          {!isJobSeeker && ( 
             <>
               <div>
                 <Label htmlFor="companyWebsite">Company Website</Label>

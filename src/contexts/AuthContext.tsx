@@ -8,7 +8,9 @@ interface AuthContextType {
   login: (userData: UserProfile) => void;
   logout: () => void;
   updateUser: (updatedData: Partial<UserProfile>) => void;
-  setUserRole: (role: UserRole) => void; // Allow role to be set, e.g. after registration
+  setUserRole: (role: UserRole) => void;
+  applyForJob: (jobId: string) => void;
+  hasAppliedForJob: (jobId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,8 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userData: UserProfile) => {
-    setUser(userData);
-    localStorage.setItem('jobboardly-user', JSON.stringify(userData));
+    const userWithDefaults: UserProfile = {
+      ...userData,
+      appliedJobIds: userData.appliedJobIds || [],
+    };
+    setUser(userWithDefaults);
+    localStorage.setItem('jobboardly-user', JSON.stringify(userWithDefaults));
   };
 
   const logout = () => {
@@ -50,8 +56,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const applyForJob = (jobId: string) => {
+    if (user && user.role === 'jobSeeker') {
+      const currentAppliedJobIds = user.appliedJobIds || [];
+      if (!currentAppliedJobIds.includes(jobId)) {
+        updateUser({ appliedJobIds: [...currentAppliedJobIds, jobId] });
+      }
+    }
+  };
+
+  const hasAppliedForJob = (jobId: string): boolean => {
+    if (user && user.role === 'jobSeeker' && user.appliedJobIds) {
+      return user.appliedJobIds.includes(jobId);
+    }
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser, setUserRole }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, setUserRole, applyForJob, hasAppliedForJob }}>
       {children}
     </AuthContext.Provider>
   );

@@ -15,6 +15,7 @@ export interface Job {
   salaryMax?: number;
   companyLogoUrl?: string; // Could be derived from employer profile
   postedById?: string; // User ID of the employer
+  applicantIds?: string[]; // IDs of users who applied
 }
 
 export interface UserProfile {
@@ -28,6 +29,8 @@ export interface UserProfile {
   headline?: string;
   skills?: string[];
   experience?: string; // Markdown supported
+  education?: string; // e.g., "B.S. Computer Science", Markdown supported
+  availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[]; // Could be a list of city names or regions
@@ -36,6 +39,7 @@ export interface UserProfile {
   resumeUrl?: string;
   resumeFileName?: string;
   parsedResumeText?: string; // Full text extracted from resume for reference or AI processing
+  appliedJobIds?: string[]; // IDs of jobs the seeker applied to
 
   // Employer specific fields
   companyWebsite?: string;
@@ -62,7 +66,7 @@ export interface ParsedResumeData {
   experience?: string; // Extracted experience text. May contain an error message if parsing failed due to file type.
   portfolioUrl?: string;
   linkedinUrl?: string;
-  // Add other fields as needed, e.g., education
+  education?: string;
 }
 
 // Output from AI job description parsing
@@ -74,7 +78,6 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
-  // Add other fields as needed
 }
 
 export interface AIPoweredJobMatchingOutput {
