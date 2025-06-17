@@ -13,15 +13,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useRouter, usePathname } from 'next/navigation'; // Added usePathname
-import type { UserRole } from '@/types'; // Import UserRole
+import { useRouter, usePathname } from 'next/navigation'; 
+import type { UserRole } from '@/types'; 
 
-const navLinks = [
-  { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer', 'admin'], alwaysShow: true },
-  { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
-  // Employer specific main nav links
-  { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
+const navLinksBase = [
+  { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'admin'], alwaysShowForSeekerOrPublic: true },
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
+  { href: '/ai-match', label: 'AI Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
+  { href: '/employer/post-job', label: 'Post Job', icon: <FilePlus className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/admin', label: 'Admin Panel', icon: <Shield className="h-4 w-4" />, authRequired: true, roles: ['admin'] },
 ];
 
@@ -46,7 +45,7 @@ const userDropdownLinks = {
 export function Navbar() {
   const { user, logout, loading } = useAuth(); 
   const router = useRouter();
-  const pathname = usePathname(); // Get current path
+  const pathname = usePathname(); 
 
   const handleLogout = async () => {
     await logout();
@@ -66,10 +65,20 @@ export function Navbar() {
     return "";
   }
 
-  // Determine if current page is employer-specific for contextual login/signup links
   const isEmployerPage = pathname.startsWith('/employer');
   const loginLink = isEmployerPage ? "/employer/login" : "/auth/login";
   const registerLink = isEmployerPage ? "/employer/register" : "/auth/register";
+
+  const getVisibleNavLinks = () => {
+    if (loading) return []; // Don't show role-specific links while loading auth state
+    if (user) {
+      return navLinksBase.filter(link => link.roles.includes(user.role) && link.authRequired);
+    }
+    // For logged-out users, show only non-authRequired links targeted at job seekers or public
+    return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
+  };
+  const visibleNavLinks = getVisibleNavLinks();
+
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-50">
@@ -79,28 +88,13 @@ export function Navbar() {
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
         <nav className="flex items-center gap-3 md:gap-4">
-          {navLinks.map((link) => {
-            let display = false;
-            if (link.alwaysShow) {
-                display = true;
-            } else if (user && link.authRequired && link.roles.includes(user.role)) {
-                display = true;
-            }
-            
-            // Special handling for "For Employers" link to hide if user is already an employer or on employer pages
-            if (link.href === '/employer' && (user?.role === 'employer' || isEmployerPage)) {
-                 // display = false; // Decided to keep "For Employers" link always if not logged in
-            }
-
-
-            return display && (
+          {visibleNavLinks.map((link) => (
               <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
                 {link.icon}
                 <span className="hidden sm:inline">{link.label}</span>
               </Link>
-            )
-          })}
-           {!user && !loading && !isEmployerPage && ( // Show "For Employers" only if not on employer pages and not logged in
+          ))}
+           {!user && !loading && !isEmployerPage && (
              <Link href="/employer" className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
                 <Building className="h-4 w-4" />
                 <span className="hidden sm:inline">For Employers</span>
