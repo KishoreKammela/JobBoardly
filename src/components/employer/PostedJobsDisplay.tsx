@@ -20,20 +20,18 @@ export function PostedJobsDisplay() {
 
   useEffect(() => {
     const fetchPostedJobs = async () => {
-      if (!user || user.role !== 'employer' || !user.uid) { // Added check for user.uid
+      if (!user || user.role !== 'employer' || !user.uid) {
         setIsLoading(false);
         setPostedJobs([]);
-        if (user && user.role !== 'employer') {
-            // This case is handled by the main return block, but good to be explicit
-        } else if (!user) {
-            // User not logged in, also handled by main return
-        }
+        // No specific error message here, as access denial is handled by the main return block
         return;
       }
       setIsLoading(true);
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
+        // Firestore query: Requires a composite index on postedById (asc) and createdAt (desc)
+        // You can create this index via the link provided in the Firebase console error message.
         const q = query(jobsCollectionRef, where("postedById", "==", user.uid), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
@@ -47,16 +45,16 @@ export function PostedJobsDisplay() {
             } as Job;
         });
         setPostedJobs(jobsData);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Error fetching posted jobs:", e);
-        setError("Failed to load your posted jobs. Please try again.");
+        setError(e.message || "Failed to load your posted jobs. Please try again.");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPostedJobs();
-  }, [user]); // useEffect will re-run if the user object changes
+  }, [user]); 
 
   if (isLoading) {
     return (
@@ -71,8 +69,12 @@ export function PostedJobsDisplay() {
     return (
         <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertTitle>Error Loading Jobs</AlertTitle>
+            <AlertDescription>
+                {error}
+                {error.includes("firestore/failed-precondition") && error.includes("index")}
+                 <p className="mt-2">This query requires a composite index in Firestore. Please check the Firebase console or the error logs for a link to create it.</p>
+            </AlertDescription>
         </Alert>
     );
   }
@@ -116,7 +118,7 @@ export function PostedJobsDisplay() {
                 <div>
                     <CardTitle className="text-xl font-headline">{job.title}</CardTitle>
                     <CardDescription>
-                        Posted on: {job.postedDate ? (job.postedDate instanceof Timestamp ? job.postedDate.toDate().toLocaleDateString() : job.postedDate.toString().split('T')[0]) : 'N/A'} - {job.location} ({job.type})
+                        Posted on: {job.postedDate ? (typeof job.postedDate === 'string' ? job.postedDate.split('T')[0] : (job.postedDate as Timestamp).toDate().toLocaleDateString()) : 'N/A'} - {job.location} ({job.type})
                     </CardDescription>
                 </div>
                  <Badge variant={ (job.applicantIds?.length || 0) > 0 ? "default" : "secondary"}>
