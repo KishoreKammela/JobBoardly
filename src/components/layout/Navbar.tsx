@@ -70,12 +70,25 @@ export function Navbar() {
   const registerLink = isEmployerPage ? "/employer/register" : "/auth/register";
 
   const getVisibleNavLinks = () => {
-    if (loading) return []; // Don't show role-specific links while loading auth state
-    if (user) {
-      return navLinksBase.filter(link => link.roles.includes(user.role) && link.authRequired);
+    if (loading) return []; // No links while loading auth state
+
+    if (user) { // User is logged in
+      return navLinksBase.filter(link => {
+        // Case 1: Link is specifically for the user's role (authRequired implies it's not a public-only link)
+        if (link.authRequired && link.roles.includes(user.role)) {
+          return true;
+        }
+        // Case 2: Link is a general "public" link (not authRequired) that should also be shown to logged-in seekers/admins
+        // This ensures "Find Jobs" is shown to logged-in job seekers.
+        if (!link.authRequired && link.alwaysShowForSeekerOrPublic && (user.role === 'jobSeeker' || user.role === 'admin')) {
+          return true;
+        }
+        return false;
+      });
+    } else { // User is logged out
+      // Show only non-authRequired links marked as alwaysShowForSeekerOrPublic
+      return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
     }
-    // For logged-out users, show only non-authRequired links targeted at job seekers or public
-    return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
   };
   const visibleNavLinks = getVisibleNavLinks();
 
