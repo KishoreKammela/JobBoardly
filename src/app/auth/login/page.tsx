@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { mockUserProfile } from '@/lib/mockData'; // For demo
 import { Loader2, LogIn } from 'lucide-react';
+import type { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginUser } = useAuth(); // Changed from login
   const router = useRouter();
   const { toast } = useToast();
 
@@ -24,16 +24,20 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // For demo, "user@example.com" is a job seeker
-    if (email === "user@example.com" && password === "password") {
-      login({...mockUserProfile, email: email, role: 'jobSeeker' }); 
-      toast({ title: 'Login Successful', description: `Welcome back, ${mockUserProfile.name}!` });
-      router.push('/profile');
-    } else {
-       toast({ title: 'Login Failed', description: 'Invalid email or password.', variant: 'destructive' });
+    try {
+      const fbUser = await loginUser(email, password);
+      // AuthContext's onAuthStateChanged will fetch profile and redirect or update UI
+      toast({ title: 'Login Successful', description: `Welcome back!` }); // User name will be available once profile is loaded
+      // Redirection can be handled by AuthContext or a protected route wrapper
+      router.push('/profile'); // Or based on role
+    } catch (error) {
+       const firebaseError = error as FirebaseError;
+       console.error("Login error:", firebaseError.message);
+       let friendlyMessage = "Login failed. Please check your credentials.";
+       if (firebaseError.code === "auth/user-not-found" || firebaseError.code === "auth/wrong-password" || firebaseError.code === "auth/invalid-credential") {
+        friendlyMessage = "Invalid email or password.";
+       }
+       toast({ title: 'Login Failed', description: friendlyMessage, variant: 'destructive' });
     }
     setIsLoading(false);
   };

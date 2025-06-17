@@ -1,29 +1,35 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type UserRole = 'jobSeeker' | 'employer';
 
 export interface Job {
-  id: string;
+  id: string; // Will be Firestore document ID
   title: string;
   company: string; // For display; actual company details might come from employer profile
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string;
+  postedDate: string; // Or Timestamp for Firestore
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string; // Could be derived from employer profile
-  postedById?: string; // User ID of the employer
-  applicantIds?: string[]; // IDs of users who applied
+  companyLogoUrl?: string; 
+  postedById?: string; // User ID (uid) of the employer
+  applicantIds?: string[]; // UIDs of users who applied
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface UserProfile {
-  id: string;
+  uid: string; // Firebase Auth User ID
   role: UserRole;
-  email: string;
+  email: string | null; // From Firebase Auth, can be null
   name: string; // Full name for jobSeeker, Company Name for employer
   avatarUrl?: string; // Profile picture for jobSeeker, Company Logo for employer
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 
   // Job Seeker specific fields
   headline?: string;
@@ -33,17 +39,17 @@ export interface UserProfile {
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
-  preferredLocations?: string[]; // Could be a list of city names or regions
+  preferredLocations?: string[]; 
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  desiredSalary?: number; // Annual salary expectation
-  resumeUrl?: string;
+  desiredSalary?: number; 
+  resumeUrl?: string; // URL from Firebase Storage
   resumeFileName?: string;
-  parsedResumeText?: string; // Full text extracted from resume for reference or AI processing
-  appliedJobIds?: string[]; // IDs of jobs the seeker applied to
+  parsedResumeText?: string; 
+  appliedJobIds?: string[]; // IDs of jobs (Firestore doc IDs) the seeker applied to
 
   // Employer specific fields
   companyWebsite?: string;
-  companyDescription?: string; // Markdown supported, brief about the company
+  companyDescription?: string; // Markdown supported
 }
 
 export interface UserSettings {
@@ -57,22 +63,20 @@ export interface UserSettings {
   searchHistory: string[];
 }
 
-// Output from AI resume parsing
 export interface ParsedResumeData {
   name?: string;
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; // Extracted experience text. May contain an error message if parsing failed due to file type.
+  experience?: string; 
   portfolioUrl?: string;
   linkedinUrl?: string;
   education?: string;
 }
 
-// Output from AI job description parsing
 export interface ParsedJobData {
   title?: string;
-  description?: string; // May contain an error message if parsing failed due to file type.
+  description?: string; 
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';

@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { mockEmployerProfile } from '@/lib/mockData'; // For demo
 import { Loader2, LogIn } from 'lucide-react';
+import type { FirebaseError } from 'firebase/app';
 
 export function EmployerLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginUser } = useAuth(); // Changed from login
   const router = useRouter();
   const { toast } = useToast();
 
@@ -24,16 +24,19 @@ export function EmployerLoginForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // For demo, "employer@example.com" is an employer
-    if (email === "employer@example.com" && password === "password") {
-      login({...mockEmployerProfile, email: email }); 
-      toast({ title: 'Login Successful', description: `Welcome back, ${mockEmployerProfile.name}!` });
-      router.push('/employer/post-job'); // Redirect to dashboard or post job page
-    } else {
-       toast({ title: 'Login Failed', description: 'Invalid email or password.', variant: 'destructive' });
+    try {
+      await loginUser(email, password);
+      // AuthContext's onAuthStateChanged will fetch profile and redirect or update UI
+      toast({ title: 'Login Successful', description: `Welcome back!` });
+      router.push('/employer/post-job'); 
+    } catch (error) {
+       const firebaseError = error as FirebaseError;
+       console.error("Login error:", firebaseError.message);
+       let friendlyMessage = "Login failed. Please check your credentials.";
+        if (firebaseError.code === "auth/user-not-found" || firebaseError.code === "auth/wrong-password" || firebaseError.code === "auth/invalid-credential") {
+         friendlyMessage = "Invalid email or password.";
+       }
+       toast({ title: 'Login Failed', description: friendlyMessage, variant: 'destructive' });
     }
     setIsLoading(false);
   };

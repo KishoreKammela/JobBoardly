@@ -13,11 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export function UserProfileForm() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUserProfile, loading: authLoading } = useAuth(); // Using updateUserProfile
   const { toast } = useToast();
-  const [formData, setFormData] = useState<Partial<UserProfile>>({
+  
+  const initialFormData: Partial<UserProfile> = {
     name: '',
-    email: '',
+    email: '', // email is not directly editable here usually
     avatarUrl: '',
     headline: '',
     skills: [],
@@ -29,7 +30,12 @@ export function UserProfileForm() {
     preferredLocations: [],
     jobSearchStatus: 'activelyLooking',
     desiredSalary: undefined,
-  });
+    companyName: '', // For employer
+    companyWebsite: '', // For employer
+    companyDescription: '', // For employer
+  };
+
+  const [formData, setFormData] = useState<Partial<UserProfile>>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
@@ -50,18 +56,15 @@ export function UserProfileForm() {
         preferredLocations: user.preferredLocations || [],
         jobSearchStatus: user.jobSearchStatus || 'activelyLooking',
         desiredSalary: user.desiredSalary,
-        companyName: user.role === 'employer' ? user.name : undefined,
+        // For employer, name is companyName from user object
+        companyName: user.role === 'employer' ? user.name : undefined, 
         companyWebsite: user.role === 'employer' ? user.companyWebsite : undefined,
         companyDescription: user.role === 'employer' ? user.companyDescription : undefined,
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
     } else {
-       // Reset form if user logs out or is not available
-      setFormData({
-        name: '', email: '', avatarUrl: '', headline: '', skills: [], experience: '', education: '', availability: 'Flexible',
-        portfolioUrl: '', linkedinUrl: '', preferredLocations: [], jobSearchStatus: 'activelyLooking', desiredSalary: undefined,
-      });
+      setFormData(initialFormData);
       setSkillsInput('');
       setLocationsInput('');
     }
@@ -92,42 +95,60 @@ export function UserProfileForm() {
     e.preventDefault();
     if (!user) return;
     setIsLoading(true);
-
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
     
+    // Prepare only fields that are relevant to the user's role and defined in formData
     const updatePayload: Partial<UserProfile> = {
-        name: formData.name,
-        avatarUrl: formData.avatarUrl,
+      name: formData.name, // This will be full name for seeker, company name for employer
+      avatarUrl: formData.avatarUrl,
     };
 
     if (user.role === 'jobSeeker') {
-        Object.assign(updatePayload, {
-            headline: formData.headline,
-            skills: formData.skills,
-            experience: formData.experience,
-            education: formData.education,
-            availability: formData.availability,
-            portfolioUrl: formData.portfolioUrl,
-            linkedinUrl: formData.linkedinUrl,
-            preferredLocations: formData.preferredLocations,
-            jobSearchStatus: formData.jobSearchStatus,
-            desiredSalary: formData.desiredSalary,
-        });
+      updatePayload.headline = formData.headline;
+      updatePayload.skills = formData.skills;
+      updatePayload.experience = formData.experience;
+      updatePayload.education = formData.education;
+      updatePayload.availability = formData.availability;
+      updatePayload.portfolioUrl = formData.portfolioUrl;
+      updatePayload.linkedinUrl = formData.linkedinUrl;
+      updatePayload.preferredLocations = formData.preferredLocations;
+      updatePayload.jobSearchStatus = formData.jobSearchStatus;
+      updatePayload.desiredSalary = formData.desiredSalary;
     } else if (user.role === 'employer') {
-        Object.assign(updatePayload, {
-            companyWebsite: formData.companyWebsite,
-            companyDescription: formData.companyDescription,
+      // 'name' for employer is company name, already included
+      updatePayload.companyWebsite = formData.companyWebsite;
+      updatePayload.companyDescription = formData.companyDescription;
+    }
+    
+    try {
+        await updateUserProfile(updatePayload);
+        toast({
+          title: 'Profile Updated',
+          description: 'Your profile information has been successfully updated.',
+        });
+    } catch (error) {
+        console.error("Profile update error:", error);
+        toast({
+          title: 'Update Failed',
+          description: 'Could not update your profile. Please try again.',
+          variant: 'destructive',
         });
     }
 
-    updateUser(updatePayload);
 
     setIsLoading(false);
-    toast({
-      title: 'Profile Updated',
-      description: 'Your profile information has been successfully updated.',
-    });
   };
+
+  if (authLoading) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
+        <CardContent className="flex justify-center items-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
 
   if (!user) {
     return (
@@ -155,7 +176,7 @@ export function UserProfileForm() {
             </div>
             <div>
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" name="email" type="email" value={formData.email || ''} readOnly disabled className="bg-muted/50" />
+              <Input id="email" name="email" type="email" value={formData.email || user.email || ''} readOnly disabled className="bg-muted/50" />
             </div>
           </div>
           <div>
@@ -257,7 +278,7 @@ export function UserProfileForm() {
             </>
           )}
 
-          {!isJobSeeker && ( 
+          {!isJobSeeker && user.role === 'employer' && ( 
             <>
               <div>
                 <Label htmlFor="companyWebsite">Company Website</Label>
@@ -277,8 +298,8 @@ export function UserProfileForm() {
             </>
           )}
 
-          <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isLoading || authLoading} className="w-full sm:w-auto">
+            {(isLoading || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Changes
           </Button>
         </form>

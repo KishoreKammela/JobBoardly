@@ -10,14 +10,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
-import type { UserProfile } from '@/types';
+import type { UserRole } from '@/types';
+import type { FirebaseError } from 'firebase/app';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { registerUser } = useAuth(); // Changed from login
   const router = useRouter();
   const { toast } = useToast();
 
@@ -25,31 +26,22 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call for registration
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create a new user profile (mock for job seeker)
-    const newUser: UserProfile = {
-      id: `user-${Date.now()}`, // Simple unique ID
-      role: 'jobSeeker',
-      name,
-      email,
-      avatarUrl: `https://placehold.co/100x100.png?text=${name.substring(0,2).toUpperCase()}`,
-      headline: '',
-      skills: [],
-      experience: '',
-      portfolioUrl: '',
-      linkedinUrl: '',
-      preferredLocations: [],
-      jobSearchStatus: 'activelyLooking',
-      desiredSalary: undefined,
-      resumeUrl: '',
-      resumeFileName: '',
-      parsedResumeText: '',
-    };
-    login(newUser);
-    toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}! Complete your profile to get started.` });
-    router.push('/profile');
+    try {
+      await registerUser(email, password, name, 'jobSeeker' as UserRole);
+      toast({ title: 'Registration Successful', description: `Welcome to JobBoardly, ${name}! Complete your profile to get started.` });
+      // AuthContext's onAuthStateChanged will fetch profile and redirect or update UI
+      router.push('/profile');
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      console.error("Registration error:", firebaseError.message);
+      let friendlyMessage = "Registration failed. Please try again.";
+      if (firebaseError.code === "auth/email-already-in-use") {
+        friendlyMessage = "This email address is already in use.";
+      } else if (firebaseError.code === "auth/weak-password") {
+        friendlyMessage = "Password is too weak. Please use at least 6 characters.";
+      }
+      toast({ title: 'Registration Failed', description: friendlyMessage, variant: 'destructive' });
+    }
     setIsLoading(false);
   };
 
@@ -91,7 +83,7 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a strong password"
+                placeholder="Create a strong password (min. 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

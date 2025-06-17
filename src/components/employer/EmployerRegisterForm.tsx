@@ -10,15 +10,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus, Building } from 'lucide-react';
-import type { UserProfile } from '@/types';
+import type { UserRole } from '@/types';
+import type { FirebaseError } from 'firebase/app';
 
 export function EmployerRegisterForm() {
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState(''); // Kept for now, could be part of profile update
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { registerUser } = useAuth(); // Changed from login
   const router = useRouter();
   const { toast } = useToast();
 
@@ -26,21 +27,24 @@ export function EmployerRegisterForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call for registration
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newEmployer: UserProfile = {
-      id: `employer-${Date.now()}`,
-      role: 'employer',
-      name: companyName, // For employers, 'name' is companyName
-      email,
-      avatarUrl: `https://placehold.co/100x100.png?text=${companyName.substring(0,2).toUpperCase()}`,
-      companyWebsite,
-      companyDescription: '', // Initialize, can be filled in profile
-    };
-    login(newEmployer);
-    toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Start posting jobs.` });
-    router.push('/employer/post-job'); // Redirect to dashboard or post job page
+    try {
+      await registerUser(email, password, companyName, 'employer' as UserRole);
+      // The registerUser function in AuthContext will also create the Firestore profile
+      // with companyName as 'name' and role as 'employer'.
+      // Additional fields like companyWebsite can be added in the profile editing section.
+      toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Start posting jobs.` });
+      router.push('/employer/post-job'); 
+    } catch (error) {
+       const firebaseError = error as FirebaseError;
+      console.error("Registration error:", firebaseError.message);
+      let friendlyMessage = "Registration failed. Please try again.";
+      if (firebaseError.code === "auth/email-already-in-use") {
+        friendlyMessage = "This email address is already in use.";
+      } else if (firebaseError.code === "auth/weak-password") {
+        friendlyMessage = "Password is too weak. Please use at least 6 characters.";
+      }
+      toast({ title: 'Registration Failed', description: friendlyMessage, variant: 'destructive' });
+    }
     setIsLoading(false);
   };
 
@@ -78,7 +82,8 @@ export function EmployerRegisterForm() {
               aria-label="Company email address for registration"
             />
           </div>
-           <div className="space-y-2">
+           {/* Company website can be added to profile later */}
+          {/* <div className="space-y-2">
             <Label htmlFor="companyWebsite">Company Website (Optional)</Label>
             <Input
               id="companyWebsite"
@@ -88,13 +93,13 @@ export function EmployerRegisterForm() {
               onChange={(e) => setCompanyWebsite(e.target.value)}
               aria-label="Company website for registration"
             />
-          </div>
+          </div> */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Create a strong password"
+              placeholder="Create a strong password (min. 6 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
