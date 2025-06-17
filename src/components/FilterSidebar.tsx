@@ -34,10 +34,17 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFilters(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
+    }));
+  };
+
+  const handleCheckboxChange = (name: keyof Filters, checked: boolean | 'indeterminate') => {
+     setFilters(prev => ({
+      ...prev,
+      [name]: checked === true,
     }));
   };
 
@@ -109,17 +116,17 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
               id="isRemote"
               name="isRemote"
               checked={filters.isRemote}
-              onCheckedChange={(checked) => handleSelectChange('isRemote', checked as boolean ? 'true' : 'false')}
+              onCheckedChange={(checked) => handleCheckboxChange('isRemote', checked)}
             />
             <Label htmlFor="isRemote" className="font-medium">
               Remote Only
             </Label>
           </div>
-          <div className="flex flex-wrap items-center gap-2 pt-2"> {/* Changed to flex-wrap */}
-            <Button type="submit" className="flex-1 min-w-[120px]"> {/* Adjusted classes for flex-wrap */}
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Button type="submit" className="flex-1 min-w-[120px]"> 
               <Search className="mr-2 h-4 w-4" /> Apply Filters
             </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"> {/* Adjusted classes for flex-wrap */}
+            <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"> 
               <RotateCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
           </div>

@@ -1,7 +1,7 @@
 
 "use client";
 import Link from 'next/link';
-import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield, Lightbulb } from 'lucide-react'; // Added Lightbulb
+import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield, Lightbulb, FolderKanban } from 'lucide-react'; // Added FolderKanban
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -28,7 +28,7 @@ const navLinksBase = [
 const userDropdownLinks = {
   jobSeeker: [
     { href: '/profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
-    { href: '/applied-jobs', label: 'Applied Jobs', icon: <History className="h-4 w-4" /> },
+    { href: '/my-jobs', label: 'My Jobs', icon: <FolderKanban className="h-4 w-4" /> }, // Updated Link
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ],
   employer: [
@@ -78,12 +78,18 @@ export function Navbar() {
         if (link.roles.includes(user.role)) {
           return true;
         }
-        if (!link.authRequired && link.alwaysShowForSeekerOrPublic && (user.role === 'jobSeeker' || user.role === 'admin')) {
-          return true;
+        // Ensure public links relevant to the logged-in user are shown
+        if (!link.authRequired && link.alwaysShowForSeekerOrPublic && (user.role === 'jobSeeker' || !user.role)) { // !user.role covers general public view
+            return true;
+        }
+        // Show "Find Jobs" for admin as well if alwaysShowForSeekerOrPublic is true
+        if (link.href === '/jobs' && user.role === 'admin' && link.alwaysShowForSeekerOrPublic) {
+            return true;
         }
         return false;
       });
     } else { 
+      // For non-logged in users, only show public, non-auth-required links
       return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
     }
   };

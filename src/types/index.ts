@@ -18,8 +18,8 @@ export interface Job {
   companyLogoUrl?: string; 
   postedById?: string; // User ID (uid) of the employer
   applicantIds?: string[]; // UIDs of users who applied
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Timestamp | Date | string; // Allow string for new data, Date for client side, Timestamp for Firestore
+  updatedAt?: Timestamp | Date | string;
 }
 
 export interface UserProfile {
@@ -28,8 +28,8 @@ export interface UserProfile {
   email: string | null; 
   name: string; 
   avatarUrl?: string; 
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Timestamp | Date | string;
+  updatedAt?: Timestamp | Date | string;
 
   // Job Seeker specific fields
   headline?: string;
@@ -46,6 +46,7 @@ export interface UserProfile {
   resumeFileName?: string;
   parsedResumeText?: string; 
   appliedJobIds?: string[]; 
+  savedJobIds?: string[]; // Added for saved jobs
 
   // Employer specific fields
   companyWebsite?: string;
@@ -88,3 +89,4 @@ export interface AIPoweredJobMatchingOutput {
   relevantJobIDs: string[];
   reasoning: string;
 }
+

@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
-import { MapPin, Briefcase, DollarSign, Bookmark, ExternalLink, Building, CheckCircle, Loader2, AlertCircle, Share2, CalendarDays, Brain } from 'lucide-react';
+import { MapPin, Briefcase, DollarSign, Bookmark, ExternalLink, Building, CheckCircle, Loader2, AlertCircle, Share2, CalendarDays } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -21,10 +22,10 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, applyForJob, hasAppliedForJob } = useAuth();
+  const { user, applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } = useAuth();
   const { toast } = useToast();
   const [applied, setApplied] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // Placeholder for save functionality
+  const [saved, setSaved] = useState(false); 
 
   useEffect(() => {
     if (jobId) {
@@ -46,6 +47,7 @@ export default function JobDetailPage() {
             setJob(jobData);
             if (user && user.role === 'jobSeeker') {
               setApplied(hasAppliedForJob(jobId));
+              setSaved(isJobSaved(jobId));
             }
           } else {
             setError('Job not found.');
@@ -59,12 +61,12 @@ export default function JobDetailPage() {
       };
       fetchJob();
     }
-  }, [jobId, user, hasAppliedForJob]);
+  }, [jobId, user, hasAppliedForJob, isJobSaved]);
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!job) return;
     if (user && user.role === 'jobSeeker') {
-      applyForJob(job.id);
+      await applyForJob(job.id);
       setApplied(true);
       toast({
         title: 'Applied!',
@@ -77,13 +79,21 @@ export default function JobDetailPage() {
     }
   };
 
-  const handleSaveToggle = () => {
+  const handleSaveToggle = async () => {
     if (!job) return;
-    setIsSaving(!isSaving); // In a real app, this would interact with a saved jobs list
-    toast({
-      title: isSaving ? "Job Unsaved" : "Job Saved!",
-      description: `${job.title} at ${job.company} has been ${isSaving ? "removed from" : "added to"} your saved jobs.`,
-    });
+     if (!user || user.role !== 'jobSeeker') {
+      toast({ title: "Login Required", description: "Please log in as a job seeker to save jobs.", variant: "destructive" });
+      return;
+    }
+    if (saved) {
+      await unsaveJob(job.id);
+      setSaved(false);
+      toast({ title: "Job Unsaved", description: `${job.title} removed from your saved jobs.` });
+    } else {
+      await saveJob(job.id);
+      setSaved(true);
+      toast({ title: "Job Saved!", description: `${job.title} added to your saved jobs.` });
+    }
   };
 
   const handleShare = () => {
@@ -122,6 +132,9 @@ export default function JobDetailPage() {
   }
 
   const companyLogo = job.companyLogoUrl || `https://placehold.co/128x128.png?text=${job.company.substring(0,2).toUpperCase()}`;
+  const salaryDisplay = job.salaryMin && job.salaryMax ? 
+    `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.` : 
+    (job.salaryMin ? `${formatCurrencyINR(job.salaryMin)} p.a.` : (job.salaryMax ? `${formatCurrencyINR(job.salaryMax)} p.a.` : 'Not Disclosed'));
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -149,10 +162,10 @@ export default function JobDetailPage() {
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
                 <Badge variant="secondary" className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" />{job.type}</Badge>
-                {job.salaryMin && job.salaryMax && (
-                  <Badge variant="secondary" className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" />${job.salaryMin.toLocaleString()} - ${job.salaryMax.toLocaleString()}</Badge>
+                {(job.salaryMin || job.salaryMax) && (
+                  <Badge variant="secondary" className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" />{salaryDisplay}</Badge>
                 )}
-                 <Badge variant="secondary" className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Posted: {new Date(job.postedDate).toLocaleDateString()}</Badge>
+                 <Badge variant="secondary" className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Posted: {new Date(job.postedDate as string).toLocaleDateString()}</Badge>
               </div>
             </div>
           </div>
@@ -186,19 +199,19 @@ export default function JobDetailPage() {
                         <CheckCircle className="mr-2 h-5 w-5" /> Applied
                     </Button>
                 ) : (
-                    <Button size="lg" onClick={handleApply} className="w-full" disabled={!user || user.role !== 'jobSeeker'}>
+                    <Button size="lg" onClick={handleApply} className="w-full">
                         Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                     </Button>
                 )
                )}
-               {!user && (
-                  <Button size="lg" onClick={handleApply} className="w-full"> {/* Will trigger login toast */}
+               {!user && ( // For non-logged in users
+                  <Button size="lg" onClick={handleApply} className="w-full"> 
                       Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>
                )}
                 <Button variant="outline" size="lg" onClick={handleSaveToggle} className="w-full">
-                    <Bookmark className={`mr-2 h-5 w-5 ${isSaving ? 'fill-primary text-primary' : ''}`} />
-                    {isSaving ? 'Job Saved' : 'Save Job'}
+                    <Bookmark className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`} />
+                    {saved ? 'Job Saved' : 'Save Job'}
                 </Button>
                 <Button variant="outline" size="lg" onClick={handleShare} className="w-full">
                     <Share2 className="mr-2 h-5 w-5" /> Share Job

@@ -18,7 +18,7 @@ import {
   type User as FirebaseUser,
   type AuthProvider as FirebaseAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, arrayUnion, Timestamp,FieldValue } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, arrayUnion, arrayRemove, Timestamp,type FieldValue } from 'firebase/firestore';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -27,6 +27,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   applyForJob: (jobId: string) => Promise<void>;
   hasAppliedForJob: (jobId: string) => boolean;
+  saveJob: (jobId: string) => Promise<void>;
+  unsaveJob: (jobId: string) => Promise<void>;
+  isJobSaved: (jobId: string) => boolean;
   registerUser: (email: string, pass: string, name: string, role: UserRole) => Promise<FirebaseUser>;
   loginUser: (email: string, pass: string) => Promise<FirebaseUser>;
   updateUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
@@ -49,12 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const profileData = { uid: fbUser.uid, ...userDocSnap.data() } as UserProfile;
-            console.log("AuthContext: User profile fetched from Firestore:", JSON.stringify(profileData));
             setUser(profileData);
           } else {
-            console.warn("AuthContext: User profile not found in Firestore for UID:", fbUser.uid, "User might need to complete profile or new social sign-in.");
-            // If profile doesn't exist, it might be a new social sign-in scenario where createUserProfileInFirestore will be called.
-            // If it's an existing auth user without a Firestore doc, they are effectively logged out from app's perspective.
             setUser(null); 
           }
         } catch (error) {
@@ -79,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: name || fbUser.displayName || (role === 'employer' ? "New Company" : "New User"),
       role: role,
       createdAt: serverTimestamp() as Timestamp,
+      updatedAt: serverTimestamp() as Timestamp,
     };
 
     if (fbUser.photoURL) {
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (role === 'jobSeeker') {
       userProfileData.appliedJobIds = [];
+      userProfileData.savedJobIds = []; // Initialize savedJobIds
       userProfileData.headline = '';
       userProfileData.skills = [];
       userProfileData.experience = '';
@@ -94,16 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.availability = 'Flexible';
       userProfileData.preferredLocations = [];
       userProfileData.jobSearchStatus = 'activelyLooking';
-      // desiredSalary, resumeUrl, etc., are truly optional and not initialized with empty strings
     } else if (role === 'employer') {
       userProfileData.companyWebsite = '';
       userProfileData.companyDescription = '';
     }
     
-    // Merge base, additionalData, ensuring role from base profile takes precedence
     let combinedProfileData = { ...userProfileData, ...additionalData, role: userProfileData.role };
 
-    // Create a new object with only defined values to pass to Firestore
     const finalProfileDataForFirestore: { [key: string]: any } = {};
     for (const key in combinedProfileData) {
       if (combinedProfileData[key as keyof typeof combinedProfileData] !== undefined) {
@@ -113,13 +111,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
-      console.log("AuthContext: Firestore setDoc successful for UID:", fbUser.uid, "Data:", JSON.stringify(finalProfileDataForFirestore));
-      // Set user context with the data that was successfully written (which excludes undefined fields)
       setUser(finalProfileDataForFirestore as UserProfile); 
       return finalProfileDataForFirestore as UserProfile;
     } catch (error) {
       console.error("AuthContext: Firestore setDoc FAILED for UID:", fbUser.uid, "Error:", error, "Data attempted:", JSON.stringify(finalProfileDataForFirestore));
-      throw error; // Re-throw the error so the calling function knows about the failure
+      throw error;
     }
   };
 
@@ -138,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginUser = async (email: string, pass: string): Promise<FirebaseUser> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle fetching the profile from Firestore.
       return userCredential.user;
     } catch (error) {
         console.error("AuthContext: loginUser error", error);
@@ -158,7 +153,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         const existingProfile = { uid: fbUser.uid, ...userDocSnap.data() } as UserProfile;
         if (existingProfile.role !== role) {
-          console.warn(`AuthContext: User ${fbUser.uid} exists with role ${existingProfile.role}, but signed in via social login for role ${role}. Updating role.`);
           const updates: Partial<UserProfile> & {updatedAt: FieldValue} = { role, updatedAt: serverTimestamp() };
           await updateDoc(userDocRef, updates);
           setUser({ ...existingProfile, ...updates } as UserProfile);
@@ -196,15 +190,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Ensure role is not accidentally changed or removed if not explicitly part of updatedData
       if (dataToUpdate.role === undefined && user.role) {
         dataToUpdate.role = user.role;
       }
       
-      if (Object.keys(dataToUpdate).length > 1) { // more than just updatedAt
+      if (Object.keys(dataToUpdate).length > 1) { 
         try {
             await updateDoc(userDocRef, dataToUpdate);
-            setUser(prevUser => ({ ...prevUser, ...dataToUpdate } as UserProfile)); // Update with what was sent
+            setUser(prevUser => ({ ...prevUser, ...dataToUpdate } as UserProfile)); 
         } catch (error) {
             console.error("AuthContext: updateUserProfile error", error);
             throw error;
@@ -232,11 +225,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             appliedJobIds: [...(prevUser?.appliedJobIds || []), jobId] 
             } as UserProfile));
             
-            // Also update the job document with the applicant's ID
             const jobDocRef = doc(db, "jobs", jobId);
             await updateDoc(jobDocRef, {
             applicantIds: arrayUnion(user.uid),
-            // No need to update job's updatedAt timestamp for this action by seeker
             });
 
         } catch (error) {
@@ -246,7 +237,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } else {
         console.warn("User must be a logged-in job seeker to apply for a job.");
-        // Potentially throw an error or notify user
     }
   };
 
@@ -257,6 +247,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const saveJob = async (jobId: string) => {
+    if (user && user.uid && user.role === 'jobSeeker') {
+      const userDocRef = doc(db, "users", user.uid);
+      try {
+        await updateDoc(userDocRef, {
+          savedJobIds: arrayUnion(jobId),
+          updatedAt: serverTimestamp()
+        });
+        setUser(prevUser => ({
+          ...prevUser,
+          savedJobIds: [...(prevUser?.savedJobIds || []), jobId]
+        } as UserProfile));
+      } catch (error) {
+        console.error("AuthContext: saveJob error", error);
+        throw error;
+      }
+    } else {
+      console.warn("User must be a logged-in job seeker to save a job.");
+    }
+  };
+
+  const unsaveJob = async (jobId: string) => {
+    if (user && user.uid && user.role === 'jobSeeker') {
+      const userDocRef = doc(db, "users", user.uid);
+      try {
+        await updateDoc(userDocRef, {
+          savedJobIds: arrayRemove(jobId),
+          updatedAt: serverTimestamp()
+        });
+        setUser(prevUser => ({
+          ...prevUser,
+          savedJobIds: (prevUser?.savedJobIds || []).filter(id => id !== jobId)
+        } as UserProfile));
+      } catch (error) {
+        console.error("AuthContext: unsaveJob error", error);
+        throw error;
+      }
+    } else {
+      console.warn("User must be a logged-in job seeker to unsave a job.");
+    }
+  };
+
+  const isJobSaved = (jobId: string): boolean => {
+    if (user && user.role === 'jobSeeker' && user.savedJobIds) {
+      return user.savedJobIds.includes(jobId);
+    }
+    return false;
+  };
+
+
   return (
     <AuthContext.Provider value={{ 
         user, 
@@ -265,6 +305,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout, 
         applyForJob, 
         hasAppliedForJob,
+        saveJob,
+        unsaveJob,
+        isJobSaved,
         registerUser,
         loginUser,
         updateUserProfile,

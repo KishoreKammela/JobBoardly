@@ -1,43 +1,24 @@
 
 "use client";
-import { AppliedJobsDisplay } from '@/components/AppliedJobsDisplay';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+// This file is effectively replaced by src/app/my-jobs/page.tsx
+// It can be deleted, but for safety, I'm leaving its content commented out
+// or simply making it redirect if somehow accessed.
+// In a real scenario, you would delete this file and its containing folder.
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
-export default function AppliedJobsPage() {
-  const { user, loading } = useAuth();
+export default function OldAppliedJobsPage() {
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
-    } else if (user.role !== 'jobSeeker') {
-      // If logged in but not a job seeker, redirect to their dashboard or home
-      router.replace(user.role === 'employer' ? '/employer/posted-jobs' : '/');
-    }
-  }, [user, loading, router, pathname]);
-
-  if (loading || !user || user.role !== 'jobSeeker') {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
+    router.replace('/my-jobs'); // Redirect to the new page
+  }, [router]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 font-headline">My Applied Jobs</h1>
-        <p className="text-muted-foreground">Here's a list of jobs you have applied to.</p>
-      </div>
-      <Separator />
-      <AppliedJobsDisplay />
+    <div className="flex justify-center items-center h-screen">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="ml-3">Redirecting to My Jobs...</p>
     </div>
   );
 }

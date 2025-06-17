@@ -27,7 +27,6 @@ export default function JobsPage() {
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        // Fetch jobs ordered by creation date, newest first
         const q = firestoreQuery(jobsCollectionRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
@@ -35,14 +34,13 @@ export default function JobsPage() {
           return {
             id: doc.id,
             ...data,
-            // Ensure postedDate is a string for JobCard, convert if Timestamp
             postedDate: data.postedDate instanceof Timestamp ? data.postedDate.toDate().toISOString().split('T')[0] : data.postedDate,
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData); // Initially, all jobs are filtered jobs
+        setFilteredJobs(jobsData); 
       } catch (e) {
         console.error("Error fetching jobs:", e);
         setError("Failed to load jobs. Please try again later.");
@@ -54,10 +52,9 @@ export default function JobsPage() {
   }, []);
 
   const handleFilterChange = (filters: Filters) => {
-    setIsLoading(true); // Show loading state during client-side filter application
+    setIsLoading(true); 
     setCurrentPage(1); 
     
-    // Perform client-side filtering for simplicity, can be moved to Firestore queries for larger datasets
     const newFilteredJobs = allJobs.filter(job => {
       const searchTermMatch = filters.searchTerm.toLowerCase() === '' ||
         job.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -70,9 +67,7 @@ export default function JobsPage() {
       const roleTypeMatch = filters.roleType === 'all' ||
         job.type.toLowerCase() === filters.roleType.toLowerCase();
       
-      // Convert filter's isRemote string to boolean for comparison
-      const filterIsRemoteBoolean = typeof filters.isRemote === 'string' ? filters.isRemote === 'true' : filters.isRemote;
-      const remoteMatch = !filterIsRemoteBoolean || job.isRemote;
+      const remoteMatch = !filters.isRemote || job.isRemote; // Use boolean directly
 
       return searchTermMatch && locationMatch && roleTypeMatch && remoteMatch;
     });
