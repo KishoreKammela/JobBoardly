@@ -71,7 +71,11 @@ const resumeParserFlow = ai.defineFlow(
   },
   async (input: ParseResumeInput): Promise<ParseResumeOutput> => {
     const [header] = input.resumeDataUri.split(',');
-    const mimeType = header.match(/:(.*?);/)?.[1];
+    let mimeType = header.match(/:(.*?);/)?.[1];
+
+    if (mimeType) {
+      mimeType = mimeType.trim(); // Trim whitespace from extracted MIME type
+    }
 
     const unsupportedMediaMimeTypes = [
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
@@ -86,13 +90,8 @@ const resumeParserFlow = ai.defineFlow(
         `Consider extracting text content from such documents before sending for AI analysis.`
       );
       return {
-        name: undefined,
-        email: undefined,
-        headline: undefined,
-        skills: [],
         experience: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
-        portfolioUrl: undefined,
-        linkedinUrl: undefined,
+        skills: [], // Ensure skills is always an array
       };
     }
     

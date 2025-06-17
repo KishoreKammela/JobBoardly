@@ -73,11 +73,12 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
   },
   async (input: ParseJobDescriptionInput): Promise<ParseJobDescriptionOutput> => {
     const [header] = input.jobDescriptionDataUri.split(',');
-    const mimeType = header.match(/:(.*?);/)?.[1];
+    let mimeType = header.match(/:(.*?);/)?.[1];
 
-    // Mime types that are typically binary and not directly consumable as 'media' by
-    // text-focused LLMs or models that expect image/video for the {{media}} tag.
-    // text/plain should be fine.
+    if (mimeType) {
+      mimeType = mimeType.trim(); // Trim whitespace from extracted MIME type
+    }
+
     const unsupportedMediaMimeTypes = [
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
       'application/msword', // .doc
@@ -91,13 +92,8 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
         `Consider extracting text content from such documents before sending for AI analysis.`
       );
       return {
-        // title: undefined, // Fields are optional in schema
         description: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
         skills: [],
-        location: undefined,
-        jobType: undefined,
-        salaryMin: undefined,
-        salaryMax: undefined,
       };
     }
     
