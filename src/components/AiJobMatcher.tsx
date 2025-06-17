@@ -1,25 +1,34 @@
 
 "use client";
 import { useState, useEffect } from 'react';
-import Link from 'next/link'; // Added import
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, Briefcase } from 'lucide-react';
 import { aiPoweredJobMatching, type AIPoweredJobMatchingInput, type AIPoweredJobMatchingOutput } from '@/ai/flows/ai-powered-job-matching';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockJobs } from '@/lib/mockData'; // For example job postings
+import type { Job } from '@/types';
+import { JobCard } from '@/components/JobCard';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy } from 'firebase/firestore';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function AiJobMatcher() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [jobSeekerProfile, setJobSeekerProfile] = useState('');
-  const [jobPostings, setJobPostings] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [isLoading, setIsLoading] = useState(false); // For AI matching process
   const [result, setResult] = useState<AIPoweredJobMatchingOutput | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // For AI matching errors
+
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  const [matchedJobsDetails, setMatchedJobsDetails] = useState<Job[]>([]);
 
   useEffect(() => {
     if (user && user.role === 'jobSeeker') {
@@ -39,19 +48,47 @@ export function AiJobMatcher() {
       if (user.jobSearchStatus) profileText += `Job Search Status: ${user.jobSearchStatus}\n`;
       if (user.desiredSalary) profileText += `Desired Salary: $${user.desiredSalary.toLocaleString()}\n`;
       
-      if (user.parsedResumeText) { // This might be redundant if experience is well-populated
+      if (user.parsedResumeText) {
          profileText += `\n--- Resume Summary (additional context) ---\n${user.parsedResumeText}`;
       }
       setJobSeekerProfile(profileText.trim());
     }
-    
-    // Pre-fill job postings with mock data for demonstration
-    const examplePostings = mockJobs.slice(0, 3).map(job => 
-      `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\nSkills: ${job.skills.join(', ')}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nSalary: ${job.salaryMin ? `$${job.salaryMin}-` : ''}${job.salaryMax ? `$${job.salaryMax}` : 'N/A'}\n`
-    ).join('\n---\n');
-    setJobPostings(examplePostings);
-
   }, [user]);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      setJobsLoading(true);
+      setJobsError(null);
+      try {
+        const jobsCollectionRef = collection(db, "jobs");
+        const q = firestoreQuery(jobsCollectionRef, orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        const jobsData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            postedDate: data.postedDate instanceof Timestamp ? data.postedDate.toDate().toISOString().split('T')[0] : data.postedDate,
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+            updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+          } as Job;
+        });
+        setAllJobs(jobsData);
+      } catch (e) {
+        console.error("Error fetching jobs for AI matcher:", e);
+        setJobsError("Failed to load jobs for matching. Please try again later.");
+      } finally {
+        setJobsLoading(false);
+      }
+    };
+    fetchJobs();
+  }, []);
+
+  const formatJobsForAI = (jobs: Job[]): string => {
+    return jobs.map(job => 
+      `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\nSkills: ${(job.skills || []).join(', ')}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nSalary: ${job.salaryMin ? `$${job.salaryMin}-` : ''}${job.salaryMax ? `$${job.salaryMax}` : 'N/A'}\n`
+    ).join('\n---\n');
+  };
 
   const handleSubmit = async () => {
     if (!user || user.role !== 'jobSeeker') {
@@ -62,26 +99,45 @@ export function AiJobMatcher() {
       });
       return;
     }
-    if (!jobSeekerProfile.trim() || !jobPostings.trim()) {
+    if (!jobSeekerProfile.trim()) {
       toast({
         title: 'Missing Information',
-        description: 'Please ensure your profile information is available and provide job postings.',
+        description: 'Please ensure your profile information is available.',
         variant: 'destructive',
       });
+      return;
+    }
+    if (jobsLoading) {
+      toast({ title: 'Still loading jobs', description: 'Please wait until all jobs are loaded before matching.', variant: 'default' });
+      return;
+    }
+    if (jobsError || allJobs.length === 0) {
+      toast({ title: 'No Jobs Available', description: 'Cannot perform matching as no jobs are available or there was an error loading them.', variant: 'destructive' });
       return;
     }
 
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setMatchedJobsDetails([]);
 
     try {
+      const jobPostingsString = formatJobsForAI(allJobs);
       const input: AIPoweredJobMatchingInput = {
         jobSeekerProfile,
-        jobPostings,
+        jobPostings: jobPostingsString,
       };
       const aiResult = await aiPoweredJobMatching(input);
       setResult(aiResult);
+
+      if (aiResult.relevantJobIDs && aiResult.relevantJobIDs.length > 0) {
+        const matched = allJobs.filter(job => aiResult.relevantJobIDs.includes(job.id));
+        setMatchedJobsDetails(matched);
+        if (matched.length === 0 && aiResult.relevantJobIDs.length > 0) {
+          toast({ title: "Match IDs found, but no job details", description: "AI suggested job IDs, but they don't correspond to known jobs. See reasoning.", variant: "default"});
+        }
+      }
+
     } catch (e) {
       console.error("AI Matching Error:", e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -112,7 +168,6 @@ export function AiJobMatcher() {
     )
   }
 
-
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
       <CardHeader>
@@ -121,13 +176,12 @@ export function AiJobMatcher() {
           AI-Powered Job Matcher
         </CardTitle>
         <CardDescription>
-          Your profile details (auto-filled if available) and job postings below will be used by our AI to recommend relevant jobs. 
-          The job postings are pre-filled with examples.
+          Your profile details (auto-filled if available) will be used by our AI to recommend relevant jobs from our entire database.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="jobSeekerProfile" className="text-lg">Your Profile Summary (Auto-Generated)</Label>
+          <Label htmlFor="jobSeekerProfile" className="text-lg">Your Profile Summary (Editable)</Label>
           <Textarea
             id="jobSeekerProfile"
             value={jobSeekerProfile}
@@ -137,57 +191,69 @@ export function AiJobMatcher() {
             className="mt-1 bg-muted/20"
             aria-label="Job Seeker Profile Input"
           />
-           <p className="text-xs text-muted-foreground mt-1">This summary is generated from your profile. You can <Link href="/profile" className="underline text-primary">edit your full profile here</Link>.</p>
+           <p className="text-xs text-muted-foreground mt-1">This summary is generated from your profile. Changes here are only for this matching session. To permanently update, <Link href="/profile" className="underline text-primary">edit your full profile here</Link>.</p>
         </div>
-        <div>
-          <Label htmlFor="jobPostings" className="text-lg">Job Postings (Example Data)</Label>
-          <Textarea
-            id="jobPostings"
-            value={jobPostings}
-            onChange={(e) => setJobPostings(e.target.value)}
-            placeholder="Paste job descriptions here, one per line or separated by '---'..."
-            rows={12}
-            className="mt-1"
-            aria-label="Job Postings Input"
-          />
-        </div>
+        {jobsError && (
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{jobsError}</AlertDescription>
+            </Alert>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-4">
-        <Button onClick={handleSubmit} disabled={isLoading || !user} size="lg">
-          {isLoading ? (
+        <Button onClick={handleSubmit} disabled={isLoading || jobsLoading || !user || !!jobsError} size="lg">
+          {(isLoading || jobsLoading) ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
             <Sparkles className="mr-2 h-5 w-5" />
           )}
-          Get Matches
+          {jobsLoading ? 'Loading Jobs...' : 'Get Matches'}
         </Button>
         {!user && <p className="text-sm text-destructive text-center">Please log in as a job seeker to use the AI Matcher.</p>}
+        
         {error && (
           <div className="p-4 bg-destructive/10 text-destructive rounded-md flex items-center gap-2">
             <AlertTriangle className="h-5 w-5" />
             <p className="text-sm">{error}</p>
           </div>
         )}
-        {result && (
-          <Card className="mt-4 bg-muted/30">
+
+        {result && !isLoading && (
+          <Card className="mt-4 bg-muted/30 w-full">
             <CardHeader>
               <CardTitle className="text-xl">Matching Results</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h4 className="font-semibold text-md">Relevant Job IDs:</h4>
-                {result.relevantJobIDs.length > 0 ? (
-                  <ul className="list-disc list-inside mt-1">
-                    {result.relevantJobIDs.map(id => <li key={id}>{id}</li>)}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No specific job IDs matched from the provided postings. See reasoning.</p>
-                )}
+                <h4 className="font-semibold text-md mb-2">AI Reasoning:</h4>
+                <p className="text-sm whitespace-pre-wrap bg-background p-3 rounded-md border">{result.reasoning || "No reasoning provided by AI."}</p>
               </div>
-              <div>
-                <h4 className="font-semibold text-md">Reasoning:</h4>
-                <p className="text-sm whitespace-pre-wrap">{result.reasoning}</p>
-              </div>
+
+              {matchedJobsDetails.length > 0 ? (
+                <div>
+                  <h4 className="font-semibold text-md mt-4 mb-2">Recommended Jobs ({matchedJobsDetails.length}):</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {matchedJobsDetails.map(job => (
+                      <JobCard key={job.id} job={job} />
+                    ))}
+                  </div>
+                </div>
+              ) : result.relevantJobIDs && result.relevantJobIDs.length > 0 ? (
+                 <Alert variant="default" className="mt-4">
+                    <Briefcase className="h-4 w-4" />
+                    <AlertDescription>
+                        AI identified some potentially relevant job IDs, but they could not be matched to current listings. This might happen if jobs were recently removed. See reasoning above.
+                         Relevant IDs: {result.relevantJobIDs.join(', ')}
+                    </AlertDescription>
+                 </Alert>
+              ) : (
+                <Alert variant="default" className="mt-4">
+                    <Briefcase className="h-4 w-4" />
+                    <AlertDescription>
+                        No specific jobs were matched by the AI based on your current profile and available listings. Try refining your profile summary or check back later for new job postings.
+                    </AlertDescription>
+                 </Alert>
+              )}
             </CardContent>
           </Card>
         )}
@@ -195,3 +261,5 @@ export function AiJobMatcher() {
     </Card>
   );
 }
+
+    
