@@ -12,6 +12,7 @@ import { Loader2, Building, AlertCircle, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'; // Added this import
 
 const COMPANIES_PER_PAGE = 9;
 
@@ -183,3 +184,4 @@ export default function CompaniesListPage() {
     </div>
   );
 }
+
