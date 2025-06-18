@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { CandidateFilters } from './CandidateFilterSidebar';
 import { db } from '@/lib/firebase';
 import { collection, query as firestoreQuery, where, getDocs, Timestamp } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface CandidateSearchResultsProps {
   viewMode: 'grid' | 'list';
@@ -26,19 +27,7 @@ export function CandidateSearchResults({ viewMode, filters }: CandidateSearchRes
       setError(null);
       try {
         const usersCollectionRef = collection(db, "users");
-        // Base query for job seekers
         let q = firestoreQuery(usersCollectionRef, where("role", "==", "jobSeeker"));
-
-        // Note: Firestore does not support case-insensitive queries or partial string matches ('contains') directly
-        // on multiple fields easily. Complex text search usually requires a dedicated search service (e.g., Algolia, Elasticsearch)
-        // or client-side filtering for smaller datasets.
-
-        // For "availability", if it's an exact match from a select, we can add a where clause.
-        // if (filters.availability && filters.availability !== 'all') {
-        //   q = firestoreQuery(q, where("availability", "==", filters.availability));
-        // }
-        // For simplicity with current filters, we will fetch all job seekers and filter client-side.
-        // This is not scalable for very large numbers of users.
 
         const querySnapshot = await getDocs(q);
         const candidatesData = querySnapshot.docs.map(doc => {
@@ -46,26 +35,25 @@ export function CandidateSearchResults({ viewMode, filters }: CandidateSearchRes
           return {
             uid: doc.id,
             ...data,
-            // Ensure Timestamps are handled if necessary, though UserProfile doesn't have many top-level dates directly from user input
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
             updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
           } as UserProfile;
         });
         setAllCandidates(candidatesData);
+        setFilteredCandidates(candidatesData); // Initially show all, will be filtered by next effect
       } catch (e: any) {
         console.error("Error fetching candidates:", e);
         setError("Failed to load candidates. " + (e.message || "Please try again later."));
       } finally {
-        setIsLoading(false); // Set loading to false once initial fetch is done
+        setIsLoading(false);
       }
     };
     fetchCandidates();
-  }, []); // Fetch all candidates once on mount
+  }, []);
 
   useEffect(() => {
-    // Apply client-side filtering whenever 'filters' or 'allCandidates' change
-    if (allCandidates.length > 0) {
-      setIsLoading(true); // Indicate filtering is in progress
+    if (allCandidates.length > 0 || !isLoading) { // Run filter if candidates loaded or initial load done
+      setIsLoading(true); // Indicate filtering is in progress if new filters applied
       const applyFilters = (candidates: UserProfile[], currentFilters: CandidateFilters) => {
         return candidates.filter(candidate => {
           const searchTermMatch = !currentFilters.searchTerm ||
@@ -86,42 +74,46 @@ export function CandidateSearchResults({ viewMode, filters }: CandidateSearchRes
       };
       setFilteredCandidates(applyFilters(allCandidates, filters));
       setIsLoading(false);
-    } else if (!isLoading) { // If allCandidates is empty and not initially loading
-        setFilteredCandidates([]); // Ensure filtered is also empty
     }
-  }, [filters, allCandidates, isLoading]);
+  }, [filters, allCandidates, isLoading]); // isLoading in deps to ensure it runs after initial load too
 
 
-  const SkeletonCard = () => (
-    <div className={`p-4 border rounded-lg shadow-sm bg-card space-y-3 ${viewMode === 'list' ? 'flex flex-col' : ''}`}>
-        <div className="flex items-center space-x-3">
-            <div className="h-16 w-16 rounded-full bg-muted animate-pulse"></div>
-            <div className="space-y-2">
-                <div className="h-5 w-40 bg-muted animate-pulse rounded"></div>
-                <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
-            </div>
+  const CandidateSkeletonCard = () => (
+    <Card className={`shadow-sm flex flex-col ${viewMode === 'list' ? '' : 'h-full'}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-4">
+          <Skeleton className="h-16 w-16 rounded-md" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-3/4 rounded" />
+            <Skeleton className="h-4 w-1/2 rounded" />
+          </div>
         </div>
-        <div className="h-4 w-full bg-muted animate-pulse rounded"></div>
-        <div className="h-4 w-3/4 bg-muted animate-pulse rounded"></div>
-        <div className="flex flex-wrap gap-2 pt-2">
-            <div className="h-6 w-16 bg-muted animate-pulse rounded-full"></div>
-            <div className="h-6 w-20 bg-muted animate-pulse rounded-full"></div>
-            <div className="h-6 w-12 bg-muted animate-pulse rounded-full"></div>
+      </CardHeader>
+      <CardContent className="space-y-3 pb-4 flex-grow">
+        <Skeleton className="h-4 w-full rounded" />
+        <Skeleton className="h-4 w-5/6 rounded" />
+        <div className="flex flex-wrap gap-1.5 pt-1">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-12 rounded-full" />
         </div>
-        <div className="flex justify-between items-center pt-3 border-t mt-3">
+      </CardContent>
+      <CardFooter className="pt-4 border-t">
+        <div className="flex justify-between items-center w-full">
             <div className="flex gap-2">
-                <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
-                <div className="h-8 w-24 bg-muted animate-pulse rounded-md"></div>
+                <Skeleton className="h-8 w-24 rounded-md" />
             </div>
-            <div className="h-8 w-20 bg-muted animate-pulse rounded-md"></div>
+            <Skeleton className="h-8 w-20 rounded-md" />
         </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 
-  if (isLoading && filteredCandidates.length === 0) { // Show skeletons only if truly loading and no data yet
+
+  if (isLoading && filteredCandidates.length === 0 && allCandidates.length === 0) {
     return (
-      <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-        {Array.from({ length: 4 }).map((_, index) => <SkeletonCard key={index} />)}
+      <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
+        {Array.from({ length: viewMode === 'grid' ? 6 : 3 }).map((_, index) => <CandidateSkeletonCard key={index} />)}
       </div>
     );
   }
@@ -149,7 +141,7 @@ export function CandidateSearchResults({ viewMode, filters }: CandidateSearchRes
   }
 
   return (
-    <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+    <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
       {filteredCandidates.map(candidate => (
         <CandidateCard key={candidate.uid} candidate={candidate} />
       ))}

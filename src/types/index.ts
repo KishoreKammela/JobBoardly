@@ -12,7 +12,6 @@ export interface Company {
   bannerImageUrl?: string;
   adminUids: string[]; // UIDs of users who are company admins
   recruiterUids: string[]; // UIDs of all recruiters (including admins) in the company
-  // jobsPostedIds?: string[]; // Optional: can be derived by querying jobs with companyId
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
 }
@@ -25,7 +24,7 @@ export interface Job {
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string | Timestamp;
+  postedDate: string | Timestamp; // Keep as string for form input, convert to Timestamp for Firestore
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
@@ -33,16 +32,16 @@ export interface Job {
   companyLogoUrl?: string; // Company Logo (from Company document)
   postedById: string; // User ID (uid) of the individual recruiter who posted
   applicantIds?: string[];
-  createdAt?: Timestamp | Date | string;
-  updatedAt?: Timestamp | Date | string;
+  createdAt?: Timestamp | Date | string; // Allow string for client-side construction before Firestore
+  updatedAt?: Timestamp | Date | string; // Allow string for client-side construction
 }
 
 export interface UserProfile {
   uid: string;
   role: UserRole;
   email: string | null;
-  name: string; // User's full name (for job seeker) or Recruiter's name (for employer)
-  avatarUrl?: string; // User's personal avatar
+  name: string;
+  avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 
@@ -64,9 +63,8 @@ export interface UserProfile {
   savedJobIds?: string[];
 
   // Employer specific fields
-  companyId?: string; // Links to the 'companies' collection document ID
-  isCompanyAdmin?: boolean; // True if this employer user can manage the company's profile
-  // companyName, companyWebsite, companyDescription are now moved to the Company interface
+  companyId?: string;
+  isCompanyAdmin?: boolean;
 }
 
 export interface UserSettings {
@@ -85,23 +83,26 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string;
+  experience?: string; // Could be markdown string
   portfolioUrl?: string;
   linkedinUrl?: string;
-  education?: string;
+  education?: string; // Could be markdown string
 }
 
 export interface ParsedJobData {
   title?: string;
-  description?: string;
+  description?: string; // Could be markdown string
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
+  // companyName?: string; // Not needed if we rely on authenticated employer context
 }
 
-export interface AIPoweredJobMatchingOutput {
-  relevantJobIDs: string[];
-  reasoning: string;
-}
+// This type was defined in the prompt for aiPoweredJobMatching flow, ensuring it's here if needed globally.
+// If only used within the flow, it can remain local to that flow.
+// export interface AIPoweredJobMatchingOutput {
+//   relevantJobIDs: string[];
+//   reasoning: string;
+// }

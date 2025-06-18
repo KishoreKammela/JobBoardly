@@ -33,7 +33,6 @@ export default function CompanyDetailPage() {
         setIsLoading(true);
         setError(null);
         try {
-          // Fetch company details
           const companyDocRef = doc(db, 'companies', companyId);
           const companyDocSnap = await getDoc(companyDocRef);
 
@@ -45,18 +44,21 @@ export default function CompanyDetailPage() {
           const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
           setCompany(companyData);
 
-          // Fetch recruiters (users linked to this companyId with role 'employer')
           if (companyData.recruiterUids && companyData.recruiterUids.length > 0) {
-            // Firestore 'in' query can take max 30 elements. If more, batching needed.
-            // For simplicity, assuming less than 30 recruiters for now.
-            const recruitersQuery = query(collection(db, 'users'), where('__name__', 'in', companyData.recruiterUids));
-            const recruitersSnap = await getDocs(recruitersQuery);
-            const fetchedRecruiters = recruitersSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+            const recruitersQueryLimit = 30; // Firestore 'in' query limit
+            const fetchedRecruiters: UserProfile[] = [];
+            for (let i = 0; i < companyData.recruiterUids.length; i += recruitersQueryLimit) {
+                const batchUids = companyData.recruiterUids.slice(i, i + recruitersQueryLimit);
+                if (batchUids.length > 0) {
+                    const recruitersQuery = query(collection(db, 'users'), where('__name__', 'in', batchUids));
+                    const recruitersSnap = await getDocs(recruitersQuery);
+                    recruitersSnap.docs.forEach(d => fetchedRecruiters.push({ uid: d.id, ...d.data() } as UserProfile));
+                }
+            }
             setRecruiters(fetchedRecruiters);
           }
 
 
-          // Fetch jobs posted by this company
           const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', companyId), orderBy('postedDate', 'desc'));
           const jobsSnap = await getDocs(jobsQuery);
           const fetchedJobs = jobsSnap.docs.map(d => {
@@ -106,14 +108,15 @@ export default function CompanyDetailPage() {
   if (!company) {
     return (
       <div className="container mx-auto py-10 text-center">
+        <Building className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
         <p className="text-xl text-muted-foreground">Company profile not found.</p>
+        <Button variant="link" asChild className="mt-4"><Link href="/companies">Browse Companies</Link></Button>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-8">
-      {/* Banner Image */}
       {company.bannerImageUrl ? (
         <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-8">
           <Image
@@ -160,21 +163,21 @@ export default function CompanyDetailPage() {
           {company.description && (
             <section>
               <h2 className="text-2xl font-semibold mb-3 font-headline text-center">About Us</h2>
-              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background/50">
+              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-muted/10">
                 {company.description}
               </div>
             </section>
           )}
           <Separator />
 
-          {recruiters.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-semibold mb-4 font-headline text-center">Our Recruiters</h2>
+          <section>
+            <h2 className="text-2xl font-semibold mb-4 font-headline text-center">Our Recruiters</h2>
+            {recruiters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {recruiters.map(recruiter => (
                   <Card key={recruiter.uid} className="text-center p-4 shadow-sm hover:shadow-md transition-shadow">
                     <Avatar className="h-20 w-20 mx-auto mb-3 border-2 border-primary/30">
-                      <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} data-ai-hint="recruiter photo" />
+                      <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} data-ai-hint="recruiter headshot" />
                       <AvatarFallback className="text-2xl">{recruiter.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
                     </Avatar>
                     <p className="font-semibold text-foreground">{recruiter.name}</p>
@@ -186,8 +189,13 @@ export default function CompanyDetailPage() {
                   </Card>
                 ))}
               </div>
-            </section>
-          )}
+            ) : (
+                <div className="text-center py-6">
+                    <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No recruiters listed for this company yet.</p>
+                </div>
+            )}
+          </section>
            <Separator />
 
           <section>
@@ -199,7 +207,11 @@ export default function CompanyDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground">This company currently has no open positions listed on JobBoardly.</p>
+                <div className="text-center py-6">
+                    <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">This company currently has no open positions listed on JobBoardly.</p>
+                     <Button variant="link" asChild className="mt-2"><Link href="/jobs">Explore other jobs</Link></Button>
+                </div>
             )}
           </section>
         </CardContent>

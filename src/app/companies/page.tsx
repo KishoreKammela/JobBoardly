@@ -12,7 +12,8 @@ import { Loader2, Building, AlertCircle, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'; // Added this import
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const COMPANIES_PER_PAGE = 9;
 
@@ -30,7 +31,7 @@ export default function CompaniesListPage() {
       setError(null);
       try {
         const companiesCollectionRef = collection(db, "companies");
-        const q = firestoreQuery(companiesCollectionRef, orderBy("name", "asc")); // Order by name
+        const q = firestoreQuery(companiesCollectionRef, orderBy("name", "asc"));
         const querySnapshot = await getDocs(q);
         const companiesData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -60,7 +61,7 @@ export default function CompaniesListPage() {
       (company.description && company.description.toLowerCase().includes(lowercasedFilter))
     );
     setFilteredCompanies(newFilteredCompanies);
-    setCurrentPage(1); // Reset to first page on new search
+    setCurrentPage(1);
   }, [searchTerm, allCompanies]);
 
   const totalPages = Math.ceil(filteredCompanies.length / COMPANIES_PER_PAGE);
@@ -70,20 +71,20 @@ export default function CompaniesListPage() {
   );
 
   const CompanySkeletonCard = () => (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center gap-4 p-4">
-        <div className="h-16 w-16 bg-muted rounded-md animate-pulse"></div>
-        <div className="space-y-1 flex-1">
-          <div className="h-6 w-3/4 bg-muted rounded animate-pulse"></div>
-          <div className="h-4 w-1/2 bg-muted rounded animate-pulse"></div>
+    <Card className="shadow-sm flex flex-col">
+      <CardHeader className="flex-row items-center gap-4 p-4">
+        <Skeleton className="h-16 w-16 rounded-md" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-6 w-3/4 rounded" />
+          <Skeleton className="h-4 w-1/2 rounded" />
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-2">
-        <div className="h-4 w-full bg-muted rounded animate-pulse"></div>
-        <div className="h-4 w-5/6 bg-muted rounded animate-pulse"></div>
+      <CardContent className="p-4 pt-0 space-y-2 flex-grow">
+        <Skeleton className="h-4 w-full rounded" />
+        <Skeleton className="h-4 w-5/6 rounded" />
       </CardContent>
-      <CardContent className="p-4">
-         <div className="h-9 w-full bg-muted rounded-md animate-pulse"></div>
+      <CardContent className="p-4 border-t">
+         <Skeleton className="h-9 w-full rounded-md" />
       </CardContent>
     </Card>
   );
@@ -184,4 +185,3 @@ export default function CompaniesListPage() {
     </div>
   );
 }
-

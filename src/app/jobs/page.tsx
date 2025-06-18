@@ -5,7 +5,7 @@ import { JobCard } from '@/components/JobCard';
 import { FilterSidebar, type Filters } from '@/components/FilterSidebar';
 import type { Job } from '@/types';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, AlertCircle } from 'lucide-react';
+import { LayoutGrid, List, AlertCircle, Search } from 'lucide-react'; // Added Search
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query as firestoreQuery, where, Timestamp, orderBy } from 'firebase/firestore';
@@ -67,7 +67,7 @@ export default function JobsPage() {
       const roleTypeMatch = filters.roleType === 'all' ||
         job.type.toLowerCase() === filters.roleType.toLowerCase();
       
-      const remoteMatch = !filters.isRemote || job.isRemote; // Use boolean directly
+      const remoteMatch = !filters.isRemote || job.isRemote;
 
       return searchTermMatch && locationMatch && roleTypeMatch && remoteMatch;
     });
@@ -81,22 +81,32 @@ export default function JobsPage() {
     currentPage * JOBS_PER_PAGE
   );
 
-  const JobSkeleton = () => (
-    <div className={`rounded-lg border bg-card text-card-foreground shadow-sm p-4 space-y-3 ${viewMode === 'list' ? 'flex flex-col' : ''}`}>
-      <div className="flex items-center space-x-4">
-        <Skeleton className="h-12 w-12 rounded-md" />
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
+  const JobSkeletonCard = () => (
+    <Card className={`shadow-sm flex flex-col ${viewMode === 'list' ? '' : 'h-full'}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-4">
+          <Skeleton className="h-12 w-12 rounded-md" />
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-5 w-3/4 rounded" />
+            <Skeleton className="h-4 w-1/2 rounded" />
+          </div>
         </div>
-      </div>
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-3/4" />
-      <div className="flex justify-between pt-2">
-        <Skeleton className="h-8 w-[100px]" />
-        <Skeleton className="h-8 w-[80px]" />
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pb-4 flex-grow">
+        <Skeleton className="h-4 w-full rounded" />
+        <Skeleton className="h-4 w-5/6 rounded" />
+        <div className="flex flex-wrap gap-1.5 pt-1">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+      </CardContent>
+      <CardFooter className="pt-4 border-t">
+        <div className="flex justify-between items-center w-full">
+            <Skeleton className="h-4 w-24 rounded" />
+            <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
+      </CardFooter>
+    </Card>
   );
 
   return (
@@ -107,7 +117,7 @@ export default function JobsPage() {
       <main className="w-full md:w-3/4 lg:w-4/5">
         <div className="mb-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold font-headline">
-            {isLoading ? 'Loading Jobs...' : `Found ${filteredJobs.length} Jobs`}
+            {isLoading && filteredJobs.length === 0 ? 'Loading Jobs...' : `Found ${filteredJobs.length} Jobs`}
           </h2>
           <div className="flex gap-2">
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} aria-label="Grid view">
@@ -127,9 +137,9 @@ export default function JobsPage() {
             </Alert>
         )}
 
-        {isLoading ? (
+        {isLoading && filteredJobs.length === 0 ? (
           <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
-            {Array.from({ length: JOBS_PER_PAGE }).map((_, index) => <JobSkeleton key={index} />)}
+            {Array.from({ length: viewMode === 'grid' ? JOBS_PER_PAGE : 4 }).map((_, index) => <JobSkeletonCard key={index} />)}
           </div>
         ) : !error && paginatedJobs.length > 0 ? (
           <>
@@ -163,6 +173,7 @@ export default function JobsPage() {
         ) : (
           !error && (
             <div className="text-center py-12">
+              <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <p className="text-xl text-muted-foreground">No jobs found matching your criteria.</p>
             </div>
           )

@@ -10,10 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building, User } from 'lucide-react';
+import { Loader2, Building, User, Users, Info } from 'lucide-react'; // Added Users, Info
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar imports
+import { Separator } from '@/components/ui/separator'; // Added Separator
 
 export function UserProfileForm() {
   const { user, company, updateUserProfile, updateCompanyProfile, loading: authLoading } = useAuth();
@@ -21,9 +23,8 @@ export function UserProfileForm() {
   const router = useRouter();
 
   const initialUserFormData: Partial<UserProfile> = {
-    name: '', // User's personal name
-    avatarUrl: '', // User's personal avatar
-    // Job seeker fields
+    name: '',
+    avatarUrl: '',
     headline: '',
     skills: [],
     experience: '',
@@ -37,7 +38,7 @@ export function UserProfileForm() {
   };
 
   const initialCompanyFormData: Partial<Company> = {
-    name: '', // Company name
+    name: '',
     description: '',
     websiteUrl: '',
     logoUrl: '',
@@ -49,6 +50,8 @@ export function UserProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
+  const [companyRecruiters, setCompanyRecruiters] = useState<UserProfile[]>([]);
+  const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -77,14 +80,42 @@ export function UserProfileForm() {
           logoUrl: company.logoUrl || '',
           bannerImageUrl: company.bannerImageUrl || '',
         });
+
+        if (user.isCompanyAdmin && company.recruiterUids && company.recruiterUids.length > 0) {
+          const fetchRecruiters = async () => {
+            setIsFetchingRecruiters(true);
+            try {
+              const recruitersQueryLimit = 30;
+              const fetchedRecruiters: UserProfile[] = [];
+              for (let i = 0; i < company.recruiterUids.length; i += recruitersQueryLimit) {
+                  const batchUids = company.recruiterUids.slice(i, i + recruitersQueryLimit);
+                  if (batchUids.length > 0) {
+                      const q = query(collection(db, "users"), where('__name__', 'in', batchUids));
+                      const snapshot = await getDocs(q);
+                      snapshot.docs.forEach(d => fetchedRecruiters.push({ uid: d.id, ...d.data() } as UserProfile));
+                  }
+              }
+              setCompanyRecruiters(fetchedRecruiters);
+            } catch (error) {
+              console.error("Error fetching company recruiters:", error);
+              toast({ title: "Error", description: "Could not load recruiter details.", variant: "destructive"});
+            } finally {
+              setIsFetchingRecruiters(false);
+            }
+          };
+          fetchRecruiters();
+        } else {
+          setCompanyRecruiters([]);
+        }
       }
     } else {
       setUserFormData(initialUserFormData);
       setCompanyFormData(initialCompanyFormData);
       setSkillsInput('');
       setLocationsInput('');
+      setCompanyRecruiters([]);
     }
-  }, [user, company]);
+  }, [user, company, toast]);
 
   const handleUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -118,53 +149,34 @@ export function UserProfileForm() {
     setIsLoading(true);
 
     try {
-      // Update user's personal profile
       const userUpdatePayload: Partial<UserProfile> = {
         name: userFormData.name,
         avatarUrl: userFormData.avatarUrl,
       };
       if (user.role === 'jobSeeker') {
-        userUpdatePayload.headline = userFormData.headline;
-        userUpdatePayload.skills = userFormData.skills;
-        userUpdatePayload.experience = userFormData.experience;
-        userUpdatePayload.education = userFormData.education;
-        userUpdatePayload.availability = userFormData.availability;
-        userUpdatePayload.portfolioUrl = userFormData.portfolioUrl;
-        userUpdatePayload.linkedinUrl = userFormData.linkedinUrl;
-        userUpdatePayload.preferredLocations = userFormData.preferredLocations;
-        userUpdatePayload.jobSearchStatus = userFormData.jobSearchStatus;
-        userUpdatePayload.desiredSalary = userFormData.desiredSalary;
+        Object.assign(userUpdatePayload, {
+          headline: userFormData.headline, skills: userFormData.skills, experience: userFormData.experience,
+          education: userFormData.education, availability: userFormData.availability, portfolioUrl: userFormData.portfolioUrl,
+          linkedinUrl: userFormData.linkedinUrl, preferredLocations: userFormData.preferredLocations,
+          jobSearchStatus: userFormData.jobSearchStatus, desiredSalary: userFormData.desiredSalary,
+        });
       }
       await updateUserProfile(userUpdatePayload);
 
-      // If employer and company admin, update company profile
       if (user.role === 'employer' && user.isCompanyAdmin && user.companyId) {
         const companyUpdatePayload: Partial<Company> = {
-            name: companyFormData.name,
-            description: companyFormData.description,
-            websiteUrl: companyFormData.websiteUrl,
-            logoUrl: companyFormData.logoUrl,
+            name: companyFormData.name, description: companyFormData.description,
+            websiteUrl: companyFormData.websiteUrl, logoUrl: companyFormData.logoUrl,
             bannerImageUrl: companyFormData.bannerImageUrl,
         };
         await updateCompanyProfile(user.companyId, companyUpdatePayload);
       }
 
-      toast({
-        title: 'Profile Updated',
-        description: 'Your information has been successfully updated.',
-      });
-      if (user.role === 'jobSeeker') {
-        router.push('/jobs');
-      } else if (user.role === 'employer') {
-        router.push('/employer/posted-jobs');
-      }
+      toast({ title: 'Profile Updated', description: 'Your information has been successfully updated.' });
+      // router.push(user.role === 'jobSeeker' ? '/jobs' : '/employer/posted-jobs'); // No automatic redirect after save
     } catch (error) {
         console.error("Profile update error:", error);
-        toast({
-          title: 'Update Failed',
-          description: 'Could not update your profile. Please try again.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Update Failed', description: 'Could not update your profile. Please try again.', variant: 'destructive' });
     }
     setIsLoading(false);
   };
@@ -193,17 +205,15 @@ export function UserProfileForm() {
   const isCompanyAdmin = user.role === 'employer' && user.isCompanyAdmin;
 
   return (
-    <div className="space-y-8">
-      {/* User's Personal Profile Section */}
+    <form onSubmit={handleSubmit} className="space-y-8">
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center gap-2">
             <User /> {isJobSeeker ? "Your Job Seeker Profile" : "Your Recruiter Profile"}
           </CardTitle>
-          <CardDescription>Manage your personal details. {isCompanyAdmin && "Company details are managed below."}</CardDescription>
+          <CardDescription>Manage your personal details.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="userName">Full Name</Label>
@@ -227,35 +237,15 @@ export function UserProfileForm() {
                 </div>
                 <div>
                   <Label htmlFor="skills">Skills (comma-separated)</Label>
-                  <Input
-                    id="skills"
-                    name="skills"
-                    value={skillsInput}
-                    onChange={handleSkillsChange}
-                    placeholder="e.g., React, Node.js, Project Management"
-                  />
+                  <Input id="skills" name="skills" value={skillsInput} onChange={handleSkillsChange} placeholder="e.g., React, Node.js, Project Management" />
                 </div>
                 <div>
                   <Label htmlFor="experience">Experience (Markdown supported)</Label>
-                  <Textarea
-                    id="experience"
-                    name="experience"
-                    value={userFormData.experience || ''}
-                    onChange={handleUserChange}
-                    rows={10}
-                    placeholder="Describe your professional experience..."
-                  />
+                  <Textarea id="experience" name="experience" value={userFormData.experience || ''} onChange={handleUserChange} rows={10} placeholder="Describe your professional experience..." />
                 </div>
                 <div>
                   <Label htmlFor="education">Education (Markdown supported)</Label>
-                  <Textarea
-                    id="education"
-                    name="education"
-                    value={userFormData.education || ''}
-                    onChange={handleUserChange}
-                    rows={4}
-                    placeholder="e.g., B.S. Computer Science - XYZ University"
-                  />
+                  <Textarea id="education" name="education" value={userFormData.education || ''} onChange={handleUserChange} rows={4} placeholder="e.g., B.S. Computer Science - XYZ University" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -269,13 +259,7 @@ export function UserProfileForm() {
                 </div>
                 <div>
                   <Label htmlFor="preferredLocations">Preferred Locations (comma-separated)</Label>
-                  <Input
-                    id="preferredLocations"
-                    name="preferredLocations"
-                    value={locationsInput}
-                    onChange={handleLocationsChange}
-                    placeholder="e.g., San Francisco, Remote, New York"
-                  />
+                  <Input id="preferredLocations" name="preferredLocations" value={locationsInput} onChange={handleLocationsChange} placeholder="e.g., San Francisco, Remote, New York" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -308,28 +292,18 @@ export function UserProfileForm() {
                   </div>
               </>
             )}
-            {/* Save button for personal profile changes */}
-            {!isCompanyAdmin && (
-                 <Button type="submit" disabled={isLoading || authLoading} className="w-full sm:w-auto mt-4">
-                    {(isLoading || authLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Personal Profile
-                </Button>
-            )}
-          </form>
         </CardContent>
       </Card>
 
-      {/* Company Profile Section - only for Company Admins */}
       {isCompanyAdmin && company && user.companyId && (
-        <Card className="w-full shadow-lg mt-8">
+        <Card className="w-full shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl font-headline flex items-center gap-2">
                 <Building /> Company Profile
             </CardTitle>
             <CardDescription>Manage your company's public information. Changes here affect your public company page.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6"> {/* Submit still calls the main handleSubmit */}
+          <CardContent className="space-y-6">
               <div>
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input id="companyName" name="name" value={companyFormData.name || ''} onChange={handleCompanyChange} required />
@@ -348,28 +322,46 @@ export function UserProfileForm() {
               </div>
               <div>
                 <Label htmlFor="companyDescription">Company Description (Markdown supported)</Label>
-                <Textarea
-                  id="companyDescription"
-                  name="description"
-                  value={companyFormData.description || ''}
-                  onChange={handleCompanyChange}
-                  rows={6}
-                  placeholder="Briefly describe your company..."
-                />
+                <Textarea id="companyDescription" name="description" value={companyFormData.description || ''} onChange={handleCompanyChange} rows={6} placeholder="Briefly describe your company..." />
               </div>
-            </form>
+              <Separator />
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2"><Users /> Recruiters ({companyRecruiters.length} / 3)</h3>
+                {isFetchingRecruiters ? (
+                    <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Loading recruiters...</div>
+                ) : companyRecruiters.length > 0 ? (
+                    <div className="space-y-3">
+                        {companyRecruiters.map(rec => (
+                            <div key={rec.uid} className="flex items-center gap-3 p-2 border rounded-md bg-muted/20">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={rec.avatarUrl} alt={rec.name} data-ai-hint="recruiter avatar" />
+                                    <AvatarFallback>{rec.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-medium">{rec.name} {rec.uid === user.uid && "(You)"}</p>
+                                    <p className="text-xs text-muted-foreground">{rec.email}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No recruiters currently associated with this company besides yourself.</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                    <Info className="inline h-3 w-3 mr-1" />
+                    Currently, you can have up to 3 recruiters (including admins). Full recruiter management features (inviting, removing) will be available soon.
+                </p>
+              </div>
           </CardContent>
         </Card>
       )}
 
-      {/* General Save Button - handles both user and company saves if applicable */}
-      <div className="mt-8">
-        <Button onClick={handleSubmit} disabled={isLoading || authLoading} className="w-full sm:w-auto text-lg py-6 px-8">
+      <div className="mt-6 text-right">
+        <Button type="submit" disabled={isLoading || authLoading} className="w-full sm:w-auto text-lg py-6 px-8">
           {(isLoading || authLoading) && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
           Save All Changes
         </Button>
       </div>
-
-    </div>
+    </form>
   );
 }
