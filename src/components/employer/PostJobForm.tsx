@@ -1,7 +1,7 @@
 
 "use client";
 import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
-import type { Job, ParsedJobData, Company } from '@/types'; // Added Company
+import type { Job, ParsedJobData, Company } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,63 +11,86 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Sparkles, Send } from 'lucide-react';
+import { Loader2, UploadCloud, Sparkles, Send, Edit } from 'lucide-react'; // Added Edit icon
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { collection, addDoc, updateDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export function PostJobForm() {
-  const { user, company: authCompany } = useAuth(); // Use company from AuthContext
+  const { user, company: authCompany } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingJobId = searchParams.get('edit');
 
-  const [jobData, setJobData] = useState<Partial<Job>>({});
+  const [jobData, setJobData] = useState<Partial<Job>>({
+    type: 'Full-time',
+    isRemote: false,
+    applicantIds: [],
+  });
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingJob, setIsLoadingJob] = useState(false);
   const [currentCompanyDetails, setCurrentCompanyDetails] = useState<Partial<Company>>({});
 
-
   useEffect(() => {
-    // Pre-fill with authenticated employer's company data
-    if (user && user.role === 'employer' && user.companyId) {
-        const fetchCompanyData = async () => {
-            if (authCompany) { // Prioritize company from context if available
-                setCurrentCompanyDetails(authCompany);
-                 setJobData(prev => ({
-                    ...prev,
-                    companyId: authCompany.id,
-                    company: authCompany.name,
-                    companyLogoUrl: authCompany.logoUrl,
-                    postedById: user.uid,
-                    applicantIds: [],
-                    type: prev.type || 'Full-time',
-                }));
-            } else { // Fallback to fetching if not in context (e.g., direct load)
-                const companyDocRef = doc(db, "companies", user.companyId);
-                const companyDocSnap = await getDoc(companyDocRef);
-                if (companyDocSnap.exists()) {
-                    const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
-                    setCurrentCompanyDetails(companyData);
-                     setJobData(prev => ({
-                        ...prev,
-                        companyId: companyData.id,
-                        company: companyData.name,
-                        companyLogoUrl: companyData.logoUrl,
-                        postedById: user.uid,
-                        applicantIds: [],
-                        type: prev.type || 'Full-time',
-                    }));
-                } else {
-                    toast({ title: "Error", description: "Could not load your company details.", variant: "destructive"});
-                }
-            }
-        };
-        fetchCompanyData();
-    }
-  }, [user, authCompany, toast]);
+    const initializeForm = async () => {
+      if (user && user.role === 'employer' && user.companyId) {
+        let companyDataToUse: Company | null = null;
+        if (authCompany) {
+          companyDataToUse = authCompany;
+        } else {
+          const companyDocRef = doc(db, "companies", user.companyId);
+          const companyDocSnap = await getDoc(companyDocRef);
+          if (companyDocSnap.exists()) {
+            companyDataToUse = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
+          } else {
+            toast({ title: "Error", description: "Could not load your company details.", variant: "destructive"});
+            return; // Stop if company details can't be loaded
+          }
+        }
+
+        if (companyDataToUse) {
+          setCurrentCompanyDetails(companyDataToUse);
+          setJobData(prev => ({
+            ...prev,
+            companyId: companyDataToUse!.id,
+            company: companyDataToUse!.name,
+            companyLogoUrl: companyDataToUse!.logoUrl,
+            postedById: user.uid,
+          }));
+        }
+      }
+
+      if (editingJobId) {
+        setIsLoadingJob(true);
+        const jobDocRef = doc(db, "jobs", editingJobId);
+        const jobDocSnap = await getDoc(jobDocRef);
+        if (jobDocSnap.exists()) {
+          const existingJob = jobDocSnap.data() as Job;
+          // Ensure postedById matches the current user's UID if editing
+          if (user && existingJob.postedById !== user.uid && existingJob.companyId !== user.companyId) {
+             toast({ title: "Unauthorized", description: "You cannot edit this job.", variant: "destructive" });
+             router.push('/employer/posted-jobs');
+             return;
+          }
+          setJobData({
+            ...existingJob,
+            postedDate: existingJob.postedDate instanceof Timestamp ? existingJob.postedDate.toDate().toISOString().split('T')[0] : existingJob.postedDate,
+          });
+          setSkillsInput((existingJob.skills || []).join(', '));
+        } else {
+          toast({ title: "Error", description: "Job to edit not found.", variant: "destructive" });
+          router.push('/employer/posted-jobs');
+        }
+        setIsLoadingJob(false);
+      }
+    };
+    initializeForm();
+  }, [user, authCompany, editingJobId, router, toast]);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -169,67 +192,75 @@ export function PostJobForm() {
     setIsSubmitting(true);
 
     try {
-        const jobPayload: Omit<Job, 'id'> = {
+        const jobPayload: Partial<Job> = {
             title: jobData.title || '',
-            company: currentCompanyDetails.name || 'N/A Company', // From fetched company details
+            company: currentCompanyDetails.name || 'N/A Company',
             companyId: user.companyId,
             location: jobData.location || '',
             type: jobData.type || 'Full-time',
             description: jobData.description || '',
-            postedDate: new Date().toISOString().split('T')[0],
             isRemote: jobData.isRemote || false,
             skills: jobData.skills || [],
             salaryMin: jobData.salaryMin,
             salaryMax: jobData.salaryMax,
-            companyLogoUrl: currentCompanyDetails.logoUrl, // From fetched company details
+            companyLogoUrl: currentCompanyDetails.logoUrl,
             postedById: user.uid,
-            applicantIds: [],
-            createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         };
 
-        const jobsCollectionRef = collection(db, "jobs");
-        await addDoc(jobsCollectionRef, jobPayload);
-
-        toast({
-          title: 'Job Posted!',
-          description: `${jobData.title} has been successfully posted.`,
-        });
-
-        // Reset form
-        setJobData({
-            title: '',
-            location: '',
-            type: 'Full-time',
-            description: '',
-            skills: [],
-            salaryMin: undefined,
-            salaryMax: undefined,
-            isRemote: false,
-            // company, companyId, companyLogoUrl, postedById are prefilled by useEffect or payload construction
-            company: currentCompanyDetails.name,
-            companyId: user.companyId,
-            companyLogoUrl: currentCompanyDetails.logoUrl,
-            postedById: user.uid,
-            applicantIds: [],
-        });
-        setSkillsInput('');
-        setFile(null);
+        if (editingJobId) {
+            const jobDocRef = doc(db, "jobs", editingJobId);
+            await updateDoc(jobDocRef, jobPayload);
+            toast({ title: 'Job Updated!', description: `${jobData.title} has been successfully updated.` });
+        } else {
+            jobPayload.postedDate = new Date().toISOString().split('T')[0];
+            jobPayload.applicantIds = [];
+            jobPayload.createdAt = serverTimestamp();
+            const jobsCollectionRef = collection(db, "jobs");
+            await addDoc(jobsCollectionRef, jobPayload);
+            toast({ title: 'Job Posted!', description: `${jobData.title} has been successfully posted.` });
+        }
+        
+        // Reset form only if not editing or if successfully created a new one
+        if (!editingJobId) {
+           setJobData({
+                title: '', location: '', type: 'Full-time', description: '',
+                skills: [], salaryMin: undefined, salaryMax: undefined, isRemote: false,
+                company: currentCompanyDetails.name, companyId: user.companyId,
+                companyLogoUrl: currentCompanyDetails.logoUrl, postedById: user.uid, applicantIds: [],
+            });
+            setSkillsInput('');
+            setFile(null);
+        }
         router.push('/employer/posted-jobs');
 
     } catch (error) {
-        console.error("Error posting job:", error);
-        toast({ title: "Job Posting Failed", description: "Could not post the job. Please try again.", variant: "destructive" });
+        console.error("Error saving job:", error);
+        toast({ title: editingJobId ? "Job Update Failed" : "Job Posting Failed", description: "Could not save the job. Please try again.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
   };
 
+  if (isLoadingJob) {
+    return (
+        <Card className="w-full shadow-lg">
+            <CardHeader>
+                <CardTitle className="text-xl font-headline">Loading Job Details...</CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </CardContent>
+        </Card>
+    );
+  }
+
+
   if (!user || user.role !== 'employer') {
     return (
       <Card>
         <CardHeader><CardTitle>Access Denied</CardTitle></CardHeader>
-        <CardContent><p>You must be logged in as an employer to post a job.</p></CardContent>
+        <CardContent><p>You must be logged in as an employer to post or edit a job.</p></CardContent>
       </Card>
     );
   }
@@ -249,40 +280,46 @@ export function PostJobForm() {
   return (
     <Card className="w-full shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">Job Details for {currentCompanyDetails.name || "Your Company"}</CardTitle>
-        <CardDescription>
-          Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT)
-          and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
-        </CardDescription>
+        <CardTitle className="text-xl font-headline">
+            {editingJobId ? "Edit Job Opening" : "Post New Job"} for {currentCompanyDetails.name || "Your Company"}
+        </CardTitle>
+        {!editingJobId && (
+            <CardDescription>
+            Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT)
+            and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
+            </CardDescription>
+        )}
       </CardHeader>
       <CardContent className="space-y-8">
-        <div className="space-y-4 p-4 border rounded-md bg-muted/20">
-            <Label htmlFor="jobDescriptionFile" className="text-base font-semibold">AI-Powered Parsing</Label>
-            <div className="flex items-center justify-center w-full">
-            <label
-                htmlFor="jobDescriptionFile"
-                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors"
-            >
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <UploadCloud className="w-8 h-8 mb-2 text-primary" />
-                <p className="mb-1 text-sm text-foreground/80">
-                    <span className="font-semibold">Click to upload job description</span> or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (MAX. 2MB)</p>
-                </div>
-                <Input id="jobDescriptionFile" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" />
-            </label>
-            </div>
-            {file && (
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Selected file: {file.name}</span>
-                    <Button type="button" size="sm" onClick={handleParseDocument} disabled={isParsing || !file}>
-                        {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Parse Document
-                    </Button>
-                </div>
-            )}
-        </div>
+        {!editingJobId && (
+          <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+              <Label htmlFor="jobDescriptionFile" className="text-base font-semibold">AI-Powered Parsing (Optional)</Label>
+              <div className="flex items-center justify-center w-full">
+              <label
+                  htmlFor="jobDescriptionFile"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors"
+              >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <UploadCloud className="w-8 h-8 mb-2 text-primary" />
+                  <p className="mb-1 text-sm text-foreground/80">
+                      <span className="font-semibold">Click to upload job description</span> or drag and drop
+                  </p>
+                  <p className="text-xs text-muted-foreground">PDF, DOCX, TXT (MAX. 2MB)</p>
+                  </div>
+                  <Input id="jobDescriptionFile" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" />
+              </label>
+              </div>
+              {file && (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Selected file: {file.name}</span>
+                      <Button type="button" size="sm" onClick={handleParseDocument} disabled={isParsing || !file}>
+                          {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                          Parse Document
+                      </Button>
+                  </div>
+              )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -360,8 +397,8 @@ export function PostJobForm() {
           </div>
 
           <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid || !user.companyId} className="w-full sm:w-auto">
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Post Job Opening
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingJobId ? <Edit className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
+            {editingJobId ? "Update Job Opening" : "Post Job Opening"}
           </Button>
         </form>
       </CardContent>

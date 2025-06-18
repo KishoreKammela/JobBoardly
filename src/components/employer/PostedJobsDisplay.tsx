@@ -23,15 +23,12 @@ export function PostedJobsDisplay() {
       if (!user || user.role !== 'employer' || !user.uid) {
         setIsLoading(false);
         setPostedJobs([]);
-        // No specific error message here, as access denial is handled by the main return block
         return;
       }
       setIsLoading(true);
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        // Firestore query: Requires a composite index on postedById (asc) and createdAt (desc)
-        // You can create this index via the link provided in the Firebase console error message.
         const q = query(jobsCollectionRef, where("postedById", "==", user.uid), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
@@ -72,8 +69,9 @@ export function PostedJobsDisplay() {
             <AlertTitle>Error Loading Jobs</AlertTitle>
             <AlertDescription>
                 {error}
-                {error.includes("firestore/failed-precondition") && error.includes("index")}
+                {error.includes("firestore/failed-precondition") && error.includes("index") &&
                  <p className="mt-2">This query requires a composite index in Firestore. Please check the Firebase console or the error logs for a link to create it.</p>
+                }
             </AlertDescription>
         </Alert>
     );
@@ -135,15 +133,13 @@ export function PostedJobsDisplay() {
                 <Users className="mr-2 h-4 w-4" /> View Applicants ({job.applicantIds?.length || 0})
               </Link>
             </Button>
-            <Button variant="outline" size="sm" asChild disabled>
-              {/* Link to an edit job page - not implemented yet */}
+            <Button variant="outline" size="sm" asChild>
               <Link href={`/employer/post-job?edit=${job.id}`}> 
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Job
               </Link>
             </Button>
-            <Button size="sm" asChild disabled>
-                {/* Link to the public job view page - not implemented yet */}
-              <Link href={`/jobs/${job.id}`} target="_blank"> 
+            <Button size="sm" asChild>
+              <Link href={`/jobs/${job.id}`}> 
                 <Eye className="mr-2 h-4 w-4" /> View Posting
               </Link>
             </Button>
