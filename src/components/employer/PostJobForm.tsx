@@ -16,6 +16,7 @@ import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Badge } from '@/components/ui/badge'; // Added Badge
 
 export function PostJobForm() {
   const { user, company: authCompany } = useAuth();
@@ -216,12 +217,11 @@ export function PostJobForm() {
 
         if (editingJobId) {
             const jobDocRef = doc(db, "jobs", editingJobId);
-            // When editing, we don't automatically change the status. Admins handle re-approval if needed.
-            // Or, a business rule could set it to 'pending' if critical fields change.
-            // For now, status remains as is unless explicitly changed by an admin.
-            jobPayload.status = jobData.status; // Preserve existing status or one set if admin was editing
+            // When editing, the status is reset to 'pending' to trigger re-moderation by admin.
+            jobPayload.status = 'pending';
+            jobPayload.moderationReason = undefined; // Clear previous moderation reason
             await updateDoc(jobDocRef, jobPayload);
-            toast({ title: 'Job Updated!', description: `${jobData.title} has been successfully updated.` });
+            toast({ title: 'Job Updated & Resubmitted for Approval!', description: `${jobData.title} has been updated and sent for review.` });
         } else {
             jobPayload.postedDate = new Date().toISOString().split('T')[0];
             jobPayload.applicantIds = [];
@@ -298,6 +298,13 @@ export function PostJobForm() {
             and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
             </CardDescription>
         )}
+         {editingJobId && jobData.status && (
+            <div className="pt-2">
+              <p className="text-sm font-medium">Current Status: <Badge variant={jobData.status === 'approved' ? 'default' : jobData.status === 'rejected' ? 'destructive' : 'secondary'}>{jobData.status.toUpperCase()}</Badge></p>
+              {jobData.status === 'rejected' && jobData.moderationReason && <p className="text-xs text-destructive mt-1">Admin Reason: {jobData.moderationReason}</p>}
+              <p className="text-xs text-muted-foreground mt-1">Editing and saving this job will resubmit it for admin approval (status will become 'pending').</p>
+            </div>
+          )}
       </CardHeader>
       <CardContent className="space-y-8">
         {!editingJobId && (
@@ -404,16 +411,10 @@ export function PostJobForm() {
               required
             />
           </div>
-          {editingJobId && jobData.status && (
-            <div className="p-3 bg-muted/50 rounded-md">
-              <p className="text-sm font-medium">Current Status: <Badge variant={jobData.status === 'approved' ? 'default' : jobData.status === 'rejected' ? 'destructive' : 'secondary'}>{jobData.status.toUpperCase()}</Badge></p>
-              {jobData.status === 'rejected' && jobData.moderationReason && <p className="text-xs text-destructive mt-1">Reason: {jobData.moderationReason}</p>}
-            </div>
-          )}
-
+          
           <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid || !user.companyId} className="w-full sm:w-auto">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingJobId ? <Edit className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
-            {editingJobId ? "Update Job Opening" : "Submit Job for Approval"}
+            {editingJobId ? "Update & Resubmit Job" : "Submit Job for Approval"}
           </Button>
         </form>
       </CardContent>
