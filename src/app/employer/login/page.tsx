@@ -17,7 +17,6 @@ export default function EmployerLoginPage() {
       if (redirectPath) {
         router.replace(redirectPath);
       } else {
-        // Default to employer dashboard if role matches, otherwise to general appropriate dashboard
         if (user.role === 'employer') router.replace('/employer/posted-jobs');
         else if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'admin') router.replace('/admin');
@@ -33,7 +32,7 @@ export default function EmployerLoginPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null; // Redirected by useEffect
+  if (user && !authLoading) return null; 
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-150px)] items-center justify-center py-12">

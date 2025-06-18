@@ -28,7 +28,6 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      // If user is already logged in, redirect them
       const redirectPath = searchParams.get('redirect');
       if (redirectPath) {
         router.replace(redirectPath);
@@ -43,14 +42,7 @@ export default function RegisterPage() {
 
   const handleRegisterSuccess = () => {
     toast({ title: 'Registration Successful', description: `Welcome to JobBoardly! Complete your profile to get started.` });
-    const redirectPath = searchParams.get('redirect');
-    // After registration, usually redirect to profile or a specific onboarding page
-    // For now, let's use the redirectPath if available, or default to profile.
-    if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      router.push('/profile');
-    }
+    // Redirection is now handled by the useEffect above
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -58,7 +50,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await registerUser(email, password, name, 'jobSeeker' as UserRole);
-      setTimeout(handleRegisterSuccess, 100);
+      handleRegisterSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error("Registration error:", firebaseError.message);
@@ -83,7 +75,7 @@ export default function RegisterPage() {
       else return;
 
       await signInWithSocial(authProvider, 'jobSeeker'); 
-      setTimeout(handleRegisterSuccess, 100);
+      handleRegisterSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
@@ -99,7 +91,7 @@ export default function RegisterPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null; // Redirected by useEffect
+  if (user && !authLoading) return null; 
 
   return (
     <div className="flex items-center justify-center py-12">
@@ -169,13 +161,13 @@ export default function RegisterPage() {
           <p className="w-full text-center">
             Already have an account?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
-              <Link href="/auth/login">Sign in</Link>
+              <Link href={`/auth/login${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Sign in</Link>
             </Button>
           </p>
           <p className="w-full text-center">
             Are you an employer?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
-              <Link href="/employer/register">Register here</Link>
+              <Link href={`/employer/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Register here</Link>
             </Button>
           </p>
         </CardFooter>

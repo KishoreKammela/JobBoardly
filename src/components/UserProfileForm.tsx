@@ -45,7 +45,7 @@ export function UserProfileForm() {
     websiteUrl: '',
     logoUrl: '',
     bannerImageUrl: '',
-    status: 'pending', // Default if not set
+    status: 'pending', 
   };
 
   const [userFormData, setUserFormData] = useState<Partial<UserProfile>>(initialUserFormData);
@@ -168,12 +168,10 @@ export function UserProfileForm() {
       await updateUserProfile(userUpdatePayload);
 
       if (user.role === 'employer' && user.isCompanyAdmin && user.companyId) {
-        // Company status is not updated here, only by platform admins
         const companyUpdatePayload: Partial<Company> = {
             name: companyFormData.name, description: companyFormData.description,
             websiteUrl: companyFormData.websiteUrl, logoUrl: companyFormData.logoUrl,
             bannerImageUrl: companyFormData.bannerImageUrl,
-            // Do NOT update status here. status: companyFormData.status
         };
         await updateCompanyProfile(user.companyId, companyUpdatePayload);
       }
@@ -231,7 +229,7 @@ export function UserProfileForm() {
             </div>
             <div>
               <Label htmlFor="userAvatarUrl">Your Avatar URL</Label>
-              <Input id="userAvatarUrl" name="avatarUrl" placeholder="https://example.com/your-avatar.png" value={userFormData.avatarUrl || ''} onChange={handleUserChange} />
+              <Input id="userAvatarUrl" name="avatarUrl" placeholder="https://example.com/your-avatar.png" value={userFormData.avatarUrl || ''} onChange={handleUserChange} data-ai-hint="avatar photo" />
             </div>
 
             {isJobSeeker && (
@@ -329,11 +327,11 @@ export function UserProfileForm() {
               </div>
               <div>
                 <Label htmlFor="companyLogoUrl">Company Logo URL</Label>
-                <Input id="companyLogoUrl" name="logoUrl" placeholder="https://example.com/logo.png" value={companyFormData.logoUrl || ''} onChange={handleCompanyChange} />
+                <Input id="companyLogoUrl" name="logoUrl" placeholder="https://example.com/logo.png" value={companyFormData.logoUrl || ''} onChange={handleCompanyChange} data-ai-hint="company logo"/>
               </div>
               <div>
                 <Label htmlFor="companyBannerImageUrl">Company Banner Image URL</Label>
-                <Input id="companyBannerImageUrl" name="bannerImageUrl" placeholder="https://example.com/banner.png" value={companyFormData.bannerImageUrl || ''} onChange={handleCompanyChange} />
+                <Input id="companyBannerImageUrl" name="bannerImageUrl" placeholder="https://example.com/banner.png" value={companyFormData.bannerImageUrl || ''} onChange={handleCompanyChange} data-ai-hint="company banner"/>
               </div>
               <div>
                 <Label htmlFor="companyDescription">Company Description (Markdown supported)</Label>
@@ -349,7 +347,7 @@ export function UserProfileForm() {
                         {companyRecruiters.map(rec => (
                             <div key={rec.uid} className="flex items-center gap-3 p-2 border rounded-md bg-muted/20">
                                 <Avatar className="h-10 w-10">
-                                    <AvatarImage src={rec.avatarUrl} alt={rec.name} data-ai-hint="recruiter avatar" />
+                                    <AvatarImage src={rec.avatarUrl || `https://placehold.co/40x40.png`} alt={rec.name} data-ai-hint="recruiter avatar" />
                                     <AvatarFallback>{rec.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
                                 </Avatar>
                                 <div>

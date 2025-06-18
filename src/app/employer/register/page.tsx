@@ -32,7 +32,7 @@ export default function EmployerRegisterPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null; // Redirected by useEffect
+  if (user && !authLoading) return null; 
 
 
   return (

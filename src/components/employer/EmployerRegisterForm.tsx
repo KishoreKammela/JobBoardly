@@ -17,8 +17,8 @@ import { Separator } from '@/components/ui/separator';
 
 
 export function EmployerRegisterForm() {
-  const [recruiterName, setRecruiterName] = useState(''); // Changed from companyName to recruiterName
-  const [companyName, setCompanyName] = useState(''); // New state for actual company name
+  const [recruiterName, setRecruiterName] = useState(''); 
+  const [companyName, setCompanyName] = useState(''); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,13 +29,8 @@ export function EmployerRegisterForm() {
   const { toast } = useToast();
 
   const handleRegisterSuccess = () => {
-    toast({ title: 'Registration Successful', description: `Welcome, ${recruiterName} from ${companyName}! Please complete your company profile.` });
-    const redirectPath = searchParams.get('redirect');
-    if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      router.push('/profile'); // To complete company profile
-    }
+    toast({ title: 'Registration Successful', description: `Welcome, ${recruiterName || 'Recruiter'} from ${companyName || 'your company'}! Please complete your company profile.` });
+    // Redirection is handled by useEffect in parent page /employer/register/page.tsx
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -46,9 +41,8 @@ export function EmployerRegisterForm() {
     }
     setIsLoading(true);
     try {
-      // Pass recruiterName as 'name' and companyName for company creation
       await registerUser(email, password, recruiterName, 'employer' as UserRole, companyName);
-      setTimeout(handleRegisterSuccess, 100);
+      handleRegisterSuccess();
     } catch (error) {
        const firebaseError = error as FirebaseError;
       console.error("Registration error:", firebaseError.message);
@@ -64,13 +58,7 @@ export function EmployerRegisterForm() {
   };
 
   const handleSocialSignUp = async (providerName: 'google' | 'github' | 'microsoft') => {
-    // For social sign-up, we might need a way to capture company name if it's a new company
-    // This could be a separate step or a prompt. For now, let's assume if they use social
-    // and a new company needs to be made, we'll prompt or use a default.
-    // The AuthContext's signInWithSocial now accepts an optional companyName.
-    // We'd ideally get this from a field if the intent is to create a *new* company via social.
-    // For this form, if companyName state is filled, we can pass it.
-     if (!companyName.trim() && providerName) { // Simple check, might need better UX
+     if (!companyName.trim() && providerName) { 
         toast({ title: 'Company Name Required', description: 'Please enter the company name before signing up with a social provider for a new company.', variant: 'destructive' });
         return;
     }
@@ -83,10 +71,8 @@ export function EmployerRegisterForm() {
       else return;
 
       await signInWithSocial(authProvider, 'employer', companyName);
-      // Toast message might need to access the display name from the social provider
-      // For now, using a generic message. AuthContext handles creating user and company.
       toast({ title: 'Sign Up Successful', description: `Welcome! Please complete your company profile.` });
-      setTimeout(handleRegisterSuccess, 100);
+      handleRegisterSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
@@ -109,7 +95,7 @@ export function EmployerRegisterForm() {
           <div className="space-y-2">
             <Label htmlFor="companyNameActual">Company Name</Label>
             <Input
-              id="companyNameActual" // Different ID from recruiterName
+              id="companyNameActual" 
               type="text"
               placeholder="Your Company Inc."
               value={companyName}
@@ -178,13 +164,13 @@ export function EmployerRegisterForm() {
         <p className="w-full text-center">
           Already have an employer account?{' '}
           <Button variant="link" asChild className="p-0 h-auto">
-            <Link href="/employer/login">Sign in</Link>
+            <Link href={`/employer/login${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Sign in</Link>
           </Button>
         </p>
          <p className="w-full text-center">
           Are you a job seeker?{' '}
           <Button variant="link" asChild className="p-0 h-auto">
-            <Link href="/auth/register">Register here</Link>
+            <Link href={`/auth/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Register here</Link>
           </Button>
         </p>
       </CardFooter>

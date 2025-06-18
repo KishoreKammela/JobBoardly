@@ -147,9 +147,9 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
             )}
             </div>
         )}
-         {(showApplyButton && !user) && ( // Show apply button for non-logged in users, will trigger login
+         {(showApplyButton && !user) && ( 
              <div className="flex flex-wrap items-center gap-2">
-                {/* Save button is not shown to non-logged in users */}
+                
                 <Button size="sm" onClick={handleApply} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
                 </Button>

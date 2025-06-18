@@ -46,7 +46,7 @@ export default function CompanyDetailPage() {
 
           if (companyData.status !== 'approved') {
             setError('This company profile is currently under review or not publicly visible.');
-            setCompany(null); // Treat as not found for public view
+            setCompany(null); 
             setIsLoading(false);
             return;
           }
@@ -70,7 +70,7 @@ export default function CompanyDetailPage() {
           const jobsQuery = query(
             collection(db, 'jobs'), 
             where('companyId', '==', companyId),
-            where('status', '==', 'approved'), // Only show approved jobs from this company
+            where('status', '==', 'approved'), 
             orderBy('postedDate', 'desc')
           );
           const jobsSnap = await getDocs(jobsQuery);
@@ -131,8 +131,8 @@ export default function CompanyDetailPage() {
           <Image
             src={company.bannerImageUrl}
             alt={`${company.name} banner`}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{objectFit: 'cover'}}
             priority
             data-ai-hint="company banner"
           />
@@ -191,7 +191,7 @@ export default function CompanyDetailPage() {
                 {recruiters.map(recruiter => (
                   <Card key={recruiter.uid} className="text-center p-4 shadow-sm hover:shadow-md transition-shadow bg-card hover:border-primary/50">
                     <Avatar className="h-20 w-20 mx-auto mb-3 border-2 border-primary/30">
-                      <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} data-ai-hint="recruiter headshot" />
+                      <AvatarImage src={recruiter.avatarUrl || `https://placehold.co/80x80.png`} alt={recruiter.name} data-ai-hint="recruiter headshot" />
                       <AvatarFallback className="text-2xl">{recruiter.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
                     </Avatar>
                     <p className="font-semibold text-foreground">{recruiter.name}</p>

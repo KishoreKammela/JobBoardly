@@ -50,7 +50,7 @@ export default function CandidateDetailPage() {
   }, [employerUser, authLoading, router, currentPathname]);
 
   useEffect(() => {
-    if (candidateId && employerUser && employerUser.role === 'employer') { // Ensure employer is logged in before fetching
+    if (candidateId && employerUser && employerUser.role === 'employer') { 
       const fetchCandidate = async () => {
         setIsLoading(true);
         setError(null);
@@ -76,7 +76,7 @@ export default function CandidateDetailPage() {
       };
       fetchCandidate();
     } else if (employerUser && employerUser.role !== 'employer') {
-        setIsLoading(false); // No need to load if user is not employer
+        setIsLoading(false); 
     }
   }, [candidateId, employerUser]);
 

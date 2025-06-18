@@ -5,7 +5,7 @@ import { collection, getDocs, orderBy, query as firestoreQuery, Timestamp, where
 import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image from 'next/image'; // Keep if used directly for non-avatar images
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Building, AlertCircle, ExternalLink } from 'lucide-react';
@@ -31,7 +31,6 @@ export default function CompaniesListPage() {
       setError(null);
       try {
         const companiesCollectionRef = collection(db, "companies");
-        // Only fetch companies that are approved
         const q = firestoreQuery(companiesCollectionRef, where("status", "==", "approved"), orderBy("name", "asc"));
         const querySnapshot = await getDocs(q);
         const companiesData = querySnapshot.docs.map(doc => {
@@ -57,7 +56,6 @@ export default function CompaniesListPage() {
 
   useEffect(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
-    // Ensure allCompanies being filtered are already 'approved' (handled by initial fetch)
     const newFilteredCompanies = allCompanies.filter(company =>
       company.name.toLowerCase().includes(lowercasedFilter) ||
       (company.description && company.description.toLowerCase().includes(lowercasedFilter))
@@ -127,7 +125,7 @@ export default function CompaniesListPage() {
               <Card key={company.id} className="hover:shadow-lg transition-shadow duration-300 flex flex-col">
                 <CardHeader className="flex-row items-center gap-4 p-4">
                   <Avatar className="h-16 w-16 border">
-                    <AvatarImage src={company.logoUrl || `https://placehold.co/100x100.png?text=${company.name?.[0]}`} alt={`${company.name} logo`} data-ai-hint="company logo" />
+                    <AvatarImage src={company.logoUrl || `https://placehold.co/100x100.png`} alt={`${company.name} logo`} data-ai-hint="company logo" />
                     <AvatarFallback className="text-xl">{company.name?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

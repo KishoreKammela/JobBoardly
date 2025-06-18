@@ -34,7 +34,7 @@ export default function LoginPage() {
         if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'employer') router.replace('/employer/posted-jobs');
         else if (user.role === 'admin') router.replace('/admin');
-        else router.replace('/'); // Fallback
+        else router.replace('/'); 
       }
     }
   }, [user, authLoading, router, searchParams]);
@@ -42,16 +42,7 @@ export default function LoginPage() {
 
   const handleLoginSuccess = () => {
     toast({ title: 'Login Successful', description: `Welcome back!` });
-    const redirectPath = searchParams.get('redirect');
-    if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      // Default redirection based on role after login
-      if (user?.role === 'jobSeeker') router.push('/profile'); // or /jobs
-      else if (user?.role === 'employer') router.push('/employer/posted-jobs');
-      else if (user?.role === 'admin') router.push('/admin');
-      else router.push('/profile'); // Fallback
-    }
+    // Redirection is now handled by the useEffect above
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -59,11 +50,9 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await loginUser(email, password);
-      // Success will be handled by useEffect or explicit call after user state updates
-      // For now, let's assume onAuthStateChanged updates `user` and useEffect handles redirect
-      // Or call handleLoginSuccess if user context might not update immediately for redirect
-      // Forcing a slight delay to allow auth context to update user state if needed for role check in handleLoginSuccess
-      setTimeout(handleLoginSuccess, 100); 
+      // `user` state will update via onAuthStateChanged, then useEffect will trigger redirect.
+      // We can call handleLoginSuccess for the toast immediately.
+      handleLoginSuccess();
     } catch (error) {
        const firebaseError = error as FirebaseError;
        console.error("Login error:", firebaseError.message);
@@ -86,8 +75,7 @@ export default function LoginPage() {
       else return;
 
       await signInWithSocial(authProvider, 'jobSeeker'); 
-      // Similar to email login, relying on user state update and useEffect or explicit call
-      setTimeout(handleLoginSuccess, 100);
+      handleLoginSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
@@ -103,8 +91,7 @@ export default function LoginPage() {
       </div>
     );
   }
-  // If user is already logged in, useEffect will redirect them.
-  // So, no need to render the form if `user` is present.
+
   if (user && !authLoading) return null;
 
 
@@ -163,13 +150,13 @@ export default function LoginPage() {
           <p className="w-full text-center">
             Don't have an account?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
-              <Link href="/auth/register">Sign up</Link>
+              <Link href={`/auth/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Sign up</Link>
             </Button>
           </p>
            <p className="w-full text-center">
             Are you an employer?{' '}
             <Button variant="link" asChild className="p-0 h-auto">
-              <Link href="/employer/login">Login here</Link>
+              <Link href={`/employer/login${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}>Login here</Link>
             </Button>
           </p>
         </CardFooter>

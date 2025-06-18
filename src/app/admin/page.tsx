@@ -83,7 +83,7 @@ export default function AdminPage() {
       const snapshot = await getDocs(q);
       const usersList = snapshot.docs.map(doc => ({ 
           uid: doc.id, ...doc.data(),
-          createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate().toISOString() : doc.data().createdAt,
+          createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate().toISOString() : (doc.data().createdAt ? String(doc.data().createdAt) : 'N/A'),
         } as UserProfile));
       setAllUsers(usersList);
     } catch (error) {
@@ -264,7 +264,7 @@ export default function AdminPage() {
                             </Link>
                         </CardTitle>
                         <CardDescription className="text-xs">
-                            Registered: {company.createdAt ? (typeof company.createdAt === 'string' ? new Date(company.createdAt).toLocaleDateString() : (company.createdAt as Timestamp)?.toDate().toLocaleDateString()) : 'N/A'}
+                            Registered: {company.createdAt ? (typeof company.createdAt === 'string' ? new Date(company.createdAt).toLocaleDateString() : (company.createdAt as unknown as Timestamp)?.toDate().toLocaleDateString()) : 'N/A'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground line-clamp-2 pb-3">
@@ -324,7 +324,7 @@ export default function AdminPage() {
                       <TableCell className="font-medium">{u.name}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell><Badge variant={u.role === 'admin' ? 'default' : (u.role === 'employer' ? 'secondary' : 'outline') }>{u.role.toUpperCase()}</Badge></TableCell>
-                      <TableCell>{u.createdAt ? (typeof u.createdAt === 'string' ? new Date(u.createdAt).toLocaleDateString() : (u.createdAt as Timestamp)?.toDate().toLocaleDateString()) : 'N/A'}</TableCell>
+                      <TableCell>{u.createdAt ? (typeof u.createdAt === 'string' ? new Date(u.createdAt).toLocaleDateString() : (u.createdAt as unknown as Timestamp)?.toDate().toLocaleDateString()) : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" disabled>Manage</Button> 
                       </TableCell>
