@@ -29,6 +29,7 @@ export function PostedJobsDisplay() {
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
+        // Fetch all jobs posted by the user, regardless of status, so they can see pending/rejected too.
         const q = query(jobsCollectionRef, where("postedById", "==", user.uid), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
@@ -116,7 +117,10 @@ export function PostedJobsDisplay() {
                 <div>
                     <CardTitle className="text-xl font-headline">{job.title}</CardTitle>
                     <CardDescription>
-                        Posted on: {job.postedDate ? (typeof job.postedDate === 'string' ? job.postedDate.split('T')[0] : (job.postedDate as Timestamp).toDate().toLocaleDateString()) : 'N/A'} - {job.location} ({job.type})
+                        Posted: {job.postedDate ? (typeof job.postedDate === 'string' ? job.postedDate.split('T')[0] : (job.postedDate as Timestamp).toDate().toLocaleDateString()) : 'N/A'} - {job.location} ({job.type})
+                         <Badge variant={job.status === 'approved' ? 'default' : job.status === 'pending' ? 'secondary' : 'destructive'} className="ml-2 align-middle">
+                           {job.status.toUpperCase()}
+                         </Badge>
                     </CardDescription>
                 </div>
                  <Badge variant={ (job.applicantIds?.length || 0) > 0 ? "default" : "secondary"}>
@@ -126,6 +130,9 @@ export function PostedJobsDisplay() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground line-clamp-2">{job.description}</p>
+            {job.status === 'rejected' && job.moderationReason && (
+                <p className="text-xs text-destructive mt-1">Rejection Reason: {job.moderationReason}</p>
+            )}
           </CardContent>
           <CardFooter className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" size="sm" asChild>
@@ -138,11 +145,13 @@ export function PostedJobsDisplay() {
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Job
               </Link>
             </Button>
-            <Button size="sm" asChild>
-              <Link href={`/jobs/${job.id}`}> 
-                <Eye className="mr-2 h-4 w-4" /> View Posting
-              </Link>
-            </Button>
+            {job.status === 'approved' && (
+              <Button size="sm" asChild>
+                <Link href={`/jobs/${job.id}`} target="_blank" rel="noopener noreferrer">
+                  <Eye className="mr-2 h-4 w-4" /> View Posting
+                </Link>
+              </Button>
+            )}
           </CardFooter>
         </Card>
       ))}

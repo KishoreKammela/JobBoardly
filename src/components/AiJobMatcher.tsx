@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Job } from '@/types';
 import { JobCard } from '@/components/JobCard';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy, where } from 'firebase/firestore'; // Added where
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function AiJobMatcher() {
@@ -21,9 +21,9 @@ export function AiJobMatcher() {
   const { toast } = useToast();
   const [jobSeekerProfile, setJobSeekerProfile] = useState('');
   
-  const [isLoading, setIsLoading] = useState(false); // For AI matching process
+  const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AIPoweredJobMatchingOutput | null>(null);
-  const [error, setError] = useState<string | null>(null); // For AI matching errors
+  const [error, setError] = useState<string | null>(null);
 
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
@@ -61,7 +61,8 @@ export function AiJobMatcher() {
       setJobsError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        const q = firestoreQuery(jobsCollectionRef, orderBy("createdAt", "desc"));
+        // Only fetch approved jobs for matching
+        const q = firestoreQuery(jobsCollectionRef, where("status", "==", "approved"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -108,11 +109,11 @@ export function AiJobMatcher() {
       return;
     }
     if (jobsLoading) {
-      toast({ title: 'Still loading jobs', description: 'Please wait until all jobs are loaded before matching.', variant: 'default' });
+      toast({ title: 'Still loading jobs', description: 'Please wait until all jobs are loaded before matching.', variant: "default" });
       return;
     }
     if (jobsError || allJobs.length === 0) {
-      toast({ title: 'No Jobs Available', description: 'Cannot perform matching as no jobs are available or there was an error loading them.', variant: 'destructive' });
+      toast({ title: 'No Approved Jobs Available', description: 'Cannot perform matching as no approved jobs are available or there was an error loading them.', variant: 'destructive' });
       return;
     }
 
@@ -122,7 +123,7 @@ export function AiJobMatcher() {
     setMatchedJobsDetails([]);
 
     try {
-      const jobPostingsString = formatJobsForAI(allJobs);
+      const jobPostingsString = formatJobsForAI(allJobs); // allJobs here are already filtered for 'approved' status
       const input: AIPoweredJobMatchingInput = {
         jobSeekerProfile,
         jobPostings: jobPostingsString,
@@ -134,7 +135,7 @@ export function AiJobMatcher() {
         const matched = allJobs.filter(job => aiResult.relevantJobIDs.includes(job.id));
         setMatchedJobsDetails(matched);
         if (matched.length === 0 && aiResult.relevantJobIDs.length > 0) {
-          toast({ title: "Match IDs found, but no job details", description: "AI suggested job IDs, but they don't correspond to known jobs. See reasoning.", variant: "default"});
+          toast({ title: "Match IDs found, but no job details", description: "AI suggested job IDs, but they don't correspond to known approved jobs. See reasoning.", variant: "default"});
         }
       }
 
@@ -176,7 +177,7 @@ export function AiJobMatcher() {
           AI-Powered Job Matcher
         </CardTitle>
         <CardDescription>
-          Your profile details (auto-filled if available) will be used by our AI to recommend relevant jobs from our entire database.
+          Your profile details (auto-filled if available) will be used by our AI to recommend relevant jobs from our entire database of approved listings.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -207,7 +208,7 @@ export function AiJobMatcher() {
           ) : (
             <Sparkles className="mr-2 h-5 w-5" />
           )}
-          {jobsLoading ? 'Loading Jobs...' : 'Get Matches'}
+          {jobsLoading ? 'Loading Approved Jobs...' : 'Get Matches'}
         </Button>
         {!user && <p className="text-sm text-destructive text-center">Please log in as a job seeker to use the AI Matcher.</p>}
         
@@ -242,7 +243,7 @@ export function AiJobMatcher() {
                  <Alert variant="default" className="mt-4">
                     <Briefcase className="h-4 w-4" />
                     <AlertDescription>
-                        AI identified some potentially relevant job IDs, but they could not be matched to current listings. This might happen if jobs were recently removed. See reasoning above.
+                        AI identified some potentially relevant job IDs, but they could not be matched to current approved listings. This might happen if jobs were recently removed or their status changed. See reasoning above.
                          Relevant IDs: {result.relevantJobIDs.join(', ')}
                     </AlertDescription>
                  </Alert>
@@ -250,7 +251,7 @@ export function AiJobMatcher() {
                 <Alert variant="default" className="mt-4">
                     <Briefcase className="h-4 w-4" />
                     <AlertDescription>
-                        No specific jobs were matched by the AI based on your current profile and available listings. Try refining your profile summary or check back later for new job postings.
+                        No specific jobs were matched by the AI based on your current profile and available approved listings. Try refining your profile summary or check back later for new job postings.
                     </AlertDescription>
                  </Alert>
               )}
@@ -261,5 +262,3 @@ export function AiJobMatcher() {
     </Card>
   );
 }
-
-    

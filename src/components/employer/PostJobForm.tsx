@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Sparkles, Send, Edit } from 'lucide-react'; // Added Edit icon
+import { Loader2, UploadCloud, Sparkles, Send, Edit } from 'lucide-react';
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
@@ -24,11 +24,14 @@ export function PostJobForm() {
   const searchParams = useSearchParams();
   const editingJobId = searchParams.get('edit');
 
-  const [jobData, setJobData] = useState<Partial<Job>>({
+  const initialJobData: Partial<Job> = {
     type: 'Full-time',
     isRemote: false,
     applicantIds: [],
-  });
+    status: 'pending', // Default status for new jobs
+  };
+
+  const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -38,8 +41,8 @@ export function PostJobForm() {
 
   useEffect(() => {
     const initializeForm = async () => {
+      let companyDataToUse: Company | null = null;
       if (user && user.role === 'employer' && user.companyId) {
-        let companyDataToUse: Company | null = null;
         if (authCompany) {
           companyDataToUse = authCompany;
         } else {
@@ -49,7 +52,7 @@ export function PostJobForm() {
             companyDataToUse = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
           } else {
             toast({ title: "Error", description: "Could not load your company details.", variant: "destructive"});
-            return; // Stop if company details can't be loaded
+            return;
           }
         }
 
@@ -71,10 +74,10 @@ export function PostJobForm() {
         const jobDocSnap = await getDoc(jobDocRef);
         if (jobDocSnap.exists()) {
           const existingJob = jobDocSnap.data() as Job;
-          // Ensure postedById matches the current user's UID if editing
           if (user && existingJob.postedById !== user.uid && existingJob.companyId !== user.companyId) {
              toast({ title: "Unauthorized", description: "You cannot edit this job.", variant: "destructive" });
              router.push('/employer/posted-jobs');
+             setIsLoadingJob(false);
              return;
           }
           setJobData({
@@ -87,6 +90,9 @@ export function PostJobForm() {
           router.push('/employer/posted-jobs');
         }
         setIsLoadingJob(false);
+      } else {
+        // For new jobs, ensure status is pending
+        setJobData(prev => ({ ...prev, status: 'pending' }));
       }
     };
     initializeForm();
@@ -110,7 +116,7 @@ export function PostJobForm() {
   };
 
   const handleSelectChange = (name: keyof Job, value: string) => {
-    setJobData(prev => ({ ...prev, [name]: value as Job['type'] }));
+    setJobData(prev => ({ ...prev, [name]: value as Job['type'] })); // Assuming 'type' is the only select for Job
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -210,24 +216,27 @@ export function PostJobForm() {
 
         if (editingJobId) {
             const jobDocRef = doc(db, "jobs", editingJobId);
+            // When editing, we don't automatically change the status. Admins handle re-approval if needed.
+            // Or, a business rule could set it to 'pending' if critical fields change.
+            // For now, status remains as is unless explicitly changed by an admin.
+            jobPayload.status = jobData.status; // Preserve existing status or one set if admin was editing
             await updateDoc(jobDocRef, jobPayload);
             toast({ title: 'Job Updated!', description: `${jobData.title} has been successfully updated.` });
         } else {
             jobPayload.postedDate = new Date().toISOString().split('T')[0];
             jobPayload.applicantIds = [];
             jobPayload.createdAt = serverTimestamp();
+            jobPayload.status = 'pending'; // New jobs are pending approval
             const jobsCollectionRef = collection(db, "jobs");
             await addDoc(jobsCollectionRef, jobPayload);
-            toast({ title: 'Job Posted!', description: `${jobData.title} has been successfully posted.` });
+            toast({ title: 'Job Submitted for Approval!', description: `${jobData.title} has been submitted and is pending review.` });
         }
         
-        // Reset form only if not editing or if successfully created a new one
         if (!editingJobId) {
            setJobData({
-                title: '', location: '', type: 'Full-time', description: '',
-                skills: [], salaryMin: undefined, salaryMax: undefined, isRemote: false,
+                ...initialJobData, // Reset to initial with pending status
                 company: currentCompanyDetails.name, companyId: user.companyId,
-                companyLogoUrl: currentCompanyDetails.logoUrl, postedById: user.uid, applicantIds: [],
+                companyLogoUrl: currentCompanyDetails.logoUrl, postedById: user.uid,
             });
             setSkillsInput('');
             setFile(null);
@@ -285,7 +294,7 @@ export function PostJobForm() {
         </CardTitle>
         {!editingJobId && (
             <CardDescription>
-            Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT)
+            Provide the specifics for the job opening. New jobs will be submitted for admin approval. You can also upload a document (e.g., PDF, DOCX, TXT)
             and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
             </CardDescription>
         )}
@@ -336,7 +345,7 @@ export function PostJobForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="type">Job Type</Label>
-              <Select value={jobData.type || 'Full-time'} onValueChange={(value) => handleSelectChange('type', value)}>
+              <Select value={jobData.type || 'Full-time'} onValueChange={(value) => handleSelectChange('type', value as Job['type'])}>
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select job type" />
                 </SelectTrigger>
@@ -395,10 +404,16 @@ export function PostJobForm() {
               required
             />
           </div>
+          {editingJobId && jobData.status && (
+            <div className="p-3 bg-muted/50 rounded-md">
+              <p className="text-sm font-medium">Current Status: <Badge variant={jobData.status === 'approved' ? 'default' : jobData.status === 'rejected' ? 'destructive' : 'secondary'}>{jobData.status.toUpperCase()}</Badge></p>
+              {jobData.status === 'rejected' && jobData.moderationReason && <p className="text-xs text-destructive mt-1">Reason: {jobData.moderationReason}</p>}
+            </div>
+          )}
 
           <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid || !user.companyId} className="w-full sm:w-auto">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (editingJobId ? <Edit className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />)}
-            {editingJobId ? "Update Job Opening" : "Post Job Opening"}
+            {editingJobId ? "Update Job Opening" : "Submit Job for Approval"}
           </Button>
         </form>
       </CardContent>

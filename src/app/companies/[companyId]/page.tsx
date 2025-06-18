@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Briefcase, MapPin, Users, Link as LinkIcon, Building, Loader2, AlertCircle, Mail, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { JobCard } from '@/components/JobCard'; // Assuming JobCard can be reused
+import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 
 export default function CompanyDetailPage() {
@@ -39,13 +39,14 @@ export default function CompanyDetailPage() {
           if (!companyDocSnap.exists()) {
             setError('Company not found.');
             setIsLoading(false);
+            setCompany(null); // Ensure company is null if not found
             return;
           }
           const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
           setCompany(companyData);
 
           if (companyData.recruiterUids && companyData.recruiterUids.length > 0) {
-            const recruitersQueryLimit = 30; // Firestore 'in' query limit
+            const recruitersQueryLimit = 30;
             const fetchedRecruiters: UserProfile[] = [];
             for (let i = 0; i < companyData.recruiterUids.length; i += recruitersQueryLimit) {
                 const batchUids = companyData.recruiterUids.slice(i, i + recruitersQueryLimit);
@@ -59,7 +60,12 @@ export default function CompanyDetailPage() {
           }
 
 
-          const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', companyId), orderBy('postedDate', 'desc'));
+          const jobsQuery = query(
+            collection(db, 'jobs'), 
+            where('companyId', '==', companyId),
+            where('status', '==', 'approved'), // Only show approved jobs
+            orderBy('postedDate', 'desc')
+          );
           const jobsSnap = await getDocs(jobsQuery);
           const fetchedJobs = jobsSnap.docs.map(d => {
             const jobData = d.data();
@@ -76,6 +82,7 @@ export default function CompanyDetailPage() {
         } catch (e) {
           console.error('Error fetching company details:', e);
           setError('Failed to load company details. Please try again.');
+          setCompany(null); // Ensure company is null on error
         } finally {
           setIsLoading(false);
         }
@@ -93,19 +100,19 @@ export default function CompanyDetailPage() {
     );
   }
 
-  if (error) {
+  if (error && !company) { // Show main error if company couldn't be loaded at all
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Profile</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error} <Link href="/companies" className="underline">Browse other companies.</Link></AlertDescription>
         </Alert>
       </div>
     );
   }
-
-  if (!company) {
+  
+  if (!company) { // Company not found or error occurred during specific data fetch but company was initially set
     return (
       <div className="container mx-auto py-10 text-center">
         <Building className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
@@ -115,10 +122,11 @@ export default function CompanyDetailPage() {
     );
   }
 
+
   return (
     <div className="container mx-auto py-8">
       {company.bannerImageUrl ? (
-        <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-8">
+        <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-[-50px] md:mb-[-75px] z-0">
           <Image
             src={company.bannerImageUrl}
             alt={`${company.name} banner`}
@@ -127,22 +135,27 @@ export default function CompanyDetailPage() {
             priority
             data-ai-hint="company banner"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
         </div>
       ) : (
-        <div className="w-full h-48 md:h-64 lg:h-80 rounded-lg bg-muted flex items-center justify-center shadow-lg mb-8">
-            <Building className="h-24 w-24 text-muted-foreground" />
+        <div className="w-full h-32 md:h-48 rounded-lg bg-muted flex items-center justify-center shadow-lg mb-4">
+            <Building className="h-16 w-16 md:h-24 md:w-24 text-muted-foreground" />
         </div>
       )}
 
-      <Card className="shadow-xl -mt-16 md:-mt-24 relative z-10 max-w-5xl mx-auto">
-        <CardHeader className="p-6 text-center">
-          <div className="flex flex-col items-center gap-4">
-            {company.logoUrl && (
-              <Avatar className="h-24 w-24 border-4 border-background shadow-md">
-                <AvatarImage src={company.logoUrl} alt={`${company.name} logo`} data-ai-hint="company logo" />
-                <AvatarFallback className="text-3xl">{company.name?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
+      <Card className="shadow-xl relative z-10 max-w-5xl mx-auto overflow-hidden">
+        <CardHeader className={`p-6 ${company.bannerImageUrl ? 'pt-20 md:pt-24' : 'pt-6'} text-center bg-card`}>
+          <div className="flex flex-col items-center gap-4 -mt-16 md:-mt-20">
+             {company.logoUrl ? (
+              <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-md bg-background">
+                <AvatarImage src={company.logoUrl} alt={`${company.name} logo`} data-ai-hint="company logo" className="object-contain"/>
+                <AvatarFallback className="text-3xl md:text-4xl">{company.name?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
               </Avatar>
-            )}
+             ) : (
+                <div className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-md">
+                    <Building className="h-12 w-12 md:h-16 md:w-16 text-primary"/>
+                </div>
+             )}
             <div className="mt-2">
               <CardTitle className="text-3xl md:text-4xl font-bold font-headline text-primary">{company.name}</CardTitle>
               {company.websiteUrl && (
@@ -162,8 +175,8 @@ export default function CompanyDetailPage() {
         <CardContent className="p-6 space-y-8">
           {company.description && (
             <section>
-              <h2 className="text-2xl font-semibold mb-3 font-headline text-center">About Us</h2>
-              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-muted/10">
+              <h2 className="text-2xl font-semibold mb-3 font-headline text-center md:text-left">About Us</h2>
+              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                 {company.description}
               </div>
             </section>
@@ -171,11 +184,11 @@ export default function CompanyDetailPage() {
           <Separator />
 
           <section>
-            <h2 className="text-2xl font-semibold mb-4 font-headline text-center">Our Recruiters</h2>
+            <h2 className="text-2xl font-semibold mb-4 font-headline text-center md:text-left">Our Recruiters</h2>
             {recruiters.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recruiters.map(recruiter => (
-                  <Card key={recruiter.uid} className="text-center p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <Card key={recruiter.uid} className="text-center p-4 shadow-sm hover:shadow-md transition-shadow bg-card hover:border-primary/50">
                     <Avatar className="h-20 w-20 mx-auto mb-3 border-2 border-primary/30">
                       <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} data-ai-hint="recruiter headshot" />
                       <AvatarFallback className="text-2xl">{recruiter.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
@@ -190,7 +203,7 @@ export default function CompanyDetailPage() {
                 ))}
               </div>
             ) : (
-                <div className="text-center py-6">
+                <div className="text-center py-6 border rounded-md bg-muted/30">
                     <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No recruiters listed for this company yet.</p>
                 </div>
@@ -199,7 +212,7 @@ export default function CompanyDetailPage() {
            <Separator />
 
           <section>
-            <h2 className="text-2xl font-semibold mb-6 font-headline text-center">Open Positions ({jobs.length})</h2>
+            <h2 className="text-2xl font-semibold mb-6 font-headline text-center md:text-left">Open Positions ({jobs.length})</h2>
             {jobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {jobs.map(job => (
@@ -207,9 +220,9 @@ export default function CompanyDetailPage() {
                 ))}
               </div>
             ) : (
-                <div className="text-center py-6">
+                <div className="text-center py-6 border rounded-md bg-muted/30">
                     <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">This company currently has no open positions listed on JobBoardly.</p>
+                    <p className="text-muted-foreground">This company currently has no approved open positions listed on JobBoardly.</p>
                      <Button variant="link" asChild className="mt-2"><Link href="/jobs">Explore other jobs</Link></Button>
                 </div>
             )}

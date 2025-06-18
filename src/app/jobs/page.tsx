@@ -1,22 +1,22 @@
 
 "use client";
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation'; // Import useSearchParams
+import { useSearchParams } from 'next/navigation';
 import { JobCard } from '@/components/JobCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
-import type { Job, Filters } from '@/types'; // Import Filters
+import type { Job, Filters } from '@/types';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, AlertCircle, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy, where } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const JOBS_PER_PAGE = 9;
 
 export default function JobsPage() {
-  const searchParams = useSearchParams(); // Hook to access URL query parameters
+  const searchParams = useSearchParams();
 
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
@@ -24,7 +24,6 @@ export default function JobsPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  // Initial filters can now be read from URL, but FilterSidebar also needs to be initialized
   const [initialFiltersApplied, setInitialFiltersApplied] = useState(false);
   const [currentFilters, setCurrentFilters] = useState<Filters>({
     searchTerm: searchParams.get('q') || '',
@@ -40,7 +39,8 @@ export default function JobsPage() {
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        const q = firestoreQuery(jobsCollectionRef, orderBy("createdAt", "desc"));
+        // Only fetch jobs that are approved
+        const q = firestoreQuery(jobsCollectionRef, where("status", "==", "approved"), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -53,7 +53,6 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        // Initial filtering based on URL params happens after jobs are fetched
       } catch (e) {
         console.error("Error fetching jobs:", e);
         setError("Failed to load jobs. Please try again later.");
@@ -64,21 +63,21 @@ export default function JobsPage() {
     fetchJobs();
   }, []);
 
-  // Effect to apply filters (including initial from URL) once jobs are loaded
   useEffect(() => {
     if (allJobs.length > 0 && !initialFiltersApplied) {
-      handleFilterChange(currentFilters); // Apply initial URL filters
-      setInitialFiltersApplied(true); // Mark as applied
-    } else if (initialFiltersApplied) { // For subsequent filter changes from sidebar
+      handleFilterChange(currentFilters);
+      setInitialFiltersApplied(true);
+    } else if (initialFiltersApplied) {
       handleFilterChange(currentFilters);
     }
-  }, [allJobs, currentFilters, initialFiltersApplied]); // Dependencies
+  }, [allJobs, currentFilters, initialFiltersApplied]);
 
   const handleFilterChange = (filters: Filters) => {
     setIsLoading(true); 
     setCurrentPage(1); 
-    setCurrentFilters(filters); // Update currentFilters state
+    setCurrentFilters(filters);
     
+    // Ensure allJobs being filtered are already 'approved' (handled by initial fetch)
     const newFilteredJobs = allJobs.filter(job => {
       const searchTermMatch = filters.searchTerm.toLowerCase() === '' ||
         job.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -141,7 +140,7 @@ export default function JobsPage() {
       <main className="w-full md:w-3/4 lg:w-4/5">
         <div className="mb-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold font-headline">
-            {isLoading && filteredJobs.length === 0 ? 'Loading Jobs...' : `Found ${filteredJobs.length} Jobs`}
+            {isLoading && filteredJobs.length === 0 ? 'Loading Jobs...' : `Found ${filteredJobs.length} Approved Jobs`}
           </h2>
           <div className="flex gap-2">
             <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} aria-label="Grid view">
@@ -198,7 +197,7 @@ export default function JobsPage() {
           !error && (
             <div className="text-center py-12">
               <Search className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-xl text-muted-foreground">No jobs found matching your criteria.</p>
+              <p className="text-xl text-muted-foreground">No approved jobs found matching your criteria.</p>
             </div>
           )
         )}

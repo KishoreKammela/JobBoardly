@@ -25,28 +25,31 @@ export interface Company {
   websiteUrl?: string;
   logoUrl?: string;
   bannerImageUrl?: string;
-  adminUids: string[]; // UIDs of users who are company admins
+  adminUids: string[]; // UIDs of users who are company admins for this company
   recruiterUids: string[]; // UIDs of all recruiters (including admins) in the company
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
+  // Future: status: 'pendingVerification' | 'verified' | 'rejected';
 }
 
 export interface Job {
   id: string;
   title: string;
   company: string;
-  companyId: string;
+  companyId: string; // Links to the Company document ID
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string | Timestamp;
+  postedDate: string | Timestamp; // Consider standardizing to string (ISO) or Date object after fetch for consistency
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string;
-  postedById: string;
+  companyLogoUrl?: string; // Can be sourced from Company.logoUrl
+  postedById: string; // UID of the employer who posted it
   applicantIds?: string[];
+  status: 'pending' | 'approved' | 'rejected'; // For moderation
+  moderationReason?: string; // Optional reason for rejection
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 }
@@ -62,7 +65,7 @@ export interface UserProfile {
 
   // Job Seeker specific fields
   headline?: string;
-  skills?: string[];
+  // skills?: string[]; // Duplicated from Job, assuming skills here are user's skills
   experience?: string;
   education?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
@@ -76,7 +79,7 @@ export interface UserProfile {
   parsedResumeText?: string;
   appliedJobIds?: string[];
   savedJobIds?: string[];
-  savedSearches?: SavedSearch[]; // Added for saved searches
+  savedSearches?: SavedSearch[];
 
   // Employer specific fields
   companyId?: string;
@@ -88,10 +91,10 @@ export interface UserSettings {
   itemsPerPage: 10 | 20 | 50;
   jobAlerts: {
     newJobsMatchingProfile: boolean;
-    savedSearchAlerts: boolean; // This will be configurable once alerts are implemented
+    savedSearchAlerts: boolean;
     applicationStatusUpdates: boolean;
   };
-  searchHistory: string[]; // This is distinct from saved searches
+  searchHistory: string[];
 }
 
 export interface ParsedResumeData {
@@ -113,4 +116,5 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
+  // companyName will come from employer's profile
 }
