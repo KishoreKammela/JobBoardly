@@ -7,6 +7,7 @@ import type { Job } from '@/types';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List, AlertCircle, Search } from 'lucide-react'; // Added Search
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query as firestoreQuery, where, Timestamp, orderBy } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -182,3 +183,4 @@ export default function JobsPage() {
     </div>
   );
 }
+
