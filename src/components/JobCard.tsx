@@ -131,7 +131,7 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
         <p className="text-xs text-muted-foreground whitespace-nowrap">
           Posted: {job.postedDate ? (typeof job.postedDate === 'string' ? new Date(job.postedDate).toLocaleDateString() : (job.postedDate as Timestamp).toDate().toLocaleDateString()) : 'N/A'}
         </p>
-        {showApplyButton && user?.role === 'jobSeeker' && (
+        {(showApplyButton && user?.role === 'jobSeeker') && (
             <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleSaveToggle} aria-pressed={saved} aria-label={saved ? "Unsave job" : "Save job"}>
                 <Bookmark className={`h-4 w-4 ${saved ? 'fill-primary text-primary' : ''}`} />
@@ -147,11 +147,9 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
             )}
             </div>
         )}
-         {showApplyButton && !user && ( // Show apply button for non-logged in users, will trigger login
+         {(showApplyButton && !user) && ( // Show apply button for non-logged in users, will trigger login
              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleSaveToggle} aria-label="Save job">
-                    <Bookmark className={`h-4 w-4 ${saved ? 'fill-primary text-primary' : ''}`} />
-                </Button>
+                {/* Save button is not shown to non-logged in users */}
                 <Button size="sm" onClick={handleApply} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                     Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
                 </Button>

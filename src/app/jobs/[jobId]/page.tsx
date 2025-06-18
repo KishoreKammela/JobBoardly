@@ -216,10 +216,12 @@ export default function JobDetailPage() {
                       Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>
                )}
-                <Button variant="outline" size="lg" onClick={handleSaveToggle} className="w-full">
-                    <Bookmark className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`} />
-                    {saved ? 'Job Saved' : 'Save Job'}
-                </Button>
+                {user && user.role === 'jobSeeker' && (
+                  <Button variant="outline" size="lg" onClick={handleSaveToggle} className="w-full">
+                      <Bookmark className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`} />
+                      {saved ? 'Job Saved' : 'Save Job'}
+                  </Button>
+                )}
                 <Button variant="outline" size="lg" onClick={handleShare} className="w-full">
                     <Share2 className="mr-2 h-5 w-5" /> Share Job
                 </Button>
