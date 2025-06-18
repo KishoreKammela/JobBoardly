@@ -28,7 +28,7 @@ interface NavLinkConfig {
 
 const navLinksBase: NavLinkConfig[] = [
   { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'admin'], alwaysShowForSeekerOrPublic: true, visibility: 'primary' },
-  { href: '/companies', label: 'Companies', icon: <Columns className="h-4 w-4" />, authRequired: false, roles: [], alwaysShowForSeekerOrPublic: true, visibility: 'primary' },
+  { href: '/companies', label: 'Companies', icon: <Columns className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'employer', 'admin'], alwaysShowForSeekerOrPublic: true, visibility: 'primary' },
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'], visibility: 'primary' },
   { href: '/ai-match', label: 'AI Job Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'], visibility: 'secondary' },
   { href: '/employer/ai-candidate-match', label: 'AI Candidate Matcher', icon: <Lightbulb className="h-4 w-4" />, authRequired: true, roles: ['employer'], visibility: 'secondary' },
@@ -89,10 +89,10 @@ export function Navbar() {
     return navLinksBase.filter(link => {
       if (user) { // Logged in
         if (link.roles.includes(user.role)) return true;
-        // Allow admin to see seeker-specific "Find Jobs" and public "Companies"
+        // Allow admin to see seeker-specific "Find Jobs" and public "Companies" - these specific overrides might be redundant if roles array is comprehensive
         if (user.role === 'admin' && link.alwaysShowForSeekerOrPublic && (link.href === '/jobs' || link.href === '/companies')) return true;
-         // Allow employer to see public "Companies"
-        if (user.role === 'employer' && link.href === '/companies') return true;
+         // Allow employer to see public "Companies" - this specific override might be redundant
+        if (user.role === 'employer' && link.href === '/companies' && link.alwaysShowForSeekerOrPublic) return true;
 
         return false;
       } else { // Not logged in
