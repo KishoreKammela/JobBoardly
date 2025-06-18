@@ -10,12 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building, User, Users, Info } from 'lucide-react'; // Added Users, Info
+import { Loader2, Building, User, Users, Info, ShieldCheck } from 'lucide-react'; 
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar imports
-import { Separator } from '@/components/ui/separator'; // Added Separator
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
+import { Separator } from '@/components/ui/separator'; 
+import { Badge } from '@/components/ui/badge';
+
 
 export function UserProfileForm() {
   const { user, company, updateUserProfile, updateCompanyProfile, loading: authLoading } = useAuth();
@@ -43,6 +45,7 @@ export function UserProfileForm() {
     websiteUrl: '',
     logoUrl: '',
     bannerImageUrl: '',
+    status: 'pending', // Default if not set
   };
 
   const [userFormData, setUserFormData] = useState<Partial<UserProfile>>(initialUserFormData);
@@ -79,6 +82,7 @@ export function UserProfileForm() {
           websiteUrl: company.websiteUrl || '',
           logoUrl: company.logoUrl || '',
           bannerImageUrl: company.bannerImageUrl || '',
+          status: company.status || 'pending',
         });
 
         if (user.isCompanyAdmin && company.recruiterUids && company.recruiterUids.length > 0) {
@@ -164,16 +168,17 @@ export function UserProfileForm() {
       await updateUserProfile(userUpdatePayload);
 
       if (user.role === 'employer' && user.isCompanyAdmin && user.companyId) {
+        // Company status is not updated here, only by platform admins
         const companyUpdatePayload: Partial<Company> = {
             name: companyFormData.name, description: companyFormData.description,
             websiteUrl: companyFormData.websiteUrl, logoUrl: companyFormData.logoUrl,
             bannerImageUrl: companyFormData.bannerImageUrl,
+            // Do NOT update status here. status: companyFormData.status
         };
         await updateCompanyProfile(user.companyId, companyUpdatePayload);
       }
 
       toast({ title: 'Profile Updated', description: 'Your information has been successfully updated.' });
-      // router.push(user.role === 'jobSeeker' ? '/jobs' : '/employer/posted-jobs'); // No automatic redirect after save
     } catch (error) {
         console.error("Profile update error:", error);
         toast({ title: 'Update Failed', description: 'Could not update your profile. Please try again.', variant: 'destructive' });
@@ -298,10 +303,20 @@ export function UserProfileForm() {
       {isCompanyAdmin && company && user.companyId && (
         <Card className="w-full shadow-lg">
           <CardHeader>
-            <CardTitle className="text-xl font-headline flex items-center gap-2">
-                <Building /> Company Profile
-            </CardTitle>
-            <CardDescription>Manage your company's public information. Changes here affect your public company page.</CardDescription>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="text-xl font-headline flex items-center gap-2">
+                        <Building /> Company Profile
+                    </CardTitle>
+                    <CardDescription>Manage your company's public information. Changes here affect your public company page.</CardDescription>
+                </div>
+                <Badge variant={companyFormData.status === 'approved' ? 'default' : companyFormData.status === 'rejected' ? 'destructive' : 'secondary'} className="text-sm">
+                    <ShieldCheck className="mr-1.5 h-4 w-4"/> {companyFormData.status?.toUpperCase()}
+                </Badge>
+            </div>
+            {companyFormData.status === 'rejected' && company.moderationReason && (
+                <p className="text-sm text-destructive mt-1">Admin Reason: {company.moderationReason}</p>
+            )}
           </CardHeader>
           <CardContent className="space-y-6">
               <div>

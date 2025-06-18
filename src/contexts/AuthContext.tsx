@@ -37,8 +37,8 @@ interface AuthContextType {
   updateUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
   updateCompanyProfile: (companyId: string, updatedData: Partial<Company>) => Promise<void>;
   signInWithSocial: (provider: FirebaseAuthProvider, role: UserRole, companyName?: string) => Promise<FirebaseUser>;
-  saveSearch: (searchName: string, filters: Filters) => Promise<void>; // New method
-  deleteSearch: (searchId: string) => Promise<void>; // New method
+  saveSearch: (searchName: string, filters: Filters) => Promise<void>;
+  deleteSearch: (searchId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recruiterUids: [fbUser.uid],
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
+        status: 'pending', // New companies are pending approval
       };
       await setDoc(newCompanyRef, newCompanyData);
       userCompanyId = newCompanyRef.id;
@@ -132,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (role === 'jobSeeker') {
       userProfileData.appliedJobIds = [];
       userProfileData.savedJobIds = [];
-      userProfileData.savedSearches = []; // Initialize savedSearches
+      userProfileData.savedSearches = [];
       userProfileData.headline = '';
       userProfileData.skills = [];
     }
@@ -202,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 recruiterUids: [fbUser.uid],
                 createdAt: serverTimestamp() as Timestamp,
                 updatedAt: serverTimestamp() as Timestamp,
+                status: 'pending', // New companies via social sign-up are also pending
             };
             await setDoc(newCompanyRef, newCompanyData);
             updates.companyId = newCompanyRef.id;
@@ -209,12 +211,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updatesNeeded = true;
             setCompany({ id: newCompanyRef.id, ...newCompanyData } as Company);
         }
-        // Ensure savedSearches array exists for job seekers
         if (role === 'jobSeeker' && !existingProfile.savedSearches) {
             updates.savedSearches = [];
             updatesNeeded = true;
         }
-
 
         if (updatesNeeded) {
           updates.updatedAt = serverTimestamp();
@@ -260,10 +260,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (Object.keys(dataToUpdate).length > 1) { // Check if there's more than just updatedAt
+      if (Object.keys(dataToUpdate).length > 1) { 
         try {
             await updateDoc(userDocRef, dataToUpdate);
-            setUser(prevUser => ({ ...prevUser, ...dataToUpdate } as UserProfile)); // Update local state
+            setUser(prevUser => ({ ...prevUser, ...dataToUpdate } as UserProfile)); 
         } catch (error) {
             console.error("AuthContext: updateUserProfile error", error);
             throw error;
@@ -282,7 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const companyDocRef = doc(db, "companies", companyId);
     const dataToUpdate: { [key: string]: any } = { ...updatedData, updatedAt: serverTimestamp() };
-    delete dataToUpdate.id;
+    delete dataToUpdate.id; 
     
     try {
         await updateDoc(companyDocRef, dataToUpdate);
@@ -445,8 +445,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserProfile,
         updateCompanyProfile,
         signInWithSocial,
-        saveSearch, // Added
-        deleteSearch // Added
+        saveSearch, 
+        deleteSearch 
     }}>
       {!loading && children}
     </AuthContext.Provider>

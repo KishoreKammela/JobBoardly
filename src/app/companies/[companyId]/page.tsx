@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Briefcase, MapPin, Users, Link as LinkIcon, Building, Loader2, AlertCircle, Mail, ExternalLink } from 'lucide-react';
+import { Briefcase, MapPin, Users, Link as LinkIcon, Building, Loader2, AlertCircle, Mail, ExternalLink, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { JobCard } from '@/components/JobCard';
@@ -37,18 +37,25 @@ export default function CompanyDetailPage() {
           const companyDocSnap = await getDoc(companyDocRef);
 
           if (!companyDocSnap.exists()) {
-            setError('Company not found.');
+            setError('Company not found or is not currently visible.');
             setIsLoading(false);
-            setCompany(null); // Ensure company is null if not found
+            setCompany(null);
             return;
           }
           const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
+
+          if (companyData.status !== 'approved') {
+            setError('This company profile is currently under review or not publicly visible.');
+            setCompany(null); // Treat as not found for public view
+            setIsLoading(false);
+            return;
+          }
           setCompany(companyData);
 
           if (companyData.recruiterUids && companyData.recruiterUids.length > 0) {
             const recruitersQueryLimit = 30;
             const fetchedRecruiters: UserProfile[] = [];
-            for (let i = 0; i < companyData.recruiterUids.length; i += recruitersQueryLimit) {
+             for (let i = 0; i < companyData.recruiterUids.length; i += recruitersQueryLimit) {
                 const batchUids = companyData.recruiterUids.slice(i, i + recruitersQueryLimit);
                 if (batchUids.length > 0) {
                     const recruitersQuery = query(collection(db, 'users'), where('__name__', 'in', batchUids));
@@ -63,7 +70,7 @@ export default function CompanyDetailPage() {
           const jobsQuery = query(
             collection(db, 'jobs'), 
             where('companyId', '==', companyId),
-            where('status', '==', 'approved'), // Only show approved jobs
+            where('status', '==', 'approved'), // Only show approved jobs from this company
             orderBy('postedDate', 'desc')
           );
           const jobsSnap = await getDocs(jobsQuery);
@@ -82,7 +89,7 @@ export default function CompanyDetailPage() {
         } catch (e) {
           console.error('Error fetching company details:', e);
           setError('Failed to load company details. Please try again.');
-          setCompany(null); // Ensure company is null on error
+          setCompany(null);
         } finally {
           setIsLoading(false);
         }
@@ -100,28 +107,22 @@ export default function CompanyDetailPage() {
     );
   }
 
-  if (error && !company) { // Show main error if company couldn't be loaded at all
+  if (error || !company) {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Profile</AlertTitle>
-          <AlertDescription>{error} <Link href="/companies" className="underline">Browse other companies.</Link></AlertDescription>
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>{error ? 'Error' : 'Profile Unavailable'}</AlertTitle>
+          <AlertDescription>
+            {error || 'This company profile is not currently available.'}
+            <Button variant="link" asChild className="mt-2 block">
+              <Link href="/companies">Browse other companies</Link>
+            </Button>
+          </AlertDescription>
         </Alert>
       </div>
     );
   }
-  
-  if (!company) { // Company not found or error occurred during specific data fetch but company was initially set
-    return (
-      <div className="container mx-auto py-10 text-center">
-        <Building className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
-        <p className="text-xl text-muted-foreground">Company profile not found.</p>
-        <Button variant="link" asChild className="mt-4"><Link href="/companies">Browse Companies</Link></Button>
-      </div>
-    );
-  }
-
 
   return (
     <div className="container mx-auto py-8">

@@ -1,7 +1,7 @@
 
 "use client";
 import { useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query as firestoreQuery, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query as firestoreQuery, Timestamp, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
 import Link from 'next/link';
@@ -31,7 +31,8 @@ export default function CompaniesListPage() {
       setError(null);
       try {
         const companiesCollectionRef = collection(db, "companies");
-        const q = firestoreQuery(companiesCollectionRef, orderBy("name", "asc"));
+        // Only fetch companies that are approved
+        const q = firestoreQuery(companiesCollectionRef, where("status", "==", "approved"), orderBy("name", "asc"));
         const querySnapshot = await getDocs(q);
         const companiesData = querySnapshot.docs.map(doc => {
           const data = doc.data();
@@ -56,6 +57,7 @@ export default function CompaniesListPage() {
 
   useEffect(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
+    // Ensure allCompanies being filtered are already 'approved' (handled by initial fetch)
     const newFilteredCompanies = allCompanies.filter(company =>
       company.name.toLowerCase().includes(lowercasedFilter) ||
       (company.description && company.description.toLowerCase().includes(lowercasedFilter))
@@ -179,7 +181,7 @@ export default function CompaniesListPage() {
       ) : (
         <div className="text-center py-12">
           <Building className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-          <p className="text-xl text-muted-foreground">No companies found matching your search criteria.</p>
+          <p className="text-xl text-muted-foreground">No approved companies found matching your search criteria.</p>
         </div>
       )}
     </div>

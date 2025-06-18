@@ -29,7 +29,8 @@ export interface Company {
   recruiterUids: string[]; // UIDs of all recruiters (including admins) in the company
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  // Future: status: 'pendingVerification' | 'verified' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected'; // For moderation
+  moderationReason?: string; // Optional reason for rejection
 }
 
 export interface Job {
