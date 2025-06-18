@@ -1,0 +1,12 @@
+
+node_modules
+.next
+out
+build
+coverage
+*.config.js
+*.config.ts
+jest.setup.js
+sonar-scanner.js
+.eslintrc.json
+src/components/ui/*
