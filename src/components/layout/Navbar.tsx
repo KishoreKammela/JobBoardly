@@ -1,7 +1,7 @@
 
 "use client";
 import Link from 'next/link';
-import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield, Lightbulb, FolderKanban } from 'lucide-react'; // Added FolderKanban
+import { Briefcase, Brain, User, Settings, LogIn, UserPlus, Building, FilePlus, Search, ListChecks, Users, History, Loader2, Shield, Lightbulb, FolderKanban, Columns } from 'lucide-react'; // Added Columns
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,11 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useRouter, usePathname } from 'next/navigation'; 
-import type { UserRole } from '@/types'; 
+import { useRouter, usePathname } from 'next/navigation';
+import type { UserRole } from '@/types';
 
 const navLinksBase = [
   { href: '/jobs', label: 'Find Jobs', icon: <Search className="h-4 w-4" />, authRequired: false, roles: ['jobSeeker', 'admin'], alwaysShowForSeekerOrPublic: true },
+  { href: '/companies', label: 'Companies', icon: <Columns className="h-4 w-4" />, authRequired: false, roles: [], alwaysShowForSeekerOrPublic: true }, // New Companies Link
   { href: '/employer/find-candidates', label: 'Find Candidates', icon: <Users className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
   { href: '/ai-match', label: 'AI Job Matcher', icon: <Brain className="h-4 w-4" />, authRequired: true, roles: ['jobSeeker'] },
   { href: '/employer/ai-candidate-match', label: 'AI Candidate Matcher', icon: <Lightbulb className="h-4 w-4" />, authRequired: true, roles: ['employer'] },
@@ -28,15 +29,15 @@ const navLinksBase = [
 const userDropdownLinks = {
   jobSeeker: [
     { href: '/profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
-    { href: '/my-jobs', label: 'My Jobs', icon: <FolderKanban className="h-4 w-4" /> }, // Updated Link
+    { href: '/my-jobs', label: 'My Jobs', icon: <FolderKanban className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ],
   employer: [
-    { href: '/profile', label: 'Company Profile', icon: <Building className="h-4 w-4" /> },
+    { href: '/profile', label: 'My Profile / Company', icon: <Building className="h-4 w-4" /> }, // Updated label
     { href: '/employer/posted-jobs', label: 'Posted Jobs', icon: <ListChecks className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
   ],
-  admin: [ 
+  admin: [
     { href: '/profile', label: 'Profile', icon: <User className="h-4 w-4" /> },
     { href: '/admin', label: 'Admin Dashboard', icon: <Shield className="h-4 w-4" /> },
     { href: '/settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
@@ -44,25 +45,33 @@ const userDropdownLinks = {
 };
 
 export function Navbar() {
-  const { user, logout, loading } = useAuth(); 
+  const { user, logout, loading } = useAuth();
   const router = useRouter();
-  const pathname = usePathname(); 
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
     router.push('/');
   };
-  
+
   const getAvatarFallback = () => {
     if (!user) return 'U';
-    return user.name ? user.name.substring(0, user.role === 'employer' ? 2 : 1).toUpperCase() : (user.email ? user.email.substring(0,1).toUpperCase() : 'U');
+    // For employer, use company name's first letter if available and no personal avatar, else personal name.
+    if (user.role === 'employer' && user.companyId && !user.avatarUrl) {
+        // This part would ideally fetch company name, but navbar doesn't have direct access
+        // to `company` object from AuthContext.
+        // A simple fallback could be 'C' or based on user.name if that's the company admin.
+        // For now, let's keep it based on user.name as it's simpler.
+        return user.name ? user.name.substring(0, 1).toUpperCase() : 'E';
+    }
+    return user.name ? user.name.substring(0, 1).toUpperCase() : (user.email ? user.email.substring(0,1).toUpperCase() : 'U');
   }
 
   const getRoleDisplayName = (role?: UserRole) => {
     if (!role) return "";
     if (role === 'jobSeeker') return "Job Seeker";
-    if (role === 'employer') return "Employer";
-    if (role === 'admin') return "Admin";
+    if (role === 'employer') return user?.isCompanyAdmin ? "Company Admin" : "Recruiter";
+    if (role === 'admin') return "Platform Admin";
     return "";
   }
 
@@ -71,25 +80,16 @@ export function Navbar() {
   const registerLink = isEmployerPage ? "/employer/register" : "/auth/register";
 
   const getVisibleNavLinks = () => {
-    if (loading) return []; 
+    if (loading) return [];
 
-    if (user) { 
+    if (user) {
       return navLinksBase.filter(link => {
-        if (link.roles.includes(user.role)) {
-          return true;
-        }
-        // Ensure public links relevant to the logged-in user are shown
-        if (!link.authRequired && link.alwaysShowForSeekerOrPublic && (user.role === 'jobSeeker' || !user.role)) { // !user.role covers general public view
-            return true;
-        }
-        // Show "Find Jobs" for admin as well if alwaysShowForSeekerOrPublic is true
-        if (link.href === '/jobs' && user.role === 'admin' && link.alwaysShowForSeekerOrPublic) {
-            return true;
-        }
+        if (link.roles.includes(user.role)) return true;
+        if (!link.authRequired && link.alwaysShowForSeekerOrPublic) return true; // Show public links like /companies
+        if (link.href === '/jobs' && user.role === 'admin' && link.alwaysShowForSeekerOrPublic) return true;
         return false;
       });
-    } else { 
-      // For non-logged in users, only show public, non-auth-required links
+    } else {
       return navLinksBase.filter(link => !link.authRequired && link.alwaysShowForSeekerOrPublic);
     }
   };
@@ -139,14 +139,21 @@ export function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {(userDropdownLinks[user.role] || []).map((link) => (
-                  <DropdownMenuItem key={link.href} asChild>
-                    <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
-                      {link.icon}
-                      {link.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
+                {(userDropdownLinks[user.role] || []).map((link) => {
+                   let finalLabel = link.label;
+                   if (user.role === 'employer') {
+                       finalLabel = user.isCompanyAdmin ? 'Company Settings' : 'My Recruiter Profile';
+                       if (link.href !== '/profile') finalLabel = link.label; // Keep other labels same
+                   }
+                  return (
+                    <DropdownMenuItem key={link.href} asChild>
+                      <Link href={link.href} className="flex items-center gap-2 cursor-pointer">
+                        {link.icon}
+                        {finalLabel}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2">
                   <LogIn className="h-4 w-4 rotate-180" />

@@ -17,7 +17,8 @@ import { Separator } from '@/components/ui/separator';
 
 
 export function EmployerRegisterForm() {
-  const [companyName, setCompanyName] = useState('');
+  const [recruiterName, setRecruiterName] = useState(''); // Changed from companyName to recruiterName
+  const [companyName, setCompanyName] = useState(''); // New state for actual company name
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +29,7 @@ export function EmployerRegisterForm() {
   const { toast } = useToast();
 
   const handleRegisterSuccess = () => {
-    toast({ title: 'Registration Successful', description: `Welcome, ${companyName}! Please complete your company profile.` });
+    toast({ title: 'Registration Successful', description: `Welcome, ${recruiterName} from ${companyName}! Please complete your company profile.` });
     const redirectPath = searchParams.get('redirect');
     if (redirectPath) {
       router.push(redirectPath);
@@ -39,9 +40,14 @@ export function EmployerRegisterForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!companyName.trim()) {
+        toast({ title: 'Company Name Required', description: 'Please enter the name of your company.', variant: 'destructive' });
+        return;
+    }
     setIsLoading(true);
     try {
-      await registerUser(email, password, companyName, 'employer' as UserRole);
+      // Pass recruiterName as 'name' and companyName for company creation
+      await registerUser(email, password, recruiterName, 'employer' as UserRole, companyName);
       setTimeout(handleRegisterSuccess, 100);
     } catch (error) {
        const firebaseError = error as FirebaseError;
@@ -58,6 +64,16 @@ export function EmployerRegisterForm() {
   };
 
   const handleSocialSignUp = async (providerName: 'google' | 'github' | 'microsoft') => {
+    // For social sign-up, we might need a way to capture company name if it's a new company
+    // This could be a separate step or a prompt. For now, let's assume if they use social
+    // and a new company needs to be made, we'll prompt or use a default.
+    // The AuthContext's signInWithSocial now accepts an optional companyName.
+    // We'd ideally get this from a field if the intent is to create a *new* company via social.
+    // For this form, if companyName state is filled, we can pass it.
+     if (!companyName.trim() && providerName) { // Simple check, might need better UX
+        toast({ title: 'Company Name Required', description: 'Please enter the company name before signing up with a social provider for a new company.', variant: 'destructive' });
+        return;
+    }
     setIsSocialLoading(providerName);
     try {
       let authProvider;
@@ -66,10 +82,11 @@ export function EmployerRegisterForm() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'employer');
+      await signInWithSocial(authProvider, 'employer', companyName);
+      // Toast message might need to access the display name from the social provider
+      // For now, using a generic message. AuthContext handles creating user and company.
       toast({ title: 'Sign Up Successful', description: `Welcome! Please complete your company profile.` });
-      // Determine company name for toast - might need to fetch from user object after signInWithSocial completes
-      setTimeout(handleRegisterSuccess, 100); // Use a generic success handler
+      setTimeout(handleRegisterSuccess, 100);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
@@ -90,9 +107,9 @@ export function EmployerRegisterForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name</Label>
+            <Label htmlFor="companyNameActual">Company Name</Label>
             <Input
-              id="companyName"
+              id="companyNameActual" // Different ID from recruiterName
               type="text"
               placeholder="Your Company Inc."
               value={companyName}
@@ -102,15 +119,27 @@ export function EmployerRegisterForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Company Email Address (for login)</Label>
+            <Label htmlFor="recruiterName">Your Full Name (Recruiter)</Label>
+            <Input
+              id="recruiterName"
+              type="text"
+              placeholder="Your Full Name"
+              value={recruiterName}
+              onChange={(e) => setRecruiterName(e.target.value)}
+              required
+              aria-label="Recruiter's full name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Your Email Address (for login)</Label>
             <Input
               id="email"
               type="email"
-              placeholder="hr@yourcompany.com"
+              placeholder="you@yourcompany.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              aria-label="Company email address for registration"
+              aria-label="Your email address for registration"
             />
           </div>
           <div className="space-y-2">
@@ -128,10 +157,11 @@ export function EmployerRegisterForm() {
           </div>
           <Button type="submit" className="w-full" disabled={isLoading || !!isSocialLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-            Register Company
+            Register Company & Account
           </Button>
         </form>
         <Separator className="my-6" />
+         <p className="text-sm text-center text-muted-foreground mb-3">Or sign up with your company account (ensure Company Name above is filled if new):</p>
          <div className="space-y-3">
              <Button variant="outline" className="w-full" onClick={() => handleSocialSignUp('google')} disabled={isLoading || !!isSocialLoading}>
               {isSocialLoading === 'google' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Chrome className="mr-2 h-4 w-4" />} Sign up with Google

@@ -1,0 +1,212 @@
+
+"use client";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { doc, getDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { Company, UserProfile, Job } from '@/types';
+import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Briefcase, MapPin, Users, Link as LinkIcon, Building, Loader2, AlertCircle, Mail, ExternalLink } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { JobCard } from '@/components/JobCard'; // Assuming JobCard can be reused
+import Link from 'next/link';
+
+export default function CompanyDetailPage() {
+  const params = useParams();
+  const companyId = params.companyId as string;
+  const router = useRouter();
+
+  const [company, setCompany] = useState<Company | null>(null);
+  const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (companyId) {
+      const fetchCompanyData = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          // Fetch company details
+          const companyDocRef = doc(db, 'companies', companyId);
+          const companyDocSnap = await getDoc(companyDocRef);
+
+          if (!companyDocSnap.exists()) {
+            setError('Company not found.');
+            setIsLoading(false);
+            return;
+          }
+          const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
+          setCompany(companyData);
+
+          // Fetch recruiters (users linked to this companyId with role 'employer')
+          if (companyData.recruiterUids && companyData.recruiterUids.length > 0) {
+            // Firestore 'in' query can take max 30 elements. If more, batching needed.
+            // For simplicity, assuming less than 30 recruiters for now.
+            const recruitersQuery = query(collection(db, 'users'), where('__name__', 'in', companyData.recruiterUids));
+            const recruitersSnap = await getDocs(recruitersQuery);
+            const fetchedRecruiters = recruitersSnap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
+            setRecruiters(fetchedRecruiters);
+          }
+
+
+          // Fetch jobs posted by this company
+          const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', companyId), orderBy('postedDate', 'desc'));
+          const jobsSnap = await getDocs(jobsQuery);
+          const fetchedJobs = jobsSnap.docs.map(d => {
+            const jobData = d.data();
+            return {
+              id: d.id,
+              ...jobData,
+              postedDate: jobData.postedDate instanceof Timestamp ? jobData.postedDate.toDate().toISOString().split('T')[0] : jobData.postedDate,
+              createdAt: jobData.createdAt instanceof Timestamp ? jobData.createdAt.toDate().toISOString() : jobData.createdAt,
+              updatedAt: jobData.updatedAt instanceof Timestamp ? jobData.updatedAt.toDate().toISOString() : jobData.updatedAt,
+            } as Job;
+          });
+          setJobs(fetchedJobs);
+
+        } catch (e) {
+          console.error('Error fetching company details:', e);
+          setError('Failed to load company details. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchCompanyData();
+    }
+  }, [companyId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-3 text-lg">Loading company profile...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Profile</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="container mx-auto py-10 text-center">
+        <p className="text-xl text-muted-foreground">Company profile not found.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-8">
+      {/* Banner Image */}
+      {company.bannerImageUrl ? (
+        <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-8">
+          <Image
+            src={company.bannerImageUrl}
+            alt={`${company.name} banner`}
+            layout="fill"
+            objectFit="cover"
+            priority
+            data-ai-hint="company banner"
+          />
+        </div>
+      ) : (
+        <div className="w-full h-48 md:h-64 lg:h-80 rounded-lg bg-muted flex items-center justify-center shadow-lg mb-8">
+            <Building className="h-24 w-24 text-muted-foreground" />
+        </div>
+      )}
+
+      <Card className="shadow-xl -mt-16 md:-mt-24 relative z-10 max-w-5xl mx-auto">
+        <CardHeader className="p-6 text-center">
+          <div className="flex flex-col items-center gap-4">
+            {company.logoUrl && (
+              <Avatar className="h-24 w-24 border-4 border-background shadow-md">
+                <AvatarImage src={company.logoUrl} alt={`${company.name} logo`} data-ai-hint="company logo" />
+                <AvatarFallback className="text-3xl">{company.name?.[0]?.toUpperCase() || 'C'}</AvatarFallback>
+              </Avatar>
+            )}
+            <div className="mt-2">
+              <CardTitle className="text-3xl md:text-4xl font-bold font-headline text-primary">{company.name}</CardTitle>
+              {company.websiteUrl && (
+                <a
+                  href={company.websiteUrl.startsWith('http') ? company.websiteUrl : `https://${company.websiteUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1 mt-1"
+                >
+                  <LinkIcon className="h-3.5 w-3.5" /> Visit Website <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-8">
+          {company.description && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-3 font-headline text-center">About Us</h2>
+              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background/50">
+                {company.description}
+              </div>
+            </section>
+          )}
+          <Separator />
+
+          {recruiters.length > 0 && (
+            <section>
+              <h2 className="text-2xl font-semibold mb-4 font-headline text-center">Our Recruiters</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {recruiters.map(recruiter => (
+                  <Card key={recruiter.uid} className="text-center p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <Avatar className="h-20 w-20 mx-auto mb-3 border-2 border-primary/30">
+                      <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} data-ai-hint="recruiter photo" />
+                      <AvatarFallback className="text-2xl">{recruiter.name?.[0]?.toUpperCase() || 'R'}</AvatarFallback>
+                    </Avatar>
+                    <p className="font-semibold text-foreground">{recruiter.name}</p>
+                    {recruiter.email && (
+                      <a href={`mailto:${recruiter.email}`} className="text-xs text-muted-foreground hover:text-primary flex items-center justify-center gap-1">
+                        <Mail className="h-3 w-3" /> Contact
+                      </a>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+           <Separator />
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-6 font-headline text-center">Open Positions ({jobs.length})</h2>
+            {jobs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {jobs.map(job => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground">This company currently has no open positions listed on JobBoardly.</p>
+            )}
+          </section>
+        </CardContent>
+        <CardFooter className="p-6 border-t bg-muted/20 rounded-b-lg">
+           <p className="text-xs text-muted-foreground text-center w-full">Company ID: {company.id}</p>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}

@@ -1,7 +1,7 @@
 
 "use client";
 import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
-import type { Job, ParsedJobData } from '@/types';
+import type { Job, ParsedJobData, Company } from '@/types'; // Added Company
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,47 +12,62 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, Sparkles, Send } from 'lucide-react';
-import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow'; 
+import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 export function PostJobForm() {
-  const { user } = useAuth();
+  const { user, company: authCompany } = useAuth(); // Use company from AuthContext
   const { toast } = useToast();
   const router = useRouter();
-  
-  const initialJobData: Partial<Job> = {
-    title: '',
-    company: user?.role === 'employer' ? user.name : '',
-    location: '',
-    type: 'Full-time',
-    description: '',
-    skills: [],
-    salaryMin: undefined,
-    salaryMax: undefined,
-    isRemote: false,
-    postedById: user?.uid,
-    companyLogoUrl: user?.role === 'employer' ? user.avatarUrl : undefined,
-    applicantIds: [],
-  };
 
-  const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
+  const [jobData, setJobData] = useState<Partial<Job>>({});
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentCompanyDetails, setCurrentCompanyDetails] = useState<Partial<Company>>({});
+
 
   useEffect(() => {
-    if (user && user.role === 'employer') {
-      setJobData(prev => ({
-        ...prev,
-        company: user.name,
-        companyLogoUrl: user.avatarUrl,
-        postedById: user.uid,
-      }));
+    // Pre-fill with authenticated employer's company data
+    if (user && user.role === 'employer' && user.companyId) {
+        const fetchCompanyData = async () => {
+            if (authCompany) { // Prioritize company from context if available
+                setCurrentCompanyDetails(authCompany);
+                 setJobData(prev => ({
+                    ...prev,
+                    companyId: authCompany.id,
+                    company: authCompany.name,
+                    companyLogoUrl: authCompany.logoUrl,
+                    postedById: user.uid,
+                    applicantIds: [],
+                    type: prev.type || 'Full-time',
+                }));
+            } else { // Fallback to fetching if not in context (e.g., direct load)
+                const companyDocRef = doc(db, "companies", user.companyId);
+                const companyDocSnap = await getDoc(companyDocRef);
+                if (companyDocSnap.exists()) {
+                    const companyData = { id: companyDocSnap.id, ...companyDocSnap.data() } as Company;
+                    setCurrentCompanyDetails(companyData);
+                     setJobData(prev => ({
+                        ...prev,
+                        companyId: companyData.id,
+                        company: companyData.name,
+                        companyLogoUrl: companyData.logoUrl,
+                        postedById: user.uid,
+                        applicantIds: [],
+                        type: prev.type || 'Full-time',
+                    }));
+                } else {
+                    toast({ title: "Error", description: "Could not load your company details.", variant: "destructive"});
+                }
+            }
+        };
+        fetchCompanyData();
     }
-  }, [user]);
+  }, [user, authCompany, toast]);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -74,7 +89,7 @@ export function PostJobForm() {
   const handleSelectChange = (name: keyof Job, value: string) => {
     setJobData(prev => ({ ...prev, [name]: value as Job['type'] }));
   };
-  
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -93,15 +108,15 @@ export function PostJobForm() {
       reader.onload = async () => {
         const dataUri = reader.result as string;
         const parsedData: ParsedJobData = await parseJobDescriptionFlow({ jobDescriptionDataUri: dataUri });
-        
+
         if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
             toast({
                 title: "Document Parsing Issue",
                 description: parsedData.description,
                 variant: "destructive",
-                duration: 9000, 
+                duration: 9000,
             });
-             setJobData(prev => ({ 
+             setJobData(prev => ({
               ...prev,
               title: parsedData.title || prev.title,
               skills: parsedData.skills || prev.skills,
@@ -127,7 +142,7 @@ export function PostJobForm() {
         if (parsedData.skills && parsedData.skills.length > 0) {
             setSkillsInput(parsedData.skills.join(', '));
         }
-        setFile(null); 
+        setFile(null);
       };
       reader.onerror = () => {
         toast({ title: "File Reading Error", description: "Could not read the selected file.", variant: "destructive" });
@@ -143,12 +158,8 @@ export function PostJobForm() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user || user.role !== 'employer') {
-        toast({ title: "Unauthorized", description: "Only employers can post jobs.", variant: "destructive" });
-        return;
-    }
-    if (!user.uid) { 
-        toast({ title: "Error", description: "User ID is missing. Cannot post job.", variant: "destructive" });
+    if (!user || user.role !== 'employer' || !user.uid || !user.companyId) {
+        toast({ title: "Unauthorized", description: "Only authenticated employers with a company can post jobs.", variant: "destructive" });
         return;
     }
     if (!jobData.title || !jobData.description) {
@@ -156,11 +167,12 @@ export function PostJobForm() {
         return;
     }
     setIsSubmitting(true);
-    
+
     try {
         const jobPayload: Omit<Job, 'id'> = {
             title: jobData.title || '',
-            company: user.name || '',
+            company: currentCompanyDetails.name || 'N/A Company', // From fetched company details
+            companyId: user.companyId,
             location: jobData.location || '',
             type: jobData.type || 'Full-time',
             description: jobData.description || '',
@@ -169,7 +181,7 @@ export function PostJobForm() {
             skills: jobData.skills || [],
             salaryMin: jobData.salaryMin,
             salaryMax: jobData.salaryMax,
-            companyLogoUrl: user.avatarUrl,
+            companyLogoUrl: currentCompanyDetails.logoUrl, // From fetched company details
             postedById: user.uid,
             applicantIds: [],
             createdAt: serverTimestamp(),
@@ -178,15 +190,15 @@ export function PostJobForm() {
 
         const jobsCollectionRef = collection(db, "jobs");
         await addDoc(jobsCollectionRef, jobPayload);
-        
+
         toast({
           title: 'Job Posted!',
           description: `${jobData.title} has been successfully posted.`,
         });
-        
-        setJobData({ 
+
+        // Reset form
+        setJobData({
             title: '',
-            company: user.name,
             location: '',
             type: 'Full-time',
             description: '',
@@ -194,13 +206,16 @@ export function PostJobForm() {
             salaryMin: undefined,
             salaryMax: undefined,
             isRemote: false,
+            // company, companyId, companyLogoUrl, postedById are prefilled by useEffect or payload construction
+            company: currentCompanyDetails.name,
+            companyId: user.companyId,
+            companyLogoUrl: currentCompanyDetails.logoUrl,
             postedById: user.uid,
-            companyLogoUrl: user.avatarUrl,
             applicantIds: [],
         });
         setSkillsInput('');
         setFile(null);
-        router.push('/employer/posted-jobs'); 
+        router.push('/employer/posted-jobs');
 
     } catch (error) {
         console.error("Error posting job:", error);
@@ -218,13 +233,25 @@ export function PostJobForm() {
       </Card>
     );
   }
+   if (!user.companyId && !authCompany) {
+    return (
+      <Card>
+        <CardHeader><CardTitle>Company Not Set</CardTitle></CardHeader>
+        <CardContent>
+            <p>Your employer account is not yet associated with a company, or company details are still loading.</p>
+            <p className="mt-2">Please ensure your company profile is complete. You may need to re-login or contact support if this persists.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
 
   return (
     <Card className="w-full shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">Job Details</CardTitle>
+        <CardTitle className="text-xl font-headline">Job Details for {currentCompanyDetails.name || "Your Company"}</CardTitle>
         <CardDescription>
-          Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT) 
+          Provide the specifics for the job opening. You can also upload a document (e.g., PDF, DOCX, TXT)
           and our AI will try to parse and pre-fill the fields for you. Plain text (.txt) files yield the best results for AI parsing.
         </CardDescription>
       </CardHeader>
@@ -268,7 +295,7 @@ export function PostJobForm() {
               <Input id="location" name="location" value={jobData.location || ''} onChange={handleChange} placeholder="e.g., San Francisco, CA or Remote"/>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="type">Job Type</Label>
@@ -299,12 +326,12 @@ export function PostJobForm() {
 
           <div>
             <Label htmlFor="skills">Required Skills (comma-separated)</Label>
-            <Input 
-              id="skills" 
-              name="skills" 
-              value={skillsInput} 
-              onChange={handleSkillsChange} 
-              placeholder="e.g., React, Node.js, Project Management" 
+            <Input
+              id="skills"
+              name="skills"
+              value={skillsInput}
+              onChange={handleSkillsChange}
+              placeholder="e.g., React, Node.js, Project Management"
             />
           </div>
 
@@ -331,8 +358,8 @@ export function PostJobForm() {
               required
             />
           </div>
-          
-          <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid} className="w-full sm:w-auto">
+
+          <Button type="submit" disabled={isSubmitting || isParsing || !user?.uid || !user.companyId} className="w-full sm:w-auto">
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Post Job Opening
           </Button>

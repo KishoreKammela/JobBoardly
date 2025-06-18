@@ -69,7 +69,7 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
     toast({ title: "Applied!", description: `You've applied for ${job.title} at ${job.company}.` });
   };
 
-  const companyLogo = job.companyLogoUrl || `https://placehold.co/64x64.png?text=${job.company.substring(0,2).toUpperCase()}`;
+  const companyLogo = job.companyLogoUrl || `https://placehold.co/64x64.png?text=${job.company?.substring(0,2).toUpperCase() || 'C'}`;
   const salaryDisplay = job.salaryMin && job.salaryMax ?
     `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.` :
     (job.salaryMin ? `${formatCurrencyINR(job.salaryMin)} p.a.` : (job.salaryMax ? `${formatCurrencyINR(job.salaryMax)} p.a.` : 'Not Disclosed'));
@@ -91,7 +91,14 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
               <Link href={`/jobs/${job.id}`}>{job.title}</Link>
             </CardTitle>
             <CardDescription className="text-sm flex items-center gap-1.5 mt-1">
-              <Building className="h-3.5 w-3.5" /> {job.company}
+              <Building className="h-3.5 w-3.5" />
+              {job.companyId ? (
+                <Link href={`/companies/${job.companyId}`} className="hover:underline">
+                  {job.company}
+                </Link>
+              ) : (
+                job.company
+              )}
             </CardDescription>
           </div>
         </div>

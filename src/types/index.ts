@@ -1,56 +1,72 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'jobSeeker' | 'employer' | 'admin'; // Added admin role
+export type UserRole = 'jobSeeker' | 'employer' | 'admin';
+
+export interface Company {
+  id: string; // Firestore document ID
+  name: string;
+  description?: string;
+  websiteUrl?: string;
+  logoUrl?: string;
+  bannerImageUrl?: string;
+  adminUids: string[]; // UIDs of users who are company admins
+  recruiterUids: string[]; // UIDs of all recruiters (including admins) in the company
+  // jobsPostedIds?: string[]; // Optional: can be derived by querying jobs with companyId
+  createdAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+}
 
 export interface Job {
-  id: string; // Will be Firestore document ID
+  id: string;
   title: string;
-  company: string; 
+  company: string; // Company Name (from Company document)
+  companyId: string; // ID of the company document in 'companies' collection
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string | Timestamp; // Can be ISO string or Firestore Timestamp
+  postedDate: string | Timestamp;
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string; 
-  postedById?: string; // User ID (uid) of the employer
-  applicantIds?: string[]; // UIDs of users who applied
-  createdAt?: Timestamp | Date | string; // Allow string for new data, Date for client side, Timestamp for Firestore
+  companyLogoUrl?: string; // Company Logo (from Company document)
+  postedById: string; // User ID (uid) of the individual recruiter who posted
+  applicantIds?: string[];
+  createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 }
 
 export interface UserProfile {
-  uid: string; // Firebase Auth User ID
+  uid: string;
   role: UserRole;
-  email: string | null; 
-  name: string; 
-  avatarUrl?: string; 
+  email: string | null;
+  name: string; // User's full name (for job seeker) or Recruiter's name (for employer)
+  avatarUrl?: string; // User's personal avatar
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 
   // Job Seeker specific fields
   headline?: string;
   skills?: string[];
-  experience?: string; 
-  education?: string; 
+  experience?: string;
+  education?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
-  preferredLocations?: string[]; 
+  preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  desiredSalary?: number; 
-  resumeUrl?: string; 
+  desiredSalary?: number;
+  resumeUrl?: string;
   resumeFileName?: string;
-  parsedResumeText?: string; 
-  appliedJobIds?: string[]; 
-  savedJobIds?: string[]; // Added for saved jobs
+  parsedResumeText?: string;
+  appliedJobIds?: string[];
+  savedJobIds?: string[];
 
   // Employer specific fields
-  companyWebsite?: string;
-  companyDescription?: string; 
+  companyId?: string; // Links to the 'companies' collection document ID
+  isCompanyAdmin?: boolean; // True if this employer user can manage the company's profile
+  // companyName, companyWebsite, companyDescription are now moved to the Company interface
 }
 
 export interface UserSettings {
@@ -69,7 +85,7 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; 
+  experience?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
   education?: string;
@@ -77,7 +93,7 @@ export interface ParsedResumeData {
 
 export interface ParsedJobData {
   title?: string;
-  description?: string; 
+  description?: string;
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
@@ -89,4 +105,3 @@ export interface AIPoweredJobMatchingOutput {
   relevantJobIDs: string[];
   reasoning: string;
 }
-

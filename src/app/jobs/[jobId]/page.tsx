@@ -15,6 +15,7 @@ import { MapPin, Briefcase, DollarSign, Bookmark, ExternalLink, Building, CheckC
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrencyINR } from '@/lib/utils';
+import Link from 'next/link'; // Import Link
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -25,7 +26,7 @@ export default function JobDetailPage() {
   const { user, applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } = useAuth();
   const { toast } = useToast();
   const [applied, setApplied] = useState(false);
-  const [saved, setSaved] = useState(false); 
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (jobId) {
@@ -131,9 +132,9 @@ export default function JobDetailPage() {
     );
   }
 
-  const companyLogo = job.companyLogoUrl || `https://placehold.co/128x128.png?text=${job.company.substring(0,2).toUpperCase()}`;
-  const salaryDisplay = job.salaryMin && job.salaryMax ? 
-    `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.` : 
+  const companyLogo = job.companyLogoUrl || `https://placehold.co/128x128.png?text=${job.company?.substring(0,2).toUpperCase() || 'C'}`;
+  const salaryDisplay = job.salaryMin && job.salaryMax ?
+    `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.` :
     (job.salaryMin ? `${formatCurrencyINR(job.salaryMin)} p.a.` : (job.salaryMax ? `${formatCurrencyINR(job.salaryMax)} p.a.` : 'Not Disclosed'));
 
   return (
@@ -153,7 +154,13 @@ export default function JobDetailPage() {
               <h1 className="text-3xl font-bold font-headline text-primary mb-1">{job.title}</h1>
               <div className="flex items-center gap-2 text-lg text-foreground mb-1">
                 <Building className="h-5 w-5 text-muted-foreground" />
-                <span>{job.company}</span>
+                {job.companyId ? (
+                  <Link href={`/companies/${job.companyId}`} className="hover:underline">
+                    {job.company}
+                  </Link>
+                ) : (
+                  <span>{job.company}</span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <MapPin className="h-4 w-4" />
@@ -205,7 +212,7 @@ export default function JobDetailPage() {
                 )
                )}
                {!user && ( // For non-logged in users
-                  <Button size="lg" onClick={handleApply} className="w-full"> 
+                  <Button size="lg" onClick={handleApply} className="w-full">
                       Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>
                )}
