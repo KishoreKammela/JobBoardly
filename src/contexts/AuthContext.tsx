@@ -1,6 +1,6 @@
 
 "use client";
-import type { UserProfile, UserRole, Company, Filters, SavedSearch } from '@/types'; // Added Filters, SavedSearch
+import type { UserProfile, UserRole, Company, Filters, SavedSearch, Application, ApplicationStatus } from '@/types'; // Added Application, ApplicationStatus
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import {
   auth,
@@ -27,7 +27,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  applyForJob: (jobId: string) => Promise<void>;
+  applyForJob: (job: Job) => Promise<void>; // Changed to take full Job object
   hasAppliedForJob: (jobId: string) => boolean;
   saveJob: (jobId: string) => Promise<void>;
   unsaveJob: (jobId: string) => Promise<void>;
@@ -39,6 +39,7 @@ interface AuthContextType {
   signInWithSocial: (provider: FirebaseAuthProvider, role: UserRole, companyName?: string) => Promise<FirebaseUser>;
   saveSearch: (searchName: string, filters: Filters) => Promise<void>;
   deleteSearch: (searchId: string) => Promise<void>;
+  updateApplicationStatus: (applicationId: string, newStatus: ApplicationStatus, employerNotes?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -109,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recruiterUids: [fbUser.uid],
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
-        status: 'pending', // New companies are pending approval
+        status: 'pending', 
       };
       await setDoc(newCompanyRef, newCompanyData);
       userCompanyId = newCompanyRef.id;
@@ -203,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 recruiterUids: [fbUser.uid],
                 createdAt: serverTimestamp() as Timestamp,
                 updatedAt: serverTimestamp() as Timestamp,
-                status: 'pending', // New companies via social sign-up are also pending
+                status: 'pending', 
             };
             await setDoc(newCompanyRef, newCompanyData);
             updates.companyId = newCompanyRef.id;
@@ -293,24 +294,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const applyForJob = async (jobId: string) => {
+  const applyForJob = async (job: Job) => { // Takes full Job object
     if (user && user.uid && user.role === 'jobSeeker') {
       const currentAppliedJobIds = user.appliedJobIds || [];
-      if (!currentAppliedJobIds.includes(jobId)) {
+      if (!currentAppliedJobIds.includes(job.id)) {
+        
+        // Create new application document
+        const applicationRef = doc(collection(db, "applications"));
+        const newApplication: Omit<Application, 'id'> = {
+          jobId: job.id,
+          jobTitle: job.title,
+          applicantId: user.uid,
+          applicantName: user.name,
+          applicantAvatarUrl: user.avatarUrl,
+          applicantHeadline: user.headline,
+          companyId: job.companyId,
+          postedById: job.postedById, // Employer who posted the job
+          status: 'Applied',
+          appliedAt: serverTimestamp() as Timestamp,
+          updatedAt: serverTimestamp() as Timestamp,
+        };
+        
         const userDocRef = doc(db, "users", user.uid);
         try {
+            await setDoc(applicationRef, newApplication);
             await updateDoc(userDocRef, {
-            appliedJobIds: arrayUnion(jobId),
-            updatedAt: serverTimestamp()
+              appliedJobIds: arrayUnion(job.id), // Still keep this for job seeker's quick reference
+              updatedAt: serverTimestamp()
             });
             setUser(prevUser => ({
             ...prevUser,
-            appliedJobIds: [...(prevUser?.appliedJobIds || []), jobId]
+            appliedJobIds: [...(prevUser?.appliedJobIds || []), job.id]
             } as UserProfile));
-            const jobDocRef = doc(db, "jobs", jobId);
-            await updateDoc(jobDocRef, {
-            applicantIds: arrayUnion(user.uid),
-            });
+            // No longer need to update applicantIds on the job document directly
         } catch (error) {
             console.error("AuthContext: applyForJob error", error);
             throw error;
@@ -318,6 +334,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } else {
         console.warn("User must be a logged-in job seeker to apply for a job.");
+    }
+  };
+
+  const updateApplicationStatus = async (applicationId: string, newStatus: ApplicationStatus, employerNotes?: string) => {
+    if (!user || user.role !== 'employer') {
+      throw new Error("Only employers can update application status.");
+    }
+    const applicationDocRef = doc(db, "applications", applicationId);
+    const updates: Partial<Application> = {
+      status: newStatus,
+      updatedAt: serverTimestamp() as Timestamp,
+    };
+    if (employerNotes !== undefined) {
+      updates.employerNotes = employerNotes;
+    }
+    try {
+      await updateDoc(applicationDocRef, updates);
+    } catch (error) {
+      console.error("AuthContext: updateApplicationStatus error", error);
+      throw error;
     }
   };
 
@@ -446,7 +482,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateCompanyProfile,
         signInWithSocial,
         saveSearch, 
-        deleteSearch 
+        deleteSearch,
+        updateApplicationStatus
     }}>
       {!loading && children}
     </AuthContext.Provider>

@@ -64,7 +64,7 @@ export function JobCard({ job, showApplyButton = true, isApplied, isSavedProp }:
         return;
     }
 
-    await applyForJob(job.id);
+    await applyForJob(job); // Pass the full job object
     setApplied(true);
     toast({ title: "Applied!", description: `You've applied for ${job.title} at ${job.company}.` });
   };

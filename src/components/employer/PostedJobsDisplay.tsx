@@ -3,18 +3,23 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Job } from '@/types';
+import type { Job, Application } from '@/types'; // Added Application
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Edit3, Eye, Loader2, Users, PlusCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, orderBy,getCountFromServer } from 'firebase/firestore'; // Added getCountFromServer
+
+
+interface JobWithApplicantCount extends Job {
+  applicantCount: number;
+}
 
 export function PostedJobsDisplay() {
   const { user } = useAuth();
-  const [postedJobs, setPostedJobs] = useState<Job[]>([]);
+  const [postedJobs, setPostedJobs] = useState<JobWithApplicantCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,20 +34,33 @@ export function PostedJobsDisplay() {
       setError(null);
       try {
         const jobsCollectionRef = collection(db, "jobs");
-        // Fetch all jobs posted by the user, regardless of status, so they can see pending/rejected too.
         const q = query(jobsCollectionRef, where("postedById", "==", user.uid), orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
-        const jobsData = querySnapshot.docs.map(doc => {
+        
+        const jobsDataPromises = querySnapshot.docs.map(async (doc) => {
             const data = doc.data();
+            let applicantCount = 0;
+            try {
+                const applicationsQuery = query(collection(db, "applications"), where("jobId", "==", doc.id));
+                const snapshot = await getCountFromServer(applicationsQuery);
+                applicantCount = snapshot.data().count;
+            } catch (countError) {
+                console.error(`Error fetching applicant count for job ${doc.id}:`, countError);
+            }
+
             return {
                 id: doc.id,
                 ...data,
                 postedDate: data.postedDate instanceof Timestamp ? data.postedDate.toDate().toISOString().split('T')[0] : data.postedDate,
                 createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
                 updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-            } as Job;
+                applicantCount: applicantCount,
+            } as JobWithApplicantCount;
         });
+
+        const jobsData = await Promise.all(jobsDataPromises);
         setPostedJobs(jobsData);
+
       } catch (e: any) {
         console.error("Error fetching posted jobs:", e);
         setError(e.message || "Failed to load your posted jobs. Please try again.");
@@ -123,8 +141,8 @@ export function PostedJobsDisplay() {
                          </Badge>
                     </CardDescription>
                 </div>
-                 <Badge variant={ (job.applicantIds?.length || 0) > 0 ? "default" : "secondary"}>
-                    {job.applicantIds?.length || 0} Applicant(s)
+                 <Badge variant={ (job.applicantCount || 0) > 0 ? "default" : "secondary"}>
+                    {job.applicantCount || 0} Applicant(s)
                 </Badge>
             </div>
           </CardHeader>
@@ -137,7 +155,7 @@ export function PostedJobsDisplay() {
           <CardFooter className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href={`/employer/jobs/${job.id}/applicants`}>
-                <Users className="mr-2 h-4 w-4" /> View Applicants ({job.applicantIds?.length || 0})
+                <Users className="mr-2 h-4 w-4" /> View Applicants ({job.applicantCount || 0})
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>

@@ -15,7 +15,7 @@ import { MapPin, Briefcase, DollarSign, Bookmark, ExternalLink, Building, CheckC
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrencyINR } from '@/lib/utils';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link'; 
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -67,7 +67,7 @@ export default function JobDetailPage() {
   const handleApply = async () => {
     if (!job) return;
     if (user && user.role === 'jobSeeker') {
-      await applyForJob(job.id);
+      await applyForJob(job); // Pass full job object
       setApplied(true);
       toast({
         title: 'Applied!',
@@ -211,7 +211,7 @@ export default function JobDetailPage() {
                     </Button>
                 )
                )}
-               {!user && ( // For non-logged in users
+               {!user && ( 
                   <Button size="lg" onClick={handleApply} className="w-full">
                       Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>

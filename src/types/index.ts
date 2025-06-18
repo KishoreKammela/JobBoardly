@@ -48,12 +48,43 @@ export interface Job {
   salaryMax?: number;
   companyLogoUrl?: string; // Can be sourced from Company.logoUrl
   postedById: string; // UID of the employer who posted it
-  applicantIds?: string[];
+  // applicantIds?: string[]; // Removed, applications are now a separate collection
   status: 'pending' | 'approved' | 'rejected'; // For moderation
   moderationReason?: string; // Optional reason for rejection
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 }
+
+export type ApplicationStatus = 
+  | 'Applied' 
+  | 'Reviewed' 
+  | 'Interviewing' 
+  | 'Offer Made' 
+  | 'Hired' 
+  | 'Rejected By Company' 
+  | 'Withdrawn by Applicant'; // Job seeker might withdraw
+
+export const EmployerManagedApplicationStatuses: ApplicationStatus[] = [
+  'Applied', 'Reviewed', 'Interviewing', 'Offer Made', 'Hired', 'Rejected By Company'
+];
+
+
+export interface Application {
+  id: string; // Firestore document ID
+  jobId: string;
+  jobTitle: string; // Denormalized
+  applicantId: string; // Job Seeker UID
+  applicantName: string; // Denormalized
+  applicantAvatarUrl?: string; // Denormalized
+  applicantHeadline?: string; // Denormalized
+  companyId: string;
+  postedById: string; // Employer UID who posted the job (owner of the job post)
+  status: ApplicationStatus;
+  appliedAt: Timestamp | Date | string;
+  updatedAt: Timestamp | Date | string;
+  employerNotes?: string; // Notes by the employer about this application
+}
+
 
 export interface UserProfile {
   uid: string;
@@ -66,7 +97,7 @@ export interface UserProfile {
 
   // Job Seeker specific fields
   headline?: string;
-  // skills?: string[]; // Duplicated from Job, assuming skills here are user's skills
+  skills?: string[];
   experience?: string;
   education?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
@@ -78,7 +109,7 @@ export interface UserProfile {
   resumeUrl?: string;
   resumeFileName?: string;
   parsedResumeText?: string;
-  appliedJobIds?: string[];
+  appliedJobIds?: string[]; // Still useful for job seeker to track applications made
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
 
@@ -117,5 +148,4 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
-  // companyName will come from employer's profile
 }

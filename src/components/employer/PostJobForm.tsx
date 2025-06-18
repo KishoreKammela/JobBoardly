@@ -16,7 +16,7 @@ import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Badge } from '@/components/ui/badge'; // Added Badge
+import { Badge } from '@/components/ui/badge';
 
 export function PostJobForm() {
   const { user, company: authCompany } = useAuth();
@@ -28,8 +28,8 @@ export function PostJobForm() {
   const initialJobData: Partial<Job> = {
     type: 'Full-time',
     isRemote: false,
-    applicantIds: [],
-    status: 'pending', // Default status for new jobs
+    // applicantIds: [], // This field is removed from Job type
+    status: 'pending', 
   };
 
   const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
@@ -92,7 +92,6 @@ export function PostJobForm() {
         }
         setIsLoadingJob(false);
       } else {
-        // For new jobs, ensure status is pending
         setJobData(prev => ({ ...prev, status: 'pending' }));
       }
     };
@@ -117,7 +116,7 @@ export function PostJobForm() {
   };
 
   const handleSelectChange = (name: keyof Job, value: string) => {
-    setJobData(prev => ({ ...prev, [name]: value as Job['type'] })); // Assuming 'type' is the only select for Job
+    setJobData(prev => ({ ...prev, [name]: value as Job['type'] })); 
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -217,16 +216,15 @@ export function PostJobForm() {
 
         if (editingJobId) {
             const jobDocRef = doc(db, "jobs", editingJobId);
-            // When editing, the status is reset to 'pending' to trigger re-moderation by admin.
             jobPayload.status = 'pending';
-            jobPayload.moderationReason = undefined; // Clear previous moderation reason
+            jobPayload.moderationReason = undefined; 
             await updateDoc(jobDocRef, jobPayload);
             toast({ title: 'Job Updated & Resubmitted for Approval!', description: `${jobData.title} has been updated and sent for review.` });
         } else {
             jobPayload.postedDate = new Date().toISOString().split('T')[0];
-            jobPayload.applicantIds = [];
+            // applicantIds is no longer part of Job type
             jobPayload.createdAt = serverTimestamp();
-            jobPayload.status = 'pending'; // New jobs are pending approval
+            jobPayload.status = 'pending'; 
             const jobsCollectionRef = collection(db, "jobs");
             await addDoc(jobsCollectionRef, jobPayload);
             toast({ title: 'Job Submitted for Approval!', description: `${jobData.title} has been submitted and is pending review.` });
@@ -234,7 +232,7 @@ export function PostJobForm() {
         
         if (!editingJobId) {
            setJobData({
-                ...initialJobData, // Reset to initial with pending status
+                ...initialJobData, 
                 company: currentCompanyDetails.name, companyId: user.companyId,
                 companyLogoUrl: currentCompanyDetails.logoUrl, postedById: user.uid,
             });
