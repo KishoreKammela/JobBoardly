@@ -1,26 +1,38 @@
 
 "use client";
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation'; // Import useSearchParams
 import { JobCard } from '@/components/JobCard';
-import { FilterSidebar, type Filters } from '@/components/FilterSidebar';
-import type { Job } from '@/types';
+import { FilterSidebar } from '@/components/FilterSidebar';
+import type { Job, Filters } from '@/types'; // Import Filters
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, AlertCircle, Search } from 'lucide-react'; // Added Search
+import { LayoutGrid, List, AlertCircle, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query as firestoreQuery, where, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query as firestoreQuery, Timestamp, orderBy } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const JOBS_PER_PAGE = 9;
 
 export default function JobsPage() {
+  const searchParams = useSearchParams(); // Hook to access URL query parameters
+
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // Initial filters can now be read from URL, but FilterSidebar also needs to be initialized
+  const [initialFiltersApplied, setInitialFiltersApplied] = useState(false);
+  const [currentFilters, setCurrentFilters] = useState<Filters>({
+    searchTerm: searchParams.get('q') || '',
+    location: searchParams.get('loc') || '',
+    roleType: searchParams.get('type') || 'all',
+    isRemote: searchParams.get('remote') === 'true',
+  });
+
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -41,7 +53,7 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData); 
+        // Initial filtering based on URL params happens after jobs are fetched
       } catch (e) {
         console.error("Error fetching jobs:", e);
         setError("Failed to load jobs. Please try again later.");
@@ -52,9 +64,20 @@ export default function JobsPage() {
     fetchJobs();
   }, []);
 
+  // Effect to apply filters (including initial from URL) once jobs are loaded
+  useEffect(() => {
+    if (allJobs.length > 0 && !initialFiltersApplied) {
+      handleFilterChange(currentFilters); // Apply initial URL filters
+      setInitialFiltersApplied(true); // Mark as applied
+    } else if (initialFiltersApplied) { // For subsequent filter changes from sidebar
+      handleFilterChange(currentFilters);
+    }
+  }, [allJobs, currentFilters, initialFiltersApplied]); // Dependencies
+
   const handleFilterChange = (filters: Filters) => {
     setIsLoading(true); 
     setCurrentPage(1); 
+    setCurrentFilters(filters); // Update currentFilters state
     
     const newFilteredJobs = allJobs.filter(job => {
       const searchTermMatch = filters.searchTerm.toLowerCase() === '' ||
@@ -113,7 +136,7 @@ export default function JobsPage() {
   return (
     <div className="flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-1/4 lg:w-1/5">
-        <FilterSidebar onFilterChange={handleFilterChange} />
+        <FilterSidebar onFilterChange={handleFilterChange} initialFilters={currentFilters} />
       </aside>
       <main className="w-full md:w-3/4 lg:w-4/5">
         <div className="mb-6 flex justify-between items-center">
@@ -138,7 +161,7 @@ export default function JobsPage() {
             </Alert>
         )}
 
-        {isLoading && filteredJobs.length === 0 ? (
+        {(isLoading && filteredJobs.length === 0) ? (
           <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {Array.from({ length: viewMode === 'grid' ? JOBS_PER_PAGE : 4 }).map((_, index) => <JobSkeletonCard key={index} />)}
           </div>
@@ -183,4 +206,3 @@ export default function JobsPage() {
     </div>
   );
 }
-

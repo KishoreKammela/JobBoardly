@@ -3,6 +3,21 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'jobSeeker' | 'employer' | 'admin';
 
+// Define Filters interface globally
+export interface Filters {
+  searchTerm: string;
+  location: string;
+  roleType: string; // 'all', 'Full-time', 'Part-time', 'Contract', 'Internship'
+  isRemote: boolean;
+}
+
+export interface SavedSearch {
+  id: string; // Unique ID for the saved search
+  name: string;
+  filters: Filters;
+  createdAt: Timestamp | Date | string;
+}
+
 export interface Company {
   id: string; // Firestore document ID
   name: string;
@@ -19,21 +34,21 @@ export interface Company {
 export interface Job {
   id: string;
   title: string;
-  company: string; // Company Name (from Company document)
-  companyId: string; // ID of the company document in 'companies' collection
+  company: string;
+  companyId: string;
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string | Timestamp; // Keep as string for form input, convert to Timestamp for Firestore
+  postedDate: string | Timestamp;
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string; // Company Logo (from Company document)
-  postedById: string; // User ID (uid) of the individual recruiter who posted
+  companyLogoUrl?: string;
+  postedById: string;
   applicantIds?: string[];
-  createdAt?: Timestamp | Date | string; // Allow string for client-side construction before Firestore
-  updatedAt?: Timestamp | Date | string; // Allow string for client-side construction
+  createdAt?: Timestamp | Date | string;
+  updatedAt?: Timestamp | Date | string;
 }
 
 export interface UserProfile {
@@ -61,6 +76,7 @@ export interface UserProfile {
   parsedResumeText?: string;
   appliedJobIds?: string[];
   savedJobIds?: string[];
+  savedSearches?: SavedSearch[]; // Added for saved searches
 
   // Employer specific fields
   companyId?: string;
@@ -72,10 +88,10 @@ export interface UserSettings {
   itemsPerPage: 10 | 20 | 50;
   jobAlerts: {
     newJobsMatchingProfile: boolean;
-    savedSearchAlerts: boolean;
+    savedSearchAlerts: boolean; // This will be configurable once alerts are implemented
     applicationStatusUpdates: boolean;
   };
-  searchHistory: string[];
+  searchHistory: string[]; // This is distinct from saved searches
 }
 
 export interface ParsedResumeData {
@@ -83,26 +99,18 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; // Could be markdown string
+  experience?: string;
+  education?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
-  education?: string; // Could be markdown string
 }
 
 export interface ParsedJobData {
   title?: string;
-  description?: string; // Could be markdown string
+  description?: string;
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
-  // companyName?: string; // Not needed if we rely on authenticated employer context
 }
-
-// This type was defined in the prompt for aiPoweredJobMatching flow, ensuring it's here if needed globally.
-// If only used within the flow, it can remain local to that flow.
-// export interface AIPoweredJobMatchingOutput {
-//   relevantJobIDs: string[];
-//   reasoning: string;
-// }

@@ -6,16 +6,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, RotateCcw } from 'lucide-react';
+import { Search, RotateCcw, Save, AlertCircle } from 'lucide-react'; // Added Save
 import type React from 'react';
 import { useState } from 'react';
+import type { Filters } from '@/types'; // Import Filters from global types
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useToast } from '@/hooks/use-toast'; // Import useToast
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-export interface Filters {
-  searchTerm: string;
-  location: string;
-  roleType: string; // 'all', 'Full-time', 'Part-time', 'Contract', 'Internship'
-  isRemote: boolean;
-}
 
 interface FilterSidebarProps {
   onFilterChange: (filters: Filters) => void;
@@ -32,6 +40,10 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
   };
 
   const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [searchName, setSearchName] = useState(''); // For naming the saved search
+  const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
+  const { user, saveSearch } = useAuth();
+  const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,6 +76,49 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
     setFilters(defaultFilters);
     onFilterChange(defaultFilters);
   }
+
+  const handleOpenSaveSearchDialog = () => {
+    if (!user || user.role !== 'jobSeeker') {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in as a job seeker to save searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Pre-fill search name if possible, e.g., from searchTerm
+    setSearchName(filters.searchTerm || 'My Job Search');
+    setIsSaveSearchAlertOpen(true);
+  };
+
+  const handleConfirmSaveSearch = async () => {
+    if (!searchName.trim()) {
+      toast({
+        title: 'Name Required',
+        description: 'Please enter a name for your search.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (user && user.role === 'jobSeeker') {
+      try {
+        await saveSearch(searchName, filters);
+        toast({
+          title: 'Search Saved!',
+          description: `"${searchName}" has been added to your saved searches.`,
+        });
+        setIsSaveSearchAlertOpen(false);
+        setSearchName(''); 
+      } catch (error) {
+        toast({
+          title: 'Error Saving Search',
+          description: 'Could not save your search. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
 
   return (
     <Card className="sticky top-24 shadow-sm">
@@ -122,16 +177,47 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
               Remote Only
             </Label>
           </div>
-          <div className="flex flex-wrap items-center gap-2 pt-2">
-            <Button type="submit" className="flex-1 min-w-[120px]"> 
-              <Search className="mr-2 h-4 w-4" /> Apply Filters
-            </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"> 
-              <RotateCcw className="mr-2 h-4 w-4" /> Reset
-            </Button>
+          <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+                <Button type="submit" className="flex-1 min-w-[120px]">
+                <Search className="mr-2 h-4 w-4" /> Apply Filters
+                </Button>
+                <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto">
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                </Button>
+            </div>
+            {user && user.role === 'jobSeeker' && (
+                <Button type="button" variant="outline" onClick={handleOpenSaveSearchDialog} className="w-full">
+                    <Save className="mr-2 h-4 w-4" /> Save This Search
+                </Button>
+            )}
           </div>
         </form>
       </CardContent>
+      <AlertDialog open={isSaveSearchAlertOpen} onOpenChange={setIsSaveSearchAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Job Search</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a name for this search. You can manage your saved searches in Settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Label htmlFor="searchNameInput">Search Name</Label>
+            <Input
+              id="searchNameInput"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              placeholder="e.g., Remote React Jobs"
+              className="mt-1"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSaveSearch}>Save Search</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
