@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
@@ -9,13 +8,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  /*CardDescription,*/ CardHeader,
+  /*CardTitle,*/ CardFooter,
+} from '@/components/ui/card'; // Removed CardDescription, CardTitle
 import Image from 'next/image';
-import { MapPin, Briefcase, DollarSign, Bookmark, ExternalLink, Building, CheckCircle, Loader2, AlertCircle, Share2, CalendarDays } from 'lucide-react';
+import {
+  MapPin,
+  Briefcase,
+  DollarSign,
+  Bookmark,
+  ExternalLink,
+  Building,
+  CheckCircle,
+  Loader2,
+  AlertCircle,
+  Share2,
+  CalendarDays,
+} from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrencyINR } from '@/lib/utils';
-import Link from 'next/link'; 
+import Link from 'next/link';
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -23,7 +39,14 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } = useAuth();
+  const {
+    user,
+    applyForJob,
+    hasAppliedForJob,
+    saveJob,
+    unsaveJob,
+    isJobSaved,
+  } = useAuth();
   const { toast } = useToast();
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,9 +64,18 @@ export default function JobDetailPage() {
             const jobData = {
               id: jobDocSnap.id,
               ...data,
-              postedDate: data.postedDate instanceof Timestamp ? data.postedDate.toDate().toISOString().split('T')[0] : data.postedDate,
-              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
-              updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+              postedDate:
+                data.postedDate instanceof Timestamp
+                  ? data.postedDate.toDate().toISOString().split('T')[0]
+                  : data.postedDate,
+              createdAt:
+                data.createdAt instanceof Timestamp
+                  ? data.createdAt.toDate().toISOString()
+                  : data.createdAt,
+              updatedAt:
+                data.updatedAt instanceof Timestamp
+                  ? data.updatedAt.toDate().toISOString()
+                  : data.updatedAt,
             } as Job;
             setJob(jobData);
             if (user && user.role === 'jobSeeker') {
@@ -53,9 +85,13 @@ export default function JobDetailPage() {
           } else {
             setError('Job not found.');
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('Error fetching job details:', e);
-          setError('Failed to load job details. Please try again.');
+          let message = 'Failed to load job details. Please try again.';
+          if (e instanceof Error) {
+            message = `Failed to load job details: ${e.message}`;
+          }
+          setError(message);
         } finally {
           setIsLoading(false);
         }
@@ -74,34 +110,55 @@ export default function JobDetailPage() {
         description: `You've applied for ${job.title} at ${job.company}.`,
       });
     } else if (!user) {
-      toast({ title: 'Login Required', description: 'Please log in as a job seeker to apply.', variant: 'destructive' });
+      toast({
+        title: 'Login Required',
+        description: 'Please log in as a job seeker to apply.',
+        variant: 'destructive',
+      });
     } else if (user.role === 'employer') {
-        toast({ title: 'Action Not Allowed', description: 'Employers cannot apply for jobs.', variant: 'destructive' });
+      toast({
+        title: 'Action Not Allowed',
+        description: 'Employers cannot apply for jobs.',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleSaveToggle = async () => {
     if (!job) return;
-     if (!user || user.role !== 'jobSeeker') {
-      toast({ title: "Login Required", description: "Please log in as a job seeker to save jobs.", variant: "destructive" });
+    if (!user || user.role !== 'jobSeeker') {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in as a job seeker to save jobs.',
+        variant: 'destructive',
+      });
       return;
     }
     if (saved) {
       await unsaveJob(job.id);
       setSaved(false);
-      toast({ title: "Job Unsaved", description: `${job.title} removed from your saved jobs.` });
+      toast({
+        title: 'Job Unsaved',
+        description: `${job.title} removed from your saved jobs.`,
+      });
     } else {
       await saveJob(job.id);
       setSaved(true);
-      toast({ title: "Job Saved!", description: `${job.title} added to your saved jobs.` });
+      toast({
+        title: 'Job Saved!',
+        description: `${job.title} added to your saved jobs.`,
+      });
     }
   };
 
   const handleShare = () => {
-    if(!job) return;
+    if (!job) return;
     navigator.clipboard.writeText(window.location.href);
-    toast({ title: 'Link Copied!', description: 'Job link copied to clipboard.' });
-  }
+    toast({
+      title: 'Link Copied!',
+      description: 'Job link copied to clipboard.',
+    });
+  };
 
   if (isLoading) {
     return (
@@ -132,10 +189,17 @@ export default function JobDetailPage() {
     );
   }
 
-  const companyLogo = job.companyLogoUrl || `https://placehold.co/128x128.png?text=${job.company?.substring(0,2).toUpperCase() || 'C'}`;
-  const salaryDisplay = job.salaryMin && job.salaryMax ?
-    `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.` :
-    (job.salaryMin ? `${formatCurrencyINR(job.salaryMin)} p.a.` : (job.salaryMax ? `${formatCurrencyINR(job.salaryMax)} p.a.` : 'Not Disclosed'));
+  const companyLogo =
+    job.companyLogoUrl ||
+    `https://placehold.co/128x128.png?text=${job.company?.substring(0, 2).toUpperCase() || 'C'}`;
+  const salaryDisplay =
+    job.salaryMin && job.salaryMax
+      ? `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.`
+      : job.salaryMin
+        ? `${formatCurrencyINR(job.salaryMin)} p.a.`
+        : job.salaryMax
+          ? `${formatCurrencyINR(job.salaryMax)} p.a.`
+          : 'Not Disclosed';
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -151,11 +215,16 @@ export default function JobDetailPage() {
               data-ai-hint="company logo"
             />
             <div className="flex-1">
-              <h1 className="text-3xl font-bold font-headline text-primary mb-1">{job.title}</h1>
+              <h1 className="text-3xl font-bold font-headline text-primary mb-1">
+                {job.title}
+              </h1>
               <div className="flex items-center gap-2 text-lg text-foreground mb-1">
                 <Building className="h-5 w-5 text-muted-foreground" />
                 {job.companyId ? (
-                  <Link href={`/companies/${job.companyId}`} className="hover:underline">
+                  <Link
+                    href={`/companies/${job.companyId}`}
+                    className="hover:underline"
+                  >
                     {job.company}
                   </Link>
                 ) : (
@@ -165,14 +234,37 @@ export default function JobDetailPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <MapPin className="h-4 w-4" />
                 <span>{job.location}</span>
-                {job.isRemote && <Badge variant="outline" className="ml-2">Remote</Badge>}
+                {job.isRemote && (
+                  <Badge variant="outline" className="ml-2">
+                    Remote
+                  </Badge>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 text-sm">
-                <Badge variant="secondary" className="flex items-center gap-1.5"><Briefcase className="h-3.5 w-3.5" />{job.type}</Badge>
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1.5"
+                >
+                  <Briefcase className="h-3.5 w-3.5" />
+                  {job.type}
+                </Badge>
                 {(job.salaryMin || job.salaryMax) && (
-                  <Badge variant="secondary" className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" />{salaryDisplay}</Badge>
+                  <Badge
+                    variant="secondary"
+                    className="flex items-center gap-1.5"
+                  >
+                    <DollarSign className="h-3.5 w-3.5" />
+                    {salaryDisplay}
+                  </Badge>
                 )}
-                 <Badge variant="secondary" className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />Posted: {new Date(job.postedDate as string).toLocaleDateString()}</Badge>
+                <Badge
+                  variant="secondary"
+                  className="flex items-center gap-1.5"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Posted:{' '}
+                  {new Date(job.postedDate as string).toLocaleDateString()}
+                </Badge>
               </div>
             </div>
           </div>
@@ -181,7 +273,9 @@ export default function JobDetailPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-6">
               <section>
-                <h2 className="text-xl font-semibold mb-3 font-headline">Job Description</h2>
+                <h2 className="text-xl font-semibold mb-3 font-headline">
+                  Job Description
+                </h2>
                 <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap">
                   {job.description}
                 </div>
@@ -190,46 +284,74 @@ export default function JobDetailPage() {
               {job.skills && job.skills.length > 0 && (
                 <section>
                   <Separator className="my-6" />
-                  <h2 className="text-xl font-semibold mb-3 font-headline">Required Skills</h2>
+                  <h2 className="text-xl font-semibold mb-3 font-headline">
+                    Required Skills
+                  </h2>
                   <div className="flex flex-wrap gap-2">
-                    {job.skills.map(skill => (
-                      <Badge key={skill} variant="default" className="text-sm px-3 py-1">{skill}</Badge>
+                    {job.skills.map((skill) => (
+                      <Badge
+                        key={skill}
+                        variant="default"
+                        className="text-sm px-3 py-1"
+                      >
+                        {skill}
+                      </Badge>
                     ))}
                   </div>
                 </section>
               )}
             </div>
             <aside className="w-full sm:w-64 space-y-4">
-               {user && user.role === 'jobSeeker' && (
-                applied ? (
-                    <Button size="lg" disabled variant="outline" className="w-full text-green-600 border-green-600">
-                        <CheckCircle className="mr-2 h-5 w-5" /> Applied
-                    </Button>
+              {user &&
+                user.role === 'jobSeeker' &&
+                (applied ? (
+                  <Button
+                    size="lg"
+                    disabled
+                    variant="outline"
+                    className="w-full text-green-600 border-green-600"
+                  >
+                    <CheckCircle className="mr-2 h-5 w-5" /> Applied
+                  </Button>
                 ) : (
-                    <Button size="lg" onClick={handleApply} className="w-full">
-                        Apply Now <ExternalLink className="ml-2 h-5 w-5" />
-                    </Button>
-                )
-               )}
-               {!user && ( 
                   <Button size="lg" onClick={handleApply} className="w-full">
-                      Apply Now <ExternalLink className="ml-2 h-5 w-5" />
+                    Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>
-               )}
-                {user && user.role === 'jobSeeker' && (
-                  <Button variant="outline" size="lg" onClick={handleSaveToggle} className="w-full">
-                      <Bookmark className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`} />
-                      {saved ? 'Job Saved' : 'Save Job'}
-                  </Button>
-                )}
-                <Button variant="outline" size="lg" onClick={handleShare} className="w-full">
-                    <Share2 className="mr-2 h-5 w-5" /> Share Job
+                ))}
+              {!user && (
+                <Button size="lg" onClick={handleApply} className="w-full">
+                  Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                 </Button>
+              )}
+              {user && user.role === 'jobSeeker' && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={handleSaveToggle}
+                  className="w-full"
+                >
+                  <Bookmark
+                    className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`}
+                  />
+                  {saved ? 'Job Saved' : 'Save Job'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleShare}
+                className="w-full"
+              >
+                <Share2 className="mr-2 h-5 w-5" /> Share Job
+              </Button>
             </aside>
           </div>
         </CardContent>
         <CardFooter className="p-6 border-t bg-muted/20 rounded-b-lg">
-           <p className="text-xs text-muted-foreground">Job ID: {job.id}. If you encounter any issues applying, please contact the company directly.</p>
+          <p className="text-xs text-muted-foreground">
+            If you encounter any issues applying, please contact the company
+            directly.
+          </p>
         </CardFooter>
       </Card>
     </div>

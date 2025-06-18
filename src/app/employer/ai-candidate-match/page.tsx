@@ -1,22 +1,47 @@
-
-"use client";
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+'use client';
+import { useState, useEffect, type ChangeEvent } from 'react'; // Removed FormEvent
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, AlertTriangle, Users, UploadCloud, FileText } from 'lucide-react';
-import { aiPoweredCandidateMatching, type AIPoweredCandidateMatchingInput, type AIPoweredCandidateMatchingOutput } from '@/ai/flows/ai-powered-candidate-matching';
-import { parseJobDescriptionFlow, type ParseJobDescriptionOutput } from '@/ai/flows/parse-job-description-flow';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Loader2,
+  Sparkles,
+  AlertTriangle,
+  Users /*, UploadCloud, FileText*/,
+} from 'lucide-react'; // Removed UploadCloud, FileText
+import {
+  aiPoweredCandidateMatching,
+  type AIPoweredCandidateMatchingInput,
+  type AIPoweredCandidateMatchingOutput,
+} from '@/ai/flows/ai-powered-candidate-matching';
+import {
+  parseJobDescriptionFlow,
+  type ParseJobDescriptionOutput,
+} from '@/ai/flows/parse-job-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserProfile } from '@/types';
 import { CandidateCard } from '@/components/employer/CandidateCard';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query as firestoreQuery, where, Timestamp } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  query as firestoreQuery,
+  where,
+  Timestamp,
+} from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { useRouter, usePathname } from 'next/navigation';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function AiCandidateMatchPage() {
   const { user, loading: authLoading } = useAuth();
@@ -25,16 +50,20 @@ export default function AiCandidateMatchPage() {
   const { toast } = useToast();
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  
+
   const [isLoading, setIsLoading] = useState(false); // For AI matching process
   const [isParsingJD, setIsParsingJD] = useState(false);
-  const [result, setResult] = useState<AIPoweredCandidateMatchingOutput | null>(null);
+  const [result, setResult] = useState<AIPoweredCandidateMatchingOutput | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null); // For AI matching errors
 
   const [allCandidates, setAllCandidates] = useState<UserProfile[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
-  const [matchedCandidateDetails, setMatchedCandidateDetails] = useState<UserProfile[]>([]);
+  const [matchedCandidateDetails, setMatchedCandidateDetails] = useState<
+    UserProfile[]
+  >([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -45,55 +74,84 @@ export default function AiCandidateMatchPage() {
     }
   }, [user, authLoading, router, pathname]);
 
-
   useEffect(() => {
-    if (user && user.role === 'employer') { // Only fetch if user is an employer
+    if (user && user.role === 'employer') {
+      // Only fetch if user is an employer
       const fetchCandidates = async () => {
         setCandidatesLoading(true);
         setCandidatesError(null);
         try {
-          const usersCollectionRef = collection(db, "users");
-          const q = firestoreQuery(usersCollectionRef, where("role", "==", "jobSeeker"));
+          const usersCollectionRef = collection(db, 'users');
+          const q = firestoreQuery(
+            usersCollectionRef,
+            where('role', '==', 'jobSeeker')
+          );
           const querySnapshot = await getDocs(q);
-          const candidatesData = querySnapshot.docs.map(docSnap => {
+          const candidatesData = querySnapshot.docs.map((docSnap) => {
             const data = docSnap.data();
             return {
               uid: docSnap.id,
               ...data,
-              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
-              updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+              createdAt:
+                data.createdAt instanceof Timestamp
+                  ? data.createdAt.toDate().toISOString()
+                  : data.createdAt,
+              updatedAt:
+                data.updatedAt instanceof Timestamp
+                  ? data.updatedAt.toDate().toISOString()
+                  : data.updatedAt,
             } as UserProfile;
           });
           setAllCandidates(candidatesData);
-        } catch (e) {
-          console.error("Error fetching candidates for AI matcher:", e);
-          setCandidatesError("Failed to load candidates for matching. Please try again later.");
+        } catch (e: unknown) {
+          console.error('Error fetching candidates for AI matcher:', e);
+          let message =
+            'Failed to load candidates for matching. Please try again later.';
+          if (e instanceof Error) {
+            message = `Failed to load candidates: ${e.message}`;
+          }
+          setCandidatesError(message);
         } finally {
           setCandidatesLoading(false);
         }
       };
       fetchCandidates();
     } else {
-        setCandidatesLoading(false); // Not an employer, no need to load
+      setCandidatesLoading(false); // Not an employer, no need to load
     }
   }, [user]); // Rerun if user changes
 
   const formatCandidatesForAI = (candidates: UserProfile[]): string => {
-    return candidates.map(c => 
-      `Candidate UID: ${c.uid}\nName: ${c.name}\nHeadline: ${c.headline || 'N/A'}\nSkills: ${(c.skills || []).join(', ') || 'N/A'}\nExperience Summary: ${c.experience ? c.experience.substring(0, 500) + '...' : 'N/A'}\nPreferred Locations: ${(c.preferredLocations || []).join(', ') || 'N/A'}\nAvailability: ${c.availability || 'N/A'}\n`
-    ).join('\n---\n');
+    return candidates
+      .map((c) => {
+        let profileString = `Candidate UID: ${c.uid}\nName: ${c.name}\nHeadline: ${c.headline || 'N/A'}\n`;
+        if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`;
+        profileString += `Skills: ${(c.skills || []).join(', ') || 'N/A'}\nExperience Summary: ${c.experience ? c.experience.substring(0, 500) + '...' : 'N/A'}\n`;
+        if (c.preferredLocations && c.preferredLocations.length > 0)
+          profileString += `Preferred Locations: ${c.preferredLocations.join(', ')}\n`;
+        if (c.availability)
+          profileString += `Availability: ${c.availability}\n`;
+        if (c.desiredSalary)
+          profileString += `Desired Salary (Annual INR): ${formatCurrencyINR(c.desiredSalary)} (raw: ${c.desiredSalary})\n`;
+        return profileString;
+      })
+      .join('\n---\n');
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setJobDescription(''); 
+      setJobDescription('');
     }
   };
-  
+
   const handleParseJD = async () => {
     if (!file) {
-      toast({ title: "No file selected", description: "Please select a job description document to parse.", variant: "destructive" });
+      toast({
+        title: 'No file selected',
+        description: 'Please select a job description document to parse.',
+        variant: 'destructive',
+      });
       return;
     }
     setIsParsingJD(true);
@@ -102,54 +160,91 @@ export default function AiCandidateMatchPage() {
       reader.readAsDataURL(file);
       reader.onload = async () => {
         const dataUri = reader.result as string;
-        const parsedData: ParseJobDescriptionOutput = await parseJobDescriptionFlow({ jobDescriptionDataUri: dataUri });
-        
-        if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
-             toast({ title: "JD Parsing Issue", description: parsedData.description, variant: "destructive", duration: 9000 });
-             setJobDescription(
-                `Error during parsing: ${parsedData.description}\n\nTitle: ${parsedData.title || ''}\nSkills: ${(parsedData.skills || []).join(', ')}`
-             );
+        const parsedData: ParseJobDescriptionOutput =
+          await parseJobDescriptionFlow({ jobDescriptionDataUri: dataUri });
+
+        if (
+          parsedData.description &&
+          parsedData.description.startsWith('Parsing Error:')
+        ) {
+          toast({
+            title: 'JD Parsing Issue',
+            description: parsedData.description,
+            variant: 'destructive',
+            duration: 9000,
+          });
+          setJobDescription(
+            `Error during parsing: ${parsedData.description}\n\nTitle: ${parsedData.title || ''}\nSkills: ${(parsedData.skills || []).join(', ')}`
+          );
         } else {
-            let jdText = `Job Title: ${parsedData.title || 'Not specified'}\n`;
-            jdText += `Location: ${parsedData.location || 'Not specified'}\n`;
-            jdText += `Job Type: ${parsedData.jobType || 'Not specified'}\n`;
-            if (parsedData.salaryMin || parsedData.salaryMax) {
-                jdText += `Salary: ${parsedData.salaryMin ? '$'+parsedData.salaryMin : ''} - ${parsedData.salaryMax ? '$'+parsedData.salaryMax : ''}\n`;
-            }
-            jdText += `Skills: ${(parsedData.skills || []).join(', ')}\n\n`;
-            jdText += `Description:\n${parsedData.description || 'Not specified'}`;
-            setJobDescription(jdText);
-            toast({ title: "JD Parsed", description: "Job description has been extracted." });
+          let jdText = `Job Title: ${parsedData.title || 'Not specified'}\n`;
+          jdText += `Location: ${parsedData.location || 'Not specified'}\n`;
+          jdText += `Job Type: ${parsedData.jobType || 'Not specified'}\n`;
+          if (parsedData.salaryMin || parsedData.salaryMax) {
+            jdText += `Salary (INR): ${parsedData.salaryMin ? formatCurrencyINR(parsedData.salaryMin) : ''} - ${parsedData.salaryMax ? formatCurrencyINR(parsedData.salaryMax) : ''}\n`;
+          }
+          jdText += `Skills: ${(parsedData.skills || []).join(', ')}\n\n`;
+          jdText += `Description:\n${parsedData.description || 'Not specified'}`;
+          setJobDescription(jdText);
+          toast({
+            title: 'JD Parsed',
+            description: 'Job description has been extracted.',
+          });
         }
-        setFile(null); 
+        setFile(null);
       };
       reader.onerror = () => {
-        toast({ title: "File Reading Error", description: "Could not read the selected file.", variant: "destructive" });
+        toast({
+          title: 'File Reading Error',
+          description: 'Could not read the selected file.',
+          variant: 'destructive',
+        });
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown parsing error."
-      toast({ title: "JD Parsing Error", description: errorMessage, variant: "destructive" });
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown parsing error.';
+      toast({
+        title: 'JD Parsing Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsParsingJD(false);
     }
   };
 
-
   const handleSubmit = async () => {
     if (!user || user.role !== 'employer') {
-      toast({ title: 'Access Denied', description: 'This feature is for employers.', variant: 'destructive' });
+      toast({
+        title: 'Access Denied',
+        description: 'This feature is for employers.',
+        variant: 'destructive',
+      });
       return;
     }
     if (!jobDescription.trim()) {
-      toast({ title: 'Missing Job Description', description: 'Please provide a job description.', variant: 'destructive' });
+      toast({
+        title: 'Missing Job Description',
+        description: 'Please provide a job description.',
+        variant: 'destructive',
+      });
       return;
     }
     if (candidatesLoading) {
-      toast({ title: 'Still loading candidates', description: 'Please wait until all candidates are loaded.', variant: "default" });
+      toast({
+        title: 'Still loading candidates',
+        description: 'Please wait until all candidates are loaded.',
+        variant: 'default',
+      });
       return;
     }
     if (candidatesError || allCandidates.length === 0) {
-      toast({ title: 'No Candidates Available', description: 'Cannot perform matching as no candidates are available or there was an error loading them.', variant: 'destructive' });
+      toast({
+        title: 'No Candidates Available',
+        description:
+          'Cannot perform matching as no candidates are available or there was an error loading them.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -167,40 +262,65 @@ export default function AiCandidateMatchPage() {
       const aiResult = await aiPoweredCandidateMatching(input);
       setResult(aiResult);
 
-      if (aiResult.relevantCandidateIDs && aiResult.relevantCandidateIDs.length > 0) {
-        const matched = allCandidates.filter(c => aiResult.relevantCandidateIDs.includes(c.uid));
+      if (
+        aiResult.relevantCandidateIDs &&
+        aiResult.relevantCandidateIDs.length > 0
+      ) {
+        const matched = allCandidates.filter((c) =>
+          aiResult.relevantCandidateIDs.includes(c.uid)
+        );
         setMatchedCandidateDetails(matched);
         if (matched.length === 0 && aiResult.relevantCandidateIDs.length > 0) {
-          toast({ title: "Match IDs found, but no candidate details", description: "AI suggested candidate UIDs, but they don't correspond to known profiles.", variant: "default"});
+          toast({
+            title: 'Match IDs found, but no candidate details',
+            description:
+              "AI suggested candidate UIDs, but they don't correspond to known profiles.",
+            variant: 'default',
+          });
         }
       }
-
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+    } catch (e: unknown) {
+      const errorMessage =
+        e instanceof Error ? e.message : 'An unknown error occurred.';
       setError(`Failed to get AI-powered candidate matches. ${errorMessage}`);
-      toast({ title: 'AI Matching Error', description: errorMessage, variant: 'destructive' });
+      toast({
+        title: 'AI Matching Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  if (authLoading || (!user && !authLoading)) { // Show loader if auth loading or if not logged in (will be redirected)
+
+  if (authLoading || (!user && !authLoading)) {
+    // Show loader if auth loading or if not logged in (will be redirected)
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
-  
-  if (user && user.role !== 'employer') { // Logged in, but wrong role (will be redirected by useEffect, but good to have a message)
-    return (
-        <Card className="w-full max-w-3xl mx-auto shadow-xl">
-            <CardHeader><CardTitle className="text-2xl font-headline flex items-center gap-2"><Sparkles className="text-primary h-6 w-6" />AI Candidate Matcher</CardTitle></CardHeader>
-            <CardContent><p className="text-muted-foreground">This tool is for employers to find suitable candidates. Redirecting...</p></CardContent>
-        </Card>
-    )
-  }
 
+  if (user && user.role !== 'employer') {
+    // Logged in, but wrong role (will be redirected by useEffect, but good to have a message)
+    return (
+      <Card className="w-full max-w-3xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-2xl font-headline flex items-center gap-2">
+            <Sparkles className="text-primary h-6 w-6" />
+            AI Candidate Matcher
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            This tool is for employers to find suitable candidates.
+            Redirecting...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-xl">
@@ -209,25 +329,49 @@ export default function AiCandidateMatchPage() {
           <Sparkles className="text-primary h-6 w-6" /> AI Candidate Matcher
         </CardTitle>
         <CardDescription>
-          Input or upload a job description. Our AI will scan our candidate database to find the best matches for your role. 
-          Plain text (.txt) files give the best results for JD parsing.
+          Input or upload a job description. Our AI will scan our candidate
+          database to find the best matches for your role. Plain text (.txt)
+          files give the best results for JD parsing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-            <Label htmlFor="jobDescriptionFile">Upload Job Description (Optional)</Label>
-            <div className="flex items-center gap-3">
-            <Input id="jobDescriptionFile" type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" className="flex-1"/>
-            <Button type="button" onClick={handleParseJD} disabled={isParsingJD || !file} variant="outline">
-                {isParsingJD ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                Parse File
+          <Label htmlFor="jobDescriptionFile">
+            Upload Job Description (Optional)
+          </Label>
+          <div className="flex items-center gap-3">
+            <Input
+              id="jobDescriptionFile"
+              type="file"
+              onChange={handleFileChange}
+              accept=".pdf,.doc,.docx,.txt"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              onClick={handleParseJD}
+              disabled={isParsingJD || !file}
+              variant="outline"
+            >
+              {isParsingJD ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Parse File
             </Button>
-            </div>
-            {file && <p className="text-xs text-muted-foreground">Selected: {file.name}</p>}
+          </div>
+          {file && (
+            <p className="text-xs text-muted-foreground">
+              Selected: {file.name}
+            </p>
+          )}
         </div>
 
         <div>
-          <Label htmlFor="jobDescription" className="text-lg">Job Description</Label>
+          <Label htmlFor="jobDescription" className="text-lg">
+            Job Description
+          </Label>
           <Textarea
             id="jobDescription"
             value={jobDescription}
@@ -239,23 +383,41 @@ export default function AiCandidateMatchPage() {
           />
         </div>
         {candidatesError && (
-            <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{candidatesError}</AlertDescription>
-            </Alert>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{candidatesError}</AlertDescription>
+          </Alert>
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-4">
-        <Button onClick={handleSubmit} disabled={isLoading || candidatesLoading || !user || !!candidatesError || isParsingJD} size="lg">
-          {(isLoading || candidatesLoading || isParsingJD) ? (
+        <Button
+          onClick={handleSubmit}
+          disabled={
+            isLoading ||
+            candidatesLoading ||
+            !user ||
+            !!candidatesError ||
+            isParsingJD
+          }
+          size="lg"
+        >
+          {isLoading || candidatesLoading || isParsingJD ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
             <Users className="mr-2 h-5 w-5" />
           )}
-          {candidatesLoading ? 'Loading Candidates...' : (isParsingJD ? 'Parsing JD...' : 'Find Matching Candidates')}
+          {candidatesLoading
+            ? 'Loading Candidates...'
+            : isParsingJD
+              ? 'Parsing JD...'
+              : 'Find Matching Candidates'}
         </Button>
-        {!user && <p className="text-sm text-destructive text-center">Please log in as an employer to use this feature.</p>}
-        
+        {!user && (
+          <p className="text-sm text-destructive text-center">
+            Please log in as an employer to use this feature.
+          </p>
+        )}
+
         {error && (
           <Alert variant="destructive" className="mt-4">
             <AlertTriangle className="h-5 w-5" />
@@ -271,33 +433,43 @@ export default function AiCandidateMatchPage() {
             <CardContent className="space-y-4">
               <div>
                 <h4 className="font-semibold text-md mb-2">AI Reasoning:</h4>
-                <p className="text-sm whitespace-pre-wrap bg-background p-3 rounded-md border">{result.reasoning || "No reasoning provided."}</p>
+                <p className="text-sm whitespace-pre-wrap bg-background p-3 rounded-md border">
+                  {result.reasoning || 'No reasoning provided.'}
+                </p>
               </div>
 
               {matchedCandidateDetails.length > 0 ? (
                 <div>
-                  <h4 className="font-semibold text-md mt-4 mb-2">Recommended Candidates ({matchedCandidateDetails.length}):</h4>
+                  <h4 className="font-semibold text-md mt-4 mb-2">
+                    Recommended Candidates ({matchedCandidateDetails.length}):
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {matchedCandidateDetails.map(c => (
+                    {matchedCandidateDetails.map((c) => (
                       <CandidateCard key={c.uid} candidate={c} />
                     ))}
                   </div>
                 </div>
-              ) : result.relevantCandidateIDs && result.relevantCandidateIDs.length > 0 ? (
-                 <Alert variant="default" className="mt-4">
-                    <Users className="h-4 w-4" />
-                    <AlertDescription>
-                        AI identified some potentially relevant candidate UIDs, but they could not be matched to current profiles. This might happen if profiles were recently removed or IDs are incorrect. See reasoning.
-                         Relevant UIDs: {result.relevantCandidateIDs.join(', ')}
-                    </AlertDescription>
-                 </Alert>
+              ) : result.relevantCandidateIDs &&
+                result.relevantCandidateIDs.length > 0 ? (
+                <Alert variant="default" className="mt-4">
+                  <Users className="h-4 w-4" />
+                  <AlertDescription>
+                    AI identified some potentially relevant candidate UIDs, but
+                    they could not be matched to current profiles. This might
+                    happen if profiles were recently removed or IDs are
+                    incorrect. See reasoning. Relevant UIDs:{' '}
+                    {result.relevantCandidateIDs.join(', ')}
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <Alert variant="default" className="mt-4">
-                    <Users className="h-4 w-4" />
-                    <AlertDescription>
-                        No candidates were matched by the AI based on the provided job description and available profiles. Try refining the job description or check back later for new candidates.
-                    </AlertDescription>
-                 </Alert>
+                  <Users className="h-4 w-4" />
+                  <AlertDescription>
+                    No candidates were matched by the AI based on the provided
+                    job description and available profiles. Try refining the job
+                    description or check back later for new candidates.
+                  </AlertDescription>
+                </Alert>
               )}
             </CardContent>
           </Card>

@@ -1,13 +1,27 @@
-
-"use client";
-import type { UserProfile, UserRole, Company, Filters, SavedSearch, Application, ApplicationStatus } from '@/types'; // Added Application, ApplicationStatus
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+'use client';
+import type {
+  UserProfile,
+  UserRole,
+  Company,
+  Filters,
+  SavedSearch,
+  Application,
+  ApplicationStatus,
+  Job,
+} from '@/types'; // Added Job
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from 'react';
 import {
   auth,
   db,
-  googleProvider,
-  githubProvider,
-  microsoftProvider
+  // googleProvider, // Unused
+  // githubProvider, // Unused
+  // microsoftProvider, // Unused
 } from '@/lib/firebase';
 import {
   onAuthStateChanged,
@@ -16,9 +30,20 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   type User as FirebaseUser,
-  type AuthProvider as FirebaseAuthProvider
+  type AuthProvider as FirebaseAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs, arrayUnion, arrayRemove, Timestamp, type FieldValue, writeBatch, addDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+  collection,
+  /*query, where, getDocs,*/ arrayUnion,
+  arrayRemove,
+  Timestamp,
+  type FieldValue /*writeBatch, addDoc*/,
+} from 'firebase/firestore'; // Removed query, where, getDocs, writeBatch, addDoc
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs for saved searches
 
 interface AuthContextType {
@@ -27,19 +52,36 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  applyForJob: (job: Job) => Promise<void>; // Changed to take full Job object
+  applyForJob: (job: Job) => Promise<void>;
   hasAppliedForJob: (jobId: string) => boolean;
   saveJob: (jobId: string) => Promise<void>;
   unsaveJob: (jobId: string) => Promise<void>;
   isJobSaved: (jobId: string) => boolean;
-  registerUser: (email: string, pass: string, name: string, role: UserRole, companyName?: string) => Promise<FirebaseUser>;
+  registerUser: (
+    email: string,
+    pass: string,
+    name: string,
+    role: UserRole,
+    companyName?: string
+  ) => Promise<FirebaseUser>;
   loginUser: (email: string, pass: string) => Promise<FirebaseUser>;
   updateUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
-  updateCompanyProfile: (companyId: string, updatedData: Partial<Company>) => Promise<void>;
-  signInWithSocial: (provider: FirebaseAuthProvider, role: UserRole, companyName?: string) => Promise<FirebaseUser>;
+  updateCompanyProfile: (
+    companyId: string,
+    updatedData: Partial<Company>
+  ) => Promise<void>;
+  signInWithSocial: (
+    provider: FirebaseAuthProvider,
+    role: UserRole,
+    companyName?: string
+  ) => Promise<FirebaseUser>;
   saveSearch: (searchName: string, filters: Filters) => Promise<void>;
   deleteSearch: (searchId: string) => Promise<void>;
-  updateApplicationStatus: (applicationId: string, newStatus: ApplicationStatus, employerNotes?: string) => Promise<void>;
+  updateApplicationStatus: (
+    applicationId: string,
+    newStatus: ApplicationStatus,
+    employerNotes?: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,20 +96,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        const userDocRef = doc(db, "users", fbUser.uid);
+        const userDocRef = doc(db, 'users', fbUser.uid);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
-            const profileData = { uid: fbUser.uid, ...userDocSnap.data() } as UserProfile;
+            const profileData = {
+              uid: fbUser.uid,
+              ...userDocSnap.data(),
+            } as UserProfile;
             setUser(profileData);
             if (profileData.role === 'employer' && profileData.companyId) {
-              const companyDocRef = doc(db, "companies", profileData.companyId);
+              const companyDocRef = doc(db, 'companies', profileData.companyId);
               const companyDocSnap = await getDoc(companyDocRef);
               if (companyDocSnap.exists()) {
-                setCompany({ id: companyDocSnap.id, ...companyDocSnap.data() } as Company);
+                setCompany({
+                  id: companyDocSnap.id,
+                  ...companyDocSnap.data(),
+                } as Company);
               } else {
                 setCompany(null);
-                console.warn(`Company with ID ${profileData.companyId} not found for user ${fbUser.uid}`);
+                console.warn(
+                  `Company with ID ${profileData.companyId} not found for user ${fbUser.uid}`
+                );
               }
             } else {
               setCompany(null);
@@ -77,9 +127,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setCompany(null);
           }
         } catch (error) {
-            console.error("AuthContext: Error fetching user or company profile from Firestore:", error);
-            setUser(null);
-            setCompany(null);
+          console.error(
+            'AuthContext: Error fetching user or company profile from Firestore:',
+            error
+          );
+          setUser(null);
+          setCompany(null);
         }
       } else {
         setUser(null);
@@ -98,19 +151,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyNameForNewCompany?: string,
     existingCompanyId?: string
   ): Promise<UserProfile> => {
-    const userDocRef = doc(db, "users", fbUser.uid);
+    const userDocRef = doc(db, 'users', fbUser.uid);
     let userCompanyId = existingCompanyId;
     let userIsCompanyAdmin = false;
 
     if (role === 'employer' && !existingCompanyId) {
-      const newCompanyRef = doc(collection(db, "companies"));
+      const newCompanyRef = doc(collection(db, 'companies'));
       const newCompanyData: Omit<Company, 'id'> = {
-        name: companyNameForNewCompany || "New Company",
+        name: companyNameForNewCompany || 'New Company',
         adminUids: [fbUser.uid],
         recruiterUids: [fbUser.uid],
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
-        status: 'pending', 
+        status: 'pending',
       };
       await setDoc(newCompanyRef, newCompanyData);
       userCompanyId = newCompanyRef.id;
@@ -121,7 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userProfileData: Partial<UserProfile> = {
       uid: fbUser.uid,
       email: fbUser.email,
-      name: name || fbUser.displayName || (role === 'employer' ? "Recruiter" : "New User"),
+      name:
+        name ||
+        fbUser.displayName ||
+        (role === 'employer' ? 'Recruiter' : 'New User'),
       role: role,
       avatarUrl: fbUser.photoURL || undefined,
       createdAt: serverTimestamp() as Timestamp,
@@ -137,12 +193,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.savedSearches = [];
       userProfileData.headline = '';
       userProfileData.skills = [];
+      userProfileData.mobileNumber = ''; // Initialize mobile number
     }
 
     const finalProfileDataForFirestore: { [key: string]: any } = {};
     for (const key in userProfileData) {
       if (userProfileData[key as keyof typeof userProfileData] !== undefined) {
-        finalProfileDataForFirestore[key] = userProfileData[key as keyof typeof userProfileData];
+        finalProfileDataForFirestore[key] =
+          userProfileData[key as keyof typeof userProfileData];
       }
     }
 
@@ -151,70 +209,109 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(finalProfileDataForFirestore as UserProfile);
       return finalProfileDataForFirestore as UserProfile;
     } catch (error) {
-      console.error("AuthContext: Firestore setDoc FAILED for UID:", fbUser.uid, "Error:", error, "Data attempted:", JSON.stringify(finalProfileDataForFirestore));
+      console.error(
+        'AuthContext: Firestore setDoc FAILED for UID:',
+        fbUser.uid,
+        'Error:',
+        error,
+        'Data attempted:',
+        JSON.stringify(finalProfileDataForFirestore)
+      );
       throw error;
     }
   };
 
-  const registerUser = async (email: string, pass: string, name: string, role: UserRole, companyName?: string): Promise<FirebaseUser> => {
+  const registerUser = async (
+    email: string,
+    pass: string,
+    name: string,
+    role: UserRole,
+    companyName?: string
+  ): Promise<FirebaseUser> => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        pass
+      );
       const fbUser = userCredential.user;
       await createUserProfileInFirestore(fbUser, name, role, companyName);
       return fbUser;
     } catch (error) {
-      console.error("AuthContext: registerUser error", error);
+      console.error('AuthContext: registerUser error', error);
       throw error;
     }
   };
 
-  const loginUser = async (email: string, pass: string): Promise<FirebaseUser> => {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      return userCredential.user;
-    } catch (error) {
-        console.error("AuthContext: loginUser error", error);
-        throw error;
-    }
+  const loginUser = async (
+    email: string,
+    pass: string
+  ): Promise<FirebaseUser> => {
+    // try { // Useless try-catch removed
+    const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    return userCredential.user;
+    // } catch (error) { // Useless try-catch removed
+    //     throw error;
+    // }
   };
 
-  const signInWithSocial = async (provider: FirebaseAuthProvider, role: UserRole, companyName?: string): Promise<FirebaseUser> => {
+  const signInWithSocial = async (
+    provider: FirebaseAuthProvider,
+    role: UserRole,
+    companyName?: string
+  ): Promise<FirebaseUser> => {
     try {
       const result = await signInWithPopup(auth, provider);
       const fbUser = result.user;
-      const userDocRef = doc(db, "users", fbUser.uid);
+      const userDocRef = doc(db, 'users', fbUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        await createUserProfileInFirestore(fbUser, fbUser.displayName || (role === 'employer' ? "Recruiter" : "New User"), role, companyName);
+        await createUserProfileInFirestore(
+          fbUser,
+          fbUser.displayName ||
+            (role === 'employer' ? 'Recruiter' : 'New User'),
+          role,
+          companyName
+        );
       } else {
-        const existingProfile = { uid: fbUser.uid, ...userDocSnap.data() } as UserProfile;
+        const existingProfile = {
+          uid: fbUser.uid,
+          ...userDocSnap.data(),
+        } as UserProfile;
         let updatesNeeded = false;
-        const updates: Partial<UserProfile> & {updatedAt?: FieldValue} = {};
+        const updates: Partial<UserProfile> & { updatedAt?: FieldValue } = {};
 
         if (existingProfile.role !== role) {
           updates.role = role;
           updatesNeeded = true;
         }
         if (role === 'employer' && !existingProfile.companyId && companyName) {
-            const newCompanyRef = doc(collection(db, "companies"));
-            const newCompanyData: Omit<Company, 'id'> = {
-                name: companyName,
-                adminUids: [fbUser.uid],
-                recruiterUids: [fbUser.uid],
-                createdAt: serverTimestamp() as Timestamp,
-                updatedAt: serverTimestamp() as Timestamp,
-                status: 'pending', 
-            };
-            await setDoc(newCompanyRef, newCompanyData);
-            updates.companyId = newCompanyRef.id;
-            updates.isCompanyAdmin = true;
-            updatesNeeded = true;
-            setCompany({ id: newCompanyRef.id, ...newCompanyData } as Company);
+          const newCompanyRef = doc(collection(db, 'companies'));
+          const newCompanyData: Omit<Company, 'id'> = {
+            name: companyName,
+            adminUids: [fbUser.uid],
+            recruiterUids: [fbUser.uid],
+            createdAt: serverTimestamp() as Timestamp,
+            updatedAt: serverTimestamp() as Timestamp,
+            status: 'pending',
+          };
+          await setDoc(newCompanyRef, newCompanyData);
+          updates.companyId = newCompanyRef.id;
+          updates.isCompanyAdmin = true;
+          updatesNeeded = true;
+          setCompany({ id: newCompanyRef.id, ...newCompanyData } as Company);
         }
         if (role === 'jobSeeker' && !existingProfile.savedSearches) {
-            updates.savedSearches = [];
-            updatesNeeded = true;
+          updates.savedSearches = [];
+          updatesNeeded = true;
+        }
+        if (
+          role === 'jobSeeker' &&
+          existingProfile.mobileNumber === undefined
+        ) {
+          updates.mobileNumber = '';
+          updatesNeeded = true;
         }
 
         if (updatesNeeded) {
@@ -223,19 +320,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({ ...existingProfile, ...updates } as UserProfile);
         } else {
           setUser(existingProfile);
-          if (existingProfile.role === 'employer' && existingProfile.companyId) {
-             const companyDocRef = doc(db, "companies", existingProfile.companyId);
-             const companyDocSnap = await getDoc(companyDocRef);
-             if (companyDocSnap.exists()) {
-                setCompany({ id: companyDocSnap.id, ...companyDocSnap.data() } as Company);
-             }
+          if (
+            existingProfile.role === 'employer' &&
+            existingProfile.companyId
+          ) {
+            const companyDocRef = doc(
+              db,
+              'companies',
+              existingProfile.companyId
+            );
+            const companyDocSnap = await getDoc(companyDocRef);
+            if (companyDocSnap.exists()) {
+              setCompany({
+                id: companyDocSnap.id,
+                ...companyDocSnap.data(),
+              } as Company);
+            }
           }
         }
       }
       return fbUser;
     } catch (error) {
-        console.error("AuthContext: signInWithSocial error", error);
-        throw error;
+      console.error('AuthContext: signInWithSocial error', error);
+      throw error;
     }
   };
 
@@ -246,61 +353,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(null);
       setCompany(null);
     } catch (error) {
-        console.error("AuthContext: logout error", error);
-        throw error;
+      console.error('AuthContext: logout error', error);
+      throw error;
     }
   };
 
   const updateUserProfile = async (updatedData: Partial<UserProfile>) => {
     if (user && user.uid) {
-      const userDocRef = doc(db, "users", user.uid);
-      const dataToUpdate: { [key: string]: any } = { updatedAt: serverTimestamp() };
+      const userDocRef = doc(db, 'users', user.uid);
+      const dataToUpdate: { [key: string]: any } = {
+        updatedAt: serverTimestamp(),
+      };
       for (const key in updatedData) {
         if (updatedData[key as keyof UserProfile] !== undefined) {
           dataToUpdate[key] = updatedData[key as keyof UserProfile];
         }
       }
 
-      if (Object.keys(dataToUpdate).length > 1) { 
+      if (Object.keys(dataToUpdate).length > 1) {
         try {
-            await updateDoc(userDocRef, dataToUpdate);
-            setUser(prevUser => ({ ...prevUser, ...dataToUpdate } as UserProfile)); 
+          await updateDoc(userDocRef, dataToUpdate);
+          setUser(
+            (prevUser) => ({ ...prevUser, ...dataToUpdate }) as UserProfile
+          );
         } catch (error) {
-            console.error("AuthContext: updateUserProfile error", error);
-            throw error;
+          console.error('AuthContext: updateUserProfile error', error);
+          throw error;
         }
       }
     } else {
-      console.error("AuthContext: User not logged in to update profile.");
-      throw new Error("User not logged in to update profile.");
+      console.error('AuthContext: User not logged in to update profile.');
+      throw new Error('User not logged in to update profile.');
     }
   };
 
-  const updateCompanyProfile = async (companyId: string, updatedData: Partial<Company>) => {
-    if (!user || user.role !== 'employer' || !user.isCompanyAdmin || user.companyId !== companyId) {
-        console.error("AuthContext: Unauthorized or invalid operation to update company profile.");
-        throw new Error("Unauthorized to update company profile.");
+  const updateCompanyProfile = async (
+    companyId: string,
+    updatedData: Partial<Company>
+  ) => {
+    if (
+      !user ||
+      user.role !== 'employer' ||
+      !user.isCompanyAdmin ||
+      user.companyId !== companyId
+    ) {
+      console.error(
+        'AuthContext: Unauthorized or invalid operation to update company profile.'
+      );
+      throw new Error('Unauthorized to update company profile.');
     }
-    const companyDocRef = doc(db, "companies", companyId);
-    const dataToUpdate: { [key: string]: any } = { ...updatedData, updatedAt: serverTimestamp() };
-    delete dataToUpdate.id; 
-    
+    const companyDocRef = doc(db, 'companies', companyId);
+    const dataToUpdate: { [key: string]: any } = {
+      ...updatedData,
+      updatedAt: serverTimestamp(),
+    };
+    delete dataToUpdate.id;
+
     try {
-        await updateDoc(companyDocRef, dataToUpdate);
-        setCompany(prevCompany => ({ ...prevCompany, ...dataToUpdate, id: companyId } as Company));
+      await updateDoc(companyDocRef, dataToUpdate);
+      setCompany(
+        (prevCompany) =>
+          ({ ...prevCompany, ...dataToUpdate, id: companyId }) as Company
+      );
     } catch (error) {
-        console.error("AuthContext: updateCompanyProfile error", error);
-        throw error;
+      console.error('AuthContext: updateCompanyProfile error', error);
+      throw error;
     }
   };
 
-  const applyForJob = async (job: Job) => { // Takes full Job object
+  const applyForJob = async (job: Job) => {
     if (user && user.uid && user.role === 'jobSeeker') {
       const currentAppliedJobIds = user.appliedJobIds || [];
       if (!currentAppliedJobIds.includes(job.id)) {
-        
-        // Create new application document
-        const applicationRef = doc(collection(db, "applications"));
+        const applicationRef = doc(collection(db, 'applications'));
         const newApplication: Omit<Application, 'id'> = {
           jobId: job.id,
           jobTitle: job.title,
@@ -309,42 +434,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           applicantAvatarUrl: user.avatarUrl,
           applicantHeadline: user.headline,
           companyId: job.companyId,
-          postedById: job.postedById, // Employer who posted the job
+          postedById: job.postedById,
           status: 'Applied',
           appliedAt: serverTimestamp() as Timestamp,
           updatedAt: serverTimestamp() as Timestamp,
         };
-        
-        const userDocRef = doc(db, "users", user.uid);
+
+        const userDocRef = doc(db, 'users', user.uid);
         try {
-            await setDoc(applicationRef, newApplication);
-            await updateDoc(userDocRef, {
-              appliedJobIds: arrayUnion(job.id), // Still keep this for job seeker's quick reference
-              updatedAt: serverTimestamp()
-            });
-            setUser(prevUser => ({
-            ...prevUser,
-            appliedJobIds: [...(prevUser?.appliedJobIds || []), job.id]
-            } as UserProfile));
-            // No longer need to update applicantIds on the job document directly
+          await setDoc(applicationRef, newApplication);
+          await updateDoc(userDocRef, {
+            appliedJobIds: arrayUnion(job.id),
+            updatedAt: serverTimestamp(),
+          });
+          setUser(
+            (prevUser) =>
+              ({
+                ...prevUser,
+                appliedJobIds: [...(prevUser?.appliedJobIds || []), job.id],
+              }) as UserProfile
+          );
         } catch (error) {
-            console.error("AuthContext: applyForJob error", error);
-            throw error;
+          console.error('AuthContext: applyForJob error', error);
+          throw error;
         }
       }
     } else {
-        console.warn("User must be a logged-in job seeker to apply for a job.");
+      console.warn('User must be a logged-in job seeker to apply for a job.');
     }
   };
 
-  const updateApplicationStatus = async (applicationId: string, newStatus: ApplicationStatus, employerNotes?: string) => {
+  const updateApplicationStatus = async (
+    applicationId: string,
+    newStatus: ApplicationStatus,
+    employerNotes?: string
+  ) => {
     if (!user || user.role !== 'employer') {
-      throw new Error("Only employers can update application status.");
+      throw new Error('Only employers can update application status.');
     }
-    const applicationDocRef = doc(db, "applications", applicationId);
-    const updates: Partial<Application> = {
+    const applicationDocRef = doc(db, 'applications', applicationId);
+    const updates: Partial<Application> & { updatedAt: FieldValue } = {
+      // Ensure updatedAt is part of the type
       status: newStatus,
-      updatedAt: serverTimestamp() as Timestamp,
+      updatedAt: serverTimestamp(),
     };
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
@@ -352,7 +484,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await updateDoc(applicationDocRef, updates);
     } catch (error) {
-      console.error("AuthContext: updateApplicationStatus error", error);
+      console.error('AuthContext: updateApplicationStatus error', error);
       throw error;
     }
   };
@@ -366,43 +498,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveJob = async (jobId: string) => {
     if (user && user.uid && user.role === 'jobSeeker') {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       try {
         await updateDoc(userDocRef, {
           savedJobIds: arrayUnion(jobId),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
-        setUser(prevUser => ({
-          ...prevUser,
-          savedJobIds: [...(prevUser?.savedJobIds || []), jobId]
-        } as UserProfile));
+        setUser(
+          (prevUser) =>
+            ({
+              ...prevUser,
+              savedJobIds: [...(prevUser?.savedJobIds || []), jobId],
+            }) as UserProfile
+        );
       } catch (error) {
-        console.error("AuthContext: saveJob error", error);
+        console.error('AuthContext: saveJob error', error);
         throw error;
       }
     } else {
-      console.warn("User must be a logged-in job seeker to save a job.");
+      console.warn('User must be a logged-in job seeker to save a job.');
     }
   };
 
   const unsaveJob = async (jobId: string) => {
     if (user && user.uid && user.role === 'jobSeeker') {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       try {
         await updateDoc(userDocRef, {
           savedJobIds: arrayRemove(jobId),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
-        setUser(prevUser => ({
-          ...prevUser,
-          savedJobIds: (prevUser?.savedJobIds || []).filter(id => id !== jobId)
-        } as UserProfile));
+        setUser(
+          (prevUser) =>
+            ({
+              ...prevUser,
+              savedJobIds: (prevUser?.savedJobIds || []).filter(
+                (id) => id !== jobId
+              ),
+            }) as UserProfile
+        );
       } catch (error) {
-        console.error("AuthContext: unsaveJob error", error);
+        console.error('AuthContext: unsaveJob error', error);
         throw error;
       }
     } else {
-      console.warn("User must be a logged-in job seeker to unsave a job.");
+      console.warn('User must be a logged-in job seeker to unsave a job.');
     }
   };
 
@@ -415,7 +555,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveSearch = async (searchName: string, filters: Filters) => {
     if (user && user.uid && user.role === 'jobSeeker') {
-      const userDocRef = doc(db, "users", user.uid);
+      const userDocRef = doc(db, 'users', user.uid);
       const newSearch: SavedSearch = {
         id: uuidv4(),
         name: searchName,
@@ -425,47 +565,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await updateDoc(userDocRef, {
           savedSearches: arrayUnion(newSearch),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
-        setUser(prevUser => ({
-          ...prevUser,
-          savedSearches: [...(prevUser?.savedSearches || []), newSearch]
-        } as UserProfile));
+        setUser(
+          (prevUser) =>
+            ({
+              ...prevUser,
+              savedSearches: [...(prevUser?.savedSearches || []), newSearch],
+            }) as UserProfile
+        );
       } catch (error) {
-        console.error("AuthContext: saveSearch error", error);
+        console.error('AuthContext: saveSearch error', error);
         throw error;
       }
     } else {
-      console.warn("User must be a logged-in job seeker to save a search.");
+      console.warn('User must be a logged-in job seeker to save a search.');
     }
   };
 
   const deleteSearch = async (searchId: string) => {
     if (user && user.uid && user.role === 'jobSeeker' && user.savedSearches) {
-      const userDocRef = doc(db, "users", user.uid);
-      const searchToDelete = user.savedSearches.find(s => s.id === searchId);
+      const userDocRef = doc(db, 'users', user.uid);
+      const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
       if (searchToDelete) {
         try {
           await updateDoc(userDocRef, {
             savedSearches: arrayRemove(searchToDelete),
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
           });
-          setUser(prevUser => ({
-            ...prevUser,
-            savedSearches: (prevUser?.savedSearches || []).filter(s => s.id !== searchId)
-          } as UserProfile));
+          setUser(
+            (prevUser) =>
+              ({
+                ...prevUser,
+                savedSearches: (prevUser?.savedSearches || []).filter(
+                  (s) => s.id !== searchId
+                ),
+              }) as UserProfile
+          );
         } catch (error) {
-          console.error("AuthContext: deleteSearch error", error);
+          console.error('AuthContext: deleteSearch error', error);
           throw error;
         }
       }
     } else {
-      console.warn("User must be a logged-in job seeker with searches to delete a search.");
+      console.warn(
+        'User must be a logged-in job seeker with searches to delete a search.'
+      );
     }
   };
 
   return (
-    <AuthContext.Provider value={{
+    <AuthContext.Provider
+      value={{
         user,
         company,
         firebaseUser,
@@ -481,10 +632,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserProfile,
         updateCompanyProfile,
         signInWithSocial,
-        saveSearch, 
+        saveSearch,
         deleteSearch,
-        updateApplicationStatus
-    }}>
+        updateApplicationStatus,
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );

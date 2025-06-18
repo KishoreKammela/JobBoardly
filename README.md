@@ -30,11 +30,11 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 ### For Job Seekers:
 
 - **User Authentication**: Secure registration and login via email/password and social providers (Google, GitHub, Microsoft).
-- **User Profile Management**: Create and update personal and professional details.
+- **User Profile Management**: Create and update personal and professional details, including mobile number. Desired salary is handled in INR.
 - **Resume Upload & AI Parsing**: Upload resumes (PDF, DOCX, TXT), with AI attempting to parse and pre-fill profile information.
-- **Job Search & Filtering**: Browse job listings with filters for keywords, location, role type, and remote options.
-- **Dynamic Job Detail Pages**: View comprehensive details for each job.
-- **Save Jobs & Saved Searches**: Bookmark jobs and save search filter criteria for later viewing and quick application.
+- **Job Search & Filtering**: Browse job listings with filters for keywords, location, role type, and remote options. Filtered searches can be initiated via URL parameters.
+- **Dynamic Job Detail Pages**: View comprehensive details for each job, including share functionality with clipboard confirmation.
+- **Save Jobs & Saved Searches**: Bookmark jobs and save search filter criteria for later viewing and quick application via the settings page.
 - **Application Submission**: Apply for jobs (creates an application document in Firestore).
 - **My Jobs Page**: View and manage saved and applied jobs with filtering options.
 - **AI-Powered Job Matching**: Get AI-driven job recommendations based on your profile summary (editable for the session) matched against all available approved jobs.
@@ -43,12 +43,12 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 ### For Employers:
 
 - **User Authentication**: Secure registration and login via email/password and social providers. Company creation upon first employer registration.
-- **Company Profile Management**: Set up and manage company details. Company profiles require admin approval before being publicly visible.
+- **Company Profile Management**: Set up and manage company details. Company profiles require admin approval before being publicly visible. Current company status (e.g., "Pending", "Approved", "Rejected") is visible on the profile edit page.
 - **Job Posting**: Create and publish job listings.
   - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT) for AI to parse and pre-fill the posting form.
-  - **Job Status**: Jobs are submitted with a 'pending' status and require admin approval to go live.
+  - **Job Status**: Jobs are submitted with a 'pending' status and require admin approval to go live. Editing an existing job displays its current status and resubmits it as 'pending' for re-approval.
 - **View Posted Jobs**: Manage and see an overview of jobs posted by the company, including applicant counts and job status (Pending, Approved, Rejected). Edit existing jobs (resubmits for approval).
-- **View Applicants**: See a list of candidates who have applied for a specific job.
+- **View Applicants**: See a list of candidates who have applied for a specific job. Filter applicants by application status.
 - **Application Status Management**: Update the status of applications (e.g., Reviewed, Interviewing, Hired, Rejected) and add internal notes.
 - **Dynamic Candidate Detail Pages**: View comprehensive profiles of job seekers.
 - **Candidate Search & Filtering**: Browse job seeker profiles with filters for keywords, location, and availability.
@@ -58,11 +58,11 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 ### For Admins:
 
 - **Admin Dashboard**:
-  - **Job Listing Moderation**: Review, approve, or reject job postings. Link to view job details.
-  - **Company Profile Moderation**: Review, approve, or reject new company profiles. Link to view company details.
+  - **Job Listing Moderation**: Review, approve, or reject job postings. Job titles link to public detail pages for review (opens in new tab). Action buttons have specific loading states.
+  - **Company Profile Moderation**: Review, approve, or reject new company profiles. Company names link to public detail pages for review (opens in new tab). Action buttons have specific loading states.
   - **User Management**: View all registered users in a structured table (Name, Email, Role, Joined Date).
   - Placeholders for advanced moderation tools (Content Flagging, Platform Analytics, Policy & Appeals).
-- **Protected Admin Route**: Access restricted to users with the 'admin' role.
+- **Protected Admin Route**: Access restricted to users with the 'admin' role, with a dedicated admin login page at `/auth/admin/login`.
 
 ### General Platform Features:
 
@@ -74,6 +74,7 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 - **Toast Notifications**: For user feedback on actions.
 - **`data-ai-hint` Attributes**: Added to placeholder images for improved accessibility and future AI image generation integration.
 - **Robust Firebase Initialization**: Improved error handling during Firebase setup.
+- **Clean UI**: Internal IDs for jobs, companies, and candidates are not exposed in the UI.
 
 ## Folder Structure
 
@@ -89,6 +90,7 @@ A high-level overview of the project's directory structure:
 │   │   └── genkit.ts           # Genkit global initialization
 │   ├── app/                    # Next.js App Router (pages, layouts)
 │   │   ├── (auth)/             # Route group for auth pages
+│   │   │   └── admin/          # Admin-specific auth pages
 │   │   ├── admin/              # Admin specific pages
 │   │   ├── employer/           # Employer specific pages
 │   │   ├── jobs/
@@ -151,7 +153,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-your-measurement-id" # Optional
 This project requires a Firebase project with the following services enabled and configured:
 
 - **Authentication**: Enable Email/Password, Google, GitHub, and Microsoft sign-in methods.
-- **Firestore**: Set up a Firestore database in Native mode.
+- **Firestore**: Set up a Firestore database in Native mode. Ensure you have appropriate composite indexes for queries (e.g., for filtering jobs by status and ordering, or fetching applicants). The Firestore console or error messages in Firebase Functions logs will often provide links to create necessary indexes.
 - **Storage**: Enable Firebase Storage for file uploads (e.g., resumes).
 - **Genkit**: Ensure your environment is set up for Genkit, potentially with access to Google AI Studio models (like Gemini) or Vertex AI. This might involve setting up Application Default Credentials or an API key.
 - **Firebase Functions**: Required for backend tasks like email alerts or advanced data processing (see "Backend Development Outline").
@@ -207,14 +209,14 @@ You need both servers running concurrently to use the AI-powered features.
 
 ### Code Quality & Testing Scripts
 
-- **Lint**: `npm run lint` (checks for code style issues)
-- **Format**: `npm run format` (automatically formats code)
+- **Lint**: `npm run lint` (checks for code style issues with ESLint)
+- **Format**: `npm run format` (automatically formats code with Prettier)
+- **Type Check**: `npm run typecheck` (runs TypeScript compiler to check for type errors)
 - **Test**: `npm run test` (runs unit/integration tests with Jest)
-- **Test Coverage**: `npm run test:cov` (runs tests and generates a coverage report)
+- **Test Coverage**: `npm run test:cov` (runs tests and generates a coverage report, aiming for >80%)
 - **SonarQube Analysis**: `npm run sonar` (runs SonarQube scanner - requires SonarQube server setup, see `sonar-scanner.js`)
-- **Type Checking**: `npm run typecheck` (runs TypeScript compiler to check for type errors)
 
-The pre-commit hook (Husky + lint-staged) will automatically run ESLint and Prettier on staged files before committing.
+The pre-commit hook (Husky + lint-staged) will automatically run ESLint and Prettier on staged files before committing to ensure code quality.
 
 ## Deployment Instructions
 
@@ -224,7 +226,9 @@ The pre-commit hook (Husky + lint-staged) will automatically run ESLint and Pret
 2.  **Configure Project**: Vercel typically auto-detects Next.js projects.
 3.  **Environment Variables**: Set up the same environment variables (from your `.env` file) in your Vercel project settings.
 4.  **Build & Deploy**: Vercel will automatically build and deploy your Next.js application upon pushes to the connected branch (e.g., `main` or `develop`).
-5.  **Genkit/Backend**: If Genkit flows are intended for production use beyond simple frontend calls (e.g., triggered by Firestore events or HTTP endpoints not directly part of Next.js API routes), they might need to be deployed separately, for instance, as Firebase Functions.
+    - Ensure your build command in Vercel is `npm run build` (or equivalent for your package manager).
+    - Vercel handles the installation of dependencies listed in `package.json`.
+5.  **Genkit/Backend**: If Genkit flows are intended for production use beyond simple frontend calls (e.g., triggered by Firestore events or HTTP endpoints not directly part of Next.js API routes), they might need to be deployed separately, for instance, as Firebase Functions or Google Cloud Functions.
 
 ### Firebase App Hosting (Alternative for Frontend)
 
@@ -268,8 +272,8 @@ firebase deploy --only firestore:rules
 ### Public Routes:
 
 - `/`: Home page (redirects to dashboard if logged in)
-- `/jobs`: Job listings page
-- `/jobs/[jobId]`: Dynamic page for individual job details
+- `/jobs`: Job listings page (shows approved jobs)
+- `/jobs/[jobId]`: Dynamic page for individual job details (shows if approved)
 - `/companies`: Company listings page (shows approved companies)
 - `/companies/[companyId]`: Dynamic page for individual company details (shows if approved)
 - `/employer`: Employer landing page
@@ -278,7 +282,7 @@ firebase deploy --only firestore:rules
 
 - `/auth/login`: Job seeker login page
 - `/auth/register`: Job seeker registration page
-- `/profile`: Job seeker profile management (including resume upload)
+- `/profile`: Job seeker profile management (including resume upload and mobile number)
 - `/my-jobs`: View saved and applied jobs
 - `/ai-match`: AI-powered job matching tool
 - `/settings`: User settings page (including saved searches)
@@ -289,13 +293,14 @@ firebase deploy --only firestore:rules
 - `/employer/register`: Employer registration page
 - `/employer/post-job`: Page to create or edit a job posting (submitted for admin approval)
 - `/employer/posted-jobs`: View and manage jobs posted by the employer (see applicant counts, job status)
-- `/employer/jobs/[jobId]/applicants`: View applicants for a specific job, manage application statuses.
+- `/employer/jobs/[jobId]/applicants`: View applicants for a specific job, manage application statuses (with filtering).
 - `/employer/find-candidates`: Search and filter candidate profiles
 - `/employer/candidates/[candidateId]`: Dynamic page for individual candidate details
 - `/employer/ai-candidate-match`: AI-powered candidate matching tool
 
 ### Admin Routes (Admin Role Required):
 
+- `/auth/admin/login`: Admin-specific login page.
 - `/admin`: Admin dashboard (job/company moderation, user overview)
 
 ## Admin User Creation
@@ -329,7 +334,7 @@ The following features require backend development, likely using **Firebase Func
 ### 2. Advanced Moderation & Analytics (Backend Support)
 
 - **Content Flagging & Scam Detection (Automated)**:
-  - **Trigger**: Firebase Function triggered on `jobs` or `companies` collection create/update.
+  - **Trigger**: Firebase Function triggered on `jobs` or `companies` collection create/update (especially when status is `pending` or `approved`).
   - **Logic**:
     - Maintain a list of suspicious keywords/patterns (can be stored in Firestore or config).
     - Analyze job/company descriptions, titles, salary fields.
@@ -352,8 +357,8 @@ The following features require backend development, likely using **Firebase Func
 ### 3. Denormalization (for Performance & Scalability)
 
 - **Applicant Count on Jobs**:
-  - **Trigger**: Firebase Function triggered on `applications` collection create/delete (or status changes if certain statuses shouldn't count).
-  - **Logic**: Increment/decrement an `applicantCount` field on the corresponding `Job` document. This avoids expensive count queries on the frontend when listing jobs.
+  - **Trigger**: Firebase Function triggered on `applications` collection create/delete.
+  - **Logic**: Increment/decrement an `applicantCount` field on the corresponding `Job` document. This avoids expensive count queries on the frontend when listing jobs. (Frontend currently does a direct count, this would optimize it).
 - **Job Count on Companies**: Similar logic if needed for company profiles.
 
 ## Future Development & Recommendations (Roadmap)

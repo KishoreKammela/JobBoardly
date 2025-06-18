@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'jobSeeker' | 'employer' | 'admin';
@@ -48,26 +47,29 @@ export interface Job {
   salaryMax?: number;
   companyLogoUrl?: string; // Can be sourced from Company.logoUrl
   postedById: string; // UID of the employer who posted it
-  // applicantIds?: string[]; // Removed, applications are now a separate collection
   status: 'pending' | 'approved' | 'rejected'; // For moderation
   moderationReason?: string; // Optional reason for rejection
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
 }
 
-export type ApplicationStatus = 
-  | 'Applied' 
-  | 'Reviewed' 
-  | 'Interviewing' 
-  | 'Offer Made' 
-  | 'Hired' 
-  | 'Rejected By Company' 
+export type ApplicationStatus =
+  | 'Applied'
+  | 'Reviewed'
+  | 'Interviewing'
+  | 'Offer Made'
+  | 'Hired'
+  | 'Rejected By Company'
   | 'Withdrawn by Applicant'; // Job seeker might withdraw
 
 export const EmployerManagedApplicationStatuses: ApplicationStatus[] = [
-  'Applied', 'Reviewed', 'Interviewing', 'Offer Made', 'Hired', 'Rejected By Company'
+  'Applied',
+  'Reviewed',
+  'Interviewing',
+  'Offer Made',
+  'Hired',
+  'Rejected By Company',
 ];
-
 
 export interface Application {
   id: string; // Firestore document ID
@@ -85,7 +87,6 @@ export interface Application {
   employerNotes?: string; // Notes by the employer about this application
 }
 
-
 export interface UserProfile {
   uid: string;
   role: UserRole;
@@ -100,16 +101,17 @@ export interface UserProfile {
   skills?: string[];
   experience?: string;
   education?: string;
+  mobileNumber?: string; // Added mobile number field
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  desiredSalary?: number;
+  desiredSalary?: number; // Stored as number, displayed in INR
   resumeUrl?: string;
   resumeFileName?: string;
   parsedResumeText?: string;
-  appliedJobIds?: string[]; // Still useful for job seeker to track applications made
+  appliedJobIds?: string[];
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
 
@@ -138,6 +140,7 @@ export interface ParsedResumeData {
   education?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
+  // mobileNumber is not typically parsed directly from resume by AI, but could be.
 }
 
 export interface ParsedJobData {
