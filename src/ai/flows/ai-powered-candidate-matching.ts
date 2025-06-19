@@ -25,7 +25,7 @@ const AIPoweredCandidateMatchingInputSchema = z.object({
   candidateProfiles: z
     .string()
     .describe(
-      'A list/collection of candidate profiles (only those marked as searchable by the job seeker). Each profile should include: Candidate UID, Name, Email (optional), Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list), detailed Work Experience Summary (Markdown format preferred for structure), detailed Education Summary, Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking), Availability to Start (e.g., Immediate), Desired Annual Salary in INR (e.g., "₹12LPA (raw: 1200000)"), and any additional summary from their parsed resume document.'
+      'A list/collection of candidate profiles (only those marked as searchable by the job seeker). Each profile should include: Candidate UID, Name, Email (optional), Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list with optional proficiency, e.g., "English (Fluent), Spanish (Basic)"), detailed Work Experience Summary (Markdown format preferred for structure), detailed Education Summary, Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking), Availability to Start (e.g., Immediate), Desired Annual Salary in INR (e.g., "₹12LPA (raw: 1200000)"), and any additional summary from their parsed resume document.'
     ),
 });
 
@@ -79,7 +79,7 @@ Searchable Candidate Profiles:
 
 Based on the provided information:
 1.  Thoroughly analyze the job description, noting key responsibilities, required and preferred skills, language requirements (if any), experience level, location, job type, and salary range (if provided).
-2.  Carefully review each candidate's profile. Pay close attention to their skills, languages, detailed work experience (roles, responsibilities, duration), education, stated preferences (preferred locations, desired salary in INR, job search status, availability), and any resume summary.
+2.  Carefully review each candidate's profile. Pay close attention to their skills, languages (and proficiency if specified), detailed work experience (roles, responsibilities, duration), education, stated preferences (preferred locations, desired salary in INR, job search status, availability), and any resume summary.
 3.  Identify the candidate UIDs that are the MOST relevant matches for the job description.
 4.  Provide a detailed reasoning for your selections. For each recommended candidate, explain how their profile aligns with the job's requirements. Highlight specific matches in skills, experience, education, languages, salary expectations (if their desired salary is compatible with the job's range or market rates), and location preferences. Also, note any potential minor misalignments if the overall match is strong.
 5.  Return the UIDs of the matched candidates in the 'relevantCandidateIDs' array, ideally ordered by relevance (most relevant first).

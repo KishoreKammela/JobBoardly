@@ -79,7 +79,7 @@ export default function AiCandidateMatchPage() {
           const q = firestoreQuery(
             usersCollectionRef,
             where('role', '==', 'jobSeeker'),
-            where('isProfileSearchable', '==', true) // Only fetch searchable profiles
+            where('isProfileSearchable', '==', true)
           );
           const querySnapshot = await getDocs(q);
           const candidatesData = querySnapshot.docs.map((docSnap) => {
@@ -128,7 +128,7 @@ export default function AiCandidateMatchPage() {
           profileString += `Skills: ${c.skills.join(', ')}\n`;
         }
         if (c.languages && c.languages.length > 0) {
-          profileString += `Languages: ${c.languages.join(', ')}\n`;
+          profileString += `Languages: ${c.languages.map((l) => `${l.language}${l.proficiency ? ` (${l.proficiency})` : ''}`).join(', ')}\n`;
         }
         if (c.experience) {
           profileString += `Work Experience Summary:\n${c.experience}\n`;

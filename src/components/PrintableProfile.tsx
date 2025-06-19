@@ -267,8 +267,9 @@ const PrintableProfileComponent = React.forwardRef<
           <h2>Languages</h2>
           <div className="languages-list">
             {user.languages.map((lang, index) => (
-              <span key={`${lang}-${index}`} className="language-badge">
-                {lang}
+              <span key={`${lang.id}-${index}`} className="language-badge">
+                {lang.language}
+                {lang.proficiency && ` (${lang.proficiency})`}
               </span>
             ))}
           </div>

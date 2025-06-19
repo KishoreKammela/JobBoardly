@@ -20,7 +20,7 @@ const AIPoweredJobMatchingInputSchema = z.object({
   jobSeekerProfile: z
     .string()
     .describe(
-      'A comprehensive profile of the job seeker. This should include: Name, Email, Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list), detailed Work Experience Summary (Markdown format preferred for structure), detailed Education Summary, Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking, Open to Opportunities), Availability to Start (e.g., Immediate, 2 Weeks Notice), Desired Annual Salary in INR (e.g., "₹12LPA (raw: 1200000)"), and any additional summary from a parsed resume document.'
+      'A comprehensive profile of the job seeker. This should include: Name, Email, Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list with optional proficiency, e.g., "English (Fluent), Spanish (Basic)"), detailed Work Experience Summary (Markdown format preferred for structure), detailed Education Summary, Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking, Open to Opportunities), Availability to Start (e.g., Immediate, 2 Weeks Notice), Desired Annual Salary in INR (e.g., "₹12LPA (raw: 1200000)"), and any additional summary from a parsed resume document.'
     ),
   jobPostings: z
     .string()
@@ -79,8 +79,8 @@ Available Job Postings:
 {{{jobPostings}}}
 
 Your task is to:
-1.  Thoroughly analyze the job seeker's profile, paying close attention to their skills, languages, work experience (including roles, responsibilities, and duration), education, stated preferences (such as preferred locations, desired salary in INR, and job search status), and any summary from their resume.
-2.  Carefully review each job posting, focusing on the job description, required skills, location, job type, remote status, and salary range (if provided).
+1.  Thoroughly analyze the job seeker's profile, paying close attention to their skills, languages (and proficiency if specified), work experience (including roles, responsibilities, and duration), education, stated preferences (such as preferred locations, desired salary in INR, and job search status), and any summary from their resume.
+2.  Carefully review each job posting, focusing on the job description, required skills, language requirements, location, job type, remote status, and salary range (if provided).
 3.  Identify the job IDs that are the MOST relevant matches for the job seeker. Consider a holistic match, not just keyword stuffing.
 4.  Provide a detailed reasoning for your selections. Explain for each recommended job (or generally for the set of recommendations) how it aligns with the seeker's profile. Highlight specific connections, e.g., "The seeker's experience in 'Project Management' and skill 'Agile' directly match Job ID XYZ's requirements." or "Job ID ABC aligns with the seeker's desired salary range and preferred remote work option." Also consider language skills if relevant to job description.
 5.  Return the job IDs in the 'relevantJobIDs' array, ideally ordered by relevance (most relevant first).

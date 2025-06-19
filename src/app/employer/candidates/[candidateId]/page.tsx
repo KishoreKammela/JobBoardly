@@ -28,7 +28,7 @@ import {
   FileText,
   MessageSquare,
   Phone,
-  Languages, // Added Languages icon
+  Languages,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -54,7 +54,6 @@ export default function CandidateDetailPage() {
       );
       return;
     }
-    // Allow employers and admins to view candidate profiles
     if (
       currentUser.role !== 'employer' &&
       currentUser.role !== 'admin' &&
@@ -83,7 +82,6 @@ export default function CandidateDetailPage() {
           if (candidateDocSnap.exists()) {
             const data = candidateDocSnap.data();
             if (data.role === 'jobSeeker') {
-              // Admins can view any job seeker profile, employers can too (if searchable, but access here is direct via ID)
               setCandidate({
                 uid: candidateDocSnap.id,
                 ...data,
@@ -112,7 +110,7 @@ export default function CandidateDetailPage() {
       currentUser.role !== 'admin' &&
       currentUser.role !== 'superAdmin'
     ) {
-      setIsLoading(false); // To prevent infinite loading if user is not authorized early
+      setIsLoading(false);
     }
   }, [candidateId, currentUser]);
 
@@ -166,7 +164,7 @@ export default function CandidateDetailPage() {
             <Avatar className="h-28 w-28 border-4 border-primary/30">
               <AvatarImage
                 src={candidate.avatarUrl || `https://placehold.co/128x128.png`}
-                alt={candidate.name}
+                alt={candidate.name || 'Candidate'}
                 data-ai-hint="candidate photo"
               />
               <AvatarFallback className="text-4xl">
@@ -282,11 +280,12 @@ export default function CandidateDetailPage() {
                 <div className="flex flex-wrap gap-2">
                   {candidate.languages.map((lang) => (
                     <Badge
-                      key={lang}
+                      key={lang.id || lang.language}
                       variant="outline"
                       className="text-sm px-3 py-1"
                     >
-                      {lang}
+                      {lang.language}
+                      {lang.proficiency && ` (${lang.proficiency})`}
                     </Badge>
                   ))}
                 </div>

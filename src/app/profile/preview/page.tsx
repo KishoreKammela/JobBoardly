@@ -26,7 +26,7 @@ import {
   FileText,
   Phone,
   Edit,
-  Languages, // Added Languages icon
+  Languages,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -61,7 +61,7 @@ export default function ProfilePreviewPage() {
     if (currentUser.role !== 'jobSeeker') {
       setError('Profile preview is only available for job seekers.');
       setIsLoading(false);
-      setCandidate(null); // Ensure candidate is null if not jobSeeker
+      setCandidate(null);
       return;
     }
     setCandidate(currentUser);
@@ -136,7 +136,7 @@ export default function ProfilePreviewPage() {
             <Avatar className="h-28 w-28 border-4 border-primary/30">
               <AvatarImage
                 src={candidate.avatarUrl || `https://placehold.co/128x128.png`}
-                alt={candidate.name}
+                alt={candidate.name || 'Candidate'}
                 data-ai-hint="candidate photo"
               />
               <AvatarFallback className="text-4xl">
@@ -259,11 +259,12 @@ export default function ProfilePreviewPage() {
                 <div className="flex flex-wrap gap-2">
                   {candidate.languages.map((lang) => (
                     <Badge
-                      key={lang}
+                      key={lang.id || lang.language}
                       variant="outline"
                       className="text-sm px-3 py-1"
                     >
-                      {lang}
+                      {lang.language}
+                      {lang.proficiency && ` (${lang.proficiency})`}
                     </Badge>
                   ))}
                 </div>
@@ -383,7 +384,6 @@ export default function ProfilePreviewPage() {
           </p>
         </CardFooter>
       </Card>
-      {/* Hidden component for printing PDF */}
       <div style={{ display: 'none' }}>
         <PrintableProfileComponent ref={printableProfileRef} user={candidate} />
       </div>

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, type FormEvent } from 'react';
-import type { UserProfile, Company } from '@/types';
+import type { UserProfile, Company, LanguageEntry } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,7 +31,7 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  Languages, // Added Languages icon
+  Languages,
 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -39,6 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINR } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 export function UserProfileForm() {
   const {
@@ -57,7 +58,7 @@ export function UserProfileForm() {
     skills: [],
     experience: '',
     education: '',
-    languages: [], // Initialize languages
+    languages: [],
     mobileNumber: '',
     availability: 'Flexible',
     portfolioUrl: '',
@@ -85,7 +86,7 @@ export function UserProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
-  const [languagesInput, setLanguagesInput] = useState(''); // For languages
+  const [languagesInput, setLanguagesInput] = useState('');
   const [companyRecruiters, setCompanyRecruiters] = useState<UserProfile[]>([]);
   const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(false);
 
@@ -98,7 +99,7 @@ export function UserProfileForm() {
         skills: user.skills || [],
         experience: user.experience || '',
         education: user.education || '',
-        languages: user.languages || [], // Load languages
+        languages: user.languages || [],
         mobileNumber: user.mobileNumber || '',
         availability: user.availability || 'Flexible',
         portfolioUrl: user.portfolioUrl || '',
@@ -113,7 +114,9 @@ export function UserProfileForm() {
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
-      setLanguagesInput((user.languages || []).join(', ')); // Set languages input
+      setLanguagesInput(
+        (user.languages || []).map((l) => l.language).join(', ')
+      );
 
       if (user.role === 'employer' && company) {
         setCompanyFormData({
@@ -231,16 +234,32 @@ export function UserProfileForm() {
     }));
   };
 
-  const handleLanguagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLanguagesInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const val = e.target.value;
     setLanguagesInput(val);
-    setUserFormData((prev) => ({
-      ...prev,
-      languages: val
-        .split(',')
-        .map((lang) => lang.trim())
-        .filter((lang) => lang),
-    }));
+    const languageNames = val
+      .split(',')
+      .map((name) => name.trim())
+      .filter((name) => name);
+
+    setUserFormData((prev) => {
+      const existingLanguages = prev.languages || [];
+      const newLanguages: LanguageEntry[] = languageNames.map((name) => {
+        const existingEntry = existingLanguages.find(
+          (l) => l.language.toLowerCase() === name.toLowerCase()
+        );
+        return (
+          existingEntry || {
+            id: uuidv4(),
+            language: name,
+            proficiency: 'Conversational',
+          }
+        ); // Add default proficiency
+      });
+      return { ...prev, languages: newLanguages };
+    });
   };
 
   const handleSelectChange = (name: keyof UserProfile, value: string) => {
@@ -267,7 +286,7 @@ export function UserProfileForm() {
           skills: userFormData.skills,
           experience: userFormData.experience,
           education: userFormData.education,
-          languages: userFormData.languages, // Save languages
+          languages: userFormData.languages,
           mobileNumber: userFormData.mobileNumber,
           availability: userFormData.availability,
           portfolioUrl: userFormData.portfolioUrl,
@@ -426,24 +445,30 @@ export function UserProfileForm() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="skills">Skills (comma-separated)</Label>
+                <Label htmlFor="skillsInput">Skills (comma-separated)</Label>
                 <Input
-                  id="skills"
-                  name="skills"
+                  id="skillsInput"
+                  name="skillsInput"
                   value={skillsInput}
                   onChange={handleSkillsChange}
                   placeholder="e.g., React, Node.js, Project Management"
                 />
               </div>
               <div>
-                <Label htmlFor="languages">Languages (comma-separated)</Label>
+                <Label htmlFor="languagesInput">
+                  Languages (comma-separated, e.g., English, Spanish)
+                </Label>
                 <Input
-                  id="languages"
-                  name="languages"
+                  id="languagesInput"
+                  name="languagesInput"
                   value={languagesInput}
-                  onChange={handleLanguagesChange}
-                  placeholder="e.g., English, Spanish (Fluent), German (Basic)"
+                  onChange={handleLanguagesInputChange}
+                  placeholder="e.g., English, Spanish, German (Basic)"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Proficiency will be defaulted. For detailed proficiency, edit
+                  later.
+                </p>
               </div>
               <div>
                 <Label htmlFor="experience">
@@ -555,7 +580,7 @@ export function UserProfileForm() {
               <div className="flex items-center space-x-3 pt-2">
                 <Switch
                   id="isProfileSearchable"
-                  checked={userFormData.isProfileSearchable}
+                  checked={!!userFormData.isProfileSearchable}
                   onCheckedChange={(checked) =>
                     handleSwitchChange('isProfileSearchable', checked)
                   }
