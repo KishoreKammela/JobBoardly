@@ -90,51 +90,51 @@ To empower employers to efficiently find and connect with qualified candidates b
 
 ```mermaid
 graph TD
-    A[Start: Needs to Hire] --> B[Visit JobBoardly Employer Section: /employer];
-    B --> C{Has Account & Company Setup?};
-    C -- No --> D[Register Company & Recruiter Account: /employer/register];
-    D --> E[Company Profile Pending Admin Approval];
-    E --> F[Login: /employer/login];
-    C -- Yes --> F;
-    F --> G[Navigate to Post Job: /employer/post-job];
-    G --> H[Fill Job Details or Parse JD Document];
-    H --> I[Add Screening Questions (Optional)];
-    I --> J[Submit Job for Admin Approval];
-    J --> K[Job 'Pending' in My Postings: /employer/posted-jobs];
-    K --> L[Await Admin Approval for Job];
+    A[Start: Needs to Hire] --> B[Visit JobBoardly Employer Section: /employer]
+    B --> C{Has Account & Company Setup?}
+    C -- No --> D[Register Company & Recruiter Account: /employer/register]
+    D --> E[Company Profile Pending Admin Approval]
+    E --> F[Login: /employer/login]
+    C -- Yes --> F
+    F --> G[Navigate to Post Job: /employer/post-job]
+    G --> H[Fill Job Details or Parse JD Document]
+    H --> I[Add Screening Questions Optional]
+    I --> J[Submit Job for Admin Approval]
+    J --> K[Job Pending in My Postings: /employer/posted-jobs]
+    K --> L[Await Admin Approval for Job]
 ```
 
 ### Journey 2: Managing Applicants for an Approved Job
 
 ```mermaid
 graph TD
-    A[Job Approved by Admin] --> B[Employer Notified (future feature) or Checks /employer/posted-jobs];
-    B --> C[Job visible to Seekers, Applications Received];
-    C --> D[View Applicants for Job: /employer/jobs/[jobId]/applicants];
-    D --> E[Filter/Review Applicant List];
-    E --> F{Select Applicant};
-    F -- View Profile --> G[Candidate Detail Page: /employer/candidates/[applicantId]];
-    G --> H[Review Full Profile & Screening Answers];
-    H --> I[Update Application Status (e.g., Interviewing)];
-    I --> J[Add Internal Notes];
-    J --> D;
-    F -- Back to List --> D;
+    A[Job Approved by Admin] --> B[Employer Notified or Checks /employer/posted-jobs]
+    B --> C[Job visible to Seekers, Applications Received]
+    C --> D[View Applicants for Job: /employer/jobs/jobId/applicants]
+    D --> E[Filter/Review Applicant List]
+    E --> F{Select Applicant}
+    F -- View Profile --> G[Candidate Detail Page: /employer/candidates/applicantId]
+    G --> H[Review Full Profile & Screening Answers]
+    H --> I[Update Application Status e.g. Interviewing]
+    I --> J[Add Internal Notes]
+    J --> D
+    F -- Back to List --> D
 ```
 
 ### Journey 3: Finding Candidates via Search
 
 ```mermaid
 graph TD
-    A[Logged-in Employer] --> B[Navigate to Find Candidates: /employer/find-candidates];
-    B --> C[Enter Search Keywords (Boolean Logic)];
-    B --> D[Apply Filters (Location, Availability, Salary, etc.)];
-    C --> E[View Search Results];
-    D --> E;
-    E --> F{Select Candidate};
-    F -- View Profile --> G[Candidate Detail Page: /employer/candidates/[candidateId]];
-    G --> H[Review Profile, Consider for Roles];
-    H -- Contact (Future) --> I[Initiate Contact];
-    F -- Back to Results --> E;
+    A[Logged-in Employer] --> B[Navigate to Find Candidates: /employer/find-candidates]
+    B --> C[Enter Search Keywords Boolean Logic]
+    B --> D[Apply Filters Location, Availability, Salary, etc.]
+    C --> E[View Search Results]
+    D --> E
+    E --> F{Select Candidate}
+    F -- View Profile --> G[Candidate Detail Page: /employer/candidates/candidateId]
+    G --> H[Review Profile, Consider for Roles]
+    H -- Contact Future --> I[Initiate Contact]
+    F -- Back to Results --> E
 ```
 
 ## 4. Page Routes
