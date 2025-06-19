@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // Added useRef
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -33,17 +33,20 @@ import {
   FileText,
   MessageSquare,
   Phone,
-  Languages as LanguagesIcon, // Renamed
+  Languages as LanguagesIcon,
   Cake,
   Home,
   Sparkles,
   BookOpen,
   Award,
+  Download, // Added Download icon
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrencyINR } from '@/lib/utils';
+import { useReactToPrint } from 'react-to-print'; // Added for PDF download
+import { PrintableProfileComponent } from '@/components/PrintableProfile'; // Added for PDF download
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -55,6 +58,15 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const printableProfileRef = useRef<HTMLDivElement>(null); // Added for PDF download
+
+  const handlePrintProfile = useReactToPrint({
+    // Added for PDF download
+    content: () => printableProfileRef.current,
+    documentTitle: `${candidate?.name || 'CandidateProfile'}_JobBoardly`,
+    onPrintError: () =>
+      alert('There was an error printing the profile. Please try again.'),
+  });
 
   useEffect(() => {
     if (authLoading) return;
@@ -95,6 +107,18 @@ export default function CandidateDetailPage() {
               setCandidate({
                 uid: candidateDocSnap.id,
                 ...data,
+                createdAt:
+                  data.createdAt instanceof Timestamp
+                    ? data.createdAt.toDate().toISOString()
+                    : data.createdAt,
+                updatedAt:
+                  data.updatedAt instanceof Timestamp
+                    ? data.updatedAt.toDate().toISOString()
+                    : data.updatedAt,
+                lastActive:
+                  data.lastActive instanceof Timestamp
+                    ? data.lastActive.toDate().toISOString()
+                    : data.lastActive,
               } as UserProfile);
             } else {
               setError('This profile does not belong to a job seeker.');
@@ -120,26 +144,29 @@ export default function CandidateDetailPage() {
       currentUser.role !== 'admin' &&
       currentUser.role !== 'superAdmin'
     ) {
+      // If not authorized and already checked, just stop loading.
       setIsLoading(false);
     }
-  }, [candidateId, currentUser]);
+  }, [candidateId, currentUser]); // Removed isMounted pattern
 
-  if (
-    authLoading ||
-    isLoading ||
-    (!currentUser && !authLoading) ||
-    (currentUser &&
-      currentUser.role !== 'employer' &&
-      currentUser.role !== 'admin' &&
-      currentUser.role !== 'superAdmin' &&
-      !authLoading)
-  ) {
+  if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="ml-3 text-lg">Loading candidate profile...</p>
       </div>
     );
+  }
+
+  if (
+    currentUser &&
+    currentUser.role !== 'employer' &&
+    currentUser.role !== 'admin' &&
+    currentUser.role !== 'superAdmin' &&
+    !error &&
+    !isLoading
+  ) {
+    setError('Access Denied. This page is for employers and administrators.');
   }
 
   if (error) {
@@ -232,11 +259,20 @@ export default function CandidateDetailPage() {
                 )}
               </div>
             </div>
-            {currentUser && currentUser.role === 'employer' && (
-              <Button className="w-full sm:w-auto mt-4 sm:mt-0">
-                <MessageSquare className="mr-2 h-5 w-5" /> Contact Candidate
+            <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
+              {currentUser && currentUser.role === 'employer' && (
+                <Button className="w-full sm:w-auto">
+                  <MessageSquare className="mr-2 h-5 w-5" /> Contact Candidate
+                </Button>
+              )}
+              <Button
+                onClick={handlePrintProfile}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                <Download className="mr-2 h-4 w-4" /> Download PDF
               </Button>
-            )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-8">
@@ -272,6 +308,7 @@ export default function CandidateDetailPage() {
                     <p className="text-xs text-muted-foreground mb-1">
                       {exp.startDate
                         ? new Date(exp.startDate + '-02').toLocaleDateString(
+                            // Add day for correct month parsing
                             'en-US',
                             { month: 'short', year: 'numeric' }
                           )
@@ -281,6 +318,7 @@ export default function CandidateDetailPage() {
                         ? 'Present'
                         : exp.endDate
                           ? new Date(exp.endDate + '-02').toLocaleDateString(
+                              // Add day
                               'en-US',
                               { month: 'short', year: 'numeric' }
                             )
@@ -388,7 +426,10 @@ export default function CandidateDetailPage() {
               {candidate.languages && candidate.languages.length > 0 ? (
                 <ul className="space-y-1">
                   {candidate.languages.map((lang: LanguageEntry) => (
-                    <li key={lang.id} className="text-sm text-foreground/90">
+                    <li
+                      key={lang.id || lang.languageName}
+                      className="text-sm text-foreground/90"
+                    >
                       <span className="font-medium">{lang.languageName}</span>:{' '}
                       {lang.proficiency}
                       <span className="text-xs text-muted-foreground ml-2">
@@ -491,8 +532,8 @@ export default function CandidateDetailPage() {
                     rel="noopener noreferrer"
                     download={candidate.resumeFileName}
                   >
-                    <FileText className="mr-2 h-4 w-4" /> Download Resume (
-                    {candidate.resumeFileName})
+                    <FileText className="mr-2 h-4 w-4" /> Download Stored Resume
+                    ({candidate.resumeFileName})
                   </a>
                 </Button>
               )}
@@ -500,7 +541,7 @@ export default function CandidateDetailPage() {
                 !candidate.portfolioUrl &&
                 !candidate.resumeUrl && (
                   <p className="text-sm text-muted-foreground">
-                    No external links or resume provided.
+                    No external links or stored resume provided.
                   </p>
                 )}
             </div>
@@ -513,12 +554,24 @@ export default function CandidateDetailPage() {
               ? typeof candidate.createdAt === 'string'
                 ? new Date(candidate.createdAt).toLocaleDateString()
                 : new Date(
-                    (candidate.createdAt as Timestamp).seconds * 1000
+                    (candidate.createdAt as Timestamp)?.seconds * 1000
                   ).toLocaleDateString()
               : 'N/A'}
+            {candidate.updatedAt &&
+              ` | Last Updated: ${
+                typeof candidate.updatedAt === 'string'
+                  ? new Date(candidate.updatedAt).toLocaleDateString()
+                  : new Date(
+                      (candidate.updatedAt as Timestamp)?.seconds * 1000
+                    ).toLocaleDateString()
+              }`}
           </p>
         </CardFooter>
       </Card>
+      {/* Hidden component for printing */}
+      <div style={{ display: 'none' }}>
+        <PrintableProfileComponent ref={printableProfileRef} user={candidate} />
+      </div>
     </div>
   );
 }

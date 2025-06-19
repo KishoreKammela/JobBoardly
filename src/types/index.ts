@@ -25,7 +25,7 @@ export interface Filters {
 
 export interface CandidateFilters {
   searchTerm: string;
-  location: string;
+  location: string; // General location preference for candidates
   availability: string;
   jobSearchStatus?:
     | 'all'
@@ -34,7 +34,10 @@ export interface CandidateFilters {
     | 'notLooking';
   desiredSalaryMin?: number;
   desiredSalaryMax?: number;
-  recentActivity?: 'any' | '24h' | '7d' | '30d';
+  recentActivity?: 'any' | '24h' | '7d' | '30d'; // Based on profile updatedAt
+  gender?: 'all' | 'Male' | 'Female' | 'Other' | 'Prefer not to say';
+  homeState?: string; // Specific home state of candidate
+  homeCity?: string; // Specific home city of candidate
 }
 
 export interface SavedSearch {
@@ -46,7 +49,7 @@ export interface SavedSearch {
 
 export interface LanguageEntry {
   id: string;
-  languageName: string;
+  languageName: string; // Changed from 'language'
   proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Native';
   canRead: boolean;
   canWrite: boolean;
@@ -61,7 +64,7 @@ export interface ExperienceEntry {
   endDate?: string; // YYYY-MM
   currentlyWorking: boolean;
   description?: string;
-  annualCTC?: number;
+  annualCTC?: number; // Compensation for this specific role
 }
 
 export interface EducationEntry {
@@ -164,11 +167,12 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
-  status?: 'active' | 'suspended';
+  status?: 'active' | 'suspended'; // For admin user management
   theme?: 'light' | 'dark' | 'system';
-  jobBoardDisplay?: 'list' | 'grid';
-  itemsPerPage?: 10 | 20 | 50;
+  jobBoardDisplay?: 'list' | 'grid'; // For job seeker's job board view
+  itemsPerPage?: 10 | 20 | 50; // For job seeker's job board view
   jobAlerts?: {
+    // For job seeker
     newJobsMatchingProfile: boolean;
     savedSearchAlerts: boolean;
     applicationStatusUpdates: boolean;
@@ -176,10 +180,9 @@ export interface UserProfile {
 
   // Job Seeker Specific Fields
   headline?: string;
-  skills?: string[]; // General skills summary, can be auto-populated
+  skills?: string[];
   parsedResumeText?: string; // Summary from resume parsing
 
-  // New Detailed Fields for Job Seeker
   gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
   dateOfBirth?: string; // YYYY-MM-DD
   currentCTCValue?: number;
@@ -191,7 +194,7 @@ export interface UserProfile {
 
   experiences?: ExperienceEntry[];
   educations?: EducationEntry[];
-  languages?: LanguageEntry[]; // Changed from string[]
+  languages?: LanguageEntry[];
 
   mobileNumber?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
@@ -199,7 +202,7 @@ export interface UserProfile {
   linkedinUrl?: string;
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  desiredSalary?: number; // This is now expectedCTCValue for consistency
+  // desiredSalary is now expectedCTCValue for consistency. Keep for legacy if any, but prefer expectedCTCValue.
   isProfileSearchable?: boolean;
   resumeUrl?: string;
   resumeFileName?: string;
@@ -214,8 +217,8 @@ export interface UserProfile {
   isCompanyAdmin?: boolean;
 
   // Admin/System Usage
-  jobsAppliedCount?: number; // Potentially for admin view
-  lastActive?: Timestamp | Date | string; // For admin view
+  jobsAppliedCount?: number;
+  lastActive?: Timestamp | Date | string;
 }
 
 export interface ParsedResumeData {
@@ -225,10 +228,11 @@ export interface ParsedResumeData {
   skills?: string[];
   // Experience and Education from resume are now primarily parsed into structured data
   // but a raw text summary can still be useful.
-  experienceSummary?: string; // Raw text summary of experience
-  educationSummary?: string; // Raw text summary of education
+  experience?: string; // Changed from experienceSummary to match UserProfileForm
+  education?: string; // Changed from educationSummary
   portfolioUrl?: string;
   linkedinUrl?: string;
+  mobileNumber?: string; // Added mobile number
 }
 
 export interface ParsedJobData {

@@ -12,9 +12,9 @@ interface PrintableProfileProps {
 }
 
 // Define reasonable truncation limits for PDF
-const MAX_SUMMARY_LENGTH = 750;
-const MAX_EXPERIENCE_DESC_LENGTH = 250;
-const MAX_EDUCATION_DESC_LENGTH = 200;
+const MAX_SUMMARY_LENGTH = 800; // Increased slightly
+const MAX_EXPERIENCE_DESC_LENGTH = 300; // Increased slightly
+const MAX_EDUCATION_DESC_LENGTH = 250; // Increased slightly
 
 const truncateText = (text: string | undefined, maxLength: number): string => {
   if (!text) return 'N/A';
@@ -26,10 +26,11 @@ const PrintableProfileComponent = React.forwardRef<
   HTMLDivElement,
   PrintableProfileProps
 >(({ user }, ref) => {
-  if (!user || user.role !== 'jobSeeker') {
+  if (!user) {
+    // Simplified check, role check can be done by caller
     return (
-      <div ref={ref}>
-        <p>Not a job seeker profile or no user data.</p>
+      <div ref={ref} className="p-8 font-body bg-white text-black text-sm">
+        <p>No user data provided for printing.</p>
       </div>
     );
   }
@@ -64,21 +65,36 @@ const PrintableProfileComponent = React.forwardRef<
           }
           .printable-profile h1,
           .printable-profile h2,
-          .printable-profile h3 {
+          .printable-profile h3,
+          .printable-profile h4 {
+            /* Added h4 */
             color: #111 !important;
             margin-bottom: 0.3rem;
+            font-family: 'Inter', sans-serif; /* Ensure consistent font */
           }
           .printable-profile h1 {
-            font-size: 1.6rem;
+            font-size: 18pt; /* Adjusted for better hierarchy */
+            font-weight: 700;
           }
           .printable-profile h2 {
-            font-size: 1.2rem;
-            margin-top: 0.8rem;
+            font-size: 14pt; /* Adjusted */
+            font-weight: 600;
+            margin-top: 1rem;
             border-bottom: 1px solid #ccc;
             padding-bottom: 0.2rem;
           }
           .printable-profile h3 {
-            font-size: 1rem;
+            /* For Experience/Education titles */
+            font-size: 11pt;
+            font-weight: 600;
+            margin-bottom: 0.1rem;
+          }
+          .printable-profile h4 {
+            /* For sub-headings like Company/Institute */
+            font-size: 10pt;
+            font-weight: 500;
+            color: #444 !important;
+            margin-bottom: 0.1rem;
           }
           .printable-profile strong {
             font-weight: 600;
@@ -89,118 +105,105 @@ const PrintableProfileComponent = React.forwardRef<
           }
           .printable-profile hr {
             border-top: 1px solid #ddd;
-            margin: 0.7rem 0;
+            margin: 0.8rem 0;
           }
-          .printable-profile ul {
-            margin-left: 1.2rem;
-            list-style-type: disc;
+          .printable-profile ul.compact-list {
+            /* For skills/languages */
+            margin-left: 0;
+            padding-left: 0;
+            list-style-type: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+          }
+          .printable-profile ul.compact-list li {
+            background-color: #f0f0f0;
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.2rem;
+            font-size: 8pt;
           }
           .printable-profile .section {
-            margin-bottom: 0.8rem;
+            margin-bottom: 1rem; /* Increased spacing */
             page-break-inside: avoid;
           }
           .printable-profile .header {
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
             page-break-after: avoid;
           }
           .printable-profile .header p {
             margin: 0.1rem 0;
-            font-size: 0.8rem;
-          }
-          .printable-profile .skills-list,
-          .languages-list-pdf {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.3rem;
-            margin-top: 0.3rem;
-          }
-          .printable-profile .skill-badge,
-          .language-badge-pdf {
-            background-color: #f0f0f0;
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.2rem;
-            font-size: 0.75rem;
+            font-size: 9pt;
+            color: #555 !important;
           }
           .printable-profile .entry-item {
-            margin-bottom: 0.6rem;
+            margin-bottom: 0.8rem; /* Increased spacing */
             page-break-inside: avoid;
           }
-          .printable-profile .item-title {
-            font-weight: bold;
-            font-size: 0.9rem;
-          }
-          .printable-profile .item-subtitle {
-            font-size: 0.8rem;
-            color: #555 !important;
-            margin-bottom: 0.15rem;
+          .printable-profile .item-meta {
+            /* For dates/CTC */
+            font-size: 8pt;
+            color: #666 !important;
+            margin-bottom: 0.2rem;
           }
           .printable-profile .item-description {
             white-space: pre-wrap;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
-            padding-left: 0.5rem;
-            border-left: 1px solid #eee;
+            font-size: 9pt;
+            margin-left: 0; /* Removed indent for more space */
+            padding-left: 0;
+            border-left: none;
           }
           .printable-profile .footer-note {
             margin-top: 1.5rem;
-            font-size: 0.7rem;
+            font-size: 7pt;
             color: #777 !important;
             text-align: center;
+            page-break-before: auto; /* Allow break if it's at page bottom */
           }
-          .printable-profile .grid-cols-2-pdf {
+          .printable-profile .grid-2-col {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.5rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
           }
-          .printable-profile .grid-cols-3-pdf {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 0.5rem;
+          .printable-profile .contact-info span {
+            margin-right: 0.7rem;
           }
-          .printable-profile .flex-pdf {
-            display: flex;
-          }
-          .printable-profile .gap-2-pdf {
-            gap: 0.5rem;
-          }
-          .printable-profile .items-center-pdf {
-            align-items: center;
+          .printable-profile .contact-info span:last-child {
+            margin-right: 0;
           }
         }
         .printable-profile {
+          /* Base styles for screen, if needed */
           font-family: 'Inter', sans-serif;
-          max-width: 780px;
+          max-width: 800px; /* A bit wider for screen if needed */
           margin: auto;
+          line-height: 1.5;
         }
       `}</style>
 
       <div className="header">
         <h1>{user.name}</h1>
         {user.headline && <p>{user.headline}</p>}
-        <p
-          className="flex-pdf gap-2-pdf items-center-pdf"
-          style={{ justifyContent: 'center' }}
-        >
+        <p className="contact-info">
           {user.email && <span>{user.email}</span>}
           {user.mobileNumber && (
             <>
-              <span>|</span> <span>{user.mobileNumber}</span>
+              {user.email && <span>&bull;</span>}{' '}
+              <span>{user.mobileNumber}</span>
             </>
           )}
-          {user.homeCity && user.homeState && (
+          {(user.homeCity || user.homeState) && (
             <>
-              <span>|</span>{' '}
+              {(user.email || user.mobileNumber) && <span>&bull;</span>}
               <span>
-                {user.homeCity}, {user.homeState}
+                {user.homeCity}
+                {user.homeCity && user.homeState ? ', ' : ''}
+                {user.homeState}
               </span>
             </>
           )}
         </p>
-        <p
-          className="flex-pdf gap-2-pdf items-center-pdf"
-          style={{ justifyContent: 'center' }}
-        >
+        <p className="contact-info">
           {user.portfolioUrl && (
             <a
               href={user.portfolioUrl}
@@ -212,7 +215,7 @@ const PrintableProfileComponent = React.forwardRef<
           )}
           {user.linkedinUrl && (
             <>
-              {user.portfolioUrl && <span>|</span>}{' '}
+              {user.portfolioUrl && <span>&bull;</span>}{' '}
               <a
                 href={user.linkedinUrl}
                 target="_blank"
@@ -239,10 +242,9 @@ const PrintableProfileComponent = React.forwardRef<
           <h2>Work Experience</h2>
           {user.experiences.map((exp: ExperienceEntry) => (
             <div key={exp.id} className="entry-item">
-              <h3 className="item-title">
-                {exp.jobRole} at {exp.companyName}
-              </h3>
-              <p className="item-subtitle">
+              <h3>{exp.jobRole}</h3>
+              <h4>{exp.companyName}</h4>
+              <p className="item-meta">
                 {exp.startDate
                   ? new Date(exp.startDate + '-02').toLocaleDateString(
                       'en-US',
@@ -251,13 +253,13 @@ const PrintableProfileComponent = React.forwardRef<
                   : 'N/A'}{' '}
                 -
                 {exp.currentlyWorking
-                  ? 'Present'
+                  ? ' Present'
                   : exp.endDate
                     ? new Date(exp.endDate + '-02').toLocaleDateString(
                         'en-US',
                         { month: 'short', year: 'numeric' }
                       )
-                    : 'N/A'}
+                    : ' N/A'}
                 {exp.annualCTC && ` | CTC: ${formatCurrencyINR(exp.annualCTC)}`}
               </p>
               {exp.description && (
@@ -275,21 +277,29 @@ const PrintableProfileComponent = React.forwardRef<
           <h2>Education</h2>
           {user.educations.map((edu: EducationEntry) => (
             <div key={edu.id} className="entry-item">
-              <h3 className="item-title">
-                {edu.degreeName}{' '}
+              <h3>
+                {edu.degreeName}
+                {edu.specialization && `, ${edu.specialization}`}
                 {edu.isMostRelevant && (
-                  <span style={{ fontSize: '0.7rem', color: '#0056b3' }}>
+                  <span
+                    style={{
+                      fontSize: '0.8em',
+                      color: '#0056b3',
+                      marginLeft: '5px',
+                    }}
+                  >
                     (Most Relevant)
                   </span>
                 )}
               </h3>
-              <p className="item-subtitle">
-                {edu.instituteName} | {edu.level}
-                {edu.specialization && ` - ${edu.specialization}`}
-                {edu.startYear &&
-                  edu.endYear &&
-                  ` | ${edu.startYear} - ${edu.endYear}`}
-                {edu.courseType && ` (${edu.courseType})`}
+              <h4>
+                {edu.instituteName} ({edu.level})
+              </h4>
+              <p className="item-meta">
+                {edu.startYear && edu.endYear
+                  ? `${edu.startYear} - ${edu.endYear}`
+                  : edu.endYear || 'N/A'}
+                {edu.courseType && ` | ${edu.courseType}`}
               </p>
               {edu.description && (
                 <p className="item-description">
@@ -301,17 +311,15 @@ const PrintableProfileComponent = React.forwardRef<
         </div>
       )}
 
-      <div className="grid-cols-2-pdf section">
+      <div className="grid-2-col section">
         <div>
           <h2>Skills</h2>
           {user.skills && user.skills.length > 0 ? (
-            <div className="skills-list">
+            <ul className="compact-list">
               {user.skills.map((skill, index) => (
-                <span key={`${skill}-${index}`} className="skill-badge">
-                  {skill}
-                </span>
+                <li key={`skill-${index}`}>{skill}</li>
               ))}
-            </div>
+            </ul>
           ) : (
             <p>N/A</p>
           )}
@@ -319,16 +327,16 @@ const PrintableProfileComponent = React.forwardRef<
         <div>
           <h2>Languages</h2>
           {user.languages && user.languages.length > 0 ? (
-            <div className="languages-list-pdf">
+            <ul className="compact-list">
               {user.languages.map((lang: LanguageEntry) => (
-                <span key={lang.id} className="language-badge-pdf">
+                <li key={lang.id || lang.languageName}>
                   {lang.languageName} ({lang.proficiency.substring(0, 3)}.
-                  {lang.canRead && 'R'}
-                  {lang.canWrite && 'W'}
-                  {lang.canSpeak && 'S'})
-                </span>
+                  {lang.canRead ? 'R' : ''}
+                  {lang.canWrite ? 'W' : ''}
+                  {lang.canSpeak ? 'S' : ''})
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
             <p>N/A</p>
           )}
@@ -336,8 +344,8 @@ const PrintableProfileComponent = React.forwardRef<
       </div>
 
       <div className="section">
-        <h2>Additional Information</h2>
-        <div className="grid-cols-2-pdf">
+        <h2>Preferences & Other Details</h2>
+        <div className="grid-2-col">
           {user.dateOfBirth && (
             <p>
               <strong>Date of Birth:</strong>{' '}

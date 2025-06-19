@@ -45,7 +45,7 @@ const AIPoweredCandidateMatchingOutputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, experience, education, languages, salary expectations (current and expected CTC), and preferences align with the job description. Mention any potential misalignments if significant but outweighed by other factors.'
+      'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, detailed work experience (roles, responsibilities, CTCs), detailed education (specializations, course types), languages (proficiency), salary expectations (current and expected CTC vs job range), preferences (location, availability, job search status), personal details (gender, DOB, home location), and resume summary align with the job description. Mention any potential misalignments if significant but outweighed by other factors.'
     ),
 });
 
@@ -79,9 +79,16 @@ Searchable Candidate Profiles:
 
 Based on the provided information:
 1.  Thoroughly analyze the job description, noting key responsibilities, required and preferred skills, language requirements (if any), experience level, location, job type, and salary range (if provided).
-2.  Carefully review each candidate's profile. Pay close attention to their skills, languages (including proficiency and RWS abilities), detailed work experience (roles, responsibilities, duration, CTC), education details (level, degree, institute, specialization, course type), stated preferences (preferred locations, expected salary in INR, job search status, availability, current CTC), and any resume summary.
+2.  Carefully review each candidate's profile. Pay close attention to their:
+    - Skills (technical and soft)
+    - Languages (including proficiency and RWS abilities)
+    - Detailed Work Experience (roles, responsibilities, duration, specific achievements, and annual CTC for each role)
+    - Detailed Education (level, degree, institute, specialization, course type, graduation year)
+    - Stated Preferences (preferred locations, expected salary in INR, job search status, current CTC, availability to start)
+    - Personal Details (gender, date of birth, home state/city, if they might influence location or cultural fit, though be cautious with biases)
+    - Any summary from their resume document.
 3.  Identify the candidate UIDs that are the MOST relevant matches for the job description.
-4.  Provide a detailed reasoning for your selections. For each recommended candidate, explain how their profile aligns with the job's requirements. Highlight specific matches in skills, experience, education, languages, salary expectations (if their expected salary is compatible with the job's range or market rates, considering their current CTC), and location preferences. Also, note any potential minor misalignments if the overall match is strong.
+4.  Provide a detailed reasoning for your selections. For each recommended candidate, explain how their comprehensive profile aligns with the job's requirements. Highlight specific matches in skills, depth and type of experience (including specific roles and responsibilities), education, languages, salary expectations (if their expected salary is compatible with the job's range or market rates, considering their current CTC), and location preferences. Also, note any potential minor misalignments if the overall match is strong.
 5.  Return the UIDs of the matched candidates in the 'relevantCandidateIDs' array, ideally ordered by relevance (most relevant first).
 6.  Ensure your output is a correctly formatted JSON object matching the defined output schema.
 

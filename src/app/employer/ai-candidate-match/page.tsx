@@ -51,7 +51,7 @@ const formatExperiencesForAICandidate = (
   return experiences
     .map(
       (exp) =>
-        `Company: ${exp.companyName}, Role: ${exp.jobRole}, Duration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}${exp.annualCTC ? `, CTC: ${formatCurrencyINR(exp.annualCTC)}` : ''}. Description: ${exp.description || 'N/A'}`
+        `Company: ${exp.companyName || 'N/A'}, Role: ${exp.jobRole || 'N/A'}, Duration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}${exp.annualCTC ? `, Annual CTC: ${formatCurrencyINR(exp.annualCTC)}` : ''}. Description: ${exp.description || 'N/A'}`
     )
     .join('; ');
 };
@@ -63,7 +63,7 @@ const formatEducationsForAICandidate = (
   return educations
     .map(
       (edu) =>
-        `Level: ${edu.level}, Degree: ${edu.degreeName}, Institute: ${edu.instituteName}, Batch: ${edu.startYear || 'N/A'}-${edu.endYear || 'N/A'}, Specialization: ${edu.specialization || 'N/A'}, Course: ${edu.courseType || 'N/A'}. Description: ${edu.description || 'N/A'}`
+        `Level: ${edu.level || 'N/A'}, Degree: ${edu.degreeName || 'N/A'}, Institute: ${edu.instituteName || 'N/A'}, Batch: ${edu.startYear || 'N/A'}-${edu.endYear || 'N/A'}, Specialization: ${edu.specialization || 'N/A'}, Course Type: ${edu.courseType || 'N/A'}. Description: ${edu.description || 'N/A'}`
     )
     .join('; ');
 };
@@ -135,6 +135,10 @@ export default function AiCandidateMatchPage() {
                 data.updatedAt instanceof Timestamp
                   ? data.updatedAt.toDate().toISOString()
                   : data.updatedAt,
+              lastActive:
+                data.lastActive instanceof Timestamp
+                  ? data.lastActive.toDate().toISOString()
+                  : data.lastActive,
             } as UserProfile;
           });
           setAllCandidates(candidatesData);
@@ -161,19 +165,19 @@ export default function AiCandidateMatchPage() {
       .map((c) => {
         let profileString = `Candidate UID: ${c.uid}\n`;
         profileString += `Name: ${c.name || 'N/A'}\n`;
-        if (c.email) profileString += `Email: ${c.email}\n`;
-        if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`;
-        if (c.headline) profileText += `Headline: ${c.headline}\n`;
-        if (c.gender) profileText += `Gender: ${c.gender}\n`;
-        if (c.dateOfBirth) profileText += `Date of Birth: ${c.dateOfBirth}\n`;
-        if (c.homeState) profileText += `Home State: ${c.homeState}\n`;
-        if (c.homeCity) profileText += `Home City: ${c.homeCity}\n`;
+        if (c.email) profileString += `Email: ${c.email}\n`; // For context
+        if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`; // For context
+        if (c.headline) profileString += `Headline: ${c.headline}\n`;
+        if (c.gender) profileString += `Gender: ${c.gender}\n`;
+        if (c.dateOfBirth) profileString += `Date of Birth: ${c.dateOfBirth}\n`;
+        if (c.homeState) profileString += `Home State: ${c.homeState}\n`;
+        if (c.homeCity) profileString += `Home City: ${c.homeCity}\n`;
 
         if (c.currentCTCValue !== undefined) {
-          profileString += `Current CTC (INR): ${formatCurrencyINR(c.currentCTCValue)} ${c.currentCTCConfidential ? '(Confidential)' : ''}\n`;
+          profileString += `Current Annual CTC (INR): ${formatCurrencyINR(c.currentCTCValue)} ${c.currentCTCConfidential ? '(Confidential)' : ''}\n`;
         }
         if (c.expectedCTCValue !== undefined) {
-          profileString += `Expected CTC (INR): ${formatCurrencyINR(c.expectedCTCValue)} ${c.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
+          profileString += `Expected Annual CTC (INR): ${formatCurrencyINR(c.expectedCTCValue)} ${c.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
         }
 
         if (c.skills && c.skills.length > 0) {
@@ -186,8 +190,9 @@ export default function AiCandidateMatchPage() {
         profileString += `Work Experience Summary:\n${formatExperiencesForAICandidate(c.experiences)}\n`;
         profileString += `Education Summary:\n${formatEducationsForAICandidate(c.educations)}\n`;
 
-        if (c.portfolioUrl) profileString += `Portfolio: ${c.portfolioUrl}\n`;
-        if (c.linkedinUrl) profileString += `LinkedIn: ${c.linkedinUrl}\n`;
+        if (c.portfolioUrl)
+          profileString += `Portfolio URL: ${c.portfolioUrl}\n`;
+        if (c.linkedinUrl) profileString += `LinkedIn URL: ${c.linkedinUrl}\n`;
         if (c.preferredLocations && c.preferredLocations.length > 0) {
           profileString += `Preferred Locations: ${c.preferredLocations.join(', ')}\n`;
         }
@@ -247,7 +252,7 @@ export default function AiCandidateMatchPage() {
           jdText += `Location: ${parsedData.location || 'Not specified'}\n`;
           jdText += `Job Type: ${parsedData.jobType || 'Not specified'}\n`;
           if (parsedData.salaryMin || parsedData.salaryMax) {
-            jdText += `Salary (INR): ${parsedData.salaryMin ? formatCurrencyINR(parsedData.salaryMin) : ''} - ${parsedData.salaryMax ? formatCurrencyINR(parsedData.salaryMax) : ''}\n`;
+            jdText += `Salary (Annual INR): ${parsedData.salaryMin ? formatCurrencyINR(parsedData.salaryMin) : 'N/A'} - ${parsedData.salaryMax ? formatCurrencyINR(parsedData.salaryMax) : 'N/A'}\n`;
           }
           jdText += `Skills: ${(parsedData.skills || []).join(', ')}\n\n`;
           jdText += `Full Description (including responsibilities, qualifications, etc.):\n${parsedData.description || 'Not specified'}`;
@@ -335,7 +340,14 @@ export default function AiCandidateMatchPage() {
         const matched = allCandidates.filter((c) =>
           aiResult.relevantCandidateIDs.includes(c.uid)
         );
+        // Sort matched candidates based on the order of relevantCandidateIDs from AI result
+        matched.sort(
+          (a, b) =>
+            aiResult.relevantCandidateIDs.indexOf(a.uid) -
+            aiResult.relevantCandidateIDs.indexOf(b.uid)
+        );
         setMatchedCandidateDetails(matched);
+
         if (matched.length === 0 && aiResult.relevantCandidateIDs.length > 0) {
           toast({
             title: 'Match IDs found, but no candidate details',
@@ -410,12 +422,14 @@ export default function AiCandidateMatchPage() {
               onChange={handleFileChange}
               accept=".pdf,.doc,.docx,.txt"
               className="flex-1"
+              aria-label="Upload job description file"
             />
             <Button
               type="button"
               onClick={handleParseJD}
               disabled={isParsingJD || !file}
               variant="outline"
+              aria-label="Parse uploaded job description file"
             >
               {isParsingJD ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -464,6 +478,7 @@ export default function AiCandidateMatchPage() {
             isParsingJD
           }
           size="lg"
+          aria-label="Find matching candidates"
         >
           {isLoading || candidatesLoading || isParsingJD ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />

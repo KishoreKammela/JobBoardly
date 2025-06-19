@@ -4,12 +4,13 @@ import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, Eye } from 'lucide-react'; // Added Eye
 import { useEffect, useRef } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, NextRouter } from 'next/navigation'; // Added NextRouter
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import Link from 'next/link'; // Added Link
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -65,7 +66,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2 font-headline">
             {pageTitle()}
@@ -73,9 +74,20 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">{pageDescription()}</p>
         </div>
         {user.role === 'jobSeeker' && (
-          <Button onClick={handlePrintProfile} variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Download PDF Profile
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handlePrintProfile}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              <Download className="mr-2 h-4 w-4" /> Download PDF
+            </Button>
+            <Button asChild variant="default" className="w-full sm:w-auto">
+              <Link href="/profile/preview">
+                <Eye className="mr-2 h-4 w-4" /> Preview Profile
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
       <Separator />

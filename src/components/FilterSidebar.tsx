@@ -164,6 +164,7 @@ export function FilterSidebar({
               placeholder="Job title, skills, company"
               value={filters.searchTerm}
               onChange={handleChange}
+              aria-label="Search keywords for jobs"
             />
           </div>
           <div>
@@ -174,6 +175,7 @@ export function FilterSidebar({
               placeholder="City, state, or zip code"
               value={filters.location}
               onChange={handleChange}
+              aria-label="Location filter for jobs"
             />
           </div>
           <div>
@@ -183,7 +185,7 @@ export function FilterSidebar({
               value={filters.roleType}
               onValueChange={(value) => handleSelectChange('roleType', value)}
             >
-              <SelectTrigger id="roleType">
+              <SelectTrigger id="roleType" aria-label="Filter by role type">
                 <SelectValue placeholder="Select role type" />
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +206,10 @@ export function FilterSidebar({
                 handleSelectChange('recentActivity', value)
               }
             >
-              <SelectTrigger id="recentActivity">
+              <SelectTrigger
+                id="recentActivity"
+                aria-label="Filter by job posting date"
+              >
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
@@ -223,18 +228,23 @@ export function FilterSidebar({
               onCheckedChange={(checked) =>
                 handleCheckboxChange('isRemote', checked)
               }
-              onCheckedChange={(checked) =>
-                handleCheckboxChange('isRemote', checked)
-              }
+              aria-labelledby="isRemoteLabel"
             />
-            <Label htmlFor="isRemote" className="font-medium">
+            <Label
+              htmlFor="isRemote"
+              className="font-medium"
+              id="isRemoteLabel"
+            >
               Remote Only
             </Label>
           </div>
           <div className="flex flex-col gap-2 pt-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" className="flex-1 min-w-[120px]">
-              <Button type="submit" className="flex-1 min-w-[120px]">
+              <Button
+                type="submit"
+                className="flex-1 min-w-[120px]"
+                aria-label="Apply job filters"
+              >
                 <Search className="mr-2 h-4 w-4" /> Apply Filters
               </Button>
               <Button
@@ -242,6 +252,7 @@ export function FilterSidebar({
                 variant="outline"
                 onClick={handleReset}
                 className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+                aria-label="Reset job filters"
               >
               </Button>
               <Button
@@ -249,6 +260,7 @@ export function FilterSidebar({
                 variant="outline"
                 onClick={handleReset}
                 className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+                aria-label="Reset job filters"
               >
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
               </Button>
@@ -260,6 +272,7 @@ export function FilterSidebar({
                 variant="outline"
                 onClick={handleOpenSaveSearchDialog}
                 className="w-full"
+                aria-label="Save current search criteria"
               >
                 <Save className="mr-2 h-4 w-4" /> Save This Search
               </Button>
@@ -268,6 +281,7 @@ export function FilterSidebar({
                 variant="outline"
                 onClick={handleOpenSaveSearchDialog}
                 className="w-full"
+                aria-label="Save current search criteria"
               >
                 <Save className="mr-2 h-4 w-4" /> Save This Search
               </Button>
@@ -301,6 +315,7 @@ export function FilterSidebar({
               onChange={(e) => setSearchName(e.target.value)}
               placeholder="e.g., Remote React Jobs"
               className="mt-1"
+              aria-label="Name for saved search"
             />
           </div>
           <AlertDialogFooter>

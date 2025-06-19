@@ -4,7 +4,7 @@ import type { UserProfile } from '@/types';
 import { CandidateCard } from './CandidateCard';
 import { AlertCircle, Loader2, UserSearch } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { CandidateFilters } from '@/types'; // Updated import to global types
+import type { CandidateFilters } from '@/types';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -50,12 +50,11 @@ export function CandidateSearchResults({
       setError(null);
       try {
         const usersCollectionRef = collection(db, 'users');
-        // Base query for job seekers whose profiles are searchable
         const q = firestoreQuery(
           usersCollectionRef,
           where('role', '==', 'jobSeeker'),
-          where('isProfileSearchable', '==', true), // Only fetch searchable profiles
-          orderBy('updatedAt', 'desc') // Default sort, can be changed by filters
+          where('isProfileSearchable', '==', true),
+          orderBy('updatedAt', 'desc')
         );
 
         const querySnapshot = await getDocs(q);
@@ -72,6 +71,10 @@ export function CandidateSearchResults({
               data.updatedAt instanceof Timestamp
                 ? data.updatedAt.toDate().toISOString()
                 : data.updatedAt,
+            lastActive:
+              data.lastActive instanceof Timestamp
+                ? data.lastActive.toDate().toISOString()
+                : data.lastActive,
           } as UserProfile;
         });
         setAllCandidates(candidatesData);
@@ -82,16 +85,16 @@ export function CandidateSearchResults({
             (e.message || 'Please try again later.')
         );
       } finally {
-        setIsLoading(false); // Initial fetch done
+        setIsLoading(false);
       }
     };
     fetchCandidates();
-  }, []); // Fetch all (searchable) candidates once on mount
+  }, []);
 
   useEffect(() => {
-    if (isLoading && allCandidates.length === 0) return; // Don't filter if initial load isn't done
+    if (isLoading && allCandidates.length === 0) return;
 
-    setIsLoading(true); // Indicate filtering is in progress
+    setIsLoading(true);
 
     const applyFilters = (
       candidates: UserProfile[],
@@ -99,37 +102,81 @@ export function CandidateSearchResults({
     ) => {
       let tempFiltered = [...candidates];
 
-      // Keyword search (name, skills, headline, experience)
+      // Keyword search
       if (currentFilters.searchTerm) {
         const lowerSearchTerm = currentFilters.searchTerm.toLowerCase();
-        const searchTerms = lowerSearchTerm.includes('"')
-          ? [lowerSearchTerm.replace(/"/g, '')] // Treat as exact phrase if quotes present
-          : lowerSearchTerm.split(/\s+/).filter(Boolean); // Split by space for AND logic
 
-        tempFiltered = tempFiltered.filter((candidate) => {
-          const profileText = `
-            ${candidate.name?.toLowerCase() || ''} 
-            ${candidate.headline?.toLowerCase() || ''} 
-            ${(candidate.skills || []).join(' ').toLowerCase()} 
-            ${candidate.experience?.toLowerCase() || ''}
-          `.trim();
+        // Handle quoted phrases for exact match
+        const phraseMatches = lowerSearchTerm.match(/"([^"]+)"/g);
+        let remainingSearchTerm = lowerSearchTerm;
 
-          return searchTerms.every((term) => profileText.includes(term));
-        });
+        if (phraseMatches) {
+          for (const phrase of phraseMatches) {
+            const cleanPhrase = phrase.replace(/"/g, '');
+            tempFiltered = tempFiltered.filter((candidate) =>
+              `${candidate.name?.toLowerCase() || ''} ${candidate.headline?.toLowerCase() || ''} ${(candidate.skills || []).join(' ').toLowerCase()} ${candidate.parsedResumeText?.toLowerCase() || ''} ${
+                candidate.experiences
+                  ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
+                  .join(' ')
+                  .toLowerCase() || ''
+              }`.includes(cleanPhrase)
+            );
+            remainingSearchTerm = remainingSearchTerm
+              .replace(phrase, '')
+              .trim();
+          }
+        }
+
+        const searchTerms = remainingSearchTerm.split(/\s+/).filter(Boolean);
+        if (searchTerms.length > 0) {
+          tempFiltered = tempFiltered.filter((candidate) => {
+            const profileText = `
+              ${candidate.name?.toLowerCase() || ''} 
+              ${candidate.headline?.toLowerCase() || ''} 
+              ${(candidate.skills || []).join(' ').toLowerCase()} 
+              ${candidate.parsedResumeText?.toLowerCase() || ''}
+              ${
+                candidate.experiences
+                  ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
+                  .join(' ')
+                  .toLowerCase() || ''
+              }
+            `.trim();
+            return searchTerms.every((term) => profileText.includes(term));
+          });
+        }
       }
 
-      // Location filter
+      // Location filter (Preferred Locations)
       if (currentFilters.location) {
         const lowerLocation = currentFilters.location.toLowerCase();
+        tempFiltered = tempFiltered.filter((candidate) =>
+          candidate.preferredLocations?.some((loc) =>
+            loc.toLowerCase().includes(lowerLocation)
+          )
+        );
+      }
+
+      // Home State filter
+      if (currentFilters.homeState) {
+        const lowerHomeState = currentFilters.homeState.toLowerCase();
+        tempFiltered = tempFiltered.filter((candidate) =>
+          candidate.homeState?.toLowerCase().includes(lowerHomeState)
+        );
+      }
+
+      // Home City filter
+      if (currentFilters.homeCity) {
+        const lowerHomeCity = currentFilters.homeCity.toLowerCase();
+        tempFiltered = tempFiltered.filter((candidate) =>
+          candidate.homeCity?.toLowerCase().includes(lowerHomeCity)
+        );
+      }
+
+      // Gender filter
+      if (currentFilters.gender && currentFilters.gender !== 'all') {
         tempFiltered = tempFiltered.filter(
-          (candidate) =>
-            candidate.preferredLocations?.some((loc) =>
-              loc.toLowerCase().includes(lowerLocation)
-            ) ||
-            (lowerLocation === 'remote' &&
-              candidate.preferredLocations?.some(
-                (loc) => loc.toLowerCase() === 'remote'
-              ))
+          (candidate) => candidate.gender === currentFilters.gender
         );
       }
 
@@ -157,23 +204,23 @@ export function CandidateSearchResults({
         );
       }
 
-      // Desired Salary filter
+      // Expected CTC filter (using expectedCTCValue)
       if (currentFilters.desiredSalaryMin !== undefined) {
         tempFiltered = tempFiltered.filter(
           (c) =>
-            c.desiredSalary !== undefined &&
-            c.desiredSalary >= currentFilters.desiredSalaryMin!
+            c.expectedCTCValue !== undefined &&
+            c.expectedCTCValue >= currentFilters.desiredSalaryMin!
         );
       }
       if (currentFilters.desiredSalaryMax !== undefined) {
         tempFiltered = tempFiltered.filter(
           (c) =>
-            c.desiredSalary !== undefined &&
-            c.desiredSalary <= currentFilters.desiredSalaryMax!
+            c.expectedCTCValue !== undefined &&
+            c.expectedCTCValue <= currentFilters.desiredSalaryMax!
         );
       }
 
-      // Recent Activity filter
+      // Recent Activity filter (profile updatedAt)
       if (
         currentFilters.recentActivity &&
         currentFilters.recentActivity !== 'any'
@@ -189,19 +236,19 @@ export function CandidateSearchResults({
 
         tempFiltered = tempFiltered.filter((c) => {
           const updatedAt = c.updatedAt
-            ? new Date(c.updatedAt as string)
-            : new Date(0);
+            ? new Date(c.updatedAt as string) // Ensure it's a string from UserProfile
+            : new Date(0); // If no updatedAt, treat as very old
           return updatedAt >= cutoffDate;
         });
       }
-
+      // Default sort by updatedAt desc if no other sort is applied (already fetched this way)
       return tempFiltered;
     };
 
     setFilteredAndSortedCandidates(
       applyFilters(allCandidates, debouncedFilters)
     );
-    setCurrentPage(1); // Reset to first page on filter change
+    setCurrentPage(1);
     setIsLoading(false);
   }, [debouncedFilters, allCandidates, isLoading]);
 
@@ -246,7 +293,12 @@ export function CandidateSearchResults({
     </Card>
   );
 
-  if (isLoading && paginatedCandidates.length === 0) {
+  if (
+    isLoading &&
+    paginatedCandidates.length === 0 &&
+    allCandidates.length === 0
+  ) {
+    // Show skeletons only on initial full load
     return (
       <div
         className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
@@ -254,6 +306,16 @@ export function CandidateSearchResults({
         {Array.from({ length: viewMode === 'grid' ? 6 : 3 }).map((_, index) => (
           <CandidateSkeletonCard key={index} />
         ))}
+      </div>
+    );
+  }
+
+  if (isLoading && allCandidates.length > 0) {
+    // Show loading indicator if filtering existing data
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2">Applying filters...</p>
       </div>
     );
   }
@@ -296,10 +358,11 @@ export function CandidateSearchResults({
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
             variant="outline"
+            aria-label="Go to previous page of candidates"
           >
             Previous
           </Button>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground" aria-live="polite">
             Page {currentPage} of {totalPages}
           </span>
           <Button
@@ -308,6 +371,7 @@ export function CandidateSearchResults({
             }
             disabled={currentPage === totalPages}
             variant="outline"
+            aria-label="Go to next page of candidates"
           >
             Next
           </Button>

@@ -45,7 +45,7 @@ const formatExperiencesForAI = (experiences?: ExperienceEntry[]): string => {
   return experiences
     .map(
       (exp) =>
-        `Company: ${exp.companyName}\nRole: ${exp.jobRole}\nDuration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}\n${exp.annualCTC ? `CTC: ${formatCurrencyINR(exp.annualCTC)}\n` : ''}Description: ${exp.description || 'N/A'}`
+        `Company: ${exp.companyName || 'N/A'}\nRole: ${exp.jobRole || 'N/A'}\nDuration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}\n${exp.annualCTC ? `Annual CTC: ${formatCurrencyINR(exp.annualCTC)}\n` : ''}Description: ${exp.description || 'N/A'}`
     )
     .join('\n\n');
 };
@@ -55,7 +55,7 @@ const formatEducationsForAI = (educations?: EducationEntry[]): string => {
   return educations
     .map(
       (edu) =>
-        `Level: ${edu.level}\nDegree: ${edu.degreeName}\nInstitute: ${edu.instituteName}\nBatch: ${edu.startYear || 'N/A'} - ${edu.endYear || 'N/A'}\nSpecialization: ${edu.specialization || 'N/A'}\nCourse Type: ${edu.courseType || 'N/A'}\nDescription: ${edu.description || 'N/A'}`
+        `Level: ${edu.level || 'N/A'}\nDegree: ${edu.degreeName || 'N/A'}\nInstitute: ${edu.instituteName || 'N/A'}\nBatch: ${edu.startYear || 'N/A'} - ${edu.endYear || 'N/A'}\nSpecialization: ${edu.specialization || 'N/A'}\nCourse Type: ${edu.courseType || 'N/A'}\nDescription: ${edu.description || 'N/A'}`
     )
     .join('\n\n');
 };
@@ -88,8 +88,8 @@ export function AiJobMatcher() {
     if (user && user.role === 'jobSeeker') {
       let profileText = `Job Seeker Profile:\n`;
       profileText += `Name: ${user.name || 'N/A'}\n`;
-      profileText += `Email: ${user.email || 'N/A'}\n`;
-      if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`;
+      profileText += `Email: ${user.email || 'N/A'}\n`; // For context, AI won't contact
+      if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`; // For context
       if (user.headline) profileText += `Headline: ${user.headline}\n`;
       if (user.gender) profileText += `Gender: ${user.gender}\n`;
       if (user.dateOfBirth)
@@ -98,10 +98,10 @@ export function AiJobMatcher() {
       if (user.homeCity) profileText += `Home City: ${user.homeCity}\n`;
 
       if (user.currentCTCValue !== undefined) {
-        profileText += `Current CTC (INR): ${formatCurrencyINR(user.currentCTCValue)} ${user.currentCTCConfidential ? '(Confidential)' : ''}\n`;
+        profileText += `Current Annual CTC (INR): ${formatCurrencyINR(user.currentCTCValue)} ${user.currentCTCConfidential ? '(Confidential)' : ''}\n`;
       }
       if (user.expectedCTCValue !== undefined) {
-        profileText += `Expected CTC (INR): ${formatCurrencyINR(user.expectedCTCValue)} ${user.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
+        profileText += `Expected Annual CTC (INR): ${formatCurrencyINR(user.expectedCTCValue)} ${user.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
       }
 
       if (user.skills && user.skills.length > 0) {
@@ -114,8 +114,10 @@ export function AiJobMatcher() {
       profileText += `\n--- Work Experience ---\n${formatExperiencesForAI(user.experiences)}\n`;
       profileText += `\n--- Education ---\n${formatEducationsForAI(user.educations)}\n`;
 
-      if (user.portfolioUrl) profileText += `Portfolio: ${user.portfolioUrl}\n`;
-      if (user.linkedinUrl) profileText += `LinkedIn: ${user.linkedinUrl}\n`;
+      if (user.portfolioUrl)
+        profileText += `Portfolio URL: ${user.portfolioUrl}\n`;
+      if (user.linkedinUrl)
+        profileText += `LinkedIn URL: ${user.linkedinUrl}\n`;
 
       if (user.preferredLocations && user.preferredLocations.length > 0) {
         profileText += `Preferred Locations: ${user.preferredLocations.join(', ')}\n`;
@@ -240,7 +242,14 @@ export function AiJobMatcher() {
         const matched = allJobs.filter((job) =>
           aiResult.relevantJobIDs.includes(job.id)
         );
+        // Sort matched jobs based on the order of relevantJobIDs from AI result
+        matched.sort(
+          (a, b) =>
+            aiResult.relevantJobIDs.indexOf(a.id) -
+            aiResult.relevantJobIDs.indexOf(b.id)
+        );
         setMatchedJobsDetails(matched);
+
         if (matched.length === 0 && aiResult.relevantJobIDs.length > 0) {
           toast({
             title: 'Match IDs found, but no job details',
@@ -334,6 +343,7 @@ export function AiJobMatcher() {
           onClick={handleSubmit}
           disabled={isLoading || jobsLoading || !user || !!jobsError}
           size="lg"
+          aria-label="Get AI Job Matches"
         >
           {isLoading || jobsLoading ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />

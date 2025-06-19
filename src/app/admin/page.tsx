@@ -21,11 +21,13 @@ import {
   BarChart3,
   Flag,
   ListChecks,
+  Search as SearchIcon, // Renamed to avoid conflict
+  Eye, // Added Eye icon
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react'; // Added useMemo
 import { useRouter, usePathname } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import {
@@ -50,9 +52,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input'; // Added Input
+import { useDebounce } from '@/hooks/use-debounce'; // Added useDebounce
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminPage() {
-  const { user, loading } = useAuth();
+  const {
+    user,
+    loading,
+    updateUserProfile: updateUserProfileInAuth,
+  } = useAuth(); // Added updateUserProfileInAuth
   const router = useRouter();
   const pathname = usePathname();
 
@@ -60,10 +70,14 @@ export default function AdminPage() {
   const [pendingCompanies, setPendingCompanies] = useState<Company[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
 
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const debouncedUserSearchTerm = useDebounce(userSearchTerm, 300);
+  const [userCurrentPage, setUserCurrentPage] = useState(1);
+
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // For individual actions
 
   const fetchPendingJobs = async () => {
     setIsJobsLoading(true);
@@ -84,6 +98,14 @@ export default function AdminPage() {
               doc.data().postedDate instanceof Timestamp
                 ? doc.data().postedDate.toDate().toISOString().split('T')[0]
                 : doc.data().postedDate,
+            createdAt:
+              doc.data().createdAt instanceof Timestamp
+                ? doc.data().createdAt.toDate().toISOString()
+                : doc.data().createdAt,
+            updatedAt:
+              doc.data().updatedAt instanceof Timestamp
+                ? doc.data().updatedAt.toDate().toISOString()
+                : doc.data().updatedAt,
           }) as Job
       );
       setPendingJobs(jobs);
@@ -113,6 +135,10 @@ export default function AdminPage() {
               d.data().createdAt instanceof Timestamp
                 ? d.data().createdAt.toDate().toISOString()
                 : d.data().createdAt,
+            updatedAt:
+              d.data().updatedAt instanceof Timestamp
+                ? d.data().updatedAt.toDate().toISOString()
+                : d.data().updatedAt,
           }) as Company
       );
       setPendingCompanies(companies);
@@ -127,6 +153,7 @@ export default function AdminPage() {
     setIsUsersLoading(true);
     try {
       const usersRef = collection(db, 'users');
+      // For more complex sorting (e.g. by name, role), consider client-side or more specific queries.
       const q = query(usersRef, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const usersList = snapshot.docs.map(
@@ -140,6 +167,14 @@ export default function AdminPage() {
                 : doc.data().createdAt
                   ? String(doc.data().createdAt)
                   : 'N/A',
+            lastActive:
+              doc.data().lastActive instanceof Timestamp
+                ? doc.data().lastActive.toDate().toISOString()
+                : doc.data().lastActive,
+            updatedAt:
+              doc.data().updatedAt instanceof Timestamp
+                ? doc.data().updatedAt.toDate().toISOString()
+                : doc.data().updatedAt,
           }) as UserProfile
       );
       setAllUsers(usersList);
@@ -155,8 +190,9 @@ export default function AdminPage() {
     if (!user) {
       router.replace(
         `/auth/admin/login?redirect=${encodeURIComponent(pathname)}`
-      ); // Updated redirect
-    } else if (user.role !== 'admin') {
+      );
+    } else if (user.role !== 'admin' && user.role !== 'superAdmin') {
+      // Allow superAdmin
       if (user.role === 'jobSeeker') router.replace('/jobs');
       else if (user.role === 'employer')
         router.replace('/employer/posted-jobs');
@@ -192,7 +228,7 @@ export default function AdminPage() {
 
   const handleCompanyStatusUpdate = async (
     companyId: string,
-    newStatus: 'approved' | 'rejected',
+    newStatus: 'approved' | 'rejected' | 'suspended', // Added suspended
     reason?: string
   ) => {
     setActionLoading(`company-${companyId}`);
@@ -201,12 +237,19 @@ export default function AdminPage() {
       await updateDoc(companyRef, {
         status: newStatus,
         moderationReason:
-          newStatus === 'rejected' ? reason || 'Rejected by admin' : null,
+          newStatus === 'rejected' || newStatus === 'suspended'
+            ? reason ||
+              `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`
+            : null,
         updatedAt: serverTimestamp(),
       });
-      setPendingCompanies((prevCompanies) =>
-        prevCompanies.filter((c) => c.id !== companyId)
-      );
+      // If company is approved/rejected, remove from pending. If suspended, it might remain in an "all companies" list if we had one.
+      if (newStatus === 'approved' || newStatus === 'rejected') {
+        setPendingCompanies((prevCompanies) =>
+          prevCompanies.filter((c) => c.id !== companyId)
+        );
+      }
+      // Potentially refetch all companies or update local state if managing a full list.
     } catch (error) {
       console.error(
         `Error updating company ${companyId} to ${newStatus}:`,
@@ -217,6 +260,58 @@ export default function AdminPage() {
     }
   };
 
+  const handleUserStatusUpdate = async (
+    userId: string,
+    newStatus: 'active' | 'suspended'
+  ) => {
+    if (user?.role !== 'admin' && user?.role !== 'superAdmin') return; // Basic check
+
+    const targetUser = allUsers.find((u) => u.uid === userId);
+    if (user?.role === 'admin' && targetUser?.role === 'admin') {
+      alert(
+        'Admins cannot suspend other admins. This action requires SuperAdmin privileges.'
+      );
+      return;
+    }
+    if (user?.role === 'admin' && targetUser?.role === 'superAdmin') {
+      alert('Admins cannot suspend SuperAdmins.');
+      return;
+    }
+
+    setActionLoading(`user-${userId}`);
+    try {
+      await updateUserProfileInAuth({ uid: userId, status: newStatus }); // Using AuthContext for consistency
+      setAllUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.uid === userId ? { ...u, status: newStatus } : u
+        )
+      );
+    } catch (e) {
+      console.error('Error updating user status:', e);
+      alert('Failed to update user status.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!debouncedUserSearchTerm) return allUsers;
+    const lowerSearch = debouncedUserSearchTerm.toLowerCase();
+    return allUsers.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(lowerSearch) ||
+        u.email?.toLowerCase().includes(lowerSearch) ||
+        u.role?.toLowerCase().includes(lowerSearch)
+    );
+  }, [allUsers, debouncedUserSearchTerm]);
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (userCurrentPage - 1) * ITEMS_PER_PAGE;
+    return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredUsers, userCurrentPage]);
+
+  const totalUserPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+
   if (loading || (!user && !loading)) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -225,7 +320,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user && user.role !== 'admin') {
+  if (user && user.role !== 'admin' && user.role !== 'superAdmin') {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
@@ -247,6 +342,11 @@ export default function AdminPage() {
           <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
           <p className="text-muted-foreground">
             Manage users, job postings, company profiles, and platform settings.
+            {user?.role === 'superAdmin' && (
+              <Badge variant="destructive" className="ml-2">
+                Super Admin
+              </Badge>
+            )}
           </p>
         </div>
       </div>
@@ -302,6 +402,7 @@ export default function AdminPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline"
+                                aria-label={`View company profile for ${job.company}`}
                               >
                                 {job.company}
                               </Link>
@@ -330,6 +431,7 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'rejected')
                         }
                         disabled={actionLoading === `job-${job.id}`}
+                        aria-label={`Reject job ${job.title}`}
                       >
                         {actionLoading === `job-${job.id}` &&
                         actionLoading.startsWith(`job-${job.id}`) ? (
@@ -345,6 +447,7 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'approved')
                         }
                         disabled={actionLoading === `job-${job.id}`}
+                        aria-label={`Approve job ${job.title}`}
                       >
                         {actionLoading === `job-${job.id}` &&
                         actionLoading.startsWith(`job-${job.id}`) ? (
@@ -397,6 +500,7 @@ export default function AdminPage() {
                           rel="noopener noreferrer"
                           className="hover:text-primary hover:underline"
                           title="View company profile in new tab (if accessible)"
+                          aria-label={`View company profile for ${company.name}`}
                         >
                           {company.name}
                         </Link>
@@ -423,6 +527,7 @@ export default function AdminPage() {
                           handleCompanyStatusUpdate(company.id, 'rejected')
                         }
                         disabled={actionLoading === `company-${company.id}`}
+                        aria-label={`Reject company ${company.name}`}
                       >
                         {actionLoading === `company-${company.id}` &&
                         actionLoading.startsWith(`company-${company.id}`) ? (
@@ -438,6 +543,7 @@ export default function AdminPage() {
                           handleCompanyStatusUpdate(company.id, 'approved')
                         }
                         disabled={actionLoading === `company-${company.id}`}
+                        aria-label={`Approve company ${company.name}`}
                       >
                         {actionLoading === `company-${company.id}` &&
                         actionLoading.startsWith(`company-${company.id}`) ? (
@@ -459,11 +565,21 @@ export default function AdminPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users /> User Management ({allUsers.length})
+            <Users /> User Management ({filteredUsers.length} of{' '}
+            {allUsers.length})
           </CardTitle>
           <CardDescription>
-            View and manage registered users on the platform.
+            View, search, and manage registered users on the platform.
           </CardDescription>
+          <div className="mt-4">
+            <Input
+              placeholder="Search users by name, email, or role..."
+              value={userSearchTerm}
+              onChange={(e) => setUserSearchTerm(e.target.value)}
+              className="max-w-sm"
+              aria-label="Search users"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {isUsersLoading ? (
@@ -471,8 +587,12 @@ export default function AdminPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
               <span className="ml-2">Loading users...</span>
             </div>
-          ) : allUsers.length === 0 ? (
-            <p className="text-muted-foreground">No users found.</p>
+          ) : paginatedUsers.length === 0 ? (
+            <p className="text-muted-foreground">
+              {debouncedUserSearchTerm
+                ? 'No users match your search.'
+                : 'No users found.'}
+            </p>
           ) : (
             <div className="max-h-[500px] overflow-y-auto">
               <Table>
@@ -482,19 +602,23 @@ export default function AdminPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead>Last Active</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <TableRow key={u.uid}>
-                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {u.name || 'N/A'}
+                      </TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
                         <Badge
                           variant={
-                            u.role === 'admin'
+                            u.role === 'admin' || u.role === 'superAdmin'
                               ? 'default'
                               : u.role === 'employer'
                                 ? 'secondary'
@@ -502,6 +626,20 @@ export default function AdminPage() {
                           }
                         >
                           {u.role.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            u.status === 'active' ? 'secondary' : 'destructive'
+                          }
+                          className={
+                            u.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }
+                        >
+                          {u.status?.toUpperCase() || 'ACTIVE'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -513,15 +651,93 @@ export default function AdminPage() {
                                 .toLocaleDateString()
                           : 'N/A'}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" disabled>
-                          Manage
+                      <TableCell>
+                        {u.lastActive
+                          ? typeof u.lastActive === 'string'
+                            ? new Date(u.lastActive).toLocaleString()
+                            : (u.lastActive as unknown as Timestamp)
+                                ?.toDate()
+                                .toLocaleString()
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        {u.role === 'jobSeeker' && (
+                          <Button variant="outline" size="sm" asChild>
+                            <Link
+                              href={`/employer/candidates/${u.uid}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Preview profile of ${u.name}`}
+                            >
+                              <Eye className="mr-1 h-4 w-4" /> Preview
+                            </Link>
+                          </Button>
+                        )}
+                        <Button
+                          variant={
+                            u.status === 'active' ? 'destructive' : 'default'
+                          }
+                          size="sm"
+                          onClick={() =>
+                            handleUserStatusUpdate(
+                              u.uid,
+                              u.status === 'active' ? 'suspended' : 'active'
+                            )
+                          }
+                          disabled={
+                            actionLoading === `user-${u.uid}` ||
+                            (user?.role === 'admin' &&
+                              (u.role === 'admin' ||
+                                u.role === 'superAdmin')) ||
+                            user?.uid === u.uid
+                          }
+                          aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
+                        >
+                          {actionLoading === `user-${u.uid}` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : u.status === 'active' ? (
+                            'Suspend'
+                          ) : (
+                            'Activate'
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          {totalUserPages > 1 && (
+            <div className="mt-6 flex justify-center items-center gap-2">
+              <Button
+                onClick={() =>
+                  setUserCurrentPage((prev) => Math.max(1, prev - 1))
+                }
+                disabled={userCurrentPage === 1}
+                variant="outline"
+                aria-label="Previous page of users"
+              >
+                Previous
+              </Button>
+              <span
+                className="text-sm text-muted-foreground"
+                aria-live="polite"
+              >
+                Page {userCurrentPage} of {totalUserPages}
+              </span>
+              <Button
+                onClick={() =>
+                  setUserCurrentPage((prev) =>
+                    Math.min(totalUserPages, prev + 1)
+                  )
+                }
+                disabled={userCurrentPage === totalUserPages}
+                variant="outline"
+                aria-label="Next page of users"
+              >
+                Next
+              </Button>
             </div>
           )}
         </CardContent>
@@ -581,11 +797,24 @@ export default function AdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                To make a user an admin, you currently need to manually update
-                their &apos;role&apos; field to &apos;admin&apos; in the
-                Firestore &apos;users&apos; collection.
-              </p>
+              <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                <li>
+                  To make a user an admin, manually update their
+                  &apos;role&apos; field to &apos;admin&apos; or
+                  &apos;superAdmin&apos; in Firestore &apos;users&apos;
+                  collection.
+                </li>
+                <li>Ensure their &apos;status&apos; is &apos;active&apos;.</li>
+                <li>
+                  SuperAdmins can suspend/activate Admins. Admins cannot suspend
+                  other Admins or SuperAdmins.
+                </li>
+                <li>
+                  Suspending a company automatically suspends its recruiters
+                  (this logic needs backend implementation or careful manual
+                  management if not automated by rules).
+                </li>
+              </ul>
             </CardContent>
           </Card>
         </CardContent>

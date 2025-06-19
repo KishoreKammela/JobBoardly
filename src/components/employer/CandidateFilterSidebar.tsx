@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, RotateCcw } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import type { CandidateFilters } from '@/types'; // Import from global types
+import type { CandidateFilters } from '@/types';
 
 interface CandidateFilterSidebarProps {
   onFilterChange: (filters: CandidateFilters) => void;
@@ -38,12 +38,15 @@ export function CandidateFilterSidebar({
 }: CandidateFilterSidebarProps) {
   const defaultFilters: CandidateFilters = {
     searchTerm: '',
-    location: '',
+    location: '', // For candidate's preferred location text search
     availability: 'all',
     jobSearchStatus: 'all',
     desiredSalaryMin: undefined,
     desiredSalaryMax: undefined,
-    recentActivity: 'any',
+    recentActivity: 'any', // Profile updated_at
+    gender: 'all',
+    homeState: '',
+    homeCity: '',
     ...initialFilters,
   };
 
@@ -95,28 +98,71 @@ export function CandidateFilterSidebar({
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <Label htmlFor="searchTerm">
-              Keywords (Name, Skills, Headline, Experience)
+              Keywords (Name, Skills, Headline, Experience summary)
             </Label>
             <Input
               id="searchTerm"
               name="searchTerm"
-              placeholder="e.g., React, Senior Engineer, 'AI specialist'"
+              placeholder='e.g., React, "Senior Engineer", AI'
               value={filters.searchTerm}
               onChange={handleChange}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Use quotes for exact phrases. Keywords are ANDed.
+              Use quotes for exact phrases. Multiple terms are ANDed.
             </p>
           </div>
           <div>
-            <Label htmlFor="location">Preferred Location</Label>
+            <Label htmlFor="location">Preferred Location (text search)</Label>
             <Input
               id="location"
               name="location"
-              placeholder="City, state, or remote"
+              placeholder="e.g., Remote, Bangalore"
               value={filters.location}
               onChange={handleChange}
             />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="homeState">Home State</Label>
+              <Input
+                id="homeState"
+                name="homeState"
+                placeholder="e.g., Karnataka"
+                value={filters.homeState || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <Label htmlFor="homeCity">Home City</Label>
+              <Input
+                id="homeCity"
+                name="homeCity"
+                placeholder="e.g., Bangalore"
+                value={filters.homeCity || ''}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              name="gender"
+              value={filters.gender || 'all'}
+              onValueChange={(value) => handleSelectChange('gender', value)}
+            >
+              <SelectTrigger id="gender">
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Genders</SelectItem>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Prefer not to say">
+                  Prefer not to say
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="availability">Availability</Label>
@@ -168,7 +214,9 @@ export function CandidateFilterSidebar({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="desiredSalaryMin">Min Desired Salary (INR)</Label>
+              <Label htmlFor="desiredSalaryMin">
+                Min Expected CTC (Annual INR)
+              </Label>
               <Input
                 id="desiredSalaryMin"
                 name="desiredSalaryMin"
@@ -179,7 +227,9 @@ export function CandidateFilterSidebar({
               />
             </div>
             <div>
-              <Label htmlFor="desiredSalaryMax">Max Desired Salary (INR)</Label>
+              <Label htmlFor="desiredSalaryMax">
+                Max Expected CTC (Annual INR)
+              </Label>
               <Input
                 id="desiredSalaryMax"
                 name="desiredSalaryMax"
@@ -201,7 +251,10 @@ export function CandidateFilterSidebar({
                 handleSelectChange('recentActivity', value)
               }
             >
-              <SelectTrigger id="candidateRecentActivity">
+              <SelectTrigger
+                id="candidateRecentActivity"
+                aria-label="Filter by profile last updated date"
+              >
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
@@ -214,7 +267,11 @@ export function CandidateFilterSidebar({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
-            <Button type="submit" className="flex-1 min-w-[120px]">
+            <Button
+              type="submit"
+              className="flex-1 min-w-[120px]"
+              aria-label="Apply search filters"
+            >
               <Search className="mr-2 h-4 w-4" /> Apply Filters
             </Button>
             <Button
@@ -222,6 +279,7 @@ export function CandidateFilterSidebar({
               variant="outline"
               onClick={handleReset}
               className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+              aria-label="Reset search filters"
             >
             <Button
               type="button"
