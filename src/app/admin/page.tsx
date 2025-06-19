@@ -140,16 +140,14 @@ export default function AdminPage() {
       );
       const jobsSnapshot = await getDocs(jobsQuery);
       setPendingJobs(
-        jobsSnapshot.docs.map(
-          (d) =>
-            ({
-              id: d.id,
-              ...d.data(),
-              createdAt: (d.data().createdAt as Timestamp)
-                ?.toDate()
-                .toISOString(),
-            }) as Job
-        )
+        jobsSnapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+          } as Job;
+        })
       );
       setIsJobsLoading(false);
 
@@ -160,16 +158,14 @@ export default function AdminPage() {
       );
       const pendingCompaniesSnapshot = await getDocs(pendingCompaniesQuery);
       setPendingCompanies(
-        pendingCompaniesSnapshot.docs.map(
-          (d) =>
-            ({
-              id: d.id,
-              ...d.data(),
-              createdAt: (d.data().createdAt as Timestamp)
-                ?.toDate()
-                .toISOString(),
-            }) as Company
-        )
+        pendingCompaniesSnapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+          } as Company;
+        })
       );
 
       const allCompaniesQuery = query(
@@ -215,20 +211,16 @@ export default function AdminPage() {
       );
       const jobSeekersSnapshot = await getDocs(jobSeekersQuery);
       setAllJobSeekers(
-        jobSeekersSnapshot.docs.map(
-          (d) =>
-            ({
-              uid: d.id,
-              ...d.data(),
-              createdAt: (d.data().createdAt as Timestamp)
-                ?.toDate()
-                .toISOString(),
-              lastActive: (d.data().lastActive as Timestamp)
-                ?.toDate()
-                .toISOString(),
-              jobsAppliedCount: (d.data().appliedJobIds || []).length,
-            }) as UserProfile
-        )
+        jobSeekersSnapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            uid: d.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
+            jobsAppliedCount: (data.appliedJobIds || []).length,
+          } as UserProfile;
+        })
       );
 
       const platformUsersQuery = query(
@@ -238,26 +230,22 @@ export default function AdminPage() {
       );
       const platformUsersSnapshot = await getDocs(platformUsersQuery);
       setAllPlatformUsers(
-        platformUsersSnapshot.docs.map(
-          (d) =>
-            ({
-              uid: d.id,
-              ...d.data(),
-              createdAt: (d.data().createdAt as Timestamp)
-                ?.toDate()
-                .toISOString(),
-              lastActive: (d.data().lastActive as Timestamp)
-                ?.toDate()
-                .toISOString(),
-            }) as UserProfile
-        )
+        platformUsersSnapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            uid: d.id,
+            ...data,
+            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
+          } as UserProfile;
+        })
       );
       setIsUsersLoading(false);
     } catch (error: unknown) {
       console.error('Error fetching admin data:', error);
       toast({
         title: 'Error',
-        description: `Failed to load some admin data. ${(error as Error).message}`,
+        description: `Failed to load some admin data. ${error instanceof Error ? error.message : String(error)}`,
         variant: 'destructive',
       });
       setIsJobsLoading(false);
@@ -292,20 +280,14 @@ export default function AdminPage() {
   ) => {
     setActionLoading(`job-${jobId}`);
     try {
-      const jobUpdates: Partial<Job> & { updatedAt: FieldValue } = {
+      const jobUpdates: Record<string, any> = {
         status: newStatus,
         updatedAt: serverTimestamp(),
+        moderationReason:
+          newStatus === 'rejected' ? reason || 'Rejected by admin' : null,
       };
-      if (newStatus === 'rejected') {
-        jobUpdates.moderationReason = reason || 'Rejected by admin';
-      } else {
-        jobUpdates.moderationReason = null;
-      }
 
-      await updateDoc(
-        doc(db, 'jobs', jobId),
-        jobUpdates as { [key: string]: any }
-      );
+      await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
       setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
       toast({
         title: 'Success',
@@ -315,7 +297,7 @@ export default function AdminPage() {
       console.error(`Error updating job ${jobId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update job ${jobId}. Error: ${(error as Error).message}`,
+        description: `Failed to update job ${jobId}. Error: ${error instanceof Error ? error.message : String(error)}`,
         variant: 'destructive',
       });
     } finally {
@@ -331,21 +313,16 @@ export default function AdminPage() {
     setActionLoading(`company-${companyId}`);
     try {
       const companyDocRef = doc(db, 'companies', companyId);
-      const updateData: Partial<Company> & {
-        updatedAt: FieldValue;
-        moderationReason?: string | null;
-      } = {
+      const updateData: Record<string, any> = {
         status: newStatus,
         updatedAt: serverTimestamp(),
+        moderationReason:
+          newStatus === 'rejected' || newStatus === 'suspended'
+            ? reason ||
+              `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`
+            : null,
       };
-      if (newStatus === 'rejected' || newStatus === 'suspended') {
-        updateData.moderationReason =
-          reason ||
-          `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`;
-      } else {
-        updateData.moderationReason = null;
-      }
-      await updateDoc(companyDocRef, updateData as { [key: string]: any });
+      await updateDoc(companyDocRef, updateData);
 
       setAllCompanies((prev) =>
         prev.map((c) =>
@@ -378,7 +355,7 @@ export default function AdminPage() {
       console.error(`Error updating company ${companyId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update company ${companyId}. Error: ${(error as Error).message}`,
+        description: `Failed to update company ${companyId}. Error: ${error instanceof Error ? error.message : String(error)}`,
         variant: 'destructive',
       });
     } finally {
@@ -452,7 +429,7 @@ export default function AdminPage() {
       console.error('Error updating user status:', e);
       toast({
         title: 'Error',
-        description: `Failed to update user status. Error: ${(e as Error).message}`,
+        description: `Failed to update user status. Error: ${e instanceof Error ? e.message : String(e)}`,
         variant: 'destructive',
       });
     } finally {
@@ -1114,7 +1091,7 @@ export default function AdminPage() {
                                 href={`/employer/candidates/${u.uid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                aria-label={`View profile of ${u.name}`}
+                                aria-label={`View profile of ${u.name || 'user'}`}
                               >
                                 <Eye className="mr-1 h-3 w-3" /> Profile
                               </Link>
@@ -1136,7 +1113,7 @@ export default function AdminPage() {
                                 actionLoading === `user-${u.uid}` ||
                                 user?.uid === u.uid
                               }
-                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
+                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                             >
                               {u.status === 'active' ? 'Suspend' : 'Activate'}
                             </Button>
@@ -1376,7 +1353,7 @@ export default function AdminPage() {
                                   u.uid !== user.uid &&
                                   user.role !== 'superAdmin')
                               }
-                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
+                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                             >
                               {u.status === 'active' ? 'Suspend' : 'Activate'}
                             </Button>

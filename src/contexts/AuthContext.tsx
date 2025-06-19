@@ -438,88 +438,109 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.totalMonthsExperience = 0;
     }
 
-    const finalProfileDataForFirestore: { [key: string]: any } = {};
+    const finalProfileDataForFirestore: Record<string, any> = {};
     for (const key in userProfileData) {
       const typedKey = key as keyof UserProfile;
-      if (userProfileData[typedKey] !== undefined) {
-        finalProfileDataForFirestore[key] = userProfileData[typedKey];
+      const value = userProfileData[typedKey];
+
+      if (value !== undefined) {
+        finalProfileDataForFirestore[key] = value;
       } else {
+        // Explicitly set undefined optional fields to null for Firestore
+        const nullableJobSeekerFields: Array<keyof UserProfile> = [
+          'dateOfBirth',
+          'currentCTCValue',
+          'expectedCTCValue',
+          'totalYearsExperience',
+          'totalMonthsExperience',
+          'avatarUrl',
+          'headline',
+          'parsedResumeText',
+          'mobileNumber',
+          'portfolioUrl',
+          'linkedinUrl',
+          'resumeUrl',
+          'resumeFileName',
+          'homeState',
+          'homeCity',
+        ];
         if (
           role === 'jobSeeker' &&
-          (key === 'dateOfBirth' ||
-            key === 'currentCTCValue' ||
-            key === 'expectedCTCValue' ||
-            key === 'totalYearsExperience' ||
-            key === 'totalMonthsExperience')
+          nullableJobSeekerFields.includes(typedKey)
         ) {
+          finalProfileDataForFirestore[key] = null;
+        }
+        // For employer or other roles, if a field is optional and undefined,
+        // it will be omitted unless specifically handled here.
+        if (role === 'employer' && typedKey === 'avatarUrl') {
           finalProfileDataForFirestore[key] = null;
         }
       }
     }
 
+    // Ensure arrays are initialized properly if empty
     if (role === 'jobSeeker') {
-      finalProfileDataForFirestore.experiences =
-        finalProfileDataForFirestore.experiences &&
-        finalProfileDataForFirestore.experiences.length > 0
-          ? finalProfileDataForFirestore.experiences.map(
-              (exp: Partial<ExperienceEntry>) => ({
-                id: exp.id || uuidv4(),
-                companyName: exp.companyName || '',
-                jobRole: exp.jobRole || '',
-                startDate: exp.startDate || null,
-                endDate: exp.endDate || null,
-                currentlyWorking: exp.currentlyWorking || false,
-                description: exp.description || '',
-                annualCTC: exp.annualCTC === undefined ? null : exp.annualCTC,
-              })
-            )
-          : [];
-      finalProfileDataForFirestore.educations =
-        finalProfileDataForFirestore.educations &&
-        finalProfileDataForFirestore.educations.length > 0
-          ? finalProfileDataForFirestore.educations.map(
-              (edu: Partial<EducationEntry>) => ({
-                id: edu.id || uuidv4(),
-                level: edu.level || 'Graduate',
-                degreeName: edu.degreeName || '',
-                instituteName: edu.instituteName || '',
-                startYear: edu.startYear === undefined ? null : edu.startYear,
-                endYear: edu.endYear === undefined ? null : edu.endYear,
-                specialization: edu.specialization || '',
-                courseType: edu.courseType || 'Full Time',
-                isMostRelevant: edu.isMostRelevant || false,
-                description: edu.description || '',
-              })
-            )
-          : [];
-      finalProfileDataForFirestore.languages =
-        finalProfileDataForFirestore.languages &&
-        finalProfileDataForFirestore.languages.length > 0
-          ? finalProfileDataForFirestore.languages.map(
-              (lang: Partial<LanguageEntry>) => ({
-                id: lang.id || uuidv4(),
-                languageName: lang.languageName || '',
-                proficiency: lang.proficiency || 'Beginner',
-                canRead: lang.canRead || false,
-                canWrite: lang.canWrite || false,
-                canSpeak: lang.canSpeak || false,
-              })
-            )
-          : [];
+      finalProfileDataForFirestore.skills =
+        finalProfileDataForFirestore.skills || [];
+      finalProfileDataForFirestore.preferredLocations =
+        finalProfileDataForFirestore.preferredLocations || [];
+      finalProfileDataForFirestore.appliedJobIds =
+        finalProfileDataForFirestore.appliedJobIds || [];
+      finalProfileDataForFirestore.savedJobIds =
+        finalProfileDataForFirestore.savedJobIds || [];
+      finalProfileDataForFirestore.savedSearches =
+        finalProfileDataForFirestore.savedSearches || [];
+
+      finalProfileDataForFirestore.experiences = (
+        finalProfileDataForFirestore.experiences || [createEmptyExperience()]
+      ).map((exp: Partial<ExperienceEntry>) => ({
+        id: exp.id || uuidv4(),
+        companyName: exp.companyName || '',
+        jobRole: exp.jobRole || '',
+        startDate: exp.startDate || null,
+        endDate: exp.endDate || null,
+        currentlyWorking: exp.currentlyWorking || false,
+        description: exp.description || '',
+        annualCTC: exp.annualCTC === undefined ? null : exp.annualCTC,
+      }));
+      finalProfileDataForFirestore.educations = (
+        finalProfileDataForFirestore.educations || [createEmptyEducation()]
+      ).map((edu: Partial<EducationEntry>) => ({
+        id: edu.id || uuidv4(),
+        level: edu.level || 'Graduate',
+        degreeName: edu.degreeName || '',
+        instituteName: edu.instituteName || '',
+        startYear: edu.startYear === undefined ? null : edu.startYear,
+        endYear: edu.endYear === undefined ? null : edu.endYear,
+        specialization: edu.specialization || '',
+        courseType: edu.courseType || 'Full Time',
+        isMostRelevant: edu.isMostRelevant || false,
+        description: edu.description || '',
+      }));
+      finalProfileDataForFirestore.languages = (
+        finalProfileDataForFirestore.languages || [createEmptyLanguage()]
+      ).map((lang: Partial<LanguageEntry>) => ({
+        id: lang.id || uuidv4(),
+        languageName: lang.languageName || '',
+        proficiency: lang.proficiency || 'Beginner',
+        canRead: lang.canRead || false,
+        canWrite: lang.canWrite || false,
+        canSpeak: lang.canSpeak || false,
+      }));
     }
 
     try {
-      await setDoc(
-        userDocRef,
-        finalProfileDataForFirestore as { [key: string]: any }
-      );
+      await setDoc(userDocRef, finalProfileDataForFirestore);
+      // Reconstruct UserProfile for state with correct types after Firestore save
       const fullProfile = {
-        ...userProfileData,
+        ...userProfileData, // Contains initial values, some might be serverTimestamps
         uid: fbUser.uid,
         email: fbUser.email,
+        // Simulate serverTimestamp resolution for local state
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastActive: new Date().toISOString(),
+        // Use processed arrays for local state
         experiences: finalProfileDataForFirestore.experiences || [],
         educations: finalProfileDataForFirestore.educations || [],
         languages: finalProfileDataForFirestore.languages || [],
@@ -727,10 +748,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } as UserProfile;
 
         let updatesNeeded = false;
-        const updates: Partial<UserProfile> & {
-          updatedAt?: FieldValue;
-          lastActive?: FieldValue;
-        } = {};
+        const updates: Record<string, any> = {};
         updates.lastActive = serverTimestamp();
 
         if (existingProfile.role !== role) {
@@ -759,11 +777,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updatesNeeded = true;
         }
         if (role === 'jobSeeker' && existingProfile.experiences === undefined) {
-          updates.experiences = [createEmptyExperience()];
+          updates.experiences = [createEmptyExperience()].map((exp) => ({
+            ...exp,
+            startDate: null,
+            endDate: null,
+            annualCTC: null,
+          }));
           updatesNeeded = true;
         }
         if (role === 'jobSeeker' && existingProfile.educations === undefined) {
-          updates.educations = [createEmptyEducation()];
+          updates.educations = [createEmptyEducation()].map((edu) => ({
+            ...edu,
+            startYear: null,
+            endYear: null,
+          }));
           updatesNeeded = true;
         }
         if (role === 'jobSeeker' && existingProfile.languages === undefined) {
@@ -799,7 +826,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (updatesNeeded) {
           updates.updatedAt = serverTimestamp();
-          await updateDoc(userDocRef, updates as { [x: string]: any });
+          await updateDoc(userDocRef, updates);
           setUser({ ...existingProfile, ...updates } as UserProfile);
           if (updates.theme) applyTheme(updates.theme);
         } else {
@@ -892,51 +919,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    const payloadForFirestore: { [key: string]: any } = {};
+    const payloadForFirestore: Record<string, any> = {};
+
+    const nullableFields: Array<keyof UserProfile> = [
+      'dateOfBirth',
+      'currentCTCValue',
+      'expectedCTCValue',
+      'totalYearsExperience',
+      'totalMonthsExperience',
+      'avatarUrl',
+      'headline',
+      'mobileNumber',
+      'portfolioUrl',
+      'linkedinUrl',
+      'homeState',
+      'homeCity',
+      'parsedResumeText',
+      'resumeUrl',
+      'resumeFileName',
+      'companyId', // For employers who might not have one initially if created by admin
+    ];
 
     (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
       const value = updatedData[key];
-      const nullableFields: Array<keyof UserProfile> = [
-        'dateOfBirth',
-        'currentCTCValue',
-        'expectedCTCValue',
-        'totalYearsExperience',
-        'totalMonthsExperience',
-        'avatarUrl',
-        'headline',
-        'mobileNumber',
-        'portfolioUrl',
-        'linkedinUrl',
-        'homeState',
-        'homeCity',
-        'parsedResumeText',
-        'resumeUrl',
-        'resumeFileName',
-      ];
 
       if (value === undefined) {
         if (nullableFields.includes(key)) {
           payloadForFirestore[key] = null;
         }
+        // If not in nullableFields and is undefined, it's omitted
       } else if (Array.isArray(value)) {
-        payloadForFirestore[key] = value.map((item: any) => {
-          if (typeof item === 'object' && item !== null) {
-            const cleanedItem: { [k: string]: any } = {};
-            for (const prop in item) {
-              if (item[prop] !== undefined) {
-                cleanedItem[prop] = item[prop];
-              } else {
-                cleanedItem[prop] = null;
+        if (
+          key === 'experiences' ||
+          key === 'educations' ||
+          key === 'languages'
+        ) {
+          payloadForFirestore[key] = value.map((item: any) => {
+            const cleanedItem: Record<string, any> = { ...item };
+            Object.keys(cleanedItem).forEach((prop) => {
+              if (cleanedItem[prop] === undefined) {
+                // Convert specific undefineds in array objects to null if they should be nullable
+                if (
+                  (prop === 'startDate' ||
+                    prop === 'endDate' ||
+                    prop === 'annualCTC') &&
+                  key === 'experiences'
+                ) {
+                  cleanedItem[prop] = null;
+                } else if (
+                  (prop === 'startYear' || prop === 'endYear') &&
+                  key === 'educations'
+                ) {
+                  cleanedItem[prop] = null;
+                } else {
+                  // If not specifically nullable, remove the undefined property
+                  delete cleanedItem[prop];
+                }
               }
-            }
-            if (cleanedItem.startDate === '') cleanedItem.startDate = null;
-            if (cleanedItem.endDate === '') cleanedItem.endDate = null;
-            if (cleanedItem.startYear === '') cleanedItem.startYear = null;
-            if (cleanedItem.endYear === '') cleanedItem.endYear = null;
+            });
             return cleanedItem;
-          }
-          return item;
-        });
+          });
+        } else {
+          payloadForFirestore[key] = value; // For other arrays like skills, preferredLocations
+        }
       } else {
         payloadForFirestore[key] = value;
       }
@@ -945,17 +990,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     payloadForFirestore.updatedAt = serverTimestamp();
     payloadForFirestore.lastActive = serverTimestamp();
 
-    if (Object.keys(payloadForFirestore).length > 2) {
+    if (
+      Object.keys(payloadForFirestore).length > 2 ||
+      (Object.keys(payloadForFirestore).length === 2 &&
+        payloadForFirestore.updatedAt &&
+        payloadForFirestore.lastActive)
+    ) {
+      // Ensure more than just timestamps are being updated
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState: UserProfile = { ...user } as UserProfile;
-        for (const key in updatedData) {
-          (updatedUserForState as { [key: string]: any })[key] = (
-            updatedData as { [key: string]: any }
-          )[key];
+        const updatedUserForState: UserProfile = { ...user } as UserProfile; // Create a mutable copy
+        // Merge changes into the local state, handling potential nulls from Firestore
+        for (const key in payloadForFirestore) {
+          if (key !== 'updatedAt' && key !== 'lastActive') {
+            // Timestamps will be resolved from Firestore read or simulated
+            const typedKey = key as keyof UserProfile;
+            (updatedUserForState[typedKey] as any) = payloadForFirestore[key];
+          }
         }
-        updatedUserForState.updatedAt = new Date().toISOString();
-        updatedUserForState.lastActive = new Date().toISOString();
+        updatedUserForState.updatedAt = new Date().toISOString(); // Simulate timestamp for local state
+        updatedUserForState.lastActive = new Date().toISOString(); // Simulate timestamp
         setUser(updatedUserForState);
         if (updatedData.theme) {
           applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
@@ -965,6 +1019,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     } else if (user) {
+      // Only timestamps changed
       try {
         await updateDoc(userDocRef, {
           updatedAt: serverTimestamp(),
@@ -1001,15 +1056,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Unauthorized to update company profile.');
     }
     const companyDocRef = doc(db, 'companies', companyId);
-    const dataToUpdate: { [key: string]: any } = {
+    const dataToUpdate: Record<string, any> = {
       ...updatedData,
       updatedAt: serverTimestamp(),
     };
-    delete dataToUpdate.id;
+    delete dataToUpdate.id; // id should not be part of update payload
 
     Object.keys(dataToUpdate).forEach((key) => {
       if (dataToUpdate[key] === undefined) {
-        dataToUpdate[key] = null;
+        // For company profile, ensure optional fields are set to null if cleared
+        const companyNullableFields: Array<keyof Company> = [
+          'description',
+          'websiteUrl',
+          'logoUrl',
+          'bannerImageUrl',
+          'moderationReason',
+        ];
+        if (companyNullableFields.includes(key as keyof Company)) {
+          dataToUpdate[key] = null;
+        } else {
+          delete dataToUpdate[key]; // Or remove if schema allows absence
+        }
       }
     });
 
@@ -1046,7 +1113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const userDocRef = doc(db, 'users', user.uid);
         try {
-          await setDoc(applicationRef, newApplication);
+          await setDoc(applicationRef, newApplication as Record<string, any>);
           await updateDoc(userDocRef, {
             appliedJobIds: arrayUnion(job.id),
             updatedAt: serverTimestamp(),
@@ -1078,18 +1145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Only employers can update application status.');
     }
     const applicationDocRef = doc(db, 'applications', applicationId);
-    const updates: Partial<Application> & { updatedAt: FieldValue } = {
+    const updates: Record<string, any> = {
       status: newStatus,
       updatedAt: serverTimestamp(),
     };
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
     } else {
-      updates.employerNotes = null;
+      updates.employerNotes = null; // Explicitly set to null if undefined
     }
 
     try {
-      await updateDoc(applicationDocRef, updates as { [x: string]: any });
+      await updateDoc(applicationDocRef, updates);
     } catch (error: unknown) {
       console.error('AuthContext: updateApplicationStatus error', error);
       throw error;
@@ -1173,7 +1240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       try {
         await updateDoc(userDocRef, {
-          savedSearches: arrayUnion(newSearch),
+          savedSearches: arrayUnion(newSearch as any), // Cast to any for arrayUnion with complex object
           updatedAt: serverTimestamp(),
           lastActive: serverTimestamp(),
         });
@@ -1200,7 +1267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (searchToDelete) {
         try {
           await updateDoc(userDocRef, {
-            savedSearches: arrayRemove(searchToDelete),
+            savedSearches: arrayRemove(searchToDelete as any), // Cast to any for arrayRemove
             updatedAt: serverTimestamp(),
             lastActive: serverTimestamp(),
           });

@@ -44,7 +44,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINR } from '@/lib/utils';
 
-const initialJobDataGlobal: Partial<Job> = {
+const initialJobDataState: Partial<Job> = {
   type: 'Full-time',
   isRemote: false,
   status: 'pending',
@@ -60,7 +60,7 @@ export function PostJobForm() {
   const editingJobId = searchParams.get('edit');
 
   const [jobData, setJobData] = useState<Partial<Job>>({
-    ...initialJobDataGlobal,
+    ...initialJobDataState,
   });
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -156,8 +156,8 @@ export function PostJobForm() {
         setIsLoadingJob(false);
       } else {
         setJobData((prev) => ({
-          ...initialJobDataGlobal,
-          ...prev, // Keep company details if set
+          ...initialJobDataState,
+          ...prev,
           status: 'pending',
         }));
       }
@@ -266,8 +266,7 @@ export function PostJobForm() {
         }
         setFile(null);
       };
-      reader.onerror = (errorEvent: ProgressEvent<FileReader>) => {
-        console.error('File Reading Error:', errorEvent);
+      reader.onerror = () => {
         toast({
           title: 'File Reading Error',
           description: 'Could not read the selected file.',
@@ -312,10 +311,7 @@ export function PostJobForm() {
     setIsSubmitting(true);
 
     try {
-      const jobPayload: Partial<Job> & {
-        updatedAt: FieldValue;
-        createdAt?: FieldValue;
-      } = {
+      const jobPayloadForFirestore: Record<string, any> = {
         title: jobData.title || '',
         company: currentCompanyDetails.name || 'N/A Company',
         companyId: user.companyId,
@@ -324,28 +320,29 @@ export function PostJobForm() {
         description: jobData.description || '',
         isRemote: jobData.isRemote || false,
         skills: jobData.skills || [],
-        salaryMin: jobData.salaryMin,
-        salaryMax: jobData.salaryMax,
-        companyLogoUrl: currentCompanyDetails.logoUrl,
+        salaryMin: jobData.salaryMin === undefined ? null : jobData.salaryMin,
+        salaryMax: jobData.salaryMax === undefined ? null : jobData.salaryMax,
+        companyLogoUrl: currentCompanyDetails.logoUrl || null,
         postedById: user.uid,
         updatedAt: serverTimestamp(),
+        status: 'pending',
+        moderationReason: null,
       };
 
       if (editingJobId) {
         const jobDocRef = doc(db, 'jobs', editingJobId);
-        jobPayload.status = 'pending';
-        jobPayload.moderationReason = null;
-        await updateDoc(jobDocRef, jobPayload as { [key: string]: any });
+        await updateDoc(jobDocRef, jobPayloadForFirestore);
         toast({
           title: 'Job Updated & Resubmitted for Approval!',
           description: `${jobData.title} has been updated and sent for review.`,
         });
       } else {
-        jobPayload.postedDate = new Date().toISOString().split('T')[0];
-        jobPayload.createdAt = serverTimestamp();
-        jobPayload.status = 'pending';
+        jobPayloadForFirestore.postedDate = new Date()
+          .toISOString()
+          .split('T')[0];
+        jobPayloadForFirestore.createdAt = serverTimestamp();
         const jobsCollectionRef = collection(db, 'jobs');
-        await addDoc(jobsCollectionRef, jobPayload as { [key: string]: any });
+        await addDoc(jobsCollectionRef, jobPayloadForFirestore);
         toast({
           title: 'Job Submitted for Approval!',
           description: `${jobData.title} has been submitted and is pending review.`,
@@ -354,7 +351,7 @@ export function PostJobForm() {
 
       if (!editingJobId) {
         setJobData({
-          ...initialJobDataGlobal,
+          ...initialJobDataState,
           company: currentCompanyDetails.name,
           companyId: user.companyId,
           companyLogoUrl: currentCompanyDetails.logoUrl,
@@ -368,7 +365,7 @@ export function PostJobForm() {
       console.error('Error saving job:', error);
       toast({
         title: editingJobId ? 'Job Update Failed' : 'Job Posting Failed',
-        description: `Could not save the job. Error: ${(error as Error).message}`,
+        description: `Could not save the job. Error: ${error instanceof Error ? error.message : String(error)}`,
         variant: 'destructive',
       });
     } finally {
