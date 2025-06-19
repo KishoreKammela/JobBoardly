@@ -214,13 +214,23 @@ export default function SettingsPage() {
       queryParams.set('avail', filters.availability);
     if (filters.jobSearchStatus && filters.jobSearchStatus !== 'all')
       queryParams.set('status', filters.jobSearchStatus);
-    if (filters.desiredSalaryMin !== undefined)
+
+    if (
+      filters.desiredSalaryMin !== undefined &&
+      filters.desiredSalaryMin !== null
+    )
       queryParams.set('minSal', filters.desiredSalaryMin.toString());
-    if (filters.desiredSalaryMax !== undefined)
+    if (
+      filters.desiredSalaryMax !== undefined &&
+      filters.desiredSalaryMax !== null
+    )
       queryParams.set('maxSal', filters.desiredSalaryMax.toString());
     if (filters.recentActivity && filters.recentActivity !== 'any')
       queryParams.set('activity', filters.recentActivity);
-    if (filters.minExperienceYears !== undefined)
+    if (
+      filters.minExperienceYears !== undefined &&
+      filters.minExperienceYears !== null
+    )
       queryParams.set('minExp', filters.minExperienceYears.toString());
 
     router.push(`/employer/find-candidates?${queryParams.toString()}`);
