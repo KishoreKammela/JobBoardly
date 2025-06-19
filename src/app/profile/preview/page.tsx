@@ -26,12 +26,16 @@ import {
   FileText,
   Phone,
   Edit,
+  Languages, // Added Languages icon
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useReactToPrint } from 'react-to-print';
+import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import React from 'react';
 
 export default function ProfilePreviewPage() {
   const { user: currentUser, loading: authLoading } = useAuth();
@@ -39,6 +43,14 @@ export default function ProfilePreviewPage() {
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const printableProfileRef = React.useRef<HTMLDivElement>(null);
+
+  const handlePrintProfile = useReactToPrint({
+    content: () => printableProfileRef.current,
+    documentTitle: `${currentUser?.name || 'UserProfile'}_JobBoardly_Preview`,
+    onPrintError: () =>
+      alert('There was an error printing the profile. Please try again.'),
+  });
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,7 +61,7 @@ export default function ProfilePreviewPage() {
     if (currentUser.role !== 'jobSeeker') {
       setError('Profile preview is only available for job seekers.');
       setIsLoading(false);
-      setCandidate(null);
+      setCandidate(null); // Ensure candidate is null if not jobSeeker
       return;
     }
     setCandidate(currentUser);
@@ -97,18 +109,25 @@ export default function ProfilePreviewPage() {
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      <div className="mb-6 p-4 border border-primary/30 bg-primary/5 rounded-lg text-center">
-        <p className="text-lg font-semibold text-primary">
-          This is a preview of your public profile.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          This is how employers and admins might see your profile.
-        </p>
-        <Button asChild variant="outline" size="sm" className="mt-3">
-          <Link href="/profile">
-            <Edit className="mr-2 h-4 w-4" /> Edit My Profile
-          </Link>
-        </Button>
+      <div className="mb-6 p-4 border border-primary/30 bg-primary/5 rounded-lg text-center flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div>
+          <p className="text-lg font-semibold text-primary">
+            This is a preview of your public profile.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            This is how employers and admins might see your profile.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handlePrintProfile} variant="outline" size="sm">
+            <FileText className="mr-2 h-4 w-4" /> Download PDF
+          </Button>
+          <Button asChild variant="default" size="sm">
+            <Link href="/profile">
+              <Edit className="mr-2 h-4 w-4" /> Edit My Profile
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-xl">
@@ -129,7 +148,7 @@ export default function ProfilePreviewPage() {
                 {candidate.name}
               </h1>
               <p className="text-lg text-foreground mb-2">
-                {candidate.headline}
+                {candidate.headline || 'Job Seeker'}
               </p>
               <div className="space-y-1 text-sm text-muted-foreground">
                 {candidate.email && (
@@ -154,13 +173,6 @@ export default function ProfilePreviewPage() {
                     </a>
                   </div>
                 )}
-                {candidate.preferredLocations &&
-                  candidate.preferredLocations.length > 0 && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <MapPin className="h-4 w-4" />{' '}
-                      {candidate.preferredLocations.join(', ')}
-                    </div>
-                  )}
               </div>
             </div>
           </div>
@@ -170,35 +182,54 @@ export default function ProfilePreviewPage() {
             {candidate.parsedResumeText && (
               <section>
                 <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-                  <FileText className="text-primary" /> Profile Summary
+                  <UserCheck className="text-primary" /> Profile Summary
                 </h2>
-                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background">
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                   {candidate.parsedResumeText}
                 </div>
               </section>
             )}
             {candidate.experience && (
               <section>
-                <Separator className="my-6 md:hidden" />
+                {candidate.parsedResumeText && <Separator className="my-6" />}
                 <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-                  <Briefcase className="text-primary" /> Experience
+                  <Briefcase className="text-primary" /> Work Experience
                 </h2>
-                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background">
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                   {candidate.experience}
                 </div>
               </section>
             )}
             {candidate.education && (
               <section>
-                <Separator className="my-6 md:hidden" />
+                <Separator className="my-6" />
                 <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                   <GraduationCap className="text-primary" /> Education
                 </h2>
-                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background">
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                   {candidate.education}
                 </div>
               </section>
             )}
+            {!candidate.parsedResumeText &&
+              !candidate.experience &&
+              !candidate.education && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Profile Incomplete</AlertTitle>
+                  <AlertDescription>
+                    Your summary, experience, and education sections are
+                    currently empty.
+                    <Link
+                      href="/profile"
+                      className="text-primary underline ml-1"
+                    >
+                      Add them now
+                    </Link>{' '}
+                    to improve your profile.
+                  </AlertDescription>
+                </Alert>
+              )}
           </div>
           <aside className="space-y-6 md:border-l md:pl-6">
             {candidate.skills && candidate.skills.length > 0 && (
@@ -210,10 +241,29 @@ export default function ProfilePreviewPage() {
                   {candidate.skills.map((skill) => (
                     <Badge
                       key={skill}
-                      variant="default"
-                      className="text-sm px-3 py-1"
+                      variant="secondary"
+                      className="text-sm px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
                     >
                       {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+            )}
+            {candidate.languages && candidate.languages.length > 0 && (
+              <section>
+                <Separator className="my-6 md:hidden" />
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <Languages className="text-primary" /> Languages
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {candidate.languages.map((lang) => (
+                    <Badge
+                      key={lang}
+                      variant="outline"
+                      className="text-sm px-3 py-1"
+                    >
+                      {lang}
                     </Badge>
                   ))}
                 </div>
@@ -222,11 +272,22 @@ export default function ProfilePreviewPage() {
             <Separator />
             <section className="space-y-3 text-sm">
               <h3 className="text-lg font-semibold font-headline mb-2">
-                Details
+                Preferences
               </h3>
+              {candidate.preferredLocations &&
+                candidate.preferredLocations.length > 0 && (
+                  <p className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-primary mt-0.5 shrink-0" />{' '}
+                    <span>
+                      <strong>Preferred Locations:</strong>{' '}
+                      {candidate.preferredLocations.join(', ')}
+                    </span>
+                  </p>
+                )}
               {candidate.jobSearchStatus && (
                 <p className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4 text-primary" /> Status:{' '}
+                  <UserCheck className="h-4 w-4 text-primary" />{' '}
+                  <strong>Status:</strong>{' '}
                   <span className="font-medium">
                     {candidate.jobSearchStatus
                       .replace(/([A-Z])/g, ' $1')
@@ -237,14 +298,14 @@ export default function ProfilePreviewPage() {
               {candidate.availability && (
                 <p className="flex items-center gap-2">
                   <CalendarCheck2 className="h-4 w-4 text-primary" />{' '}
-                  Availability:{' '}
+                  <strong>Availability:</strong>{' '}
                   <span className="font-medium">{candidate.availability}</span>
                 </p>
               )}
               {candidate.desiredSalary !== undefined && (
                 <p className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-primary" /> Desired
-                  Salary:{' '}
+                  <DollarSign className="h-4 w-4 text-primary" />{' '}
+                  <strong>Desired Salary:</strong>{' '}
                   <span className="font-medium">
                     {formatCurrencyINR(candidate.desiredSalary)}/year
                   </span>
@@ -307,7 +368,7 @@ export default function ProfilePreviewPage() {
                 !candidate.portfolioUrl &&
                 !candidate.resumeUrl && (
                   <p className="text-sm text-muted-foreground">
-                    No external links or resume provided.
+                    No external links or resume provided by the candidate.
                   </p>
                 )}
             </section>
@@ -322,6 +383,10 @@ export default function ProfilePreviewPage() {
           </p>
         </CardFooter>
       </Card>
+      {/* Hidden component for printing PDF */}
+      <div style={{ display: 'none' }}>
+        <PrintableProfileComponent ref={printableProfileRef} user={candidate} />
+      </div>
     </div>
   );
 }

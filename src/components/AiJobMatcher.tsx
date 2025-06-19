@@ -59,6 +59,9 @@ export function AiJobMatcher() {
       if (user.skills && user.skills.length > 0) {
         profileText += `Skills: ${user.skills.join(', ')}\n`;
       }
+      if (user.languages && user.languages.length > 0) {
+        profileText += `Languages: ${user.languages.join(', ')}\n`;
+      }
       if (user.experience) {
         profileText += `Work Experience Summary:\n${user.experience}\n`;
       }

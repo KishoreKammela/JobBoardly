@@ -127,6 +127,9 @@ export default function AiCandidateMatchPage() {
         if (c.skills && c.skills.length > 0) {
           profileString += `Skills: ${c.skills.join(', ')}\n`;
         }
+        if (c.languages && c.languages.length > 0) {
+          profileString += `Languages: ${c.languages.join(', ')}\n`;
+        }
         if (c.experience) {
           profileString += `Work Experience Summary:\n${c.experience}\n`;
         }

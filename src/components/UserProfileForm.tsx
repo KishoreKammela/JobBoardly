@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  Languages, // Added Languages icon
 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -56,6 +57,7 @@ export function UserProfileForm() {
     skills: [],
     experience: '',
     education: '',
+    languages: [], // Initialize languages
     mobileNumber: '',
     availability: 'Flexible',
     portfolioUrl: '',
@@ -83,6 +85,7 @@ export function UserProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
+  const [languagesInput, setLanguagesInput] = useState(''); // For languages
   const [companyRecruiters, setCompanyRecruiters] = useState<UserProfile[]>([]);
   const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(false);
 
@@ -95,6 +98,7 @@ export function UserProfileForm() {
         skills: user.skills || [],
         experience: user.experience || '',
         education: user.education || '',
+        languages: user.languages || [], // Load languages
         mobileNumber: user.mobileNumber || '',
         availability: user.availability || 'Flexible',
         portfolioUrl: user.portfolioUrl || '',
@@ -109,6 +113,7 @@ export function UserProfileForm() {
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
+      setLanguagesInput((user.languages || []).join(', ')); // Set languages input
 
       if (user.role === 'employer' && company) {
         setCompanyFormData({
@@ -175,6 +180,7 @@ export function UserProfileForm() {
       setCompanyFormData(initialCompanyFormData);
       setSkillsInput('');
       setLocationsInput('');
+      setLanguagesInput('');
       setCompanyRecruiters([]);
     }
   }, [user, company, toast]);
@@ -225,6 +231,18 @@ export function UserProfileForm() {
     }));
   };
 
+  const handleLanguagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLanguagesInput(val);
+    setUserFormData((prev) => ({
+      ...prev,
+      languages: val
+        .split(',')
+        .map((lang) => lang.trim())
+        .filter((lang) => lang),
+    }));
+  };
+
   const handleSelectChange = (name: keyof UserProfile, value: string) => {
     setUserFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -249,6 +267,7 @@ export function UserProfileForm() {
           skills: userFormData.skills,
           experience: userFormData.experience,
           education: userFormData.education,
+          languages: userFormData.languages, // Save languages
           mobileNumber: userFormData.mobileNumber,
           availability: userFormData.availability,
           portfolioUrl: userFormData.portfolioUrl,
@@ -269,7 +288,6 @@ export function UserProfileForm() {
           logoUrl: companyFormData.logoUrl,
           bannerImageUrl: companyFormData.bannerImageUrl,
         };
-        // Status update for company profiles is handled by Admin panel
         await updateCompanyProfile(user.companyId, companyUpdatePayload);
       }
 
@@ -415,6 +433,16 @@ export function UserProfileForm() {
                   value={skillsInput}
                   onChange={handleSkillsChange}
                   placeholder="e.g., React, Node.js, Project Management"
+                />
+              </div>
+              <div>
+                <Label htmlFor="languages">Languages (comma-separated)</Label>
+                <Input
+                  id="languages"
+                  name="languages"
+                  value={languagesInput}
+                  onChange={handleLanguagesChange}
+                  placeholder="e.g., English, Spanish (Fluent), German (Basic)"
                 />
               </div>
               <div>

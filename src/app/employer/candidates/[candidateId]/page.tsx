@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
-  /*CardDescription,*/ CardHeader,
-  /*CardTitle,*/ CardFooter,
-} from '@/components/ui/card'; // Removed CardDescription, CardTitle
+  CardHeader,
+  CardFooter,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Briefcase,
@@ -27,18 +27,18 @@ import {
   AlertCircle,
   FileText,
   MessageSquare,
-  Phone, // Added Phone
+  Phone,
+  Languages, // Added Languages icon
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-// import Link from 'next/link'; // Unused Link
-import { formatCurrencyINR } from '@/lib/utils'; // Added for salary formatting
+import { formatCurrencyINR } from '@/lib/utils';
 
 export default function CandidateDetailPage() {
   const params = useParams();
   const candidateId = params.candidateId as string;
-  const { user: employerUser, loading: authLoading } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
 
@@ -48,17 +48,32 @@ export default function CandidateDetailPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!employerUser) {
+    if (!currentUser) {
       router.replace(
         `/auth/login?redirect=${encodeURIComponent(currentPathname)}`
       );
-    } else if (employerUser.role !== 'employer') {
-      router.replace('/');
+      return;
     }
-  }, [employerUser, authLoading, router, currentPathname]);
+    // Allow employers and admins to view candidate profiles
+    if (
+      currentUser.role !== 'employer' &&
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'superAdmin'
+    ) {
+      setError('Access Denied. This page is for employers and administrators.');
+      setIsLoading(false);
+      return;
+    }
+  }, [currentUser, authLoading, router, currentPathname]);
 
   useEffect(() => {
-    if (candidateId && employerUser && employerUser.role === 'employer') {
+    if (
+      candidateId &&
+      currentUser &&
+      (currentUser.role === 'employer' ||
+        currentUser.role === 'admin' ||
+        currentUser.role === 'superAdmin')
+    ) {
       const fetchCandidate = async () => {
         setIsLoading(true);
         setError(null);
@@ -68,6 +83,7 @@ export default function CandidateDetailPage() {
           if (candidateDocSnap.exists()) {
             const data = candidateDocSnap.data();
             if (data.role === 'jobSeeker') {
+              // Admins can view any job seeker profile, employers can too (if searchable, but access here is direct via ID)
               setCandidate({
                 uid: candidateDocSnap.id,
                 ...data,
@@ -90,16 +106,25 @@ export default function CandidateDetailPage() {
         }
       };
       fetchCandidate();
-    } else if (employerUser && employerUser.role !== 'employer') {
-      setIsLoading(false);
+    } else if (
+      currentUser &&
+      currentUser.role !== 'employer' &&
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'superAdmin'
+    ) {
+      setIsLoading(false); // To prevent infinite loading if user is not authorized early
     }
-  }, [candidateId, employerUser]);
+  }, [candidateId, currentUser]);
 
   if (
     authLoading ||
     isLoading ||
-    (!employerUser && !authLoading) ||
-    (employerUser && employerUser.role !== 'employer' && !authLoading)
+    (!currentUser && !authLoading) ||
+    (currentUser &&
+      currentUser.role !== 'employer' &&
+      currentUser.role !== 'admin' &&
+      currentUser.role !== 'superAdmin' &&
+      !authLoading)
   ) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
@@ -187,7 +212,7 @@ export default function CandidateDetailPage() {
                   )}
               </div>
             </div>
-            {employerUser && employerUser.role === 'employer' && (
+            {currentUser && currentUser.role === 'employer' && (
               <Button className="w-full sm:w-auto mt-4 sm:mt-0">
                 <MessageSquare className="mr-2 h-5 w-5" /> Contact Candidate
               </Button>
@@ -196,23 +221,34 @@ export default function CandidateDetailPage() {
         </CardHeader>
         <CardContent className="p-6 grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            {candidate.experience && (
+            {candidate.parsedResumeText && (
               <section>
                 <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-                  <Briefcase className="text-primary" /> Experience
+                  <UserCheck className="text-primary" /> Profile Summary
                 </h2>
-                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background">
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
+                  {candidate.parsedResumeText}
+                </div>
+              </section>
+            )}
+            {candidate.experience && (
+              <section>
+                {candidate.parsedResumeText && <Separator className="my-6" />}
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <Briefcase className="text-primary" /> Work Experience
+                </h2>
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                   {candidate.experience}
                 </div>
               </section>
             )}
             {candidate.education && (
               <section>
-                <Separator className="my-6 md:hidden" />
+                <Separator className="my-6" />
                 <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                   <GraduationCap className="text-primary" /> Education
                 </h2>
-                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background">
+                <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                   {candidate.education}
                 </div>
               </section>
@@ -228,10 +264,29 @@ export default function CandidateDetailPage() {
                   {candidate.skills.map((skill) => (
                     <Badge
                       key={skill}
-                      variant="default"
-                      className="text-sm px-3 py-1"
+                      variant="secondary"
+                      className="text-sm px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
                     >
                       {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </section>
+            )}
+            {candidate.languages && candidate.languages.length > 0 && (
+              <section>
+                <Separator className="my-6 md:hidden" />
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <Languages className="text-primary" /> Languages
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {candidate.languages.map((lang) => (
+                    <Badge
+                      key={lang}
+                      variant="outline"
+                      className="text-sm px-3 py-1"
+                    >
+                      {lang}
                     </Badge>
                   ))}
                 </div>
@@ -240,7 +295,7 @@ export default function CandidateDetailPage() {
             <Separator />
             <section className="space-y-3 text-sm">
               <h3 className="text-lg font-semibold font-headline mb-2">
-                Details
+                Preferences & Details
               </h3>
               {candidate.jobSearchStatus && (
                 <p className="flex items-center gap-2">

@@ -144,6 +144,7 @@ export interface UserProfile {
   skills?: string[];
   experience?: string; // Markdown supported
   education?: string; // Markdown supported
+  languages?: string[]; // New field for languages
   mobileNumber?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;

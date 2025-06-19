@@ -6,8 +6,8 @@ interface PrintableProfileProps {
   user: UserProfile;
 }
 
-const MAX_TEXT_LENGTH = 750; // Max characters for long text fields
-const MAX_SUB_TEXT_LENGTH = 250; // Max characters for sub-descriptions within experience/education
+const MAX_TEXT_LENGTH = 750;
+const MAX_SUB_TEXT_LENGTH = 250;
 
 const truncateText = (text: string | undefined, maxLength: number): string => {
   if (!text) return 'N/A';
@@ -70,6 +70,7 @@ const PrintableProfileComponent = React.forwardRef<
           }
           .printable-profile .section {
             margin-bottom: 1rem;
+            page-break-inside: avoid;
           }
           .printable-profile .header {
             text-align: center;
@@ -83,13 +84,15 @@ const PrintableProfileComponent = React.forwardRef<
             margin: 0.1rem 0;
             font-size: 0.9rem;
           }
-          .printable-profile .skills-list {
+          .printable-profile .skills-list,
+          .languages-list {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
             margin-top: 0.5rem;
           }
-          .printable-profile .skill-badge {
+          .printable-profile .skill-badge,
+          .language-badge {
             background-color: #e9ecef;
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
@@ -98,6 +101,7 @@ const PrintableProfileComponent = React.forwardRef<
           .printable-profile .experience-item,
           .printable-profile .education-item {
             margin-bottom: 0.75rem;
+            page-break-inside: avoid;
           }
           .printable-profile .item-title {
             font-weight: bold;
@@ -119,7 +123,6 @@ const PrintableProfileComponent = React.forwardRef<
             text-align: center;
           }
         }
-        // Styles for screen viewing of this component (if ever rendered directly)
         .printable-profile {
           font-family: 'Inter', sans-serif;
           max-width: 800px;
@@ -154,13 +157,15 @@ const PrintableProfileComponent = React.forwardRef<
           font-size: 1rem;
           color: #495057;
         }
-        .printable-profile .skills-list {
+        .printable-profile .skills-list,
+        .languages-list {
           display: flex;
           flex-wrap: wrap;
           gap: 0.5rem;
           margin-top: 0.5rem;
         }
-        .printable-profile .skill-badge {
+        .printable-profile .skill-badge,
+        .language-badge {
           background-color: #007bff;
           color: white;
           padding: 0.3rem 0.6rem;
@@ -257,10 +262,22 @@ const PrintableProfileComponent = React.forwardRef<
         </div>
       )}
 
+      {user.languages && user.languages.length > 0 && (
+        <div className="section">
+          <h2>Languages</h2>
+          <div className="languages-list">
+            {user.languages.map((lang) => (
+              <span key={lang} className="language-badge">
+                {lang}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {user.experience && (
         <div className="section">
           <h2>Work Experience</h2>
-          {/* Assuming experience is Markdown; a simple split for basic structure */}
           {user.experience.split(/\n###\s|\n##\s/).map((expSection, index) => {
             if (
               index === 0 &&
