@@ -1240,6 +1240,10 @@ export default function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>Manage All Jobs ({sortedJobs.length})</CardTitle>
+              <CardDescription>
+                Admins manage job status (approve, reject, suspend, activate).
+                Job content editing is handled by employers via their dashboard.
+              </CardDescription>
               <Input
                 placeholder="Search jobs by title or company..."
                 value={jobsSearchTerm}

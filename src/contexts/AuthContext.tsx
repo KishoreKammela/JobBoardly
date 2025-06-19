@@ -332,9 +332,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
             }
           } else {
-            console.warn(
-              `User document for ${fbUser.uid} not found after attempting to set lastActive.`
-            );
+            // User document might not exist if it's a brand new social sign-in
+            // or if the initial setDoc for lastActive failed or hadn't completed.
+            // This path is less likely if setDoc({merge:true}) for lastActive is robust.
+            // If we reach here, it might imply userProfile was never created.
+            // For now, we will treat as logged out, though a more robust solution
+            // might re-trigger profile creation if fbUser is valid but no doc.
             setUser(null);
             setCompany(null);
           }

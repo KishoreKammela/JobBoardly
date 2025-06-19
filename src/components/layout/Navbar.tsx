@@ -22,6 +22,7 @@ import {
   Eye,
   AlertTriangle,
   Ban,
+  Bookmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -255,7 +256,9 @@ export function Navbar() {
       if (
         link.jobSeekerOnly &&
         isJobSeekerSuspended &&
-        link.href !== '/my-jobs'
+        link.href !== '/my-jobs' && // Allow viewing My Jobs even if suspended
+        link.href !== '/settings' && // Allow access to settings
+        link.href !== '/profile' // Allow access to profile viewing/basic edits
       )
         return false;
 
@@ -301,7 +304,15 @@ export function Navbar() {
               (link.employerOnly && isCompanyActionDisabled) ||
               (link.jobSeekerOnly &&
                 isJobSeekerSuspended &&
-                link.href !== '/my-jobs');
+                link.href !== '/my-jobs' &&
+                link.href !== '/settings' &&
+                link.href !== '/profile');
+
+            const savedJobsCount =
+              user?.role === 'jobSeeker' && link.href === '/my-jobs'
+                ? user.savedJobIds?.length || 0
+                : 0;
+
             return (
               <Link
                 key={link.href}
@@ -316,6 +327,14 @@ export function Navbar() {
               >
                 {link.icon}
                 <span>{link.label}</span>
+                {savedJobsCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="h-5 px-1.5 text-xs ml-0.5"
+                  >
+                    {savedJobsCount}
+                  </Badge>
+                )}
               </Link>
             );
           })}
@@ -379,14 +398,14 @@ export function Navbar() {
                     user.role === 'employer' &&
                     isCompanyActionDisabled &&
                     (item.href.includes('/employer/ai-candidate-match') ||
-                      (item.href === '/profile' && user.isCompanyAdmin)); // Allow personal profile access if not admin or profile not company related
+                      (item.href === '/profile' && user.isCompanyAdmin));
 
                   const isJobSeekerLinkDisabled =
                     user.role === 'jobSeeker' &&
                     isJobSeekerSuspended &&
-                    (item.href === '/profile' ||
+                    (item.href === '/profile' || // Main profile editing restricted
                       item.href === '/ai-match' ||
-                      item.href === '/profile/preview');
+                      item.href === '/profile/preview'); // Preview implies full profile content
 
                   const isDisabled =
                     isEmployerLinkDisabled || isJobSeekerLinkDisabled;
@@ -425,7 +444,15 @@ export function Navbar() {
                       (link.employerOnly && isCompanyActionDisabled) ||
                       (link.jobSeekerOnly &&
                         isJobSeekerSuspended &&
-                        link.href !== '/my-jobs');
+                        link.href !== '/my-jobs' && // Allow viewing My Jobs
+                        link.href !== '/settings' && // Allow settings
+                        link.href !== '/profile'); // Allow profile view/basic edits
+
+                    const savedJobsCount =
+                      user?.role === 'jobSeeker' && link.href === '/my-jobs'
+                        ? user.savedJobIds?.length || 0
+                        : 0;
+
                     return (
                       <DropdownMenuItem
                         key={`dd-main-${link.href}`}
@@ -444,7 +471,15 @@ export function Navbar() {
                           }}
                         >
                           {link.icon}
-                          {link.label}
+                          <span>{link.label}</span>
+                          {savedJobsCount > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="h-5 px-1.5 text-xs ml-auto"
+                            >
+                              {savedJobsCount}
+                            </Badge>
+                          )}
                         </Link>
                       </DropdownMenuItem>
                     );
