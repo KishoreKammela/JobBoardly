@@ -1,6 +1,10 @@
-
 'use client';
-import React, { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
+import React, {
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+} from 'react';
 import type { Job, ParsedJobData, Company } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

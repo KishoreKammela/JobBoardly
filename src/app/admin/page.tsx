@@ -1,4 +1,3 @@
-
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -978,9 +977,7 @@ export default function AdminPage() {
               ) : (
                 <>
                   <Table>
-                    <TableCaption>
-                      A list of all job seeker users.
-                    </TableCaption>
+                    <TableCaption>A list of all job seeker users.</TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead

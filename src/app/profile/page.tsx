@@ -1,4 +1,3 @@
-
 'use client';
 import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';

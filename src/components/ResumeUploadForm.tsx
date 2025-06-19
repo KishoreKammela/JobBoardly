@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -303,9 +302,7 @@ export function ResumeUploadForm() {
               type="submit"
               disabled={(!file && !pastedResume.trim()) || isProcessing}
               className="w-full sm:w-auto"
-              aria-label={
-                file ? 'Upload and Parse File' : 'Parse Pasted Text'
-              }
+              aria-label={file ? 'Upload and Parse File' : 'Parse Pasted Text'}
             >
               {isProcessing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
