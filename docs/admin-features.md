@@ -64,39 +64,39 @@ The central hub for all administrative tasks, accessible after logging in via th
 ## 3. User Journey Map (Admin)
 
 ```mermaid
-graph TD
-    A[Start: Admin Needs to Manage Platform] --> B{Authenticated?};
-    B -- No --> C[Navigate to /auth/admin/login];
-    C --> D[Enter Credentials];
-    D --> E{Login Successful & Admin Role?};
-    E -- Yes --> F[Redirect to /admin Dashboard];
-    B -- Yes --> F;
-    E -- No --> G[Error/Redirect to General Login];
 
-    F --> H{Select Task};
-    H -- Moderate Pending Jobs --> I[Use Quick Moderation Card for Jobs];
-    I --> J[Approve/Reject Job];
-    J --> F;
-    H -- Moderate Pending Companies --> K[Use Quick Moderation Card for Companies];
-    K --> L[Approve/Reject Company];
-    L --> F;
-    H -- Manage Companies --> M[Navigate to 'Companies' Tab];
-    M --> N[Search/Sort/View Companies];
-    N --> O[Perform Action: View, Approve, Reject, Suspend/Activate];
-    O --> M;
-    H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab];
-    P --> Q[Search/Sort/View Jobs];
-    Q --> R[Perform Action: View, Edit, Suspend/Activate];
-    R --> P;
-    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab];
-    S --> T[Search/Sort/View Job Seekers];
-    T --> U[Perform Action: Preview Profile, Suspend/Activate];
-    U --> S;
-    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab];
-    V --> W[Search/Sort/View Platform Users];
-    W --> X[Perform Action: Suspend/Activate (if SuperAdmin)];
-    X --> V;
-    F --> Y[Logout];
+graph TD
+    A[Start: Admin Needs to Manage Platform] --> B{Authenticated?}
+    B -- No --> C[Navigate to /auth/admin/login]
+    C --> D[Enter Credentials]
+    D --> E{Login Successful & Admin Role?}
+    E -- Yes --> F[Redirect to /admin Dashboard]
+    B -- Yes --> F
+    E -- No --> G[Error/Redirect to General Login]
+    F --> H{Select Task}
+    H -- Moderate Pending Jobs --> I[Use Quick Moderation Card for Jobs]
+    I --> J[Approve/Reject Job]
+    J --> F
+    H -- Moderate Pending Companies --> K[Use Quick Moderation Card for Companies]
+    K --> L[Approve/Reject Company]
+    L --> F
+    H -- Manage Companies --> M[Navigate to 'Companies' Tab]
+    M --> N[Search/Sort/View Companies]
+    N --> O[Perform Action: View, Approve, Reject, Suspend/Activate]
+    O --> M
+    H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab]
+    P --> Q[Search/Sort/View Jobs]
+    Q --> R[Perform Action: View, Edit, Suspend/Activate]
+    R --> P
+    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab]
+    S --> T[Search/Sort/View Job Seekers]
+    T --> U[Perform Action: Preview Profile, Suspend/Activate]
+    U --> S
+    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab]
+    V --> W[Search/Sort/View Platform Users]
+    W --> X[Perform Action: Suspend/Activate if SuperAdmin]
+    X --> V
+    F --> Y[Logout]
 ```
 
 ## 4. Page Routes
