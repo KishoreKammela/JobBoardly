@@ -38,10 +38,11 @@ import {
   where,
   Timestamp,
 } from 'firebase/firestore';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { useRouter, usePathname } from 'next/navigation';
 import { formatCurrencyINR } from '@/lib/utils';
+import Link from 'next/link';
 
 const formatExperiencesForAICandidate = (
   experiences?: ExperienceEntry[]
@@ -79,7 +80,7 @@ const formatLanguagesForAICandidate = (languages?: LanguageEntry[]): string => {
 };
 
 export default function AiCandidateMatchPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, company, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -386,6 +387,8 @@ export default function AiCandidateMatchPage() {
   }
 
   if (user && user.role !== 'employer') {
+    // This case should ideally be handled by the redirect in useEffect,
+    // but as a fallback:
     return (
       <Card className="w-full max-w-3xl mx-auto shadow-xl">
         <CardHeader>
@@ -401,6 +404,32 @@ export default function AiCandidateMatchPage() {
           </p>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (
+    company &&
+    (company.status === 'suspended' || company.status === 'deleted')
+  ) {
+    return (
+      <div className="container mx-auto py-10 max-w-2xl">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>
+            {company.status === 'suspended'
+              ? 'Company Account Suspended'
+              : 'Company Account Deactivated'}
+          </AlertTitle>
+          <AlertDescription>
+            Your company&apos;s account is currently {company.status}. The AI
+            Candidate Matcher is unavailable. Please contact JobBoardly support
+            for assistance.
+            <Button variant="link" asChild className="mt-2 block px-0">
+              <Link href="/employer/posted-jobs">Go to My Postings</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 

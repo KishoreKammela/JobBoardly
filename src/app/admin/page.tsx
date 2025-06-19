@@ -33,7 +33,7 @@ import {
   ExternalLink,
   Ban,
   CheckSquare,
-  Edit3,
+  Trash2,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -163,10 +163,13 @@ export default function AdminPage() {
     SortConfig<JobWithApplicantCount>
   >({ key: 'createdAt', direction: 'desc' });
 
-  const [isJobsLoading, setIsJobsLoading] = useState(true);
-  const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
+  const [isPendingJobsLoading, setIsPendingJobsLoading] = useState(true);
+  const [isPendingCompaniesLoading, setIsPendingCompaniesLoading] =
+    useState(true);
+  const [isAllCompaniesLoading, setIsAllCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isAllJobsLoading, setIsAllJobsLoading] = useState(true);
+
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
   >(null);
@@ -175,8 +178,9 @@ export default function AdminPage() {
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setIsJobsLoading(true);
-    setIsCompaniesLoading(true);
+    setIsPendingJobsLoading(true);
+    setIsPendingCompaniesLoading(true);
+    setIsAllCompaniesLoading(true);
     setIsUsersLoading(true);
     setIsAllJobsLoading(true);
 
@@ -197,7 +201,7 @@ export default function AdminPage() {
           } as Job;
         })
       );
-      setIsJobsLoading(false);
+      setIsPendingJobsLoading(false);
 
       const pendingCompaniesQuery = query(
         collection(db, 'companies'),
@@ -215,6 +219,7 @@ export default function AdminPage() {
           } as Company;
         })
       );
+      setIsPendingCompaniesLoading(false);
 
       const allCompaniesQuery = query(
         collection(db, 'companies'),
@@ -223,9 +228,16 @@ export default function AdminPage() {
       const allCompaniesSnapshot = await getDocs(allCompaniesQuery);
       const companiesData = await Promise.all(
         allCompaniesSnapshot.docs.map(async (companyDoc) => {
+          const companyData = companyDoc.data();
           const company = {
             id: companyDoc.id,
-            ...companyDoc.data(),
+            ...companyData,
+            createdAt: (companyData.createdAt as Timestamp)
+              ?.toDate()
+              .toISOString(),
+            updatedAt: (companyData.updatedAt as Timestamp)
+              ?.toDate()
+              .toISOString(),
           } as Company;
           company.jobCount = (
             await getCountFromServer(
@@ -243,14 +255,11 @@ export default function AdminPage() {
               )
             )
           ).data().count;
-          company.createdAt = (company.createdAt as Timestamp)
-            ?.toDate()
-            .toISOString();
           return company;
         })
       );
       setAllCompanies(companiesData);
-      setIsCompaniesLoading(false);
+      setIsAllCompaniesLoading(false);
 
       const jobSeekersQuery = query(
         collection(db, 'users'),
@@ -326,8 +335,9 @@ export default function AdminPage() {
         description: `Failed to load some admin data. ${(error as Error).message}`,
         variant: 'destructive',
       });
-      setIsJobsLoading(false);
-      setIsCompaniesLoading(false);
+      setIsPendingJobsLoading(false);
+      setIsPendingCompaniesLoading(false);
+      setIsAllCompaniesLoading(false);
       setIsUsersLoading(false);
       setIsAllJobsLoading(false);
     }
@@ -413,7 +423,11 @@ export default function AdminPage() {
 
       await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
 
-      if (newStatus === 'approved' || newStatus === 'rejected') {
+      if (
+        newStatus === 'approved' ||
+        newStatus === 'rejected' ||
+        newStatus === 'suspended'
+      ) {
         setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
       }
 
@@ -423,7 +437,7 @@ export default function AdminPage() {
             ? {
                 ...j,
                 status: newStatus,
-                moderationReason: jobUpdates.moderationReason as string,
+                moderationReason: jobUpdates.moderationReason as string | null,
                 updatedAt: new Date().toISOString(),
               }
             : j
@@ -448,7 +462,7 @@ export default function AdminPage() {
 
   const handleCompanyStatusUpdate = async (
     companyId: string,
-    newStatus: 'approved' | 'rejected' | 'suspended' | 'active',
+    newStatus: 'approved' | 'rejected' | 'suspended' | 'active' | 'deleted',
     reason?: string
   ) => {
     setSpecificActionLoading(`company-${companyId}`);
@@ -461,6 +475,7 @@ export default function AdminPage() {
       if (
         newStatus === 'rejected' ||
         newStatus === 'suspended' ||
+        newStatus === 'deleted' ||
         (newStatus === 'approved' && reason)
       ) {
         updateData.moderationReason =
@@ -478,13 +493,18 @@ export default function AdminPage() {
             ? {
                 ...c,
                 status: newStatus,
-                moderationReason: updateData.moderationReason as string,
+                moderationReason: updateData.moderationReason as string | null,
                 updatedAt: new Date().toISOString(),
               }
             : c
         )
       );
-      if (newStatus === 'approved' || newStatus === 'rejected') {
+      if (
+        newStatus === 'approved' ||
+        newStatus === 'rejected' ||
+        newStatus === 'suspended' ||
+        newStatus === 'deleted'
+      ) {
         setPendingCompanies((prev) => prev.filter((c) => c.id !== companyId));
       }
 
@@ -493,10 +513,10 @@ export default function AdminPage() {
         description: `Company ${companyId} status updated to ${newStatus}.`,
       });
 
-      if (newStatus === 'suspended') {
+      if (newStatus === 'suspended' || newStatus === 'deleted') {
         toast({
           title: 'Note',
-          description: `Suspending associated recruiters must be done manually via User Management or via backend logic (not yet implemented).`,
+          description: `Associated recruiters' access will be limited based on the new company status ('${newStatus}').`,
           duration: 7000,
         });
       }
@@ -744,7 +764,7 @@ export default function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isJobsLoading ? (
+            {isPendingJobsLoading ? (
               <div className="flex items-center py-6">
                 <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
                 Loading...
@@ -831,7 +851,7 @@ export default function AdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isCompaniesLoading ? (
+            {isPendingCompaniesLoading ? (
               <div className="flex items-center py-6">
                 <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
                 Loading...
@@ -932,7 +952,7 @@ export default function AdminPage() {
               />
             </CardHeader>
             <CardContent>
-              {isCompaniesLoading ? (
+              {isAllCompaniesLoading ? (
                 <div className="flex justify-center items-center py-6">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
                   Loading companies...
@@ -1020,7 +1040,8 @@ export default function AdminPage() {
                                 c.status === 'approved' || c.status === 'active'
                                   ? 'default'
                                   : c.status === 'rejected' ||
-                                      c.status === 'suspended'
+                                      c.status === 'suspended' ||
+                                      c.status === 'deleted'
                                     ? 'destructive'
                                     : 'secondary'
                               }
@@ -1048,8 +1069,8 @@ export default function AdminPage() {
                                 <Eye className="h-5 w-5" />
                               </Link>
                             </Button>
-                            {c.status !== 'approved' &&
-                              c.status !== 'active' && (
+                            {c.status === 'pending' && (
+                              <>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1073,9 +1094,6 @@ export default function AdminPage() {
                                 >
                                   <CheckCircle2 className="h-5 w-5" />
                                 </Button>
-                              )}
-                            {c.status !== 'rejected' &&
-                              c.status !== 'pending' && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1100,15 +1118,17 @@ export default function AdminPage() {
                                 >
                                   <XCircle className="h-5 w-5" />
                                 </Button>
-                              )}
-                            {c.status !== 'suspended' ? (
+                              </>
+                            )}
+                            {c.status === 'approved' ||
+                            c.status === 'active' ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
                                   showConfirmationModal(
                                     `Suspend Company "${c.name}"?`,
-                                    `Are you sure you want to suspend ${c.name}? This will also affect associated recruiters.`,
+                                    `Are you sure you want to suspend ${c.name}? Recruiters from this company will have limited access.`,
                                     async () =>
                                       handleCompanyStatusUpdate(
                                         c.id,
@@ -1126,14 +1146,14 @@ export default function AdminPage() {
                               >
                                 <Ban className="h-5 w-5" />
                               </Button>
-                            ) : (
+                            ) : c.status === 'suspended' ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
                                   showConfirmationModal(
                                     `Activate Company "${c.name}"?`,
-                                    `Are you sure you want to reactivate ${c.name}?`,
+                                    `Are you sure you want to reactivate ${c.name}? This will restore full access for its recruiters.`,
                                     async () =>
                                       handleCompanyStatusUpdate(c.id, 'active'),
                                     'Activate Company'
@@ -1146,6 +1166,32 @@ export default function AdminPage() {
                                 className="text-blue-600"
                               >
                                 <CheckSquare className="h-5 w-5" />
+                              </Button>
+                            ) : null}
+                            {c.status !== 'deleted' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  showConfirmationModal(
+                                    `Delete Company "${c.name}"?`,
+                                    `Are you sure you want to delete ${c.name}? This is a soft delete. Recruiters will lose access. This action cannot be easily undone.`,
+                                    async () =>
+                                      handleCompanyStatusUpdate(
+                                        c.id,
+                                        'deleted'
+                                      ),
+                                    'Delete Company',
+                                    'destructive'
+                                  )
+                                }
+                                disabled={
+                                  specificActionLoading === `company-${c.id}`
+                                }
+                                aria-label={`Delete company ${c.name}`}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-5 w-5" />
                               </Button>
                             )}
                           </TableCell>
@@ -1321,24 +1367,14 @@ export default function AdminPage() {
                                 <Eye className="h-5 w-5" />
                               </Link>
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              aria-label={`Edit job ${job.title}`}
-                            >
-                              <Link href={`/employer/post-job?edit=${job.id}`}>
-                                <Edit3 className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                            {job.status !== 'suspended' ? (
+                            {job.status === 'approved' && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
                                   showConfirmationModal(
                                     `Suspend Job "${job.title}"?`,
-                                    `Are you sure you want to suspend this job? It will be hidden from public view.`,
+                                    `Are you sure you want to suspend this job? It will be hidden from public view and recruiters won't be able to manage it or its applicants.`,
                                     async () =>
                                       handleJobStatusUpdate(
                                         job.id,
@@ -1356,7 +1392,9 @@ export default function AdminPage() {
                               >
                                 <Ban className="h-5 w-5" />
                               </Button>
-                            ) : (
+                            )}
+                            {(job.status === 'suspended' ||
+                              job.status === 'rejected') && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1377,6 +1415,57 @@ export default function AdminPage() {
                               >
                                 <CheckSquare className="h-5 w-5" />
                               </Button>
+                            )}
+                            {job.status === 'pending' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    showConfirmationModal(
+                                      `Approve Job "${job.title}"?`,
+                                      `Are you sure you want to approve this job posting? It will become publicly visible.`,
+                                      async () =>
+                                        handleJobStatusUpdate(
+                                          job.id,
+                                          'approved'
+                                        ),
+                                      'Approve Job'
+                                    )
+                                  }
+                                  disabled={
+                                    specificActionLoading === `job-${job.id}`
+                                  }
+                                  aria-label={`Approve job ${job.title}`}
+                                  className="text-green-600"
+                                >
+                                  <CheckCircle2 className="h-5 w-5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    showConfirmationModal(
+                                      `Reject Job "${job.title}"?`,
+                                      'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
+                                      async () =>
+                                        handleJobStatusUpdate(
+                                          job.id,
+                                          'rejected'
+                                        ),
+                                      'Reject Job',
+                                      'destructive'
+                                    )
+                                  }
+                                  disabled={
+                                    specificActionLoading === `job-${job.id}`
+                                  }
+                                  aria-label={`Reject job ${job.title}`}
+                                  className="text-destructive"
+                                >
+                                  <XCircle className="h-5 w-5" />
+                                </Button>
+                              </>
                             )}
                           </TableCell>
                         </TableRow>

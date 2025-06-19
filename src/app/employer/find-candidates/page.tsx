@@ -7,14 +7,22 @@ import {
 } from '@/components/employer/CandidateFilterSidebar';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, Loader2, Search as SearchIcon } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  Loader2,
+  Search as SearchIcon,
+  AlertTriangle,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 export default function FindCandidatesPage() {
-  const { user, loading } = useAuth();
+  const { user, company, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -59,6 +67,32 @@ export default function FindCandidatesPage() {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (
+    company &&
+    (company.status === 'suspended' || company.status === 'deleted')
+  ) {
+    return (
+      <div className="container mx-auto py-10 max-w-2xl">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>
+            {company.status === 'suspended'
+              ? 'Company Account Suspended'
+              : 'Company Account Deactivated'}
+          </AlertTitle>
+          <AlertDescription>
+            Your company&apos;s account is currently {company.status}. Candidate
+            search features are unavailable. Please contact JobBoardly support
+            for assistance.
+            <Button variant="link" asChild className="mt-2 block px-0">
+              <Link href="/employer/posted-jobs">Go to My Postings</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }

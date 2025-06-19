@@ -20,6 +20,7 @@ import {
   Menu,
   KeyRound,
   Eye,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserRole } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 interface NavLinkConfig {
   href: string;
@@ -203,7 +205,7 @@ const userAccountDropdownLinksConfig = {
 };
 
 export function Navbar() {
-  const { user, logout, loading } = useAuth();
+  const { user, company, logout, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -238,17 +240,20 @@ export function Navbar() {
   const loginLink = isEmployerPage ? '/employer/login' : '/auth/login';
   const registerLink = isEmployerPage ? '/employer/register' : '/auth/register';
 
+  const isCompanyActionDisabled =
+    company && (company.status === 'suspended' || company.status === 'deleted');
+
   const getRenderedMainNavLinks = () => {
     if (loading) return [];
     return mainNavLinksConfig.filter((link) => {
       if (!user) {
         // Logged-out user
-        if (link.href === '/employer') return !isEmployerPage; // Show "For Employers" if not on an employer page
+        if (link.href === '/employer') return !isEmployerPage;
         return link.publicAccess && !link.authRequired;
       }
       // Logged-in user
+      if (link.employerOnly && isCompanyActionDisabled) return false; // Hide employer links if company suspended/deleted
       if (link.roles.includes(user.role)) return true;
-      // Admins should see public job/company links
       if (
         (user.role === 'admin' || user.role === 'superAdmin') &&
         link.publicAccess &&
@@ -256,7 +261,6 @@ export function Navbar() {
       ) {
         return true;
       }
-      // Employers should see public company link
       if (
         user.role === 'employer' &&
         link.publicAccess &&
@@ -291,7 +295,16 @@ export function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
+              className={`text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5 ${
+                link.employerOnly && isCompanyActionDisabled
+                  ? 'pointer-events-none opacity-50'
+                  : ''
+              }`}
+              aria-disabled={link.employerOnly && isCompanyActionDisabled}
+              onClick={(e) => {
+                if (link.employerOnly && isCompanyActionDisabled)
+                  e.preventDefault();
+              }}
             >
               {link.icon}
               <span>{link.label}</span>
@@ -303,7 +316,6 @@ export function Navbar() {
           {loading ? (
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : user ? (
-            // Logged-in User: Avatar Dropdown (acts as main menu on mobile)
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -333,24 +345,56 @@ export function Navbar() {
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email} ({getRoleDisplayName(user.role)})
                     </p>
+                    {user.role === 'employer' &&
+                      company &&
+                      (company.status === 'suspended' ||
+                        company.status === 'deleted') && (
+                        <Badge variant="destructive" className="mt-1 text-xs">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Company {company.status}
+                        </Badge>
+                      )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
-                {/* Account Specific Links */}
-                {currentAccountDropdownLinks.map((item) => (
-                  <DropdownMenuItem key={item.href} asChild>
-                    <Link
-                      href={item.href}
-                      className="flex items-center gap-2 cursor-pointer w-full"
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
+                {currentAccountDropdownLinks.map((item) => {
+                  const isDisabled =
+                    (item.href.includes('/employer/ai-candidate-match') ||
+                      item.href.includes('/profile')) &&
+                    isCompanyActionDisabled &&
+                    item.href !== '/profile';
+                  const isProfileCompanyLinkDisabled =
+                    item.href === '/profile' &&
+                    user.role === 'employer' &&
+                    isCompanyActionDisabled;
+                  // Allow access to /profile for personal details even if company is suspended/deleted
 
-                {/* Main Nav Links for Mobile View */}
+                  return (
+                    <DropdownMenuItem
+                      key={item.href}
+                      asChild
+                      disabled={isDisabled && !isProfileCompanyLinkDisabled}
+                    >
+                      <Link
+                        href={item.href}
+                        className={`flex items-center gap-2 cursor-pointer w-full ${
+                          isDisabled && !isProfileCompanyLinkDisabled
+                            ? 'pointer-events-none opacity-50'
+                            : ''
+                        }`}
+                        onClick={(e) => {
+                          if (isDisabled && !isProfileCompanyLinkDisabled)
+                            e.preventDefault();
+                        }}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+
                 <div className="md:hidden">
                   {renderedMainNavLinks.length > 0 && <DropdownMenuSeparator />}
                   {renderedMainNavLinks.length > 0 && (
@@ -359,10 +403,22 @@ export function Navbar() {
                     </DropdownMenuLabel>
                   )}
                   {renderedMainNavLinks.map((link) => (
-                    <DropdownMenuItem key={`dd-main-${link.href}`} asChild>
+                    <DropdownMenuItem
+                      key={`dd-main-${link.href}`}
+                      asChild
+                      disabled={link.employerOnly && isCompanyActionDisabled}
+                    >
                       <Link
                         href={link.href}
-                        className="flex items-center gap-2 cursor-pointer w-full"
+                        className={`flex items-center gap-2 cursor-pointer w-full ${
+                          link.employerOnly && isCompanyActionDisabled
+                            ? 'pointer-events-none opacity-50'
+                            : ''
+                        }`}
+                        onClick={(e) => {
+                          if (link.employerOnly && isCompanyActionDisabled)
+                            e.preventDefault();
+                        }}
                       >
                         {link.icon}
                         {link.label}
@@ -382,7 +438,6 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            // Logged-out User: Buttons for Desktop, Hamburger for Mobile
             <>
               <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" asChild size="sm">
@@ -396,7 +451,6 @@ export function Navbar() {
                   </Link>
                 </Button>
               </div>
-              {/* Mobile Menu Trigger (Hamburger) */}
               <div className="md:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

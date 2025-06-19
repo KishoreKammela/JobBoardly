@@ -146,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
+          // Use setDoc with merge to create or update lastActive
           await setDoc(
             userDocRef,
             { lastActive: serverTimestamp() },
@@ -315,6 +316,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
             }
           } else {
+            // This case might occur if createUserProfileInFirestore hasn't completed yet for a new user
+            // setDoc with merge:true for lastActive should have created a minimal doc,
+            // but if not, we log and set user to null to avoid partial states.
+            console.warn(
+              `User document for ${fbUser.uid} not found after attempting to set lastActive.`
+            );
             setUser(null);
             setCompany(null);
           }
@@ -563,7 +570,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         'Error:',
         error,
         'Data attempted:',
-        JSON.stringify(finalProfileDataForFirestore)
+        JSON.stringify(finalProfileDataForFirestore, null, 2)
       );
       throw error;
     }
@@ -950,29 +957,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           key === 'educations' ||
           key === 'languages'
         ) {
-          payloadForFirestore[key] = value.map((item: any) => {
-            const cleanedItem: { [key: string]: unknown } = { ...item };
-            Object.keys(cleanedItem).forEach((prop) => {
-              if (cleanedItem[prop] === undefined) {
-                if (
-                  (prop === 'startDate' ||
-                    prop === 'endDate' ||
-                    prop === 'annualCTC') &&
-                  key === 'experiences'
-                ) {
-                  cleanedItem[prop] = null;
-                } else if (
-                  (prop === 'startYear' || prop === 'endYear') &&
-                  key === 'educations'
-                ) {
-                  cleanedItem[prop] = null;
-                } else {
-                  delete cleanedItem[prop];
+          payloadForFirestore[key] = value.map(
+            (item: Record<string, unknown>) => {
+              const cleanedItem: { [key: string]: unknown } = { ...item };
+              Object.keys(cleanedItem).forEach((prop) => {
+                if (cleanedItem[prop] === undefined) {
+                  if (
+                    (prop === 'startDate' ||
+                      prop === 'endDate' ||
+                      prop === 'annualCTC') &&
+                    key === 'experiences'
+                  ) {
+                    cleanedItem[prop] = null;
+                  } else if (
+                    (prop === 'startYear' || prop === 'endYear') &&
+                    key === 'educations'
+                  ) {
+                    cleanedItem[prop] = null;
+                  } else {
+                    delete cleanedItem[prop];
+                  }
                 }
-              }
-            });
-            return cleanedItem;
-          });
+              });
+              return cleanedItem;
+            }
+          );
         } else {
           payloadForFirestore[key] = value;
         }
@@ -984,12 +993,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     payloadForFirestore.updatedAt = serverTimestamp();
     payloadForFirestore.lastActive = serverTimestamp();
 
-    if (
-      Object.keys(payloadForFirestore).length > 2 ||
-      (Object.keys(payloadForFirestore).length === 2 &&
-        payloadForFirestore.updatedAt &&
-        payloadForFirestore.lastActive)
-    ) {
+    // Only update if there are actual changes besides timestamps
+    const actualChanges = Object.keys(payloadForFirestore).filter(
+      (k) => k !== 'updatedAt' && k !== 'lastActive'
+    );
+
+    if (actualChanges.length > 0) {
       try {
         await updateDoc(userDocRef, payloadForFirestore);
         const updatedUserForState: UserProfile = { ...user } as UserProfile;
@@ -1010,6 +1019,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     } else if (user) {
+      // If no actual profile changes, just update timestamps
       try {
         await updateDoc(userDocRef, {
           updatedAt: serverTimestamp(),
@@ -1144,7 +1154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
     } else {
-      updates.employerNotes = null;
+      updates.employerNotes = null; // Explicitly set to null if undefined
     }
 
     try {

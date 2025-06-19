@@ -3,16 +3,17 @@ import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Download, Eye } from 'lucide-react';
+import { Loader2, Download, Eye, AlertTriangle } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ProfilePage() {
-  const { user, loading } = useAuth();
+  const { user, company, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const printableProfileRef = useRef<HTMLDivElement>(null);
@@ -63,6 +64,34 @@ export default function ProfilePage() {
     return 'Manage your account details.';
   };
 
+  const renderEmployerAccountStatusAlert = () => {
+    if (
+      user.role === 'employer' &&
+      company &&
+      (company.status === 'suspended' || company.status === 'deleted')
+    ) {
+      const isSuspended = company.status === 'suspended';
+      return (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>
+            {isSuspended
+              ? 'Company Account Suspended'
+              : 'Company Account Deactivated'}
+          </AlertTitle>
+          <AlertDescription>
+            Your company&apos;s account is currently {company.status}.{' '}
+            {isSuspended
+              ? 'You can only edit your personal recruiter details and settings. Company profile editing and job management are disabled.'
+              : 'All profile editing and company-related actions are disabled.'}{' '}
+            Please contact JobBoardly support for assistance.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -91,6 +120,8 @@ export default function ProfilePage() {
         )}
       </div>
       <Separator />
+
+      {renderEmployerAccountStatusAlert()}
 
       {user.role === 'jobSeeker' && (
         <>

@@ -20,6 +20,7 @@ import {
   Loader2,
   Users,
   PlusCircle,
+  Ban,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { db } from '@/lib/firebase';
@@ -175,7 +176,7 @@ export function PostedJobsDisplay() {
       {postedJobs.map((job) => (
         <Card
           key={job.id}
-          className="shadow-md hover:shadow-lg transition-shadow"
+          className={`shadow-md hover:shadow-lg transition-shadow ${job.status === 'suspended' ? 'opacity-70 bg-muted/50' : ''}`}
         >
           <CardHeader>
             <div className="flex justify-between items-start">
@@ -205,6 +206,14 @@ export function PostedJobsDisplay() {
                   >
                     {job.status.toUpperCase()}
                   </Badge>
+                  {job.status === 'suspended' && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 align-middle border-orange-500 text-orange-600"
+                    >
+                      <Ban className="mr-1 h-3 w-3" /> INACTIVE
+                    </Badge>
+                  )}
                 </CardDescription>
               </div>
               <Badge
@@ -225,15 +234,32 @@ export function PostedJobsDisplay() {
                 Rejection Reason: {job.moderationReason}
               </p>
             )}
+            {job.status === 'suspended' && (
+              <p className="text-xs text-orange-600 mt-1">
+                This job is currently suspended by an administrator and is not
+                visible to job seekers. You cannot manage its applicants or edit
+                it at this time.
+              </p>
+            )}
           </CardContent>
           <CardFooter className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" size="sm" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              disabled={job.status === 'suspended'}
+            >
               <Link href={`/employer/jobs/${job.id}/applicants`}>
                 <Users className="mr-2 h-4 w-4" /> View Applicants (
                 {job.applicantCount || 0})
               </Link>
             </Button>
-            <Button variant="outline" size="sm" asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              disabled={job.status === 'suspended'}
+            >
               <Link href={`/employer/post-job?edit=${job.id}`}>
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Job
               </Link>

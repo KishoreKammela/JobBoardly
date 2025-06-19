@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, Application, ApplicationStatus } from '@/types';
 import { EmployerManagedApplicationStatuses } from '@/types';
-import { AlertCircle, Loader2, UserCircle, Edit2, Filter } from 'lucide-react';
+import {
+  AlertCircle,
+  Loader2,
+  UserCircle,
+  Edit2,
+  Filter,
+  Ban,
+} from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { db } from '@/lib/firebase';
 import {
@@ -49,6 +56,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Separator } from '../ui/separator';
 
 interface JobApplicantsDisplayProps {
   jobId: string;
@@ -115,8 +123,6 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         }
         const jobData = { id: jobDocSnap.id, ...jobDocSnap.data() } as Job;
 
-        // Ensure the current employer is the one who posted the job
-        // Or, if company structure allows, any recruiter from the same company
         if (jobData.companyId !== user.companyId) {
           setError(
             'You do not have permission to view applicants for this job.'
@@ -143,6 +149,13 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         };
         setJob(processedJobData);
 
+        if (processedJobData.status === 'suspended') {
+          setAllApplications([]);
+          setFilteredApplications([]);
+          setIsLoading(false);
+          return; // Don't fetch applicants if job is suspended
+        }
+
         const appsQuery = query(
           collection(db, 'applications'),
           where('jobId', '==', jobId),
@@ -165,7 +178,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
           } as Application;
         });
         setAllApplications(fetchedApplications);
-        setFilteredApplications(fetchedApplications); // Initially display all
+        setFilteredApplications(fetchedApplications);
       } catch (e: unknown) {
         console.error('Error fetching job and applicants:', e);
         let message = 'Failed to load job applicants. Please try again.';
@@ -342,242 +355,274 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
   }
 
   if (!job) {
+    // This case means useEffect hasn't set the job yet, or it's still in initial 'undefined' state
     return (
-      <Alert variant="default">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Information</AlertTitle>
-        <AlertDescription>Preparing applicant data...</AlertDescription>
-      </Alert>
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2">Fetching job details...</p>
+      </div>
     );
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-1">
-        Applicants for: <span className="text-primary">{job.title}</span>
-      </h2>
-      <p className="text-muted-foreground mb-6">
-        Company: {job.company} - Location: {job.location}
-      </p>
-
-      <div className="mb-6 p-4 border rounded-md bg-muted/30">
-        <Label className="text-md font-semibold flex items-center gap-2 mb-3">
-          <Filter className="h-5 w-5 text-primary" /> Filter by Status
-        </Label>
-        <RadioGroup
-          defaultValue="All"
-          onValueChange={(value: ApplicationStatus | 'All') =>
-            setStatusFilter(value)
-          }
-          className="flex flex-wrap gap-x-6 gap-y-3"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="All" id="filter-all-apps" />
-            <Label htmlFor="filter-all-apps">
-              All ({allApplications.length})
-            </Label>
-          </div>
-          {EmployerManagedApplicationStatuses.map((statusVal) => (
-            <div key={statusVal} className="flex items-center space-x-2">
-              <RadioGroupItem
-                value={statusVal}
-                id={`filter-${statusVal.toLowerCase().replace(/\s/g, '-')}`}
-              />
-              <Label
-                htmlFor={`filter-${statusVal.toLowerCase().replace(/\s/g, '-')}`}
-              >
-                {statusVal} (
-                {allApplications.filter((a) => a.status === statusVal).length})
-              </Label>
-            </div>
-          ))}
-        </RadioGroup>
+    <>
+      <div>
+        <h1 className="text-3xl font-bold mb-1 font-headline">
+          Job Applicants
+        </h1>
+        <h2 className="text-xl font-semibold mb-1 text-primary">{job.title}</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Company: {job.company} - Location: {job.location}
+        </p>
+        {job.status === 'suspended' && (
+          <Alert variant="destructive" className="mb-6">
+            <Ban className="h-4 w-4" />
+            <AlertTitle>Job Suspended</AlertTitle>
+            <AlertDescription>
+              This job is currently suspended by an administrator. Applicant
+              management is disabled.
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
-
-      {allApplications.length === 0 ? (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No Applicants Yet</AlertTitle>
-          <AlertDescription>
-            There are currently no applicants for this job posting.
-          </AlertDescription>
-        </Alert>
-      ) : filteredApplications.length === 0 && statusFilter !== 'All' ? (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>No Applicants Match Filter</AlertTitle>
-          <AlertDescription>
-            No applicants found with status &quot;{statusFilter}&quot;.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <div className="space-y-6">
-          {filteredApplications.map((app) => (
-            <Card key={app.id} className="shadow-md">
-              <CardHeader className="flex flex-row items-start gap-4 pb-3">
-                <Avatar className="h-16 w-16 border">
-                  <AvatarImage
-                    src={
-                      app.applicantAvatarUrl || `https://placehold.co/64x64.png`
-                    }
-                    alt={app.applicantName}
-                    data-ai-hint="applicant photo"
+      <Separator className="my-6" />
+      {job.status !== 'suspended' && (
+        <div>
+          <div className="mb-6 p-4 border rounded-md bg-muted/30">
+            <Label className="text-md font-semibold flex items-center gap-2 mb-3">
+              <Filter className="h-5 w-5 text-primary" /> Filter by Status
+            </Label>
+            <RadioGroup
+              defaultValue="All"
+              onValueChange={(value: ApplicationStatus | 'All') =>
+                setStatusFilter(value)
+              }
+              className="flex flex-wrap gap-x-6 gap-y-3"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="All" id="filter-all-apps" />
+                <Label htmlFor="filter-all-apps">
+                  All ({allApplications.length})
+                </Label>
+              </div>
+              {EmployerManagedApplicationStatuses.map((statusVal) => (
+                <div key={statusVal} className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value={statusVal}
+                    id={`filter-${statusVal.toLowerCase().replace(/\s/g, '-')}`}
                   />
-                  <AvatarFallback>
-                    {app.applicantName?.[0]?.toUpperCase() || 'A'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <Link
-                    href={`/employer/candidates/${app.applicantId}`}
-                    className="hover:underline"
+                  <Label
+                    htmlFor={`filter-${statusVal.toLowerCase().replace(/\s/g, '-')}`}
                   >
-                    <CardTitle className="text-xl font-headline text-primary">
-                      {app.applicantName}
-                    </CardTitle>
-                  </Link>
-                  <CardDescription>
-                    {app.applicantHeadline || 'Job Seeker'}
-                  </CardDescription>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Applied:{' '}
-                    {app.appliedAt
-                      ? new Date(app.appliedAt as string).toLocaleDateString()
-                      : 'N/A'}
-                  </p>
+                    {statusVal} (
+                    {
+                      allApplications.filter((a) => a.status === statusVal)
+                        .length
+                    }
+                    )
+                  </Label>
                 </div>
-                <Badge
-                  variant={
-                    app.status === 'Hired'
-                      ? 'default'
-                      : app.status.startsWith('Rejected')
-                        ? 'destructive'
-                        : 'secondary'
-                  }
-                  className="text-sm px-3 py-1 whitespace-nowrap"
-                >
-                  {app.status}
-                </Badge>
-              </CardHeader>
-              <CardContent className="pb-4">
-                {editingNotesFor === app.id ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={currentNotes}
-                      onChange={(e) => setCurrentNotes(e.target.value)}
-                      placeholder="Add internal notes about this applicant..."
-                      rows={3}
-                    />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => handleSaveNotes(app.id)}>
-                        Save Notes
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditingNotesFor(null)}
+              ))}
+            </RadioGroup>
+          </div>
+
+          {allApplications.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>No Applicants Yet</AlertTitle>
+              <AlertDescription>
+                There are currently no applicants for this job posting.
+              </AlertDescription>
+            </Alert>
+          ) : filteredApplications.length === 0 && statusFilter !== 'All' ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>No Applicants Match Filter</AlertTitle>
+              <AlertDescription>
+                No applicants found with status &quot;{statusFilter}&quot;.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-6">
+              {filteredApplications.map((app) => (
+                <Card key={app.id} className="shadow-md">
+                  <CardHeader className="flex flex-row items-start gap-4 pb-3">
+                    <Avatar className="h-16 w-16 border">
+                      <AvatarImage
+                        src={
+                          app.applicantAvatarUrl ||
+                          `https://placehold.co/64x64.png`
+                        }
+                        alt={app.applicantName}
+                        data-ai-hint="applicant photo"
+                      />
+                      <AvatarFallback>
+                        {app.applicantName?.[0]?.toUpperCase() || 'A'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <Link
+                        href={`/employer/candidates/${app.applicantId}`}
+                        className="hover:underline"
                       >
-                        Cancel
+                        <CardTitle className="text-xl font-headline text-primary">
+                          {app.applicantName}
+                        </CardTitle>
+                      </Link>
+                      <CardDescription>
+                        {app.applicantHeadline || 'Job Seeker'}
+                      </CardDescription>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Applied:{' '}
+                        {app.appliedAt
+                          ? new Date(
+                              app.appliedAt as string
+                            ).toLocaleDateString()
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        app.status === 'Hired'
+                          ? 'default'
+                          : app.status.startsWith('Rejected')
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                      className="text-sm px-3 py-1 whitespace-nowrap"
+                    >
+                      {app.status}
+                    </Badge>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    {editingNotesFor === app.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={currentNotes}
+                          onChange={(e) => setCurrentNotes(e.target.value)}
+                          placeholder="Add internal notes about this applicant..."
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveNotes(app.id)}
+                          >
+                            Save Notes
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingNotesFor(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {app.employerNotes && (
+                          <p className="text-sm text-muted-foreground italic bg-muted/30 p-2 rounded-md mb-2 whitespace-pre-wrap">
+                            <strong>Notes:</strong> {app.employerNotes}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                  <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t pt-4">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Label
+                        htmlFor={`status-${app.id}`}
+                        className="text-sm font-medium whitespace-nowrap"
+                      >
+                        Application Status:
+                      </Label>
+                      <Select
+                        value={app.status}
+                        onValueChange={(newStatus) =>
+                          handleStatusChange(
+                            app.id,
+                            app.applicantName,
+                            newStatus as ApplicationStatus
+                          )
+                        }
+                      >
+                        <SelectTrigger
+                          id={`status-${app.id}`}
+                          className="w-full sm:w-[200px] bg-background"
+                        >
+                          <SelectValue placeholder="Change status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EmployerManagedApplicationStatuses.map(
+                            (statusVal) => (
+                              <SelectItem key={statusVal} value={statusVal}>
+                                {statusVal}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEditingNotes(app)}
+                      >
+                        <Edit2 className="mr-2 h-4 w-4" />{' '}
+                        {app.employerNotes ? 'Edit Notes' : 'Add Notes'}
+                      </Button>
+                      <Button size="sm" asChild>
+                        <Link href={`/employer/candidates/${app.applicantId}`}>
+                          <UserCircle className="mr-2 h-4 w-4" /> View Full
+                          Profile
+                        </Link>
                       </Button>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    {app.employerNotes && (
-                      <p className="text-sm text-muted-foreground italic bg-muted/30 p-2 rounded-md mb-2 whitespace-pre-wrap">
-                        <strong>Notes:</strong> {app.employerNotes}
-                      </p>
-                    )}
-                  </>
-                )}
-              </CardContent>
-              <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t pt-4">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Label
-                    htmlFor={`status-${app.id}`}
-                    className="text-sm font-medium whitespace-nowrap"
-                  >
-                    Application Status:
-                  </Label>
-                  <Select
-                    value={app.status}
-                    onValueChange={(newStatus) =>
-                      handleStatusChange(
-                        app.id,
-                        app.applicantName,
-                        newStatus as ApplicationStatus
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      id={`status-${app.id}`}
-                      className="w-full sm:w-[200px] bg-background"
-                    >
-                      <SelectValue placeholder="Change status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EmployerManagedApplicationStatuses.map((statusVal) => (
-                        <SelectItem key={statusVal} value={statusVal}>
-                          {statusVal}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => startEditingNotes(app)}
-                  >
-                    <Edit2 className="mr-2 h-4 w-4" />{' '}
-                    {app.employerNotes ? 'Edit Notes' : 'Add Notes'}
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href={`/employer/candidates/${app.applicantId}`}>
-                      <UserCircle className="mr-2 h-4 w-4" /> View Full Profile
-                    </Link>
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+          <AlertDialog
+            open={modalState.isOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                setModalState(defaultModalState);
+                setIsModalActionLoading(false);
+              }
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {modalState.description}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() =>
+                    setModalState({ ...modalState, isOpen: false })
+                  }
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={executeConfirmedAction}
+                  disabled={isModalActionLoading}
+                >
+                  {isModalActionLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {modalState.confirmText}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
-      <AlertDialog
-        open={modalState.isOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setModalState(defaultModalState);
-            setIsModalActionLoading(false);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {modalState.description}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => setModalState({ ...modalState, isOpen: false })}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={executeConfirmedAction}
-              disabled={isModalActionLoading}
-            >
-              {isModalActionLoading && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {modalState.confirmText}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </>
   );
 }
