@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import type { UserProfile } from '@/types';
@@ -21,7 +22,6 @@ import {
   CardHeader,
   CardFooter,
 } from '@/components/ui/card';
-import { useDebounce } from '@/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 
 interface CandidateSearchResultsProps {
@@ -38,12 +38,10 @@ export function CandidateSearchResults({
   const [allCandidates, setAllCandidates] = useState<UserProfile[]>([]);
   const [filteredAndSortedCandidates, setFilteredAndSortedCandidates] =
     useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // True for initial fetch
-  const [isFiltering, setIsFiltering] = useState(false); // True for subsequent filter applications
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-
-  const debouncedFilters = useDebounce(filters, 500);
 
   useEffect(() => {
     const fetchCandidates = async () => {
@@ -56,7 +54,7 @@ export function CandidateSearchResults({
           usersCollectionRef,
           where('role', '==', 'jobSeeker'),
           where('isProfileSearchable', '==', true),
-          orderBy('updatedAt', 'desc') // Default sort for initial fetch
+          orderBy('updatedAt', 'desc')
         );
 
         const querySnapshot = await getDocs(q);
@@ -80,7 +78,7 @@ export function CandidateSearchResults({
           } as UserProfile;
         });
         setAllCandidates(candidatesData);
-        setFilteredAndSortedCandidates(candidatesData); // Initially show all
+        setFilteredAndSortedCandidates(candidatesData);
       } catch (e: any) {
         console.error('Error fetching candidates:', e);
         setError(
@@ -95,57 +93,73 @@ export function CandidateSearchResults({
   }, []);
 
   useEffect(() => {
-    if (isLoading) return; // Don't filter if initial load isn't done
+    if (isLoading) return;
 
     setIsFiltering(true);
 
     const applyFilters = (
-      candidates: UserProfile[],
+      candidatesToFilter: UserProfile[],
       currentFilters: CandidateFilters
     ) => {
-      let tempFiltered = [...candidates];
+      let tempFiltered = [...candidatesToFilter];
 
-      // Keyword search
       if (currentFilters.searchTerm) {
-        const lowerSearchTerm = currentFilters.searchTerm.toLowerCase();
-        const phraseMatches = lowerSearchTerm.match(/"([^"]+)"/g);
-        let remainingSearchTerm = lowerSearchTerm;
+        const searchTermLower = currentFilters.searchTerm.toLowerCase();
+        const orSegments = searchTermLower.split(/\s+or\s+/i);
+        let orResults: UserProfile[] = [];
 
-        if (phraseMatches) {
-          for (const phrase of phraseMatches) {
-            const cleanPhrase = phrase.replace(/"/g, '');
-            tempFiltered = tempFiltered.filter((candidate) =>
-              `${candidate.name?.toLowerCase() || ''} ${candidate.headline?.toLowerCase() || ''} ${(candidate.skills || []).join(' ').toLowerCase()} ${candidate.parsedResumeText?.toLowerCase() || ''} ${
-                candidate.experiences
-                  ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
-                  .join(' ')
-                  .toLowerCase() || ''
-              }`.includes(cleanPhrase)
-            );
-            remainingSearchTerm = remainingSearchTerm
-              .replace(phrase, '')
-              .trim();
-          }
-        }
+        for (const orSegment of orSegments) {
+          const andSegments = orSegment.split(/\s+and\s+/i);
+          let segmentResults = [...candidatesToFilter];
 
-        const searchTerms = remainingSearchTerm.split(/\s+/).filter(Boolean);
-        if (searchTerms.length > 0) {
-          tempFiltered = tempFiltered.filter((candidate) => {
-            const profileText = `
-              ${candidate.name?.toLowerCase() || ''} 
-              ${candidate.headline?.toLowerCase() || ''} 
-              ${(candidate.skills || []).join(' ').toLowerCase()} 
-              ${candidate.parsedResumeText?.toLowerCase() || ''}
-              ${
-                candidate.experiences
-                  ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
-                  .join(' ')
-                  .toLowerCase() || ''
+          for (const andSegment of andSegments) {
+            let mustBePresent = true;
+            let termToSearch = andSegment;
+            if (andSegment.startsWith("not ")) {
+              mustBePresent = false;
+              termToSearch = andSegment.substring(4).trim();
+            }
+            
+            const phrases = termToSearch.match(/"([^"]+)"/g) || [];
+            let remainingTerm = termToSearch;
+            phrases.forEach(phrase => remainingTerm = remainingTerm.replace(phrase, '').trim());
+            const individualTerms = remainingTerm.split(/\s+/).filter(Boolean);
+
+            segmentResults = segmentResults.filter(candidate => {
+              const profileText = `
+                ${candidate.name?.toLowerCase() || ''} 
+                ${candidate.headline?.toLowerCase() || ''} 
+                ${(candidate.skills || []).join(' ').toLowerCase()} 
+                ${candidate.parsedResumeText?.toLowerCase() || ''}
+                ${
+                  candidate.experiences
+                    ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
+                    .join(' ')
+                    .toLowerCase() || ''
+                }
+              `.trim();
+
+              let matchesAll = true;
+              for (const phrase of phrases) {
+                if (!profileText.includes(phrase.replace(/"/g, ''))) {
+                  matchesAll = false;
+                  break;
+                }
               }
-            `.trim();
-            return searchTerms.every((term) => profileText.includes(term));
-          });
+              if (!matchesAll) return mustBePresent ? false : true;
+
+              for (const term of individualTerms) {
+                if (!profileText.includes(term)) {
+                  matchesAll = false;
+                  break;
+                }
+              }
+              return mustBePresent ? matchesAll : !matchesAll;
+            });
+          }
+          orResults = orResults.concat(segmentResults);
         }
+        tempFiltered = Array.from(new Set(orResults.map(c => c.uid))).map(uid => orResults.find(c => c.uid === uid)!);
       }
 
       if (currentFilters.location) {
@@ -156,23 +170,7 @@ export function CandidateSearchResults({
           )
         );
       }
-      if (currentFilters.homeState) {
-        const lowerHomeState = currentFilters.homeState.toLowerCase();
-        tempFiltered = tempFiltered.filter((candidate) =>
-          candidate.homeState?.toLowerCase().includes(lowerHomeState)
-        );
-      }
-      if (currentFilters.homeCity) {
-        const lowerHomeCity = currentFilters.homeCity.toLowerCase();
-        tempFiltered = tempFiltered.filter((candidate) =>
-          candidate.homeCity?.toLowerCase().includes(lowerHomeCity)
-        );
-      }
-      if (currentFilters.gender && currentFilters.gender !== 'all') {
-        tempFiltered = tempFiltered.filter(
-          (candidate) => candidate.gender === currentFilters.gender
-        );
-      }
+      
       if (
         currentFilters.availability &&
         currentFilters.availability !== 'all'
@@ -183,6 +181,7 @@ export function CandidateSearchResults({
             currentFilters.availability.toLowerCase()
         );
       }
+
       if (
         currentFilters.jobSearchStatus &&
         currentFilters.jobSearchStatus !== 'all'
@@ -193,6 +192,7 @@ export function CandidateSearchResults({
             currentFilters.jobSearchStatus?.toLowerCase()
         );
       }
+
       if (currentFilters.desiredSalaryMin !== undefined) {
         tempFiltered = tempFiltered.filter(
           (c) =>
@@ -207,6 +207,15 @@ export function CandidateSearchResults({
             c.expectedCTCValue <= currentFilters.desiredSalaryMax!
         );
       }
+
+      if (currentFilters.minExperienceYears !== undefined) {
+        tempFiltered = tempFiltered.filter(
+          (c) => 
+            c.totalYearsExperience !== undefined &&
+            c.totalYearsExperience >= currentFilters.minExperienceYears!
+        );
+      }
+
       if (
         currentFilters.recentActivity &&
         currentFilters.recentActivity !== 'any'
@@ -227,8 +236,8 @@ export function CandidateSearchResults({
           return updatedAt >= cutoffDate;
         });
       }
+      
       return tempFiltered.sort((a, b) => {
-        // Keep default sort by updatedAt desc
         const dateA = a.updatedAt
           ? new Date(a.updatedAt as string).getTime()
           : 0;
@@ -240,11 +249,11 @@ export function CandidateSearchResults({
     };
 
     setFilteredAndSortedCandidates(
-      applyFilters(allCandidates, debouncedFilters)
+      applyFilters(allCandidates, filters)
     );
     setCurrentPage(1);
     setIsFiltering(false);
-  }, [debouncedFilters, allCandidates, isLoading]);
+  }, [filters, allCandidates, isLoading]);
 
   const totalPages = Math.ceil(
     filteredAndSortedCandidates.length / CANDIDATES_PER_PAGE
@@ -290,7 +299,7 @@ export function CandidateSearchResults({
     </Card>
   );
 
-  if (isLoading || isFiltering) {
+  if (isLoading && allCandidates.length === 0) {
     return (
       <div
         className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
@@ -300,6 +309,15 @@ export function CandidateSearchResults({
         }).map((_, index) => (
           <CandidateSkeletonCard key={index} />
         ))}
+      </div>
+    );
+  }
+  
+  if (isFiltering) {
+     return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2">Filtering candidates...</p>
       </div>
     );
   }

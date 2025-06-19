@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'jobSeeker' | 'employer' | 'admin' | 'superAdmin';
@@ -25,7 +26,7 @@ export interface Filters {
 
 export interface CandidateFilters {
   searchTerm: string;
-  location: string; // General location preference for candidates
+  location: string;
   availability: string;
   jobSearchStatus?:
     | 'all'
@@ -34,10 +35,8 @@ export interface CandidateFilters {
     | 'notLooking';
   desiredSalaryMin?: number;
   desiredSalaryMax?: number;
-  recentActivity?: 'any' | '24h' | '7d' | '30d'; // Based on profile updatedAt
-  gender?: 'all' | 'Male' | 'Female' | 'Other' | 'Prefer not to say';
-  homeState?: string; // Specific home state of candidate
-  homeCity?: string; // Specific home city of candidate
+  recentActivity?: 'any' | '24h' | '7d' | '30d';
+  minExperienceYears?: number;
 }
 
 export interface SavedSearch {
@@ -60,11 +59,11 @@ export interface ExperienceEntry {
   id: string;
   companyName: string;
   jobRole: string;
-  startDate?: string; // YYYY-MM
-  endDate?: string; // YYYY-MM
+  startDate?: string | undefined; // YYYY-MM-DD
+  endDate?: string | undefined; // YYYY-MM-DD
   currentlyWorking: boolean;
   description?: string;
-  annualCTC?: number; // Compensation for this specific role
+  annualCTC?: number;
 }
 
 export interface EducationEntry {
@@ -98,8 +97,8 @@ export interface Company {
   updatedAt: Timestamp | Date | string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   moderationReason?: string;
-  jobCount?: number; // For admin display, ideally aggregated
-  applicationCount?: number; // For admin display, ideally aggregated
+  jobCount?: number;
+  applicationCount?: number;
 }
 
 export interface Job {
@@ -167,21 +166,19 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
-  status?: 'active' | 'suspended'; // For admin user management
+  status?: 'active' | 'suspended';
   theme?: 'light' | 'dark' | 'system';
-  jobBoardDisplay?: 'list' | 'grid'; // For job seeker's job board view
-  itemsPerPage?: 10 | 20 | 50; // For job seeker's job board view
+  jobBoardDisplay?: 'list' | 'grid';
+  itemsPerPage?: 10 | 20 | 50;
   jobAlerts?: {
-    // For job seeker
     newJobsMatchingProfile: boolean;
     savedSearchAlerts: boolean;
     applicationStatusUpdates: boolean;
   };
 
-  // Job Seeker Specific Fields
   headline?: string;
   skills?: string[];
-  parsedResumeText?: string; // Summary from resume parsing
+  parsedResumeText?: string;
 
   gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
   dateOfBirth?: string; // YYYY-MM-DD
@@ -191,6 +188,8 @@ export interface UserProfile {
   expectedCTCNegotiable?: boolean;
   homeState?: string;
   homeCity?: string;
+  totalYearsExperience?: number;
+  totalMonthsExperience?: number;
 
   experiences?: ExperienceEntry[];
   educations?: EducationEntry[];
@@ -206,18 +205,17 @@ export interface UserProfile {
   resumeUrl?: string;
   resumeFileName?: string;
 
-  // User Activity
   appliedJobIds?: string[];
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
 
-  // Employer Specific Fields
   companyId?: string;
   isCompanyAdmin?: boolean;
 
-  // Admin/System Usage
-  jobsAppliedCount?: number; // Derived from appliedJobIds.length for job seekers
+  jobsAppliedCount?: number;
   lastActive?: Timestamp | Date | string;
+
+  desiredSalary?: number;
 }
 
 export interface ParsedResumeData {
@@ -226,10 +224,11 @@ export interface ParsedResumeData {
   mobileNumber?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; // Summary of experience
-  education?: string; // Summary of education
+  experience?: string; // Detailed text summary
+  education?: string; // Detailed text summary
   portfolioUrl?: string;
   linkedinUrl?: string;
+  totalYearsExperience?: number;
 }
 
 export interface ParsedJobData {
@@ -241,3 +240,4 @@ export interface ParsedJobData {
   salaryMin?: number;
   salaryMax?: number;
 }
+

@@ -1,16 +1,18 @@
+
 'use client';
 'use client';
 import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Download, Eye } from 'lucide-react'; // Added Eye
+import { Loader2, Download, Eye } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { useRouter, usePathname, NextRouter } from 'next/navigation'; // Added NextRouter
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
-import Link from 'next/link'; // Added Link
+import Link from 'next/link';
+
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -42,7 +44,7 @@ export default function ProfilePage() {
 
   const pageTitle = () => {
     if (!user) return 'Profile';
-    if (user.role === 'jobSeeker') return 'My Job Seeker Profile';
+    if (user.role === 'jobSeeker') return 'My Profile';
     if (user.role === 'employer' && user.isCompanyAdmin)
       return 'Manage Company Profile & Your Recruiter Info';
     if (user.role === 'employer') return 'My Recruiter Profile';
@@ -54,7 +56,7 @@ export default function ProfilePage() {
   const pageDescription = () => {
     if (!user) return 'Please log in to view your profile.';
     if (user.role === 'jobSeeker')
-      return 'View and manage your account details and professional information. Upload your resume and download your profile as a PDF.';
+      return 'View and manage your account details and professional information. Upload your resume first for AI parsing to help pre-fill sections.';
     if (user.role === 'employer' && user.isCompanyAdmin)
       return "Edit your company's public details and your personal recruiter information.";
     if (user.role === 'employer')
@@ -79,6 +81,7 @@ export default function ProfilePage() {
               onClick={handlePrintProfile}
               variant="outline"
               className="w-full sm:w-auto"
+              aria-label="Download profile as PDF"
             >
               <Download className="mr-2 h-4 w-4" /> Download PDF
             </Button>
@@ -91,16 +94,16 @@ export default function ProfilePage() {
         )}
       </div>
       <Separator />
-      {user && <UserProfileForm />}
 
       {user.role === 'jobSeeker' && (
-        <>
-          <Separator />
-          <ResumeUploadForm />
-        </>
+         <>
+            <ResumeUploadForm />
+            <Separator />
+         </>
       )}
-
-      {/* Hidden component for printing */}
+      
+      <UserProfileForm />
+      
       {user.role === 'jobSeeker' && (
         <div style={{ display: 'none' }}>
           <PrintableProfileComponent ref={printableProfileRef} user={user} />

@@ -1,4 +1,4 @@
-'use client';
+
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,39 +18,37 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, RotateCcw } from 'lucide-react';
+import { Filter, RotateCcw, Briefcase } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { CandidateFilters } from '@/types';
 
 interface CandidateFilterSidebarProps {
-  onFilterChange: (filters: CandidateFilters) => void;
-  initialFilters?: Partial<CandidateFilters>;
+  onFilterChange: (filters: Omit<CandidateFilters, 'searchTerm'>) => void;
+  initialFilters?: Partial<Omit<CandidateFilters, 'searchTerm'>>;
 }
 
 export function CandidateFilterSidebar({
   onFilterChange,
   initialFilters,
 }: CandidateFilterSidebarProps) {
-export function CandidateFilterSidebar({
-  onFilterChange,
-  initialFilters,
-}: CandidateFilterSidebarProps) {
-  const defaultFilters: CandidateFilters = {
-    searchTerm: '',
-    location: '', // For candidate's preferred location text search
+  const defaultSidebarFilters: Omit<CandidateFilters, 'searchTerm'> = {
+    location: '',
     availability: 'all',
     jobSearchStatus: 'all',
     desiredSalaryMin: undefined,
     desiredSalaryMax: undefined,
-    recentActivity: 'any', // Profile updated_at
-    gender: 'all',
-    homeState: '',
-    homeCity: '',
+    recentActivity: 'any',
+    minExperienceYears: undefined,
     ...initialFilters,
   };
 
-  const [filters, setFilters] = useState<CandidateFilters>(defaultFilters);
+  const [filters, setFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>(defaultSidebarFilters);
+
+  useEffect(() => {
+    onFilterChange(filters);
+  }, [filters, onFilterChange]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -58,7 +56,7 @@ export function CandidateFilterSidebar({
     setFilters((prev) => ({
       ...prev,
       [name]:
-        name === 'desiredSalaryMin' || name === 'desiredSalaryMax'
+        name === 'desiredSalaryMin' || name === 'desiredSalaryMax' || name === 'minExperienceYears'
           ? value
             ? parseFloat(value)
             : undefined
@@ -66,103 +64,52 @@ export function CandidateFilterSidebar({
     }));
   };
 
-  const handleSelectChange = (name: keyof CandidateFilters, value: string) => {
+  const handleSelectChange = (name: keyof Omit<CandidateFilters, 'searchTerm'>, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onFilterChange(filters);
-  };
-
   const handleReset = () => {
-    setFilters(defaultFilters);
-    onFilterChange(defaultFilters);
-  };
+    setFilters(defaultSidebarFilters);
   };
 
   return (
     <Card className="sticky top-24 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">
-          Filter Candidates
-        </CardTitle>
-        <CardTitle className="text-xl font-headline">
-          Filter Candidates
+        <CardTitle className="text-xl font-headline flex items-center gap-2">
+          <Filter className="h-5 w-5 text-primary" />
+          Refine Candidates
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
           <div>
-            <Label htmlFor="searchTerm">
-              Keywords (Name, Skills, Headline, Experience summary)
-            </Label>
-            <Input
-              id="searchTerm"
-              name="searchTerm"
-              placeholder='e.g., React, "Senior Engineer", AI'
-              value={filters.searchTerm}
-              onChange={handleChange}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Use quotes for exact phrases. Multiple terms are ANDed.
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="location">Preferred Location (text search)</Label>
+            <Label htmlFor="location">Preferred Location</Label>
             <Input
               id="location"
               name="location"
               placeholder="e.g., Remote, Bangalore"
               value={filters.location}
               onChange={handleChange}
+              aria-label="Filter by candidate preferred location"
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="homeState">Home State</Label>
-              <Input
-                id="homeState"
-                name="homeState"
-                placeholder="e.g., Karnataka"
-                value={filters.homeState || ''}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <Label htmlFor="homeCity">Home City</Label>
-              <Input
-                id="homeCity"
-                name="homeCity"
-                placeholder="e.g., Bangalore"
-                value={filters.homeCity || ''}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
           <div>
-            <Label htmlFor="gender">Gender</Label>
-            <Select
-              name="gender"
-              value={filters.gender || 'all'}
-              onValueChange={(value) => handleSelectChange('gender', value)}
-            >
-              <SelectTrigger id="gender">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Genders</SelectItem>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-                <SelectItem value="Prefer not to say">
-                  Prefer not to say
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="minExperienceYears" className="flex items-center gap-1.5">
+              <Briefcase className="h-4 w-4 text-primary/80" /> Min Experience (Years)
+            </Label>
+            <Input
+              id="minExperienceYears"
+              name="minExperienceYears"
+              type="number"
+              placeholder="e.g., 2"
+              value={filters.minExperienceYears || ''}
+              onChange={handleChange}
+              min="0"
+              aria-label="Minimum years of experience"
+            />
           </div>
           <div>
             <Label htmlFor="availability">Availability</Label>
@@ -176,7 +123,7 @@ export function CandidateFilterSidebar({
                 handleSelectChange('availability', value)
               }
             >
-              <SelectTrigger id="availability">
+              <SelectTrigger id="availability" aria-label="Filter by candidate availability">
                 <SelectValue placeholder="Select availability" />
               </SelectTrigger>
               <SelectContent>
@@ -197,7 +144,7 @@ export function CandidateFilterSidebar({
                 handleSelectChange('jobSearchStatus', value)
               }
             >
-              <SelectTrigger id="jobSearchStatus">
+              <SelectTrigger id="jobSearchStatus" aria-label="Filter by job search status">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -224,6 +171,7 @@ export function CandidateFilterSidebar({
                 placeholder="e.g., 500000"
                 value={filters.desiredSalaryMin || ''}
                 onChange={handleChange}
+                aria-label="Minimum expected salary"
               />
             </div>
             <div>
@@ -237,6 +185,7 @@ export function CandidateFilterSidebar({
                 placeholder="e.g., 1500000"
                 value={filters.desiredSalaryMax || ''}
                 onChange={handleChange}
+                aria-label="Maximum expected salary"
               />
             </div>
           </div>
@@ -268,26 +217,13 @@ export function CandidateFilterSidebar({
 
           <div className="flex flex-wrap items-center gap-2 pt-2">
             <Button
-              type="submit"
-              className="flex-1 min-w-[120px]"
-              aria-label="Apply search filters"
-            >
-              <Search className="mr-2 h-4 w-4" /> Apply Filters
-            </Button>
-            <Button
               type="button"
               variant="outline"
               onClick={handleReset}
-              className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+              className="w-full"
               aria-label="Reset search filters"
             >
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" /> Reset
+              <RotateCcw className="mr-2 h-4 w-4" /> Reset Filters
             </Button>
           </div>
         </form>

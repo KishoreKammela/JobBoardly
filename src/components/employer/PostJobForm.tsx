@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrencyINR } from '@/lib/utils';
 
 export function PostJobForm() {
   const { user, company: authCompany } = useAuth();
@@ -47,8 +48,9 @@ export function PostJobForm() {
   const initialJobData: Partial<Job> = {
     type: 'Full-time',
     isRemote: false,
-    // applicantIds: [], // This field is removed from Job type
     status: 'pending',
+    salaryMin: undefined,
+    salaryMax: undefined,
   };
 
   const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
@@ -119,10 +121,9 @@ export function PostJobForm() {
           }
           setJobData({
             ...existingJob,
-            postedDate:
-              existingJob.postedDate instanceof Timestamp
-                ? existingJob.postedDate.toDate().toISOString().split('T')[0]
-                : existingJob.postedDate,
+            postedDate: existingJob.postedDate instanceof Timestamp ? existingJob.postedDate.toDate().toISOString().split('T')[0] : existingJob.postedDate as string,
+            salaryMin: existingJob.salaryMin === null || existingJob.salaryMin === undefined ? undefined : existingJob.salaryMin,
+            salaryMax: existingJob.salaryMax === null || existingJob.salaryMax === undefined ? undefined : existingJob.salaryMax,
           });
           setSkillsInput((existingJob.skills || []).join(', '));
         } else {
@@ -135,7 +136,7 @@ export function PostJobForm() {
         }
         setIsLoadingJob(false);
       } else {
-        setJobData((prev) => ({ ...prev, status: 'pending' }));
+        setJobData(prev => ({ ...initialJobData, ...prev, status: 'pending' })); // Retain company details if already set
       }
     };
     initializeForm();
@@ -149,13 +150,14 @@ export function PostJobForm() {
       const { checked } = e.target as HTMLInputElement;
       setJobData((prev) => ({ ...prev, [name]: checked }));
     } else {
-      setJobData((prev) => ({
-        ...prev,
-        [name]:
-          (name === 'salaryMin' || name === 'salaryMax') && value
-            ? parseFloat(value)
-            : value,
-      }));
+        setJobData(prev => {
+          let newValue: any = value;
+          if (name === 'salaryMin' || name === 'salaryMax') {
+            newValue = value === '' ? undefined : parseFloat(value);
+            if (isNaN(newValue as number)) newValue = undefined;
+          }
+          return { ...prev, [name]: newValue };
+        });
     }
   };
 
@@ -172,7 +174,7 @@ export function PostJobForm() {
   };
 
   const handleSelectChange = (name: keyof Job, value: string) => {
-    setJobData((prev) => ({ ...prev, [name]: value as Job['type'] }));
+    setJobData(prev => ({ ...prev, [name]: value as Job['type'] }));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -200,40 +202,34 @@ export function PostJobForm() {
           jobDescriptionDataUri: dataUri,
         });
 
-        if (
-          parsedData.description &&
-          parsedData.description.startsWith('Parsing Error:')
-        ) {
-          toast({
-            title: 'Document Parsing Issue',
-            description: parsedData.description,
-            variant: 'destructive',
-            duration: 9000,
-          });
-          setJobData((prev) => ({
-            ...prev,
-            title: parsedData.title || prev.title,
-            skills: parsedData.skills || prev.skills,
-            location: parsedData.location || prev.location,
-            type: parsedData.jobType || prev.type,
-            salaryMin: parsedData.salaryMin || prev.salaryMin,
-            salaryMax: parsedData.salaryMax || prev.salaryMax,
-          }));
+        if (parsedData.description && parsedData.description.startsWith("Parsing Error:")) {
+            toast({
+                title: "Document Parsing Issue",
+                description: parsedData.description,
+                variant: "destructive",
+                duration: 9000,
+            });
+             setJobData(prev => ({
+              ...prev,
+              title: parsedData.title || prev.title,
+              skills: parsedData.skills || prev.skills,
+              location: parsedData.location || prev.location,
+              type: parsedData.jobType || prev.type,
+              salaryMin: parsedData.salaryMin ?? prev.salaryMin,
+              salaryMax: parsedData.salaryMax ?? prev.salaryMax,
+            }));
         } else {
-          setJobData((prev) => ({
-            ...prev,
-            title: parsedData.title || prev.title,
-            description: parsedData.description || prev.description,
-            skills: parsedData.skills || prev.skills,
-            location: parsedData.location || prev.location,
-            type: parsedData.jobType || prev.type,
-            salaryMin: parsedData.salaryMin || prev.salaryMin,
-            salaryMax: parsedData.salaryMax || prev.salaryMax,
-          }));
-          toast({
-            title: 'Document Parsed',
-            description: 'Job details have been pre-filled from the document.',
-          });
+            setJobData(prev => ({
+              ...prev,
+              title: parsedData.title || prev.title,
+              description: parsedData.description || prev.description,
+              skills: parsedData.skills || prev.skills,
+              location: parsedData.location || prev.location,
+              type: parsedData.jobType || prev.type,
+              salaryMin: parsedData.salaryMin ?? prev.salaryMin,
+              salaryMax: parsedData.salaryMax ?? prev.salaryMax,
+            }));
+            toast({ title: "Document Parsed", description: "Job details have been pre-filled from the document." });
         }
 
         if (parsedData.skills && parsedData.skills.length > 0) {
@@ -286,56 +282,48 @@ export function PostJobForm() {
     setIsSubmitting(true);
 
     try {
-      const jobPayload: Partial<Job> = {
-        title: jobData.title || '',
-        company: currentCompanyDetails.name || 'N/A Company',
-        companyId: user.companyId,
-        location: jobData.location || '',
-        type: jobData.type || 'Full-time',
-        description: jobData.description || '',
-        isRemote: jobData.isRemote || false,
-        skills: jobData.skills || [],
-        salaryMin: jobData.salaryMin,
-        salaryMax: jobData.salaryMax,
-        companyLogoUrl: currentCompanyDetails.logoUrl,
-        postedById: user.uid,
-        updatedAt: serverTimestamp(),
-      };
+        const jobPayload: Partial<Job> & { updatedAt: any, createdAt?: any } = {
+            title: jobData.title || '',
+            company: currentCompanyDetails.name || 'N/A Company',
+            companyId: user.companyId,
+            location: jobData.location || '',
+            type: jobData.type || 'Full-time',
+            description: jobData.description || '',
+            isRemote: jobData.isRemote || false,
+            skills: jobData.skills || [],
+            salaryMin: jobData.salaryMin,
+            salaryMax: jobData.salaryMax,
+            companyLogoUrl: currentCompanyDetails.logoUrl,
+            postedById: user.uid,
+            updatedAt: serverTimestamp(),
+        };
 
-      if (editingJobId) {
-        const jobDocRef = doc(db, 'jobs', editingJobId);
-        jobPayload.status = 'pending';
-        jobPayload.moderationReason = undefined;
-        await updateDoc(jobDocRef, jobPayload);
-        toast({
-          title: 'Job Updated & Resubmitted for Approval!',
-          description: `${jobData.title} has been updated and sent for review.`,
-        });
-      } else {
-        jobPayload.postedDate = new Date().toISOString().split('T')[0];
-        // applicantIds is no longer part of Job type
-        jobPayload.createdAt = serverTimestamp();
-        jobPayload.status = 'pending';
-        const jobsCollectionRef = collection(db, 'jobs');
-        await addDoc(jobsCollectionRef, jobPayload);
-        toast({
-          title: 'Job Submitted for Approval!',
-          description: `${jobData.title} has been submitted and is pending review.`,
-        });
-      }
+        if (editingJobId) {
+            const jobDocRef = doc(db, "jobs", editingJobId);
+            jobPayload.status = 'pending';
+            jobPayload.moderationReason = null; // Explicitly set to null to clear previous reason
+            await updateDoc(jobDocRef, jobPayload as { [key: string]: any });
+            toast({ title: 'Job Updated & Resubmitted for Approval!', description: `${jobData.title} has been updated and sent for review.` });
+        } else {
+            jobPayload.postedDate = new Date().toISOString().split('T')[0];
+            jobPayload.createdAt = serverTimestamp();
+            jobPayload.status = 'pending';
+            const jobsCollectionRef = collection(db, "jobs");
+            await addDoc(jobsCollectionRef, jobPayload as { [key: string]: any });
+            toast({ title: 'Job Submitted for Approval!', description: `${jobData.title} has been submitted and is pending review.` });
+        }
+        
+        if (!editingJobId) {
+           setJobData({
+                ...initialJobData, 
+                company: currentCompanyDetails.name, companyId: user.companyId,
+                companyLogoUrl: currentCompanyDetails.logoUrl, postedById: user.uid,
+            });
+            setSkillsInput('');
+            setFile(null);
+        }
+        router.push('/employer/posted-jobs');
 
-      if (!editingJobId) {
-        setJobData({
-          ...initialJobData,
-          company: currentCompanyDetails.name,
-          companyId: user.companyId,
-          companyLogoUrl: currentCompanyDetails.logoUrl,
-          postedById: user.uid,
-        });
-        setSkillsInput('');
-        setFile(null);
-      }
-      router.push('/employer/posted-jobs');
     } catch (error) {
       console.error('Error saving job:', error);
       toast({
@@ -375,7 +363,7 @@ export function PostJobForm() {
       </Card>
     );
   }
-  if (!user.companyId && !authCompany) {
+   if (!user.companyId && !authCompany && !currentCompanyDetails.id) { // Check currentCompanyDetails.id as well
     return (
       <Card>
         <CardHeader>
@@ -411,33 +399,13 @@ export function PostJobForm() {
             parsing.
           </CardDescription>
         )}
-        {editingJobId && jobData.status && (
-          <div className="pt-2">
-            <p className="text-sm font-medium">
-              Current Status:{' '}
-              <Badge
-                variant={
-                  jobData.status === 'approved'
-                    ? 'default'
-                    : jobData.status === 'rejected'
-                      ? 'destructive'
-                      : 'secondary'
-                }
-              >
-                {jobData.status.toUpperCase()}
-              </Badge>
-            </p>
-            {jobData.status === 'rejected' && jobData.moderationReason && (
-              <p className="text-xs text-destructive mt-1">
-                Admin Reason: {jobData.moderationReason}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Editing and saving this job will resubmit it for admin approval
-              (status will become &apos;pending&apos;).
-            </p>
-          </div>
-        )}
+         {editingJobId && jobData.status && (
+            <div className="pt-2">
+              <p className="text-sm font-medium">Current Status: <Badge variant={jobData.status === 'approved' ? 'default' : jobData.status === 'pending' ? 'secondary' : 'destructive'}>{jobData.status.toUpperCase()}</Badge></p>
+              {jobData.status === 'rejected' && jobData.moderationReason && <p className="text-xs text-destructive mt-1">Admin Reason: {jobData.moderationReason}</p>}
+              <p className="text-xs text-muted-foreground mt-1">Editing and saving this job will resubmit it for admin approval (status will become 'pending').</p>
+            </div>
+          )}
       </CardHeader>
       <CardContent className="space-y-8">
         {!editingJobId && (
@@ -540,21 +508,16 @@ export function PostJobForm() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2 pt-8">
-              <Checkbox
-                id="isRemote"
-                name="isRemote"
-                checked={jobData.isRemote}
-                onCheckedChange={(checked) =>
-                  setJobData((prev) => ({
-                    ...prev,
-                    isRemote: Boolean(checked),
-                  }))
-                }
-              />
-              <Label htmlFor="isRemote" className="font-medium">
-                This job is remote
-              </Label>
+             <div className="flex items-center space-x-2 pt-8">
+                <Checkbox
+                    id="isRemote"
+                    name="isRemote"
+                    checked={jobData.isRemote || false}
+                    onCheckedChange={(checked) => setJobData(prev => ({...prev, isRemote: Boolean(checked)}))}
+                />
+                <Label htmlFor="isRemote" className="font-medium">
+                    This job is remote
+                </Label>
             </div>
           </div>
 
@@ -571,30 +534,14 @@ export function PostJobForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="salaryMin">
-                Salary Minimum (Annual, Optional)
-              </Label>
-              <Input
-                id="salaryMin"
-                name="salaryMin"
-                type="number"
-                placeholder="e.g., 80000"
-                value={jobData.salaryMin || ''}
-                onChange={handleChange}
-              />
+              <Label htmlFor="salaryMin">Salary Minimum (Annual INR, Optional)</Label>
+              <Input id="salaryMin" name="salaryMin" type="number" placeholder="e.g., 800000" value={jobData.salaryMin === undefined ? '' : jobData.salaryMin} onChange={handleChange} />
+              {jobData.salaryMin !== undefined && <p className="text-xs text-muted-foreground mt-1">Formatted: {formatCurrencyINR(jobData.salaryMin)}</p>}
             </div>
             <div>
-              <Label htmlFor="salaryMax">
-                Salary Maximum (Annual, Optional)
-              </Label>
-              <Input
-                id="salaryMax"
-                name="salaryMax"
-                type="number"
-                placeholder="e.g., 120000"
-                value={jobData.salaryMax || ''}
-                onChange={handleChange}
-              />
+              <Label htmlFor="salaryMax">Salary Maximum (Annual INR, Optional)</Label>
+              <Input id="salaryMax" name="salaryMax" type="number" placeholder="e.g., 1200000" value={jobData.salaryMax === undefined ? '' : jobData.salaryMax} onChange={handleChange} />
+               {jobData.salaryMax !== undefined && <p className="text-xs text-muted-foreground mt-1">Formatted: {formatCurrencyINR(jobData.salaryMax)}</p>}
             </div>
           </div>
 
@@ -632,3 +579,5 @@ export function PostJobForm() {
     </Card>
   );
 }
+
+    

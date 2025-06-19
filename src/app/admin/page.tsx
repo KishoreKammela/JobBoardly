@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -647,6 +648,7 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'rejected')
                         }
                         disabled={actionLoading === `job-${job.id}`}
+                        aria-label={`Reject job ${job.title}`}
                       >
                         <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
                         Reject
@@ -657,6 +659,7 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'approved')
                         }
                         disabled={actionLoading === `job-${job.id}`}
+                        aria-label={`Approve job ${job.title}`}
                       >
                         <CheckCircle className="mr-1 h-4 w-4" /> Approve
                       </Button>
@@ -717,6 +720,7 @@ export default function AdminPage() {
                           handleCompanyStatusUpdate(c.id, 'rejected')
                         }
                         disabled={actionLoading === `company-${c.id}`}
+                        aria-label={`Reject company ${c.name}`}
                       >
                         <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
                         Reject
@@ -727,6 +731,7 @@ export default function AdminPage() {
                           handleCompanyStatusUpdate(c.id, 'approved')
                         }
                         disabled={actionLoading === `company-${c.id}`}
+                        aria-label={`Approve company ${c.name}`}
                       >
                         <CheckCircle className="mr-1 h-4 w-4" /> Approve
                       </Button>
@@ -780,6 +785,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by company name"
                         >
                           Name {renderSortIcon('name', companiesSortConfig)}
                         </TableHead>
@@ -793,6 +799,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by company status"
                         >
                           Status {renderSortIcon('status', companiesSortConfig)}
                         </TableHead>
@@ -807,6 +814,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by company creation date"
                         >
                           Created At{' '}
                           {renderSortIcon('createdAt', companiesSortConfig)}
@@ -864,6 +872,7 @@ export default function AdminPage() {
                                   handleCompanyStatusUpdate(c.id, 'approved')
                                 }
                                 disabled={actionLoading === `company-${c.id}`}
+                                aria-label={`Approve company ${c.name}`}
                               >
                                 Approve
                               </Button>
@@ -877,6 +886,7 @@ export default function AdminPage() {
                                     handleCompanyStatusUpdate(c.id, 'rejected')
                                   }
                                   disabled={actionLoading === `company-${c.id}`}
+                                  aria-label={`Reject company ${c.name}`}
                                 >
                                   Reject
                                 </Button>
@@ -889,6 +899,7 @@ export default function AdminPage() {
                                   handleCompanyStatusUpdate(c.id, 'suspended')
                                 }
                                 disabled={actionLoading === `company-${c.id}`}
+                                aria-label={`Suspend company ${c.name}`}
                               >
                                 Suspend
                               </Button>
@@ -900,6 +911,7 @@ export default function AdminPage() {
                                   handleCompanyStatusUpdate(c.id, 'active')
                                 }
                                 disabled={actionLoading === `company-${c.id}`}
+                                aria-label={`Activate company ${c.name}`}
                               >
                                 Activate
                               </Button>
@@ -917,6 +929,7 @@ export default function AdminPage() {
                         }
                         disabled={companiesCurrentPage === 1}
                         variant="outline"
+                        aria-label="Previous page of companies"
                       >
                         Previous
                       </Button>
@@ -931,6 +944,7 @@ export default function AdminPage() {
                         }
                         disabled={companiesCurrentPage === totalCompaniesPages}
                         variant="outline"
+                        aria-label="Next page of companies"
                       >
                         Next
                       </Button>
@@ -978,6 +992,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by job seeker name"
                         >
                           Name {renderSortIcon('name', jobSeekersSortConfig)}
                         </TableHead>
@@ -990,6 +1005,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by job seeker email"
                         >
                           Email {renderSortIcon('email', jobSeekersSortConfig)}
                         </TableHead>
@@ -1002,6 +1018,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by job seeker status"
                         >
                           Status{' '}
                           {renderSortIcon('status', jobSeekersSortConfig)}
@@ -1017,6 +1034,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by job seeker last active date"
                         >
                           Last Active{' '}
                           {renderSortIcon('lastActive', jobSeekersSortConfig)}
@@ -1030,6 +1048,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by job seeker joined date"
                         >
                           Joined{' '}
                           {renderSortIcon('createdAt', jobSeekersSortConfig)}
@@ -1109,6 +1128,7 @@ export default function AdminPage() {
                                 actionLoading === `user-${u.uid}` ||
                                 user?.uid === u.uid
                               }
+                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
                             >
                               {u.status === 'active' ? 'Suspend' : 'Activate'}
                             </Button>
@@ -1125,6 +1145,7 @@ export default function AdminPage() {
                         }
                         disabled={jobSeekersCurrentPage === 1}
                         variant="outline"
+                        aria-label="Previous page of job seekers"
                       >
                         Previous
                       </Button>
@@ -1141,6 +1162,7 @@ export default function AdminPage() {
                           jobSeekersCurrentPage === totalJobSeekersPages
                         }
                         variant="outline"
+                        aria-label="Next page of job seekers"
                       >
                         Next
                       </Button>
@@ -1190,6 +1212,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user name"
                         >
                           Name {renderSortIcon('name', platformUsersSortConfig)}
                         </TableHead>
@@ -1202,6 +1225,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user email"
                         >
                           Email{' '}
                           {renderSortIcon('email', platformUsersSortConfig)}
@@ -1215,6 +1239,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user role"
                         >
                           Role {renderSortIcon('role', platformUsersSortConfig)}
                         </TableHead>
@@ -1227,6 +1252,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user status"
                         >
                           Status{' '}
                           {renderSortIcon('status', platformUsersSortConfig)}
@@ -1240,6 +1266,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user last active date"
                         >
                           Last Active{' '}
                           {renderSortIcon(
@@ -1256,6 +1283,7 @@ export default function AdminPage() {
                             )
                           }
                           className="cursor-pointer"
+                          aria-label="Sort by platform user joined date"
                         >
                           Joined{' '}
                           {renderSortIcon('createdAt', platformUsersSortConfig)}
@@ -1352,6 +1380,7 @@ export default function AdminPage() {
                         }
                         disabled={platformUsersCurrentPage === 1}
                         variant="outline"
+                        aria-label="Previous page of platform users"
                       >
                         Previous
                       </Button>
@@ -1369,6 +1398,7 @@ export default function AdminPage() {
                           platformUsersCurrentPage === totalPlatformUsersPages
                         }
                         variant="outline"
+                        aria-label="Next page of platform users"
                       >
                         Next
                       </Button>

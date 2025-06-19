@@ -1,3 +1,4 @@
+
 'use client';
 'use client';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
@@ -26,7 +27,6 @@ import {
   Loader2,
   Trash2,
   Sparkles,
-  ClipboardPaste,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -36,7 +36,7 @@ import {
 import type { UserProfile } from '@/types';
 
 export function ResumeUploadForm() {
-  const { user, updateUserProfile } = useAuth(); // Changed from updateUser
+  const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [pastedResume, setPastedResume] = useState('');
@@ -45,13 +45,13 @@ export function ResumeUploadForm() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setPastedResume(''); // Clear pasted text if file is selected
+      setPastedResume('');
     }
   };
 
   const handlePastedResumeChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setPastedResume(e.target.value);
-    setFile(null); // Clear file if text is pasted
+    setFile(null);
   };
 
   const processResumeData = async (dataUri: string, sourceName: string) => {
@@ -74,12 +74,10 @@ export function ResumeUploadForm() {
           variant: 'destructive',
           duration: 9000,
         });
-        // Still save the file/text info if source was a file
         if (file) {
-          profileUpdates.resumeUrl = URL.createObjectURL(file); // This might be temporary, consider storing actual URL from Firebase Storage
+          profileUpdates.resumeUrl = URL.createObjectURL(file);
           profileUpdates.resumeFileName = file.name;
         }
-        // Don't populate profile fields with error messages
       } else {
         if (parsedData.name && !user.name)
           profileUpdates.name = parsedData.name;
@@ -87,8 +85,6 @@ export function ResumeUploadForm() {
         if (parsedData.skills && parsedData.skills.length > 0)
           profileUpdates.skills = parsedData.skills;
 
-        // Parsed experience/education goes into parsedResumeText for user to reference
-        // It does NOT directly populate the structured experiences/educations arrays.
         let summaryText = '';
         if (parsedData.experience)
           summaryText += `Experience Summary:\n${parsedData.experience}\n\n`;
@@ -102,14 +98,22 @@ export function ResumeUploadForm() {
           profileUpdates.linkedinUrl = parsedData.linkedinUrl;
         if (parsedData.mobileNumber && !user.mobileNumber)
           profileUpdates.mobileNumber = parsedData.mobileNumber;
+        
+        if (parsedData.totalYearsExperience !== undefined && (user.totalYearsExperience === undefined || user.totalYearsExperience === 0)) {
+           profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
+           // Months can be set to 0 if AI only gives years
+           if (user.totalMonthsExperience === undefined || user.totalMonthsExperience === 0) {
+             profileUpdates.totalMonthsExperience = 0;
+           }
+        }
+
 
         if (file) {
-          profileUpdates.resumeUrl = URL.createObjectURL(file); // This might be temporary, consider storing actual URL from Firebase Storage
+          profileUpdates.resumeUrl = URL.createObjectURL(file);
           profileUpdates.resumeFileName = file.name;
         } else if (pastedResume) {
-          // For pasted resumes, we might not store a "file" but can note it was parsed
           profileUpdates.resumeFileName = 'Pasted Resume Text';
-          profileUpdates.resumeUrl = undefined; // Or some indicator
+          profileUpdates.resumeUrl = undefined;
         }
 
         toast({
@@ -234,7 +238,7 @@ export function ResumeUploadForm() {
               type="button"
               onClick={() => {
                 setFile(null);
-                setPastedResume(''); /* allow new upload/paste */
+                setPastedResume('');
               }}
               disabled={isProcessing}
               variant="outline"

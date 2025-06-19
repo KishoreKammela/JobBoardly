@@ -16,7 +16,7 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
   - **Firestore**: NoSQL database for storing job listings, user profiles, applications, company profiles, and settings (including theme preference).
   - **Storage**: For hosting user-uploaded files like resumes.
   - **App Hosting / Functions**: (App Hosting configured via `apphosting.yaml`, Firebase Functions for backend tasks).
-- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing, and intelligent job/candidate matching.
+- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing, and intelligent job/candidate matching. Powered by Gemini models.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing, improved code quality, and better developer experience.
 - **Code Quality & Testing**:
   - **Testing Framework**: [Jest](https://jestjs.io/) - For unit and integration testing.
@@ -32,7 +32,7 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 
 - **User Authentication**: Secure registration and login via email/password and social providers. Includes password strength indicators and a dedicated "Change Password" page. Suspended accounts are prevented from logging in.
 - **User Profile Management**: Create and update personal and professional details. Includes options for profile visibility (searchable by employers or private).
-- **Resume Upload & AI Parsing**: Upload resumes (PDF, DOCX, TXT), with AI attempting to parse and pre-fill profile information. Parsed summary stored.
+- **Resume Upload & AI Parsing**: Upload resumes (PDF, DOCX, TXT) or paste text, with AI attempting to parse and pre-fill profile information. Parsed summary stored.
 - **Downloadable PDF Profile**: Download their own profile in a clean, ATS-friendly PDF format.
 - **Profile Preview**: View their own profile as it might appear to employers.
 - **Job Search & Filtering**: Browse job listings with filters for keywords, location, role type, remote options, and **recent activity** (e.g., posted in last 7 days).
@@ -149,29 +149,58 @@ A high-level overview of the project's directory structure:
 
 ### 1. Environment Variables
 
-Create a `.env` file in the root of the project:
+Create a `.env` file in the root of the project (or `.env.local` which is typically gitignored). Populate it with your Firebase project configuration and your Google AI (Gemini) API key.
+
+**Crucial: Ensure all `NEXT_PUBLIC_FIREBASE_*` variables are correctly set as these are required for Firebase services (Authentication, Firestore, Storage) to initialize properly.**
 
 ```env
-# Firebase Configuration
+# Firebase Configuration (Required for the app to function)
+# Find these values in your Firebase project settings:
+# Project settings > General > Your apps > Firebase SDK snippet > Config
 NEXT_PUBLIC_FIREBASE_API_KEY="AIza..."
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project-id.firebaseapp.com"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project-id.appspot.com"
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
 NEXT_PUBLIC_FIREBASE_APP_ID="your-app-id"
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-your-measurement-id" # Optional
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-your-measurement-id" # Optional, for Analytics
 
-# Genkit API Key (if needed)
-# GOOGLE_API_KEY="your-google-cloud-api-key"
+# Genkit API Key for Google AI (Gemini) (Required for AI features)
+# Replace YOUR_GEMINI_API_KEY_HERE with your actual key from Google AI Studio or Google Cloud.
+# Ensure this key has access to the Gemini API.
+GOOGLE_API_KEY="YOUR_GEMINI_API_KEY_HERE"
 ```
+**Important**:
+- If your `.env` file is not in `.gitignore`, **add it now** to prevent accidentally committing your API keys.
+- Create a `.env.example` file with placeholders for these keys to guide other developers or for your own reference.
+- After setting or changing these variables, **you must restart your Next.js development server and Genkit server** for them to take effect.
 
 ### 2. Firebase Setup
 
-Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled. Set up necessary composite indexes in Firestore as prompted by errors or for query optimization.
+Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled in your Firebase project. Set up necessary composite indexes in Firestore as prompted by errors during development or for query optimization (especially for the Admin Dashboard filtering/sorting if implemented server-side in the future).
 
 ## Local Development Setup
 
-(Same as before, run Next.js dev server and Genkit dev server)
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
+2.  **Run Next.js Dev Server**:
+    ```bash
+    npm run dev
+    # or
+    yarn dev
+    ```
+    This usually starts the app on `http://localhost:9002`.
+3.  **Run Genkit Dev Server (in a separate terminal)**:
+    ```bash
+    npm run genkit:dev
+    # or (for auto-reloading on AI file changes)
+    npm run genkit:watch
+    ```
+    This typically starts the Genkit server on `http://localhost:3400`.
 
 ## Key Routes Examples
 
@@ -213,9 +242,9 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
 
 ## Admin User Creation
 
-1.  A user registers normally.
-2.  Manually access your Firestore database.
-3.  Navigate to the `users` collection, find the user's document.
+1.  A user registers normally (e.g., as a job seeker or employer).
+2.  Manually access your Firebase Firestore database.
+3.  Navigate to the `users` collection, find the user's document by their UID.
 4.  Edit the `role` field to `"admin"` or `"superAdmin"`.
 5.  Ensure their `status` field is set to `"active"`.
 

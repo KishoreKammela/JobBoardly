@@ -1,24 +1,25 @@
-import type { UserProfile, UserSettings, Job } from '@/types'; // Added Job from types
-import { Timestamp } from 'firebase/firestore'; // For proper timestamp usage
+
+import type { UserProfile, UserSettings, Job } from '@/types';
+import { Timestamp } from 'firebase/firestore';
 
 export const mockEmployerProfiles: UserProfile[] = [
   {
-    uid: 'employer1', // Changed id to uid for consistency
+    uid: 'employer1',
     role: 'employer',
     name: 'Innovatech Solutions',
     email: 'hr@innovatech.com',
     avatarUrl: 'https://placehold.co/100x100.png?text=IS',
-    companyId: 'companyA', // Assuming a companyId
+    companyId: 'companyA',
     isCompanyAdmin: true,
     createdAt: Timestamp.now(),
   },
   {
-    uid: 'employer2', // Changed id to uid
+    uid: 'employer2',
     role: 'employer',
     name: 'AI Core Inc.',
     email: 'careers@aicore.com',
     avatarUrl: 'https://placehold.co/100x100.png?text=AI',
-    companyId: 'companyB', // Assuming a companyId
+    companyId: 'companyB',
     isCompanyAdmin: true,
     createdAt: Timestamp.now(),
   },
@@ -26,7 +27,7 @@ export const mockEmployerProfiles: UserProfile[] = [
 
 export const mockJobSeekerProfiles: UserProfile[] = [
   {
-    uid: 'user123', // Changed id to uid
+    uid: 'user123',
     role: 'jobSeeker',
     name: 'Jane Doe',
     email: 'jane.doe@example.com',
@@ -40,6 +41,8 @@ export const mockJobSeekerProfiles: UserProfile[] = [
       'TypeScript',
       'Next.js',
     ],
+    totalYearsExperience: 5,
+    totalMonthsExperience: 6,
     experience: `
 ### Senior Software Engineer at Tech Solutions Inc. (2020 - Present)
 - Led development of key features for a SaaS product using React, Node.js, and TypeScript.
@@ -57,7 +60,7 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/janedoe',
     preferredLocations: ['San Francisco, CA', 'Remote'],
     jobSearchStatus: 'activelyLooking',
-    desiredSalary: 140000, // Number, will be formatted to INR for display
+    desiredSalary: 1400000, // INR
     resumeUrl: '#',
     resumeFileName: 'JaneDoe_Resume.pdf',
     parsedResumeText:
@@ -67,7 +70,7 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     createdAt: Timestamp.now(),
   },
   {
-    uid: 'user456', // Changed id to uid
+    uid: 'user456',
     role: 'jobSeeker',
     name: 'John Smith',
     email: 'john.smith@example.com',
@@ -81,6 +84,8 @@ export const mockJobSeekerProfiles: UserProfile[] = [
       'Adobe XD',
       'Wireframing',
     ],
+    totalYearsExperience: 7,
+    totalMonthsExperience: 0,
     experience: `
 ### Lead UX Designer at DesignWorks (2019 - Present)
 - Spearheaded user experience strategy for flagship mobile and web applications.
@@ -98,13 +103,13 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/johnsmithux',
     preferredLocations: ['New York, NY', 'Remote'],
     jobSearchStatus: 'openToOpportunities',
-    desiredSalary: 120000, // Number
+    desiredSalary: 1200000, // INR
     appliedJobIds: [],
     savedJobIds: ['1', '3'],
     createdAt: Timestamp.now(),
   },
   {
-    uid: 'user789', // Changed id to uid
+    uid: 'user789',
     role: 'jobSeeker',
     name: 'Alice Brown',
     email: 'alice.brown@example.com',
@@ -119,6 +124,8 @@ export const mockJobSeekerProfiles: UserProfile[] = [
       'TensorFlow',
       'PyTorch',
     ],
+    totalYearsExperience: 3,
+    totalMonthsExperience: 2,
     experience: `
 ### Data Scientist at DataDriven Corp (2021 - Present)
 - Developed and deployed machine learning models for predictive analytics.
@@ -132,14 +139,13 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/alicebrowndata',
     preferredLocations: ['Boston, MA', 'Remote'],
     jobSearchStatus: 'activelyLooking',
-    desiredSalary: 160000, // Number
+    desiredSalary: 1600000, // INR
     appliedJobIds: ['5'],
     savedJobIds: [],
     createdAt: Timestamp.now(),
   },
 ];
 
-// For direct use when needed, or for AuthContext's initial login.
 export const mockUserProfile: UserProfile = mockJobSeekerProfiles[0];
 export const mockEmployerProfile: UserProfile = mockEmployerProfiles[0];
 
@@ -156,10 +162,10 @@ export const mockJobs: Job[] = [
     postedDate: '2024-07-20',
     isRemote: false,
     skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-    salaryMin: 1200000, // Assuming INR
-    salaryMax: 1600000, // Assuming INR
+    salaryMin: 1200000,
+    salaryMax: 1600000,
     companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
-    postedById: mockEmployerProfiles[0].uid, // Use uid
+    postedById: mockEmployerProfiles[0].uid,
     status: 'approved',
     createdAt: Timestamp.fromDate(new Date('2024-07-20T09:00:00Z')),
     updatedAt: Timestamp.fromDate(new Date('2024-07-20T09:00:00Z')),
@@ -176,10 +182,10 @@ export const mockJobs: Job[] = [
     postedDate: '2024-07-18',
     isRemote: true,
     skills: ['Product Management', 'AI/ML', 'Agile', 'Roadmapping'],
-    salaryMin: 1500000, // Assuming INR
-    salaryMax: 1900000, // Assuming INR
+    salaryMin: 1500000,
+    salaryMax: 1900000,
     companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
-    postedById: mockEmployerProfiles[1].uid, // Use uid
+    postedById: mockEmployerProfiles[1].uid,
     status: 'approved',
     createdAt: Timestamp.fromDate(new Date('2024-07-18T09:00:00Z')),
     updatedAt: Timestamp.fromDate(new Date('2024-07-18T09:00:00Z')),
@@ -197,7 +203,7 @@ export const mockJobs: Job[] = [
     isRemote: true,
     skills: ['UX Design', 'Figma', 'User Research', 'Prototyping'],
     companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
-    postedById: mockEmployerProfiles[0].uid, // Use uid
+    postedById: mockEmployerProfiles[0].uid,
     status: 'pending',
     createdAt: Timestamp.fromDate(new Date('2024-07-22T09:00:00Z')),
     updatedAt: Timestamp.fromDate(new Date('2024-07-22T09:00:00Z')),
@@ -214,10 +220,10 @@ export const mockJobs: Job[] = [
     postedDate: '2024-07-15',
     isRemote: false,
     skills: ['AWS', 'Kubernetes', 'Docker', 'CI/CD', 'Terraform'],
-    salaryMin: 1300000, // Assuming INR
-    salaryMax: 1700000, // Assuming INR
+    salaryMin: 1300000,
+    salaryMax: 1700000,
     companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
-    postedById: mockEmployerProfiles[1].uid, // Use uid
+    postedById: mockEmployerProfiles[1].uid,
     status: 'approved',
     createdAt: Timestamp.fromDate(new Date('2024-07-15T09:00:00Z')),
     updatedAt: Timestamp.fromDate(new Date('2024-07-15T09:00:00Z')),
@@ -234,10 +240,10 @@ export const mockJobs: Job[] = [
     postedDate: '2024-07-25',
     isRemote: false,
     skills: ['Python', 'R', 'Machine Learning', 'Statistics', 'SQL'],
-    salaryMin: 1100000, // Assuming INR
-    salaryMax: 1500000, // Assuming INR
+    salaryMin: 1100000,
+    salaryMax: 1500000,
     companyLogoUrl: mockEmployerProfiles[0].avatarUrl,
-    postedById: mockEmployerProfiles[0].uid, // Use uid
+    postedById: mockEmployerProfiles[0].uid,
     status: 'rejected',
     moderationReason: 'Salary range too broad, please specify.',
     createdAt: Timestamp.fromDate(new Date('2024-07-25T09:00:00Z')),
@@ -256,7 +262,7 @@ export const mockJobs: Job[] = [
     isRemote: true,
     skills: ['Node.js', 'Express', 'React', 'PostgreSQL', 'REST APIs'],
     companyLogoUrl: mockEmployerProfiles[1].avatarUrl,
-    postedById: mockEmployerProfiles[1].uid, // Use uid
+    postedById: mockEmployerProfiles[1].uid,
     status: 'approved',
     createdAt: Timestamp.fromDate(new Date('2024-07-23T09:00:00Z')),
     updatedAt: Timestamp.fromDate(new Date('2024-07-23T09:00:00Z')),

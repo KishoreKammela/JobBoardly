@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type {
   UserProfile,
@@ -6,20 +7,20 @@ import type {
   LanguageEntry,
 } from '@/types';
 import { formatCurrencyINR } from '@/lib/utils';
+import { format, parse, isValid } from 'date-fns';
 
 interface PrintableProfileProps {
   user: UserProfile;
 }
 
-// Define reasonable truncation limits for PDF
-const MAX_SUMMARY_LENGTH = 800; // Increased slightly
-const MAX_EXPERIENCE_DESC_LENGTH = 300; // Increased slightly
-const MAX_EDUCATION_DESC_LENGTH = 250; // Increased slightly
+const MAX_SUMMARY_LENGTH = 800;
+const MAX_EXPERIENCE_DESC_LENGTH = 300;
+const MAX_EDUCATION_DESC_LENGTH = 250;
 
 const truncateText = (text: string | undefined, maxLength: number): string => {
   if (!text) return 'N/A';
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '... (truncated)';
+  return text.substring(0, maxLength) + '...';
 };
 
 const PrintableProfileComponent = React.forwardRef<
@@ -27,13 +28,25 @@ const PrintableProfileComponent = React.forwardRef<
   PrintableProfileProps
 >(({ user }, ref) => {
   if (!user) {
-    // Simplified check, role check can be done by caller
     return (
       <div ref={ref} className="p-8 font-body bg-white text-black text-sm">
         <p>No user data provided for printing.</p>
       </div>
     );
   }
+
+  const totalExperienceString = () => {
+    const years = user.totalYearsExperience || 0;
+    const months = user.totalMonthsExperience || 0;
+    if (years === 0 && months === 0) return null; // Return null if no experience
+    let str = '';
+    if (years > 0) str += `${years} year${years > 1 ? 's' : ''}`;
+    if (months > 0) {
+      if (str) str += ', ';
+      str += `${months} month${months > 1 ? 's' : ''}`;
+    }
+    return str;
+  };
 
   const hasTruncatedContent =
     (user.parsedResumeText &&
@@ -67,30 +80,27 @@ const PrintableProfileComponent = React.forwardRef<
           .printable-profile h2,
           .printable-profile h3,
           .printable-profile h4 {
-            /* Added h4 */
             color: #111 !important;
             margin-bottom: 0.3rem;
-            font-family: 'Inter', sans-serif; /* Ensure consistent font */
+            font-family: 'Inter', sans-serif;
           }
           .printable-profile h1 {
-            font-size: 18pt; /* Adjusted for better hierarchy */
+            font-size: 18pt;
             font-weight: 700;
           }
           .printable-profile h2 {
-            font-size: 14pt; /* Adjusted */
+            font-size: 14pt;
             font-weight: 600;
             margin-top: 1rem;
             border-bottom: 1px solid #ccc;
             padding-bottom: 0.2rem;
           }
           .printable-profile h3 {
-            /* For Experience/Education titles */
             font-size: 11pt;
             font-weight: 600;
             margin-bottom: 0.1rem;
           }
           .printable-profile h4 {
-            /* For sub-headings like Company/Institute */
             font-size: 10pt;
             font-weight: 500;
             color: #444 !important;
@@ -108,7 +118,6 @@ const PrintableProfileComponent = React.forwardRef<
             margin: 0.8rem 0;
           }
           .printable-profile ul.compact-list {
-            /* For skills/languages */
             margin-left: 0;
             padding-left: 0;
             list-style-type: none;
@@ -123,7 +132,7 @@ const PrintableProfileComponent = React.forwardRef<
             font-size: 8pt;
           }
           .printable-profile .section {
-            margin-bottom: 1rem; /* Increased spacing */
+            margin-bottom: 1rem;
             page-break-inside: avoid;
           }
           .printable-profile .header {
@@ -137,11 +146,10 @@ const PrintableProfileComponent = React.forwardRef<
             color: #555 !important;
           }
           .printable-profile .entry-item {
-            margin-bottom: 0.8rem; /* Increased spacing */
+            margin-bottom: 0.8rem;
             page-break-inside: avoid;
           }
           .printable-profile .item-meta {
-            /* For dates/CTC */
             font-size: 8pt;
             color: #666 !important;
             margin-bottom: 0.2rem;
@@ -149,7 +157,7 @@ const PrintableProfileComponent = React.forwardRef<
           .printable-profile .item-description {
             white-space: pre-wrap;
             font-size: 9pt;
-            margin-left: 0; /* Removed indent for more space */
+            margin-left: 0;
             padding-left: 0;
             border-left: none;
           }
@@ -158,24 +166,39 @@ const PrintableProfileComponent = React.forwardRef<
             font-size: 7pt;
             color: #777 !important;
             text-align: center;
-            page-break-before: auto; /* Allow break if it's at page bottom */
+            page-break-before: auto;
           }
           .printable-profile .grid-2-col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            gap: 0.5rem 1.5rem; /* Adjust gap */
+            page-break-inside: avoid;
           }
-          .printable-profile .contact-info span {
+          .printable-profile .contact-info span,
+          .printable-profile .personal-info-item {
             margin-right: 0.7rem;
+            display: inline-block; /* For better wrapping in grid */
           }
-          .printable-profile .contact-info span:last-child {
+          .printable-profile .contact-info span:last-child,
+          .printable-profile .personal-info-item:last-child {
             margin-right: 0;
+          }
+           .printable-profile .sub-section { /* New for CTC & Preferences grouping */
+            margin-bottom: 0.8rem;
+            page-break-inside: avoid;
+          }
+          .printable-profile .sub-section h3 {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #333 !important;
+            border-bottom: none; /* No border for sub-section H3 */
+            margin-top: 0.5rem;
+            margin-bottom: 0.2rem;
           }
         }
         .printable-profile {
-          /* Base styles for screen, if needed */
           font-family: 'Inter', sans-serif;
-          max-width: 800px; /* A bit wider for screen if needed */
+          max-width: 800px;
           margin: auto;
           line-height: 1.5;
         }
@@ -228,9 +251,16 @@ const PrintableProfileComponent = React.forwardRef<
         </p>
       </div>
 
+      {totalExperienceString() && (
+        <div className="section">
+          <h2>Total Experience</h2>
+          <p>{totalExperienceString()}</p>
+        </div>
+      )}
+
       {user.parsedResumeText && (
         <div className="section">
-          <h2>Summary</h2>
+          <h2>Professional Summary</h2>
           <p className="item-description">
             {truncateText(user.parsedResumeText, MAX_SUMMARY_LENGTH)}
           </p>
@@ -245,21 +275,23 @@ const PrintableProfileComponent = React.forwardRef<
               <h3>{exp.jobRole}</h3>
               <h4>{exp.companyName}</h4>
               <p className="item-meta">
-                {exp.startDate
-                  ? new Date(exp.startDate + '-02').toLocaleDateString(
-                      'en-US',
-                      { month: 'short', year: 'numeric' }
+                {exp.startDate &&
+                isValid(parse(exp.startDate, 'yyyy-MM-dd', new Date()))
+                  ? format(
+                      parse(exp.startDate, 'yyyy-MM-dd', new Date()),
+                      'MMM yyyy'
                     )
                   : 'N/A'}{' '}
-                -
+                -{' '}
                 {exp.currentlyWorking
-                  ? ' Present'
-                  : exp.endDate
-                    ? new Date(exp.endDate + '-02').toLocaleDateString(
-                        'en-US',
-                        { month: 'short', year: 'numeric' }
+                  ? 'Present'
+                  : exp.endDate &&
+                      isValid(parse(exp.endDate, 'yyyy-MM-dd', new Date()))
+                    ? format(
+                        parse(exp.endDate, 'yyyy-MM-dd', new Date()),
+                        'MMM yyyy'
                       )
-                    : ' N/A'}
+                    : 'N/A'}
                 {exp.annualCTC && ` | CTC: ${formatCurrencyINR(exp.annualCTC)}`}
               </p>
               {exp.description && (
@@ -288,7 +320,7 @@ const PrintableProfileComponent = React.forwardRef<
                       marginLeft: '5px',
                     }}
                   >
-                    (Most Relevant)
+                    (Relevant)
                   </span>
                 )}
               </h3>
@@ -344,52 +376,78 @@ const PrintableProfileComponent = React.forwardRef<
       </div>
 
       <div className="section">
-        <h2>Preferences & Other Details</h2>
-        <div className="grid-2-col">
-          {user.dateOfBirth && (
-            <p>
-              <strong>Date of Birth:</strong>{' '}
-              {new Date(user.dateOfBirth).toLocaleDateString()}
-            </p>
-          )}
-          {user.gender && (
-            <p>
-              <strong>Gender:</strong> {user.gender}
-            </p>
-          )}
-          {user.preferredLocations && user.preferredLocations.length > 0 && (
-            <p>
-              <strong>Preferred Locations:</strong>{' '}
-              {user.preferredLocations.join(', ')}
-            </p>
-          )}
-          {user.availability && (
-            <p>
-              <strong>Availability:</strong> {user.availability}
-            </p>
-          )}
-          {user.jobSearchStatus && (
-            <p>
-              <strong>Job Search Status:</strong>{' '}
-              {user.jobSearchStatus
-                .replace(/([A-Z])/g, ' $1')
-                .replace(/^./, (str) => str.toUpperCase())}
-            </p>
-          )}
-          {user.currentCTCValue !== undefined && (
-            <p>
-              <strong>Current CTC:</strong>{' '}
-              {formatCurrencyINR(user.currentCTCValue)}/year{' '}
-              {user.currentCTCConfidential && '(Confidential)'}
-            </p>
-          )}
-          {user.expectedCTCValue !== undefined && (
-            <p>
-              <strong>Expected CTC:</strong>{' '}
-              {formatCurrencyINR(user.expectedCTCValue)}/year{' '}
-              {user.expectedCTCNegotiable && '(Negotiable)'}
-            </p>
-          )}
+        <h2>Other Details</h2>
+        <div className="sub-section">
+          <h3>Personal</h3>
+          <div className="grid-2-col">
+            {user.dateOfBirth &&
+              isValid(parse(user.dateOfBirth, 'yyyy-MM-dd', new Date())) && (
+                <p className="personal-info-item">
+                  <strong>Date of Birth:</strong>{' '}
+                  {format(
+                    parse(user.dateOfBirth, 'yyyy-MM-dd', new Date()),
+                    'PP'
+                  )}
+                </p>
+              )}
+            {user.gender && user.gender !== 'Prefer not to say' && (
+              <p className="personal-info-item">
+                <strong>Gender:</strong> {user.gender}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="sub-section">
+          <h3>Compensation</h3>
+          <div className="grid-2-col">
+            {user.currentCTCValue !== undefined && (
+              <p className="personal-info-item">
+                <strong>Current CTC:</strong>{' '}
+                {user.currentCTCConfidential
+                  ? 'Confidential'
+                  : `${formatCurrencyINR(user.currentCTCValue)}/year`}
+              </p>
+            )}
+            {user.expectedCTCValue !== undefined && (
+              <p className="personal-info-item">
+                <strong>Expected CTC:</strong>{' '}
+                {formatCurrencyINR(user.expectedCTCValue)}/year{' '}
+                {user.expectedCTCNegotiable && '(Negotiable)'}
+              </p>
+            )}
+             {(user.currentCTCValue === undefined && user.expectedCTCValue === undefined) && (
+                <p className="personal-info-item">Not specified.</p>
+             )}
+          </div>
+        </div>
+
+        <div className="sub-section">
+          <h3>Preferences</h3>
+          <div className="grid-2-col">
+            {user.preferredLocations && user.preferredLocations.length > 0 && (
+              <p className="personal-info-item">
+                <strong>Preferred Locations:</strong>{' '}
+                {user.preferredLocations.join(', ')}
+              </p>
+            )}
+            {user.availability && (
+              <p className="personal-info-item">
+                <strong>Availability:</strong> {user.availability}
+              </p>
+            )}
+            {user.jobSearchStatus && (
+              <p className="personal-info-item">
+                <strong>Job Search Status:</strong>{' '}
+                {user.jobSearchStatus
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/^./, (str) => str.toUpperCase())}
+              </p>
+            )}
+             {(!user.preferredLocations || user.preferredLocations.length === 0) && !user.jobSearchStatus && !user.availability && (
+                <p className="personal-info-item">Not specified.</p>
+             )}
+          </div>
         </div>
       </div>
 

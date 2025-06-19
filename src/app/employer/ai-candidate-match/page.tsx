@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -165,13 +166,17 @@ export default function AiCandidateMatchPage() {
       .map((c) => {
         let profileString = `Candidate UID: ${c.uid}\n`;
         profileString += `Name: ${c.name || 'N/A'}\n`;
-        if (c.email) profileString += `Email: ${c.email}\n`; // For context
-        if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`; // For context
+        if (c.email) profileString += `Email: ${c.email}\n`;
+        if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`;
         if (c.headline) profileString += `Headline: ${c.headline}\n`;
         if (c.gender) profileString += `Gender: ${c.gender}\n`;
         if (c.dateOfBirth) profileString += `Date of Birth: ${c.dateOfBirth}\n`;
         if (c.homeState) profileString += `Home State: ${c.homeState}\n`;
         if (c.homeCity) profileString += `Home City: ${c.homeCity}\n`;
+
+        if (c.totalYearsExperience !== undefined || c.totalMonthsExperience !== undefined) {
+          profileString += `Total Experience: ${c.totalYearsExperience || 0} years, ${c.totalMonthsExperience || 0} months\n`;
+        }
 
         if (c.currentCTCValue !== undefined) {
           profileString += `Current Annual CTC (INR): ${formatCurrencyINR(c.currentCTCValue)} ${c.currentCTCConfidential ? '(Confidential)' : ''}\n`;
@@ -192,7 +197,8 @@ export default function AiCandidateMatchPage() {
 
         if (c.portfolioUrl)
           profileString += `Portfolio URL: ${c.portfolioUrl}\n`;
-        if (c.linkedinUrl) profileString += `LinkedIn URL: ${c.linkedinUrl}\n`;
+        if (c.linkedinUrl)
+          profileString += `LinkedIn URL: ${c.linkedinUrl}\n`;
         if (c.preferredLocations && c.preferredLocations.length > 0) {
           profileString += `Preferred Locations: ${c.preferredLocations.join(', ')}\n`;
         }
@@ -340,7 +346,6 @@ export default function AiCandidateMatchPage() {
         const matched = allCandidates.filter((c) =>
           aiResult.relevantCandidateIDs.includes(c.uid)
         );
-        // Sort matched candidates based on the order of relevantCandidateIDs from AI result
         matched.sort(
           (a, b) =>
             aiResult.relevantCandidateIDs.indexOf(a.uid) -

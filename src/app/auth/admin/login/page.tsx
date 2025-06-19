@@ -1,3 +1,4 @@
+
 'use client';
 import Link from 'next/link';
 import { useState, type FormEvent, useEffect } from 'react';
@@ -32,16 +33,14 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (!authLoading && user) {
       const redirectPath = searchParams.get('redirect');
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'superAdmin') {
         router.replace(redirectPath || '/admin');
       } else if (redirectPath && redirectPath.startsWith('/admin')) {
-        // If a non-admin was trying to access /admin and got redirected here
         toast({
           title: 'Access Denied',
           description: 'You do not have permission to access the admin area.',
           variant: 'destructive',
         });
-        // Redirect them based on their actual role
         if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
@@ -49,7 +48,6 @@ export default function AdminLoginPage() {
       } else if (redirectPath) {
         router.replace(redirectPath);
       } else {
-        // Fallback redirection if no specific redirect was given and they are not admin
         if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
@@ -63,16 +61,19 @@ export default function AdminLoginPage() {
     setIsLoading(true);
     try {
       const loggedInFirebaseUser = await loginUser(email, password);
-      // AuthContext will update `user` and `useEffect` will handle redirection.
-      // We can check role here for immediate feedback if necessary.
       const userDocRef = doc(db, 'users', loggedInFirebaseUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+      if (
+        userDocSnap.exists() &&
+        (userDocSnap.data().role === 'admin' ||
+          userDocSnap.data().role === 'superAdmin')
+      ) {
         toast({
           title: 'Admin Login Successful',
           description: 'Redirecting to dashboard...',
         });
+        // Redirection will be handled by useEffect
       } else if (userDocSnap.exists()) {
         toast({
           title: 'Access Denied',
@@ -81,7 +82,6 @@ export default function AdminLoginPage() {
           variant: 'destructive',
         });
       } else {
-        // Should not happen if login is successful and user profile exists.
         toast({
           title: 'Login Successful',
           description:
@@ -115,10 +115,6 @@ export default function AdminLoginPage() {
       </div>
     );
   }
-
-  // If user is already logged in and is admin, useEffect will redirect them.
-  // If user is logged in but not admin, they also get redirected by useEffect.
-  // This form should only be visible if no user is logged in, or auth is still loading.
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)] py-12">

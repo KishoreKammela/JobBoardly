@@ -1,3 +1,4 @@
+
 'use client';
 import type {
   UserProfile,
@@ -8,6 +9,9 @@ import type {
   Application,
   ApplicationStatus,
   Job,
+  ExperienceEntry,
+  EducationEntry,
+  LanguageEntry,
 } from '@/types';
 import React, {
   createContext,
@@ -42,6 +46,7 @@ import {
   type FieldValue,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
+import { format, isValid, parse } from 'date-fns';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -87,6 +92,41 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const createEmptyExperience = (): ExperienceEntry => ({
+  id: uuidv4(),
+  companyName: '',
+  jobRole: '',
+  startDate: '',
+  endDate: '',
+  currentlyWorking: false,
+  description: '',
+  annualCTC: undefined,
+});
+
+const createEmptyEducation = (): EducationEntry => ({
+  id: uuidv4(),
+  level: 'Graduate',
+  degreeName: '',
+  instituteName: '',
+  startYear: undefined,
+  endYear: undefined,
+  specialization: '',
+  courseType: 'Full Time',
+  isMostRelevant: false,
+  description: '',
+  specialization: '',
+});
+
+const createEmptyLanguage = (): LanguageEntry => ({
+  id: uuidv4(),
+  languageName: '',
+  proficiency: 'Beginner',
+  canRead: false,
+  canWrite: false,
+  canSpeak: false,
+});
+
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
@@ -94,20 +134,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      console.warn("AuthContext: Firebase auth instance is not available. Firebase might not be configured correctly (e.g., missing environment variables). Skipping auth state listener.");
+      setLoading(false);
+      setUser(null);
+      setFirebaseUser(null);
+      setCompany(null);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
-          await updateDoc(userDocRef, { lastActive: serverTimestamp() }); // Update lastActive on auth state change
+          await updateDoc(userDocRef, { lastActive: serverTimestamp() });
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
-            const profileData = {
+            const rawData = userDocSnap.data();
+
+            let dobString: string | undefined = undefined;
+            if (rawData.dateOfBirth) {
+                if (typeof rawData.dateOfBirth === 'string' && isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))) {
+                    dobString = rawData.dateOfBirth;
+                } else if (rawData.dateOfBirth instanceof Timestamp) {
+                    dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
+                } else if (rawData.dateOfBirth instanceof Date && isValid(rawData.dateOfBirth)) {
+                    dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
+                } else {
+                    dobString = ''; 
+                }
+            } else {
+                 dobString = '';
+            }
+            
+           const experiences = (rawData.experiences || []).map((exp: any) => ({
+              id: exp.id || uuidv4(),
+              companyName: exp.companyName || '',
+              jobRole: exp.jobRole || '',
+              startDate: exp.startDate || '',
+              endDate: exp.endDate || '',
+              currentlyWorking: exp.currentlyWorking || false,
+              description: exp.description || '',
+              annualCTC: exp.annualCTC === null || exp.annualCTC === undefined || isNaN(Number(exp.annualCTC)) ? undefined : Number(exp.annualCTC),
+            }));
+            const educations = (rawData.educations || []).map((edu: any) => ({
+              id: edu.id || uuidv4(),
+              level: edu.level || 'Graduate',
+              degreeName: edu.degreeName || '',
+              instituteName: edu.instituteName || '',
+              startYear: edu.startYear === null || edu.startYear === undefined || isNaN(Number(edu.startYear)) ? undefined : Number(edu.startYear),
+              endYear: edu.endYear === null || edu.endYear === undefined || isNaN(Number(edu.endYear)) ? undefined : Number(edu.endYear),
+              specialization: edu.specialization || '',
+              courseType: edu.courseType || 'Full Time',
+              isMostRelevant: edu.isMostRelevant || false,
+              description: edu.description || '',
+            }));
+             const languages = (rawData.languages || []).map((lang: any) => ({
+                id: lang.id || uuidv4(),
+                languageName: lang.languageName || '',
+                proficiency: lang.proficiency || 'Beginner',
+                canRead: lang.canRead || false,
+                canWrite: lang.canWrite || false,
+                canSpeak: lang.canSpeak || false,
+             }));
+
+
+            const profileData: UserProfile = {
               uid: fbUser.uid,
-              ...userDocSnap.data(),
-            } as UserProfile;
+              email: fbUser.email, 
+              ...rawData,
+              dateOfBirth: dobString,
+              createdAt: rawData.createdAt instanceof Timestamp ? rawData.createdAt.toDate().toISOString() : rawData.createdAt,
+              updatedAt: rawData.updatedAt instanceof Timestamp ? rawData.updatedAt.toDate().toISOString() : rawData.updatedAt,
+              lastActive: rawData.lastActive instanceof Timestamp ? rawData.lastActive.toDate().toISOString() : rawData.lastActive,
+              savedSearches: (rawData.savedSearches || []).map((s: any) => ({
+                ...s,
+                createdAt: s.createdAt instanceof Timestamp ? s.createdAt.toDate().toISOString() : s.createdAt,
+              })),
+              experiences: experiences.length > 0 ? experiences : (rawData.role === 'jobSeeker' ? [createEmptyExperience()] : []),
+              educations: educations.length > 0 ? educations : (rawData.role === 'jobSeeker' ? [createEmptyEducation()] : []),
+              languages: languages.length > 0 ? languages : (rawData.role === 'jobSeeker' ? [createEmptyLanguage()] : []),
+              totalYearsExperience: rawData.totalYearsExperience || 0,
+              totalMonthsExperience: rawData.totalMonthsExperience || 0,
+            };
             setUser(profileData);
-            // Apply theme from user profile
+
             if (profileData.theme) {
               applyTheme(profileData.theme);
             }
@@ -116,9 +228,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
               const companyDocSnap = await getDoc(companyDocRef);
               if (companyDocSnap.exists()) {
+                const companyRawData = companyDocSnap.data();
                 setCompany({
                   id: companyDocSnap.id,
-                  ...companyDocSnap.data(),
+                  ...companyRawData,
+                  createdAt: companyRawData.createdAt instanceof Timestamp ? companyRawData.createdAt.toDate().toISOString() : companyRawData.createdAt,
+                  updatedAt: companyRawData.updatedAt instanceof Timestamp ? companyRawData.updatedAt.toDate().toISOString() : companyRawData.updatedAt,
                 } as Company);
               } else {
                 setCompany(null);
@@ -144,13 +259,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         setCompany(null);
-        applyTheme('system'); // Default to system theme if no user
+        applyTheme('system');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -167,7 +283,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Listen to system theme changes if user preference is 'system'
   useEffect(() => {
     if (user?.theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -197,6 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
         status: 'pending',
+        moderationReason: '',
       };
       await setDoc(newCompanyRef, newCompanyData);
       userCompanyId = newCompanyRef.id;
@@ -212,12 +328,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fbUser.displayName ||
         (role === 'employer' ? 'Recruiter' : 'New User'),
       role: role,
-      avatarUrl: fbUser.photoURL || undefined,
+      avatarUrl: fbUser.photoURL || '',
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
       lastActive: serverTimestamp() as Timestamp,
       status: 'active',
-      theme: 'system', // Default theme
+      theme: 'system',
       jobBoardDisplay: 'list',
       itemsPerPage: 10,
       jobAlerts: {
@@ -237,9 +353,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.headline = '';
       userProfileData.skills = [];
       userProfileData.mobileNumber = '';
-      userProfileData.experiences = [];
-      userProfileData.educations = [];
-      userProfileData.languages = [];
+      userProfileData.experiences = [createEmptyExperience()];
+      userProfileData.educations = [createEmptyEducation()];
+      userProfileData.languages = [createEmptyLanguage()];
+      userProfileData.gender = 'Prefer not to say';
+      userProfileData.dateOfBirth = '';
+      userProfileData.currentCTCValue = undefined;
+      userProfileData.currentCTCConfidential = false;
+      userProfileData.expectedCTCValue = undefined;
+      userProfileData.expectedCTCNegotiable = false;
+      userProfileData.homeState = '';
+      userProfileData.homeCity = '';
+      userProfileData.parsedResumeText = '';
+      userProfileData.isProfileSearchable = true;
+      userProfileData.availability = 'Flexible';
+      userProfileData.jobSearchStatus = 'activelyLooking';
+      userProfileData.totalYearsExperience = 0;
+      userProfileData.totalMonthsExperience = 0;
     }
 
     const finalProfileDataForFirestore: { [key: string]: any } = {};
@@ -249,14 +379,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userProfileData[key as keyof typeof userProfileData];
       }
     }
+    
+    if (role === 'jobSeeker') {
+        finalProfileDataForFirestore.experiences = finalProfileDataForFirestore.experiences && finalProfileDataForFirestore.experiences.length > 0 ? finalProfileDataForFirestore.experiences : [];
+        finalProfileDataForFirestore.educations = finalProfileDataForFirestore.educations && finalProfileDataForFirestore.educations.length > 0 ? finalProfileDataForFirestore.educations : [];
+        finalProfileDataForFirestore.languages = finalProfileDataForFirestore.languages && finalProfileDataForFirestore.languages.length > 0 ? finalProfileDataForFirestore.languages : [];
+    }
 
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
-      setUser(finalProfileDataForFirestore as UserProfile);
-      if (finalProfileDataForFirestore.theme) {
-        applyTheme(finalProfileDataForFirestore.theme);
+      const fullProfile = {
+          ...userProfileData, 
+          uid: fbUser.uid, 
+          email: fbUser.email, 
+          createdAt: new Date().toISOString(), 
+          updatedAt: new Date().toISOString(),
+          lastActive: new Date().toISOString(),
+          experiences: finalProfileDataForFirestore.experiences || [],
+          educations: finalProfileDataForFirestore.educations || [],
+          languages: finalProfileDataForFirestore.languages || [],
+          totalYearsExperience: finalProfileDataForFirestore.totalYearsExperience || 0,
+          totalMonthsExperience: finalProfileDataForFirestore.totalMonthsExperience || 0,
+      } as UserProfile;
+
+      setUser(fullProfile);
+
+      if (fullProfile.theme) {
+        applyTheme(fullProfile.theme);
       }
-      return finalProfileDataForFirestore as UserProfile;
+      return fullProfile;
     } catch (error) {
       console.error(
         'AuthContext: Firestore setDoc FAILED for UID:',
@@ -277,6 +428,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole,
     companyName?: string
   ): Promise<FirebaseUser> => {
+    if (!auth) {
+      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -296,6 +450,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     pass: string
   ): Promise<FirebaseUser> => {
+    if (!auth) {
+      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+    }
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     return userCredential.user;
   };
@@ -305,6 +462,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole,
     companyName?: string
   ): Promise<FirebaseUser> => {
+    if (!auth) {
+      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+    }
     try {
       const result = await signInWithPopup(auth, provider);
       const fbUser = result.user;
@@ -320,10 +480,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           companyName
         );
       } else {
-        const existingProfile = {
+        const rawData = userDocSnap.data();
+         let dobString: string | undefined = undefined;
+            if (rawData.dateOfBirth) {
+                 if (typeof rawData.dateOfBirth === 'string' && isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))) {
+                    dobString = rawData.dateOfBirth;
+                } else if (rawData.dateOfBirth instanceof Timestamp) {
+                    dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
+                } else if (rawData.dateOfBirth instanceof Date && isValid(rawData.dateOfBirth)) {
+                    dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
+                } else {
+                    dobString = '';
+                }
+            } else {
+                dobString = '';
+            }
+
+        const existingProfile: UserProfile = {
           uid: fbUser.uid,
-          ...userDocSnap.data(),
-        } as UserProfile;
+          email: fbUser.email,
+          ...rawData,
+          dateOfBirth: dobString,
+          createdAt: rawData.createdAt instanceof Timestamp ? rawData.createdAt.toDate().toISOString() : rawData.createdAt,
+          updatedAt: rawData.updatedAt instanceof Timestamp ? rawData.updatedAt.toDate().toISOString() : rawData.updatedAt,
+          lastActive: rawData.lastActive instanceof Timestamp ? rawData.lastActive.toDate().toISOString() : rawData.lastActive,
+          savedSearches: (rawData.savedSearches || []).map((s: any) => ({
+            ...s,
+            createdAt: s.createdAt instanceof Timestamp ? s.createdAt.toDate().toISOString() : s.createdAt,
+          })),
+           experiences: (rawData.experiences || []).map((exp: any) => ({
+              id: exp.id || uuidv4(),
+              companyName: exp.companyName || '',
+              jobRole: exp.jobRole || '',
+              startDate: exp.startDate || '',
+              endDate: exp.endDate || '',
+              currentlyWorking: exp.currentlyWorking || false,
+              description: exp.description || '',
+              annualCTC: exp.annualCTC === null || exp.annualCTC === undefined || isNaN(Number(exp.annualCTC)) ? undefined : Number(exp.annualCTC),
+            })),
+          educations: (rawData.educations || []).map((edu: any) => ({
+              id: edu.id || uuidv4(),
+              level: edu.level || 'Graduate',
+              degreeName: edu.degreeName || '',
+              instituteName: edu.instituteName || '',
+              startYear: edu.startYear === null || edu.startYear === undefined || isNaN(Number(edu.startYear)) ? undefined : Number(edu.startYear),
+              endYear: edu.endYear === null || edu.endYear === undefined || isNaN(Number(edu.endYear)) ? undefined : Number(edu.endYear),
+              specialization: edu.specialization || '',
+              courseType: edu.courseType || 'Full Time',
+              isMostRelevant: edu.isMostRelevant || false,
+              description: edu.description || '',
+          })),
+          languages: (rawData.languages || []).map((lang: any) => ({
+              id: lang.id || uuidv4(),
+              languageName: lang.languageName || '',
+              proficiency: lang.proficiency || 'Beginner',
+              canRead: lang.canRead || false,
+              canWrite: lang.canWrite || false,
+              canSpeak: lang.canSpeak || false,
+          })),
+          totalYearsExperience: rawData.totalYearsExperience || 0,
+          totalMonthsExperience: rawData.totalMonthsExperience || 0,
+        };
+        
         let updatesNeeded = false;
         const updates: Partial<UserProfile> & {
           updatedAt?: FieldValue;
@@ -344,6 +562,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: serverTimestamp() as Timestamp,
             updatedAt: serverTimestamp() as Timestamp,
             status: 'pending',
+            moderationReason: '',
           };
           await setDoc(newCompanyRef, newCompanyData);
           updates.companyId = newCompanyRef.id;
@@ -355,6 +574,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.savedSearches = [];
           updatesNeeded = true;
         }
+         if (role === 'jobSeeker' && existingProfile.experiences === undefined) {
+          updates.experiences = [createEmptyExperience()];
+          updatesNeeded = true;
+        }
+        if (role === 'jobSeeker' && existingProfile.educations === undefined) {
+          updates.educations = [createEmptyEducation()];
+          updatesNeeded = true;
+        }
+        if (role === 'jobSeeker' && existingProfile.languages === undefined) {
+          updates.languages = [createEmptyLanguage()];
+          updatesNeeded = true;
+        }
+
         if (
           role === 'jobSeeker' &&
           existingProfile.mobileNumber === undefined
@@ -366,10 +598,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.theme = 'system';
           updatesNeeded = true;
         }
+        if (role === 'jobSeeker' && existingProfile.totalYearsExperience === undefined) {
+          updates.totalYearsExperience = 0;
+          updatesNeeded = true;
+        }
+        if (role === 'jobSeeker' && existingProfile.totalMonthsExperience === undefined) {
+          updates.totalMonthsExperience = 0;
+          updatesNeeded = true;
+        }
+
 
         if (updatesNeeded) {
           updates.updatedAt = serverTimestamp();
-          await updateDoc(userDocRef, updates);
+          await updateDoc(userDocRef, updates as { [x: string]: any }); 
           setUser({ ...existingProfile, ...updates } as UserProfile);
           if (updates.theme) applyTheme(updates.theme);
         } else {
@@ -387,9 +628,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             const companyDocSnap = await getDoc(companyDocRef);
             if (companyDocSnap.exists()) {
+                const companyRawData = companyDocSnap.data();
               setCompany({
                 id: companyDocSnap.id,
-                ...companyDocSnap.data(),
+                ...companyRawData,
+                 createdAt: companyRawData.createdAt instanceof Timestamp ? companyRawData.createdAt.toDate().toISOString() : companyRawData.createdAt,
+                 updatedAt: companyRawData.updatedAt instanceof Timestamp ? companyRawData.updatedAt.toDate().toISOString() : companyRawData.updatedAt,
               } as Company);
             }
           }
@@ -405,15 +649,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       if (user && user.uid) {
-        // Update lastActive before signing out
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { lastActive: serverTimestamp() });
       }
-      await signOut(auth);
+      if (auth) { 
+        await signOut(auth);
+      }
       setUser(null);
       setFirebaseUser(null);
       setCompany(null);
-      applyTheme('system'); // Reset to system theme on logout
+      applyTheme('system');
     } catch (error) {
       console.error('AuthContext: logout error', error);
       throw error;
@@ -424,12 +669,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentPassword: string,
     newPassword: string
   ) => {
-    if (!firebaseUser) {
-      throw new Error('User not authenticated.');
+    if (!auth) {
+      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+    }
+    if (!firebaseUser || !firebaseUser.email) {
+      throw new Error('User not authenticated or email not available.');
     }
     try {
       const credential = EmailAuthProvider.credential(
-        firebaseUser.email!,
+        firebaseUser.email,
         currentPassword
       );
       await reauthenticateWithCredential(firebaseUser, credential);
@@ -448,18 +696,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastActive: serverTimestamp(),
       };
       for (const key in updatedData) {
-        if (updatedData[key as keyof UserProfile] !== undefined) {
-          dataToUpdate[key] = updatedData[key as keyof UserProfile];
+        const typedKey = key as keyof UserProfile;
+        if (updatedData[typedKey] !== undefined) {
+          if (Array.isArray(updatedData[typedKey])) {
+            dataToUpdate[key] = (updatedData[typedKey] as any[]).filter(item => item !== undefined)
+              .map(item => typeof item === 'object' && item !== null ? {...item} : item); 
+          } else {
+            dataToUpdate[key] = updatedData[typedKey];
+          }
         }
       }
 
-      if (Object.keys(dataToUpdate).length > 2) {
-        // Check if more than just timestamps are being updated
+      if (Object.keys(dataToUpdate).length > 2) { 
         try {
           await updateDoc(userDocRef, dataToUpdate);
-          setUser(
-            (prevUser) => ({ ...prevUser, ...dataToUpdate }) as UserProfile
-          );
+           const updatedUserFromState = { ...user, ...updatedData };
+            
+            if (updatedData.experiences) updatedUserFromState.experiences = updatedData.experiences.map(exp => ({...exp}));
+            if (updatedData.educations) updatedUserFromState.educations = updatedData.educations.map(edu => ({...edu}));
+            if (updatedData.languages) updatedUserFromState.languages = updatedData.languages.map(lang => ({...lang}));
+            if (updatedData.skills) updatedUserFromState.skills = [...updatedData.skills];
+            if (updatedData.preferredLocations) updatedUserFromState.preferredLocations = [...updatedData.preferredLocations];
+
+          setUser(updatedUserFromState);
           if (dataToUpdate.theme) {
             applyTheme(dataToUpdate.theme);
           }
@@ -518,8 +777,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           jobTitle: job.title,
           applicantId: user.uid,
           applicantName: user.name,
-          applicantAvatarUrl: user.avatarUrl,
-          applicantHeadline: user.headline,
+          applicantAvatarUrl: user.avatarUrl || '',
+          applicantHeadline: user.headline || '',
           companyId: job.companyId,
           postedById: job.postedById,
           status: 'Applied',
@@ -569,7 +828,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updates.employerNotes = employerNotes;
     }
     try {
-      await updateDoc(applicationDocRef, updates);
+      await updateDoc(applicationDocRef, updates as { [x:string] : any});
     } catch (error) {
       console.error('AuthContext: updateApplicationStatus error', error);
       throw error;

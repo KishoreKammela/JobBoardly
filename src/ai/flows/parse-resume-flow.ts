@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Parses a resume document (provided as a data URI) and extracts structured information.
@@ -10,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-// Using the type from global types - ParsedResumeData is updated there
 import type { ParsedResumeData } from '@/types';
 
 const ParseResumeInputSchema = z.object({
@@ -22,14 +22,11 @@ const ParseResumeInputSchema = z.object({
 });
 export type ParseResumeInput = z.infer<typeof ParseResumeInputSchema>;
 
-// Define Zod schema based on ParsedResumeData from types.ts
-// This schema guides the AI on what to extract.
 const ParseResumeOutputSchema = z
   .object({
     name: z.string().optional().describe('The full name of the candidate.'),
     email: z
       .string()
-      .email()
       .optional()
       .describe('The email address of the candidate.'),
     mobileNumber: z
@@ -60,17 +57,21 @@ const ParseResumeOutputSchema = z
       ),
     portfolioUrl: z
       .string()
-      .url()
       .optional()
       .describe('URL to a personal portfolio, if available.'),
     linkedinUrl: z
       .string()
-      .url()
       .optional()
       .describe('URL to a LinkedIn profile, if available.'),
+    totalYearsExperience: z
+      .number()
+      .optional()
+      .describe(
+        'The total years of professional experience, if explicitly mentioned or clearly inferable from the resume content.'
+      ),
   })
   .describe(
-    'Structured information extracted from the resume. The "experience" and "education" fields should be comprehensive summaries that can be used for the parsedResumeText field. The AI should attempt to identify distinct job roles/companies and degrees/institutions within these summaries.'
+    'Structured information extracted from the resume. The "experience" and "education" fields should be comprehensive summaries that can be used for the parsedResumeText field. The AI should attempt to identify distinct job roles/companies and degrees/institutions within these summaries, and infer total years of experience if possible.'
   );
 
 export type ParseResumeOutput = z.infer<typeof ParseResumeOutputSchema>;
@@ -102,6 +103,7 @@ Extract the following details and structure them according to the output schema:
 - A detailed summary of their work experience. For this 'experience' field, provide a comprehensive text block. If possible, format it using Markdown for structure if you can infer distinct sections like job titles, companies, and dates/durations, and key responsibilities. This entire block will be used as a reference.
 - A detailed summary of their education. Similar to experience, provide a comprehensive text block for the 'education' field. If possible, use Markdown for structure, identifying degrees, institutions, and graduation years/periods. This entire block will be used as a reference.
 - URLs for their personal portfolio and LinkedIn profile, if present.
+- Total years of professional work experience, if explicitly stated or clearly inferable from the work history dates. Provide this as a number (e.g., 5, 10.5).
 
 Prioritize accuracy. If some information is not clearly available, omit the field rather than guessing.
 Ensure the output is valid JSON matching the provided schema.
@@ -124,22 +126,18 @@ const resumeParserFlow = ai.defineFlow(
       mimeType = mimeType.trim();
     }
 
-    // These MIME types are known to be problematic for direct media processing by Gemini.
-    // Plain text is preferred.
     const unsupportedMediaMimeTypes = [
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-      'application/msword', // .doc
-      'application/pdf', // .pdf
-      'application/vnd.oasis.opendocument.text', // .odt
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'application/pdf',
+      'application/vnd.oasis.opendocument.text',
     ];
 
     if (mimeType && unsupportedMediaMimeTypes.includes(mimeType)) {
       console.warn(
-        `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration expecting image/video or plain text for the 'media' tag. ` +
+        `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration. ` +
           `Consider extracting text content from such documents before sending for AI analysis if results are poor.`
       );
-      // Proceed with parsing, but note that AI might struggle or return the "file type not supported" message if it cannot process it.
-      // The prompt is designed to handle this by putting the error in the 'experience' field.
     }
 
     const { output } = await resumeParserPrompt(input);
@@ -158,6 +156,7 @@ const resumeParserFlow = ai.defineFlow(
         education: undefined,
         portfolioUrl: undefined,
         linkedinUrl: undefined,
+        totalYearsExperience: undefined,
       };
     }
     return output;

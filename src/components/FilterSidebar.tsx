@@ -1,4 +1,4 @@
-'use client';
+
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,9 +19,9 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, RotateCcw, Save } from 'lucide-react';
+import { Filter, RotateCcw, Save } from 'lucide-react'; // Changed Search to Filter
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Filters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -38,20 +38,17 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface FilterSidebarProps {
-  onFilterChange: (filters: Filters) => void;
-  initialFilters?: Partial<Filters>;
+  onFilterChange: (filters: Omit<Filters, 'searchTerm'>) => void;
+  initialFilters?: Partial<Omit<Filters, 'searchTerm'>>;
+  currentGlobalSearchTerm?: string; // To include in "Save Search"
 }
 
 export function FilterSidebar({
   onFilterChange,
   initialFilters,
+  currentGlobalSearchTerm = '',
 }: FilterSidebarProps) {
-export function FilterSidebar({
-  onFilterChange,
-  initialFilters,
-}: FilterSidebarProps) {
-  const defaultFilters: Filters = {
-    searchTerm: '',
+  const defaultSidebarFilters: Omit<Filters, 'searchTerm'> = {
     location: '',
     roleType: 'all',
     isRemote: false,
@@ -59,28 +56,24 @@ export function FilterSidebar({
     ...initialFilters,
   };
 
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>(defaultSidebarFilters);
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user, saveSearch } = useAuth();
   const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  useEffect(() => {
+    onFilterChange(filters);
+  }, [filters, onFilterChange]);
+
 
   const handleCheckboxChange = (
-    name: keyof Filters,
+    name: keyof Omit<Filters, 'searchTerm'>,
     checked: boolean | 'indeterminate'
   ) => {
     setFilters((prev) => ({
   const handleCheckboxChange = (
-    name: keyof Filters,
+    name: keyof Omit<Filters, 'searchTerm'>,
     checked: boolean | 'indeterminate'
   ) => {
     setFilters((prev) => ({
@@ -89,7 +82,15 @@ export function FilterSidebar({
     }));
   };
 
-  const handleSelectChange = (name: keyof Filters, value: string) => {
+  const handleSelectChange = (name: keyof Omit<Filters, 'searchTerm'>, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFilters((prev) => ({
       ...prev,
       [name]: value,
@@ -98,13 +99,12 @@ export function FilterSidebar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onFilterChange(filters);
+    // onFilterChange is called via useEffect
   };
 
   const handleReset = () => {
-    setFilters(defaultFilters);
-    onFilterChange(defaultFilters);
-  };
+    setFilters(defaultSidebarFilters);
+    // onFilterChange will be called by useEffect
   };
 
   const handleOpenSaveSearchDialog = () => {
@@ -116,7 +116,7 @@ export function FilterSidebar({
       });
       return;
     }
-    setSearchName(filters.searchTerm || 'My Job Search');
+    setSearchName(currentGlobalSearchTerm || 'My Job Search');
     setIsSaveSearchAlertOpen(true);
   };
 
@@ -131,7 +131,11 @@ export function FilterSidebar({
     }
     if (user && user.role === 'jobSeeker') {
       try {
-        await saveSearch(searchName, filters);
+        const fullFiltersToSave: Filters = {
+          ...filters,
+          searchTerm: currentGlobalSearchTerm, // Add the global search term
+        };
+        await saveSearch(searchName, fullFiltersToSave);
         toast({
           title: 'Search Saved!',
           description: `"${searchName}" has been added to your saved searches.`,
@@ -152,21 +156,12 @@ export function FilterSidebar({
   return (
     <Card className="sticky top-24 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">Filter Jobs</CardTitle>
+        <CardTitle className="text-xl font-headline flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary"/> Filter Jobs
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="searchTerm">Keywords</Label>
-            <Input
-              id="searchTerm"
-              name="searchTerm"
-              placeholder="Job title, skills, company"
-              value={filters.searchTerm}
-              onChange={handleChange}
-              aria-label="Search keywords for jobs"
-            />
-          </div>
           <div>
             <Label htmlFor="location">Location</Label>
             <Input
@@ -174,7 +169,7 @@ export function FilterSidebar({
               name="location"
               placeholder="City, state, or zip code"
               value={filters.location}
-              onChange={handleChange}
+              onChange={handleInputChange}
               aria-label="Location filter for jobs"
             />
           </div>
@@ -239,33 +234,16 @@ export function FilterSidebar({
             </Label>
           </div>
           <div className="flex flex-col gap-2 pt-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="submit"
-                className="flex-1 min-w-[120px]"
-                aria-label="Apply job filters"
-              >
-                <Search className="mr-2 h-4 w-4" /> Apply Filters
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-                className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
-                aria-label="Reset job filters"
-              >
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-                className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
-                aria-label="Reset job filters"
-              >
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset
-              </Button>
-              </Button>
-            </div>
+            {/* Apply Filters button is implicitly handled by useEffect in parent */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="w-full"
+              aria-label="Reset job filters"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" /> Reset Filters
+            </Button>
             {user && user.role === 'jobSeeker' && (
               <Button
                 type="button"
@@ -274,7 +252,7 @@ export function FilterSidebar({
                 className="w-full"
                 aria-label="Save current search criteria"
               >
-                <Save className="mr-2 h-4 w-4" /> Save This Search
+                <Save className="mr-2 h-4 w-4" /> Save Current Search
               </Button>
               <Button
                 type="button"
@@ -283,7 +261,7 @@ export function FilterSidebar({
                 className="w-full"
                 aria-label="Save current search criteria"
               >
-                <Save className="mr-2 h-4 w-4" /> Save This Search
+                <Save className="mr-2 h-4 w-4" /> Save Current Search
               </Button>
             )}
           </div>
@@ -301,10 +279,7 @@ export function FilterSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>Save Job Search</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a name for this search. You can manage your saved searches
-              in Settings.
-              Enter a name for this search. You can manage your saved searches
-              in Settings.
+              Enter a name for this search. It will include your current keyword "{currentGlobalSearchTerm || 'none'}" and the selected filters.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

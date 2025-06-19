@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -88,14 +89,18 @@ export function AiJobMatcher() {
     if (user && user.role === 'jobSeeker') {
       let profileText = `Job Seeker Profile:\n`;
       profileText += `Name: ${user.name || 'N/A'}\n`;
-      profileText += `Email: ${user.email || 'N/A'}\n`; // For context, AI won't contact
-      if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`; // For context
+      profileText += `Email: ${user.email || 'N/A'}\n`;
+      if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`;
       if (user.headline) profileText += `Headline: ${user.headline}\n`;
       if (user.gender) profileText += `Gender: ${user.gender}\n`;
       if (user.dateOfBirth)
         profileText += `Date of Birth: ${user.dateOfBirth}\n`;
       if (user.homeState) profileText += `Home State: ${user.homeState}\n`;
       if (user.homeCity) profileText += `Home City: ${user.homeCity}\n`;
+
+      if (user.totalYearsExperience !== undefined || user.totalMonthsExperience !== undefined) {
+        profileText += `Total Experience: ${user.totalYearsExperience || 0} years, ${user.totalMonthsExperience || 0} months\n`;
+      }
 
       if (user.currentCTCValue !== undefined) {
         profileText += `Current Annual CTC (INR): ${formatCurrencyINR(user.currentCTCValue)} ${user.currentCTCConfidential ? '(Confidential)' : ''}\n`;
@@ -242,7 +247,6 @@ export function AiJobMatcher() {
         const matched = allJobs.filter((job) =>
           aiResult.relevantJobIDs.includes(job.id)
         );
-        // Sort matched jobs based on the order of relevantJobIDs from AI result
         matched.sort(
           (a, b) =>
             aiResult.relevantJobIDs.indexOf(a.id) -

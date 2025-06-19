@@ -1,5 +1,6 @@
+
 'use client';
-import { useEffect, useState, useRef } from 'react'; // Added useRef
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -17,21 +18,16 @@ import {
   CardHeader,
   CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+// Removed Button import, will use native button
 import {
   Briefcase,
   GraduationCap,
-  MapPin,
   Mail,
   Linkedin,
   Globe,
-  CalendarCheck2,
-  DollarSign,
-  UserCheck,
   Loader2,
   AlertCircle,
   FileText,
-  MessageSquare,
   Phone,
   Languages as LanguagesIcon,
   Cake,
@@ -39,14 +35,21 @@ import {
   Sparkles,
   BookOpen,
   Award,
-  Download, // Added Download icon
+  Download,
+  Users,
+  DollarSign,
+  Clock,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrencyINR } from '@/lib/utils';
-import { useReactToPrint } from 'react-to-print'; // Added for PDF download
-import { PrintableProfileComponent } from '@/components/PrintableProfile'; // Added for PDF download
+import { useReactToPrint } from 'react-to-print';
+import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import { format, isValid, parse } from 'date-fns';
+import { cn } from '@/lib/utils'; 
+import { buttonVariants } from '@/components/ui/button'; 
+import { Button } from '@/components/ui/button'; 
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -58,10 +61,9 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const printableProfileRef = useRef<HTMLDivElement>(null); // Added for PDF download
+  const printableProfileRef = useRef<HTMLDivElement>(null);
 
   const handlePrintProfile = useReactToPrint({
-    // Added for PDF download
     content: () => printableProfileRef.current,
     documentTitle: `${candidate?.name || 'CandidateProfile'}_JobBoardly`,
     onPrintError: () =>
@@ -104,9 +106,31 @@ export default function CandidateDetailPage() {
           if (candidateDocSnap.exists()) {
             const data = candidateDocSnap.data();
             if (data.role === 'jobSeeker') {
+              let dobString: string | undefined = undefined;
+              if (data.dateOfBirth) {
+                if (
+                  typeof data.dateOfBirth === 'string' &&
+                  isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
+                ) {
+                  dobString = data.dateOfBirth;
+                } else if (data.dateOfBirth instanceof Timestamp) {
+                  dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
+                } else if (
+                  data.dateOfBirth instanceof Date &&
+                  isValid(data.dateOfBirth)
+                ) {
+                  dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
+                } else {
+                    dobString = ''; 
+                }
+              } else {
+                dobString = '';
+              }
+
               setCandidate({
                 uid: candidateDocSnap.id,
                 ...data,
+                dateOfBirth: dobString,
                 createdAt:
                   data.createdAt instanceof Timestamp
                     ? data.createdAt.toDate().toISOString()
@@ -119,6 +143,8 @@ export default function CandidateDetailPage() {
                   data.lastActive instanceof Timestamp
                     ? data.lastActive.toDate().toISOString()
                     : data.lastActive,
+                totalYearsExperience: data.totalYearsExperience || 0,
+                totalMonthsExperience: data.totalMonthsExperience || 0,
               } as UserProfile);
             } else {
               setError('This profile does not belong to a job seeker.');
@@ -144,10 +170,9 @@ export default function CandidateDetailPage() {
       currentUser.role !== 'admin' &&
       currentUser.role !== 'superAdmin'
     ) {
-      // If not authorized and already checked, just stop loading.
       setIsLoading(false);
     }
-  }, [candidateId, currentUser]); // Removed isMounted pattern
+  }, [candidateId, currentUser]);
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
@@ -197,6 +222,20 @@ export default function CandidateDetailPage() {
     candidate.educations?.length ||
     candidate.parsedResumeText;
 
+  const totalExperienceString = () => {
+    const years = candidate.totalYearsExperience || 0;
+    const months = candidate.totalMonthsExperience || 0;
+    if (years === 0 && months === 0) return null; // Changed from "N/A" to null
+    let str = '';
+    if (years > 0) str += `${years} year${years > 1 ? 's' : ''}`;
+    if (months > 0) {
+      if (str) str += ', ';
+      str += `${months} month${months > 1 ? 's' : ''}`;
+    }
+    return str;
+  };
+  const totalExperienceDisplay = totalExperienceString();
+
   return (
     <div className="container mx-auto py-8 max-w-4xl">
       <Card className="shadow-xl overflow-hidden">
@@ -242,42 +281,65 @@ export default function CandidateDetailPage() {
                     </a>
                   </div>
                 )}
-                {candidate.homeCity && candidate.homeState && (
+                {(candidate.homeCity || candidate.homeState) && (
                   <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <Home className="h-4 w-4" /> {candidate.homeCity},{' '}
-                    {candidate.homeState}
+                    <Home className="h-4 w-4" />{' '}
+                    {candidate.homeCity && <span>{candidate.homeCity}</span>}
+                    {candidate.homeCity && candidate.homeState && (
+                      <span>, </span>
+                    )}
+                    {candidate.homeState && <span>{candidate.homeState}</span>}
                   </div>
                 )}
-                {candidate.dateOfBirth && (
+                {candidate.dateOfBirth &&
+                  isValid(
+                    parse(candidate.dateOfBirth, 'yyyy-MM-dd', new Date())
+                  ) && (
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <Cake className="h-4 w-4" /> Born:{' '}
+                      {format(
+                        parse(candidate.dateOfBirth, 'yyyy-MM-dd', new Date()),
+                        'PPP'
+                      )}
+                    </div>
+                  )}
+                {candidate.gender && candidate.gender !== 'Prefer not to say' && (
                   <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <Cake className="h-4 w-4" /> Born:{' '}
-                    {new Date(candidate.dateOfBirth).toLocaleDateString(
-                      'en-US',
-                      { year: 'numeric', month: 'long', day: 'numeric' }
-                    )}
+                    <Users className="h-4 w-4" /> Gender: {candidate.gender}
                   </div>
                 )}
               </div>
             </div>
             <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
-              {currentUser && currentUser.role === 'employer' && (
-                <Button className="w-full sm:w-auto">
-                  <MessageSquare className="mr-2 h-5 w-5" /> Contact Candidate
-                </Button>
-              )}
-              <Button
+              <button
                 onClick={handlePrintProfile}
-                variant="outline"
-                className="w-full sm:w-auto"
+                type="button"
+                className={cn(
+                  buttonVariants({ variant: 'outline' }),
+                  'w-full sm:w-auto'
+                )}
+                aria-label="Download candidate profile as PDF"
               >
                 <Download className="mr-2 h-4 w-4" /> Download PDF
-              </Button>
+              </button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-8">
+          {totalExperienceDisplay && (
+            <section>
+              <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                <Clock className="text-accent" /> Total Experience
+              </h2>
+              <p className="text-lg text-foreground/90">
+                {totalExperienceDisplay}
+              </p>
+            </section>
+          )}
+
           {candidate.parsedResumeText && (
             <section>
+              {totalExperienceDisplay && <Separator className="my-6" />}
               <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                 <Sparkles className="text-accent" /> Professional Summary
               </h2>
@@ -289,7 +351,9 @@ export default function CandidateDetailPage() {
 
           {candidate.experiences && candidate.experiences.length > 0 && (
             <section>
-              {candidate.parsedResumeText && <Separator className="my-6" />}
+              {(totalExperienceDisplay || candidate.parsedResumeText) && (
+                <Separator className="my-6" />
+              )}
               <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
                 <Briefcase className="text-primary" /> Work Experience
               </h2>
@@ -300,27 +364,29 @@ export default function CandidateDetailPage() {
                     className="pl-4 border-l-2 border-primary/30"
                   >
                     <h3 className="text-lg font-semibold text-foreground">
-                      {exp.jobRole}
+                      {exp.jobRole || 'N/A'}
                     </h3>
                     <p className="text-md font-medium text-primary">
-                      {exp.companyName}
+                      {exp.companyName || 'N/A'}
                     </p>
                     <p className="text-xs text-muted-foreground mb-1">
-                      {exp.startDate
-                        ? new Date(exp.startDate + '-02').toLocaleDateString(
-                            // Add day for correct month parsing
-                            'en-US',
-                            { month: 'short', year: 'numeric' }
+                      {exp.startDate &&
+                      isValid(parse(exp.startDate, 'yyyy-MM-dd', new Date()))
+                        ? format(
+                            parse(exp.startDate, 'yyyy-MM-dd', new Date()),
+                            'PPP'
                           )
                         : 'N/A'}{' '}
-                      -
+                      -{' '}
                       {exp.currentlyWorking
                         ? 'Present'
-                        : exp.endDate
-                          ? new Date(exp.endDate + '-02').toLocaleDateString(
-                              // Add day
-                              'en-US',
-                              { month: 'short', year: 'numeric' }
+                        : exp.endDate &&
+                            isValid(
+                              parse(exp.endDate, 'yyyy-MM-dd', new Date())
+                            )
+                          ? format(
+                              parse(exp.endDate, 'yyyy-MM-dd', new Date()),
+                              'PPP'
                             )
                           : 'N/A'}
                       {exp.annualCTC &&
@@ -339,9 +405,9 @@ export default function CandidateDetailPage() {
 
           {candidate.educations && candidate.educations.length > 0 && (
             <section>
-              {(candidate.parsedResumeText ||
-                (candidate.experiences &&
-                  candidate.experiences.length > 0)) && (
+              {(totalExperienceDisplay ||
+                candidate.parsedResumeText ||
+                (candidate.experiences && candidate.experiences.length > 0)) && (
                 <Separator className="my-6" />
               )}
               <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
@@ -354,7 +420,7 @@ export default function CandidateDetailPage() {
                     className={`pl-4 border-l-2 ${edu.isMostRelevant ? 'border-accent' : 'border-primary/30'}`}
                   >
                     <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                      {edu.degreeName}
+                      {edu.degreeName || 'N/A'}
                       {edu.isMostRelevant && (
                         <Badge
                           variant="default"
@@ -365,10 +431,10 @@ export default function CandidateDetailPage() {
                       )}
                     </h3>
                     <p className="text-md font-medium text-primary">
-                      {edu.instituteName}
+                      {edu.instituteName || 'N/A'}
                     </p>
                     <p className="text-xs text-muted-foreground mb-1">
-                      {edu.level}{' '}
+                      {edu.level || 'N/A'}{' '}
                       {edu.specialization && ` - ${edu.specialization}`}
                       {edu.startYear &&
                         edu.endYear &&
@@ -385,7 +451,7 @@ export default function CandidateDetailPage() {
               </div>
             </section>
           )}
-          {!hasProfessionalInfo && (
+          {!hasProfessionalInfo && !totalExperienceDisplay && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Profile Information Limited</AlertTitle>
@@ -430,8 +496,10 @@ export default function CandidateDetailPage() {
                       key={lang.id || lang.languageName}
                       className="text-sm text-foreground/90"
                     >
-                      <span className="font-medium">{lang.languageName}</span>:{' '}
-                      {lang.proficiency}
+                      <span className="font-medium">
+                        {lang.languageName || 'N/A'}
+                      </span>
+                      : {lang.proficiency || 'N/A'}
                       <span className="text-xs text-muted-foreground ml-2">
                         (Read: {lang.canRead ? 'Yes' : 'No'}, Write:{' '}
                         {lang.canWrite ? 'Yes' : 'No'}, Speak:{' '}
@@ -451,7 +519,37 @@ export default function CandidateDetailPage() {
           <Separator className="my-6" />
           <section>
             <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-              <UserCheck className="text-primary" /> Preferences & Other Details
+              <DollarSign className="text-primary" /> Compensation
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              {candidate.currentCTCValue !== undefined && (
+                <p>
+                  <strong className="text-foreground/80">Current CTC:</strong>{' '}
+                  {candidate.currentCTCConfidential
+                    ? 'Confidential'
+                    : `${formatCurrencyINR(candidate.currentCTCValue)}/year`}
+                </p>
+              )}
+              {candidate.expectedCTCValue !== undefined && (
+                <p>
+                  <strong className="text-foreground/80">Expected CTC:</strong>{' '}
+                  {formatCurrencyINR(candidate.expectedCTCValue)}/year{' '}
+                  {candidate.expectedCTCNegotiable && '(Negotiable)'}
+                </p>
+              )}
+              {(candidate.currentCTCValue === undefined &&
+                candidate.expectedCTCValue === undefined) && (
+                <p className="text-sm text-muted-foreground">
+                  Compensation details not provided.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <Separator className="my-6" />
+          <section>
+            <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+              <Briefcase className="text-primary" /> Job Preferences
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
               {candidate.preferredLocations &&
@@ -479,21 +577,15 @@ export default function CandidateDetailPage() {
                   {candidate.availability}
                 </p>
               )}
-              {candidate.currentCTCValue !== undefined && (
-                <p>
-                  <strong className="text-foreground/80">Current CTC:</strong>{' '}
-                  {formatCurrencyINR(candidate.currentCTCValue)}/year{' '}
-                  {candidate.currentCTCConfidential && '(Confidential)'}
-                </p>
-              )}
-              {candidate.expectedCTCValue !== undefined && (
-                <p>
-                  <strong className="text-foreground/80">Expected CTC:</strong>{' '}
-                  {formatCurrencyINR(candidate.expectedCTCValue)}/year{' '}
-                  {candidate.expectedCTCNegotiable && '(Negotiable)'}
-                </p>
-              )}
             </div>
+            {(!candidate.preferredLocations ||
+              candidate.preferredLocations.length === 0) &&
+              !candidate.jobSearchStatus &&
+              !candidate.availability && (
+                <p className="text-sm text-muted-foreground">
+                  Job preferences not specified.
+                </p>
+              )}
           </section>
 
           <Separator className="my-6" />
@@ -575,3 +667,4 @@ export default function CandidateDetailPage() {
     </div>
   );
 }
+

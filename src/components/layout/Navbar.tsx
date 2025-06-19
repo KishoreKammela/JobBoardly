@@ -1,4 +1,4 @@
-'use client';
+
 'use client';
 import Link from 'next/link';
 import {
@@ -43,29 +43,46 @@ interface NavLinkConfig {
   label: string;
   icon: JSX.Element;
   authRequired: boolean;
-  roles: UserRole[];
-  alwaysShowForSeekerOrPublic?: boolean;
-  visibility: 'primary' | 'secondary';
+  roles: UserRole[]; // Roles for which this link is primary/relevant
+  publicAccess?: boolean; // True if accessible without login
+  employerOnly?: boolean;
+  jobSeekerOnly?: boolean;
+  adminOnly?: boolean;
 }
 
-const navLinksBase: NavLinkConfig[] = [
+// Defines links that can appear in the main horizontal navigation bar
+const mainNavLinksConfig: NavLinkConfig[] = [
   {
     href: '/jobs',
     label: 'Find Jobs',
     icon: <Search className="h-4 w-4" />,
     authRequired: false,
+    publicAccess: true,
     roles: ['jobSeeker', 'admin', 'superAdmin'],
-    alwaysShowForSeekerOrPublic: true,
-    visibility: 'primary',
   },
   {
     href: '/companies',
     label: 'Companies',
     icon: <Columns className="h-4 w-4" />,
     authRequired: false,
+    publicAccess: true,
     roles: ['jobSeeker', 'employer', 'admin', 'superAdmin'],
-    alwaysShowForSeekerOrPublic: true,
-    visibility: 'primary',
+  },
+  {
+    href: '/employer',
+    label: 'For Employers',
+    icon: <Building className="h-4 w-4" />,
+    authRequired: false,
+    publicAccess: true,
+    roles: [], // Special handling: show if not logged in, or if jobSeeker
+  },
+  {
+    href: '/my-jobs',
+    label: 'My Jobs',
+    icon: <FolderKanban className="h-4 w-4" />,
+    authRequired: true,
+    roles: ['jobSeeker'],
+    jobSeekerOnly: true,
   },
   {
     href: '/employer/find-candidates',
@@ -73,23 +90,7 @@ const navLinksBase: NavLinkConfig[] = [
     icon: <Users className="h-4 w-4" />,
     authRequired: true,
     roles: ['employer'],
-    visibility: 'primary',
-  },
-  {
-    href: '/ai-match',
-    label: 'AI Job Matcher',
-    icon: <Brain className="h-4 w-4" />,
-    authRequired: true,
-    roles: ['jobSeeker'],
-    visibility: 'secondary',
-  },
-  {
-    href: '/employer/ai-candidate-match',
-    label: 'AI Candidate Matcher',
-    icon: <Lightbulb className="h-4 w-4" />,
-    authRequired: true,
-    roles: ['employer'],
-    visibility: 'secondary',
+    employerOnly: true,
   },
   {
     href: '/employer/post-job',
@@ -97,7 +98,15 @@ const navLinksBase: NavLinkConfig[] = [
     icon: <FilePlus className="h-4 w-4" />,
     authRequired: true,
     roles: ['employer'],
-    visibility: 'primary',
+    employerOnly: true,
+  },
+  {
+    href: '/employer/posted-jobs',
+    label: 'My Postings',
+    icon: <ListChecks className="h-4 w-4" />,
+    authRequired: true,
+    roles: ['employer'],
+    employerOnly: true,
   },
   {
     href: '/admin',
@@ -105,11 +114,12 @@ const navLinksBase: NavLinkConfig[] = [
     icon: <Shield className="h-4 w-4" />,
     authRequired: true,
     roles: ['admin', 'superAdmin'],
-    visibility: 'primary',
+    adminOnly: true,
   },
 ];
 
-const userAccountDropdownLinks = {
+// Defines links that primarily live in the user's account dropdown menu
+const userAccountDropdownLinksConfig = {
   jobSeeker: [
     {
       href: '/profile',
@@ -122,9 +132,9 @@ const userAccountDropdownLinks = {
       icon: <Eye className="h-4 w-4" />,
     },
     {
-      href: '/my-jobs',
-      label: 'My Jobs',
-      icon: <FolderKanban className="h-4 w-4" />,
+      href: '/ai-match',
+      label: 'AI Job Matcher',
+      icon: <Brain className="h-4 w-4" />,
     },
     {
       href: '/auth/change-password',
@@ -144,9 +154,9 @@ const userAccountDropdownLinks = {
       icon: <Building className="h-4 w-4" />,
     },
     {
-      href: '/employer/posted-jobs',
-      label: 'Posted Jobs',
-      icon: <ListChecks className="h-4 w-4" />,
+      href: '/employer/ai-candidate-match',
+      label: 'AI Candidate Matcher',
+      icon: <Lightbulb className="h-4 w-4" />,
     },
     {
       href: '/auth/change-password',
@@ -166,11 +176,6 @@ const userAccountDropdownLinks = {
       icon: <User className="h-4 w-4" />,
     },
     {
-      href: '/admin',
-      label: 'Admin Dashboard',
-      icon: <Shield className="h-4 w-4" />,
-    },
-    {
       href: '/auth/change-password',
       label: 'Change Password',
       icon: <KeyRound className="h-4 w-4" />,
@@ -186,11 +191,6 @@ const userAccountDropdownLinks = {
       href: '/profile',
       label: 'My Profile',
       icon: <User className="h-4 w-4" />,
-    },
-    {
-      href: '/admin',
-      label: 'Admin Dashboard',
-      icon: <Shield className="h-4 w-4" />,
     },
     {
       href: '/auth/change-password',
@@ -246,38 +246,44 @@ export function Navbar() {
 
   const isEmployerPage = pathname.startsWith('/employer');
   const loginLink = isEmployerPage ? '/employer/login' : '/auth/login';
-  const registerLink = isEmployerPage ? '/employer/register' : '/auth/register';
-  const loginLink = isEmployerPage ? '/employer/login' : '/auth/login';
-  const registerLink = isEmployerPage ? '/employer/register' : '/auth/register';
+  const registerLink = isEmployerPage
+    ? '/employer/register'
+    : '/auth/register';
 
-  const getRelevantNavLinks = () => {
+  const getRenderedMainNavLinks = () => {
     if (loading) return [];
-    return navLinksBase.filter((link) => {
-      if (user) {
-        if (link.roles.includes(user.role)) return true;
-        if (
-          (user.role === 'admin' || user.role === 'superAdmin') &&
-          link.alwaysShowForSeekerOrPublic &&
-          (link.href === '/jobs' || link.href === '/companies')
-        )
-          return true;
-        if (
-          user.role === 'employer' &&
-          link.href === '/companies' &&
-          link.alwaysShowForSeekerOrPublic
-        )
-          return true;
-        return false;
-      } else {
-        return !link.authRequired && link.alwaysShowForSeekerOrPublic;
+    return mainNavLinksConfig.filter((link) => {
+      if (!user) {
+        // Logged-out user
+        if (link.href === '/employer') return !isEmployerPage; // Show "For Employers" if not on an employer page
+        return link.publicAccess && !link.authRequired;
       }
+      // Logged-in user
+      if (link.roles.includes(user.role)) return true;
+      // Admins should see public job/company links
+      if (
+        (user.role === 'admin' || user.role === 'superAdmin') &&
+        link.publicAccess &&
+        (link.href === '/jobs' || link.href === '/companies')
+      ) {
+        return true;
+      }
+      // Employers should see public company link
+      if (
+        user.role === 'employer' &&
+        link.publicAccess &&
+        link.href === '/companies'
+      ) {
+        return true;
+      }
+
+      return false;
     });
   };
 
-
-  const relevantNavLinks = getRelevantNavLinks();
+  const renderedMainNavLinks = getRenderedMainNavLinks();
   const currentAccountDropdownLinks = user
-    ? userAccountDropdownLinks[user.role] || []
+    ? userAccountDropdownLinksConfig[user.role] || []
     : [];
 
   return (
@@ -295,44 +301,18 @@ export function Navbar() {
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
 
+        {/* Desktop Main Navigation */}
         <nav className="hidden md:flex items-center gap-2 md:gap-3">
-          {relevantNavLinks.map((link) => (
+          {renderedMainNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`text-sm font-medium text-foreground/80 hover:text-primary transition-colors items-center gap-1.5 
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-medium text-foreground/80 hover:text-primary transition-colors items-center gap-1.5 
-                            ${link.visibility === 'primary' ? 'flex' : 'hidden lg:flex'}`}
-            >
-              {link.icon}
-              <span>{link.label}</span>
-            </Link>
+              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
             >
               {link.icon}
               <span>{link.label}</span>
             </Link>
           ))}
-          {!user && !loading && !isEmployerPage && (
-            <Link
-              href="/employer"
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
-            >
-              <Building className="h-4 w-4" />
-              <span>For Employers</span>
-            </Link>
-          )}
-          {!user && !loading && !isEmployerPage && (
-            <Link
-              href="/employer"
-              className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
-            >
-              <Building className="h-4 w-4" />
-              <span>For Employers</span>
-            </Link>
-          )}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -340,15 +320,18 @@ export function Navbar() {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : user ? (
+            // Logged-in User: Avatar Dropdown (acts as main menu on mobile)
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"
+                  aria-label="User account menu"
                 >
                 <Button
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"
+                  aria-label="User account menu"
                 >
                   <Avatar className="h-9 w-9">
                     <AvatarImage
@@ -386,6 +369,8 @@ export function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+
+                {/* Account Specific Links */}
                 {currentAccountDropdownLinks.map((item) => (
                   <DropdownMenuItem key={item.href} asChild>
                     <Link
@@ -398,16 +383,16 @@ export function Navbar() {
                   </DropdownMenuItem>
                 ))}
 
-                {/* Mobile Menu Fallback Links (Primary Nav items) */}
+                {/* Main Nav Links for Mobile View */}
                 <div className="md:hidden">
-                  {relevantNavLinks.length > 0 && <DropdownMenuSeparator />}
-                  {relevantNavLinks.length > 0 && (
+                  {renderedMainNavLinks.length > 0 && <DropdownMenuSeparator />}
+                  {renderedMainNavLinks.length > 0 && (
                     <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
-                      Quick Navigation
+                      Navigation
                     </DropdownMenuLabel>
                   )}
-                  {relevantNavLinks.map((link) => (
-                    <DropdownMenuItem key={`dd-${link.href}`} asChild>
+                  {renderedMainNavLinks.map((link) => (
+                    <DropdownMenuItem key={`dd-main-${link.href}`} asChild>
                       <Link
                         href={link.href}
                         className="flex items-center gap-2 cursor-pointer w-full"
@@ -417,16 +402,6 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   ))}
-                  {!user && !loading && !isEmployerPage && (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href="/employer"
-                        className="flex items-center gap-2 cursor-pointer w-full"
-                      >
-                        <Building className="h-4 w-4" /> For Employers
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
                 </div>
 
                 <DropdownMenuSeparator />
@@ -444,6 +419,7 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
+            // Logged-out User: Buttons for Desktop, Hamburger for Mobile
             <>
               <div className="hidden md:flex items-center gap-2">
                 <Button variant="ghost" asChild size="sm">
@@ -467,16 +443,17 @@ export function Navbar() {
                   </Link>
                 </Button>
               </div>
+              {/* Mobile Menu Trigger (Hamburger) */}
               <div className="md:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" aria-label="Open menu">
                       <Menu className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
-                    {relevantNavLinks.map((link) => (
-                      <DropdownMenuItem key={`mobile-${link.href}`} asChild>
+                    {renderedMainNavLinks.map((link) => (
+                      <DropdownMenuItem key={`mobile-main-${link.href}`} asChild>
                         <Link
                           href={link.href}
                           className="flex items-center gap-2 cursor-pointer w-full"
@@ -486,16 +463,6 @@ export function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     ))}
-                    {!user && !loading && !isEmployerPage && (
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href="/employer"
-                          className="flex items-center gap-2 cursor-pointer w-full"
-                        >
-                          <Building className="h-4 w-4" /> For Employers
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
@@ -517,13 +484,13 @@ export function Navbar() {
                 </DropdownMenu>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
+                    <Button variant="ghost" size="icon" aria-label="Open menu">
                       <Menu className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
-                    {relevantNavLinks.map((link) => (
-                      <DropdownMenuItem key={`mobile-${link.href}`} asChild>
+                    {renderedMainNavLinks.map((link) => (
+                      <DropdownMenuItem key={`mobile-main-${link.href}`} asChild>
                         <Link
                           href={link.href}
                           className="flex items-center gap-2 cursor-pointer w-full"
@@ -533,16 +500,6 @@ export function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                     ))}
-                    {!user && !loading && !isEmployerPage && (
-                      <DropdownMenuItem asChild>
-                        <Link
-                          href="/employer"
-                          className="flex items-center gap-2 cursor-pointer w-full"
-                        >
-                          <Building className="h-4 w-4" /> For Employers
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link
