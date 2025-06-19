@@ -10,19 +10,25 @@
  * - `AIPoweredJobMatchingOutput`: The output type for the `aiPoweredJobMatching` function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const AIPoweredJobMatchingInputSchema = z.object({
   jobSeekerProfile: z
     .string()
-    .describe('A detailed profile of the job seeker, including skills, experience, and preferences.'),
+    .describe(
+      'A detailed profile of the job seeker, including skills, experience, and preferences.'
+    ),
   jobPostings: z
     .string()
-    .describe('A list of available job postings with descriptions of the requirements and the role itself.'),
+    .describe(
+      'A list of available job postings with descriptions of the requirements and the role itself.'
+    ),
 });
 
-export type AIPoweredJobMatchingInput = z.infer<typeof AIPoweredJobMatchingInputSchema>;
+export type AIPoweredJobMatchingInput = z.infer<
+  typeof AIPoweredJobMatchingInputSchema
+>;
 
 const AIPoweredJobMatchingOutputSchema = z.object({
   relevantJobIDs: z
@@ -31,16 +37,20 @@ const AIPoweredJobMatchingOutputSchema = z.object({
   reasoning: z.string().describe('Explanation of why these jobs were picked.'),
 });
 
-export type AIPoweredJobMatchingOutput = z.infer<typeof AIPoweredJobMatchingOutputSchema>;
+export type AIPoweredJobMatchingOutput = z.infer<
+  typeof AIPoweredJobMatchingOutputSchema
+>;
 
-export async function aiPoweredJobMatching(input: AIPoweredJobMatchingInput): Promise<AIPoweredJobMatchingOutput> {
+export async function aiPoweredJobMatching(
+  input: AIPoweredJobMatchingInput
+): Promise<AIPoweredJobMatchingOutput> {
   return aiPoweredJobMatchingFlow(input);
 }
 
 const prompt = ai.definePrompt({
   name: 'aiPoweredJobMatchingPrompt',
-  input: {schema: AIPoweredJobMatchingInputSchema},
-  output: {schema: AIPoweredJobMatchingOutputSchema},
+  input: { schema: AIPoweredJobMatchingInputSchema },
+  output: { schema: AIPoweredJobMatchingOutputSchema },
   prompt: `You are an AI job matching expert. Given a job seeker's profile and a list of job postings, you will identify the most relevant jobs for the job seeker.
 
 Job Seeker Profile: {{{jobSeekerProfile}}}
@@ -61,8 +71,8 @@ const aiPoweredJobMatchingFlow = ai.defineFlow(
     inputSchema: AIPoweredJobMatchingInputSchema,
     outputSchema: AIPoweredJobMatchingOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input) => {
+    const { output } = await prompt(input);
     return output!;
   }
 );

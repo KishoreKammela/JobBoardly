@@ -35,7 +35,6 @@ import {
   query,
   where,
   getDocs,
-  Timestamp,
 } from 'firebase/firestore'; // Removed doc, getDoc, updateDoc
 import { db } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

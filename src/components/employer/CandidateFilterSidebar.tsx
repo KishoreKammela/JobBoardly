@@ -1,8 +1,13 @@
-
-"use client";
+'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, RotateCcw } from 'lucide-react';
@@ -20,7 +25,10 @@ interface CandidateFilterSidebarProps {
   initialFilters?: Partial<CandidateFilters>;
 }
 
-export function CandidateFilterSidebar({ onFilterChange, initialFilters }: CandidateFilterSidebarProps) {
+export function CandidateFilterSidebar({
+  onFilterChange,
+  initialFilters,
+}: CandidateFilterSidebarProps) {
   const defaultFilters: CandidateFilters = {
     searchTerm: '',
     location: '',
@@ -32,14 +40,14 @@ export function CandidateFilterSidebar({ onFilterChange, initialFilters }: Candi
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -53,12 +61,14 @@ export function CandidateFilterSidebar({ onFilterChange, initialFilters }: Candi
   const handleReset = () => {
     setFilters(defaultFilters);
     onFilterChange(defaultFilters);
-  }
+  };
 
   return (
     <Card className="sticky top-24 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">Filter Candidates</CardTitle>
+        <CardTitle className="text-xl font-headline">
+          Filter Candidates
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -87,7 +97,9 @@ export function CandidateFilterSidebar({ onFilterChange, initialFilters }: Candi
             <Select
               name="availability"
               value={filters.availability}
-              onValueChange={(value) => handleSelectChange('availability', value)}
+              onValueChange={(value) =>
+                handleSelectChange('availability', value)
+              }
             >
               <SelectTrigger id="availability">
                 <SelectValue placeholder="Select availability" />
@@ -105,7 +117,12 @@ export function CandidateFilterSidebar({ onFilterChange, initialFilters }: Candi
             <Button type="submit" className="flex-1 min-w-[120px]">
               <Search className="mr-2 h-4 w-4" /> Apply Filters
             </Button>
-            <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleReset}
+              className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+            >
               <RotateCcw className="mr-2 h-4 w-4" /> Reset
             </Button>
           </div>

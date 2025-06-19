@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import type { UserProfile } from '@/types';
 import { CandidateCard } from './CandidateCard';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { CandidateFilters } from './CandidateFilterSidebar';
 import { db } from '@/lib/firebase';

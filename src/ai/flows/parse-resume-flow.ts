@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Parses a resume document (provided as a data URI) and extracts structured information.
@@ -9,9 +8,8 @@
  * - `ParseResumeOutput`: The output type (structured resume data) for the `parseResumeFlow` function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import type { ParsedResumeData } from '@/types'; // Using the type from global types
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const ParseResumeInputSchema = z.object({
   resumeDataUri: z
@@ -23,27 +21,55 @@ const ParseResumeInputSchema = z.object({
 export type ParseResumeInput = z.infer<typeof ParseResumeInputSchema>;
 
 // Define Zod schema based on ParsedResumeData from types.ts
-const ParseResumeOutputSchema = z.object({
-  name: z.string().optional().describe('The full name of the candidate.'),
-  email: z.string().email().optional().describe('The email address of the candidate.'),
-  headline: z.string().optional().describe('A professional headline or summary for the candidate (e.g., "Senior Software Engineer").'),
-  skills: z.array(z.string()).optional().describe('A list of skills extracted from the resume.'),
-  experience: z.string().optional().describe('A summary of the work experience, preferably in Markdown format if structure can be inferred. May contain an error message if parsing failed due to file type.'),
-  portfolioUrl: z.string().url().optional().describe('URL to a personal portfolio, if available.'),
-  linkedinUrl: z.string().url().optional().describe('URL to a LinkedIn profile, if available.'),
-}).describe('Structured information extracted from the resume.');
+const ParseResumeOutputSchema = z
+  .object({
+    name: z.string().optional().describe('The full name of the candidate.'),
+    email: z
+      .string()
+      .email()
+      .optional()
+      .describe('The email address of the candidate.'),
+    headline: z
+      .string()
+      .optional()
+      .describe(
+        'A professional headline or summary for the candidate (e.g., "Senior Software Engineer").'
+      ),
+    skills: z
+      .array(z.string())
+      .optional()
+      .describe('A list of skills extracted from the resume.'),
+    experience: z
+      .string()
+      .optional()
+      .describe(
+        'A summary of the work experience, preferably in Markdown format if structure can be inferred. May contain an error message if parsing failed due to file type.'
+      ),
+    portfolioUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe('URL to a personal portfolio, if available.'),
+    linkedinUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe('URL to a LinkedIn profile, if available.'),
+  })
+  .describe('Structured information extracted from the resume.');
 
 export type ParseResumeOutput = z.infer<typeof ParseResumeOutputSchema>;
 
-
-export async function parseResumeFlow(input: ParseResumeInput): Promise<ParseResumeOutput> {
+export async function parseResumeFlow(
+  input: ParseResumeInput
+): Promise<ParseResumeOutput> {
   return resumeParserFlow(input);
 }
 
 const resumeParserPrompt = ai.definePrompt({
   name: 'resumeParserPrompt',
-  input: {schema: ParseResumeInputSchema},
-  output: {schema: ParseResumeOutputSchema},
+  input: { schema: ParseResumeInputSchema },
+  output: { schema: ParseResumeOutputSchema },
   prompt: `You are an expert resume parser. Analyze the following resume document and extract key information.
 
 Resume Document:
@@ -87,27 +113,29 @@ const resumeParserFlow = ai.defineFlow(
     if (mimeType && unsupportedMediaMimeTypes.includes(mimeType)) {
       console.warn(
         `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration expecting image/video or plain text for the 'media' tag. ` +
-        `Consider extracting text content from such documents before sending for AI analysis.`
+          `Consider extracting text content from such documents before sending for AI analysis.`
       );
       return {
         experience: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
         skills: [], // Ensure skills is always an array
       };
     }
-    
-    const {output} = await resumeParserPrompt(input);
-    
+
+    const { output } = await resumeParserPrompt(input);
+
     if (!output) {
-        console.warn('Resume parsing returned no output from AI, returning empty structure.');
-        return {
-            name: undefined,
-            email: undefined,
-            headline: undefined,
-            skills: [],
-            experience: undefined,
-            portfolioUrl: undefined,
-            linkedinUrl: undefined,
-        };
+      console.warn(
+        'Resume parsing returned no output from AI, returning empty structure.'
+      );
+      return {
+        name: undefined,
+        email: undefined,
+        headline: undefined,
+        skills: [],
+        experience: undefined,
+        portfolioUrl: undefined,
+        linkedinUrl: undefined,
+      };
     }
     return output;
   }

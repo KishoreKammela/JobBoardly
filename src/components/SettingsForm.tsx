@@ -1,12 +1,25 @@
-"use client";
+'use client';
 import { useState, useEffect, type FormEvent } from 'react';
 import type { UserSettings } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
 import { defaultUserSettings } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2 } from 'lucide-react';
@@ -27,34 +40,40 @@ export function SettingsForm() {
     }
   }, []);
 
-  const handleSwitchChange = (name: keyof UserSettings['jobAlerts'], checked: boolean) => {
-    setSettings(prev => ({
+  const handleSwitchChange = (
+    name: keyof UserSettings['jobAlerts'],
+    checked: boolean
+  ) => {
+    setSettings((prev) => ({
       ...prev,
       jobAlerts: { ...prev.jobAlerts, [name]: checked },
     }));
   };
 
   const handleRadioChange = (value: UserSettings['jobBoardDisplay']) => {
-    setSettings(prev => ({ ...prev, jobBoardDisplay: value }));
+    setSettings((prev) => ({ ...prev, jobBoardDisplay: value }));
   };
 
   const handleSelectChange = (value: string) => {
-    setSettings(prev => ({ ...prev, itemsPerPage: parseInt(value, 10) as UserSettings['itemsPerPage'] }));
+    setSettings((prev) => ({
+      ...prev,
+      itemsPerPage: parseInt(value, 10) as UserSettings['itemsPerPage'],
+    }));
   };
-  
+
   const handleClearSearchHistory = () => {
-    setSettings(prev => ({ ...prev, searchHistory: [] }));
-     toast({
+    setSettings((prev) => ({ ...prev, searchHistory: [] }));
+    toast({
       title: 'Search History Cleared',
       description: 'Your job search history has been cleared.',
     });
-  }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
     setIsLoading(false);
     toast({
@@ -66,8 +85,12 @@ export function SettingsForm() {
   return (
     <Card className="w-full shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">Account Settings</CardTitle>
-        <CardDescription>Customize your JobBoardly experience and notification preferences.</CardDescription>
+        <CardTitle className="text-xl font-headline">
+          Account Settings
+        </CardTitle>
+        <CardDescription>
+          Customize your JobBoardly experience and notification preferences.
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-8">
@@ -92,8 +115,13 @@ export function SettingsForm() {
                 </RadioGroup>
               </div>
               <div>
-                <Label htmlFor="itemsPerPage" className="mb-2 block">Items Per Page</Label>
-                <Select value={String(settings.itemsPerPage)} onValueChange={handleSelectChange}>
+                <Label htmlFor="itemsPerPage" className="mb-2 block">
+                  Items Per Page
+                </Label>
+                <Select
+                  value={String(settings.itemsPerPage)}
+                  onValueChange={handleSelectChange}
+                >
                   <SelectTrigger id="itemsPerPage" className="w-[180px]">
                     <SelectValue placeholder="Select count" />
                   </SelectTrigger>
@@ -108,17 +136,28 @@ export function SettingsForm() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-3">Notification Preferences</h3>
+            <h3 className="text-lg font-semibold mb-3">
+              Notification Preferences
+            </h3>
             <div className="space-y-3">
-              {(Object.keys(settings.jobAlerts) as Array<keyof UserSettings['jobAlerts']>).map((key) => (
-                <div key={key} className="flex items-center justify-between p-3 border rounded-md bg-muted/20">
+              {(
+                Object.keys(settings.jobAlerts) as Array<
+                  keyof UserSettings['jobAlerts']
+                >
+              ).map((key) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between p-3 border rounded-md bg-muted/20"
+                >
                   <Label htmlFor={key} className="capitalize">
                     {key.replace(/([A-Z])/g, ' $1').trim()} Alerts
                   </Label>
                   <Switch
                     id={key}
                     checked={settings.jobAlerts[key]}
-                    onCheckedChange={(checked) => handleSwitchChange(key, checked)}
+                    onCheckedChange={(checked) =>
+                      handleSwitchChange(key, checked)
+                    }
                     aria-label={`${key.replace(/([A-Z])/g, ' $1').trim()} Alerts Toggle`}
                   />
                 </div>
@@ -135,12 +174,20 @@ export function SettingsForm() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-muted-foreground">No search history yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No search history yet.
+              </p>
             )}
             {settings.searchHistory.length > 0 && (
-                 <Button type="button" variant="outline" size="sm" onClick={handleClearSearchHistory} className="mt-3">
-                    <Trash2 className="mr-2 h-4 w-4" /> Clear Search History
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleClearSearchHistory}
+                className="mt-3"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Clear Search History
+              </Button>
             )}
           </section>
         </CardContent>

@@ -1,15 +1,23 @@
-
-"use client";
+'use client';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { parseResumeFlow, type ParseResumeOutput } from '@/ai/flows/parse-resume-flow';
+import {
+  parseResumeFlow,
+  type ParseResumeOutput,
+} from '@/ai/flows/parse-resume-flow';
 
 export function ResumeUploadForm() {
   const { user, updateUser } = useAuth();
@@ -34,59 +42,83 @@ export function ResumeUploadForm() {
       reader.readAsDataURL(file);
       reader.onload = async () => {
         const dataUri = reader.result as string;
-        
-        const parsedData: ParseResumeOutput = await parseResumeFlow({ resumeDataUri: dataUri });
 
-        if (parsedData.experience && parsedData.experience.startsWith("Parsing Error:")) {
-            toast({
-                title: 'Resume Parsing Issue',
-                description: parsedData.experience, // Show the specific error from the flow
-                variant: 'destructive',
-                duration: 9000,
-            });
-            // Update other fields if available, but not experience if it's the error message
-            const profileUpdates: Partial<typeof user> = {
-              resumeUrl: URL.createObjectURL(file), 
-              resumeFileName: file.name,
-              // parsedResumeText will not be updated with the error message
-            };
-            if (parsedData.name && !user.name) profileUpdates.name = parsedData.name;
-            if (parsedData.headline) profileUpdates.headline = parsedData.headline;
-            if (parsedData.skills && parsedData.skills.length > 0) profileUpdates.skills = parsedData.skills;
-            // Not updating user.experience or user.parsedResumeText with the error
-            if (parsedData.portfolioUrl) profileUpdates.portfolioUrl = parsedData.portfolioUrl;
-            if (parsedData.linkedinUrl) profileUpdates.linkedinUrl = parsedData.linkedinUrl;
-            updateUser(profileUpdates);
+        const parsedData: ParseResumeOutput = await parseResumeFlow({
+          resumeDataUri: dataUri,
+        });
 
+        if (
+          parsedData.experience &&
+          parsedData.experience.startsWith('Parsing Error:')
+        ) {
+          toast({
+            title: 'Resume Parsing Issue',
+            description: parsedData.experience, // Show the specific error from the flow
+            variant: 'destructive',
+            duration: 9000,
+          });
+          // Update other fields if available, but not experience if it's the error message
+          const profileUpdates: Partial<typeof user> = {
+            resumeUrl: URL.createObjectURL(file),
+            resumeFileName: file.name,
+            // parsedResumeText will not be updated with the error message
+          };
+          if (parsedData.name && !user.name)
+            profileUpdates.name = parsedData.name;
+          if (parsedData.headline)
+            profileUpdates.headline = parsedData.headline;
+          if (parsedData.skills && parsedData.skills.length > 0)
+            profileUpdates.skills = parsedData.skills;
+          // Not updating user.experience or user.parsedResumeText with the error
+          if (parsedData.portfolioUrl)
+            profileUpdates.portfolioUrl = parsedData.portfolioUrl;
+          if (parsedData.linkedinUrl)
+            profileUpdates.linkedinUrl = parsedData.linkedinUrl;
+          updateUser(profileUpdates);
         } else {
-            const profileUpdates: Partial<typeof user> = {
-              resumeUrl: URL.createObjectURL(file),
-              resumeFileName: file.name,
-              parsedResumeText: parsedData.experience || `Parsed content for ${file.name}. Raw AI output might go here.`,
-            };
+          const profileUpdates: Partial<typeof user> = {
+            resumeUrl: URL.createObjectURL(file),
+            resumeFileName: file.name,
+            parsedResumeText:
+              parsedData.experience ||
+              `Parsed content for ${file.name}. Raw AI output might go here.`,
+          };
 
-            if (parsedData.name && !user.name) profileUpdates.name = parsedData.name; 
-            if (parsedData.headline) profileUpdates.headline = parsedData.headline;
-            if (parsedData.skills && parsedData.skills.length > 0) profileUpdates.skills = parsedData.skills;
-            if (parsedData.experience) profileUpdates.experience = parsedData.experience; 
-            if (parsedData.portfolioUrl) profileUpdates.portfolioUrl = parsedData.portfolioUrl;
-            if (parsedData.linkedinUrl) profileUpdates.linkedinUrl = parsedData.linkedinUrl;
-            
-            updateUser(profileUpdates);
-            toast({
-              title: 'Resume Processed',
-              description: `${file.name} has been uploaded and profile details updated.`,
-            });
+          if (parsedData.name && !user.name)
+            profileUpdates.name = parsedData.name;
+          if (parsedData.headline)
+            profileUpdates.headline = parsedData.headline;
+          if (parsedData.skills && parsedData.skills.length > 0)
+            profileUpdates.skills = parsedData.skills;
+          if (parsedData.experience)
+            profileUpdates.experience = parsedData.experience;
+          if (parsedData.portfolioUrl)
+            profileUpdates.portfolioUrl = parsedData.portfolioUrl;
+          if (parsedData.linkedinUrl)
+            profileUpdates.linkedinUrl = parsedData.linkedinUrl;
+
+          updateUser(profileUpdates);
+          toast({
+            title: 'Resume Processed',
+            description: `${file.name} has been uploaded and profile details updated.`,
+          });
         }
-        setFile(null); 
+        setFile(null);
       };
       reader.onerror = (error) => {
-        console.error("File reading error:", error);
-        toast({ title: 'File Reading Error', description: 'Could not read the selected file.', variant: 'destructive' });
+        console.error('File reading error:', error);
+        toast({
+          title: 'File Reading Error',
+          description: 'Could not read the selected file.',
+          variant: 'destructive',
+        });
       };
     } catch (error) {
-      console.error("Error processing resume:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred during parsing."
+      console.error('Error processing resume:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'An unknown error occurred during parsing.';
       toast({
         title: 'Resume Processing Error',
         description: `Failed to parse resume and update profile. ${errorMessage}`,
@@ -108,15 +140,15 @@ export function ResumeUploadForm() {
       title: 'Resume Removed',
       description: 'Your resume has been removed from your profile.',
     });
-  }
+  };
 
   return (
     <Card className="w-full shadow-lg">
       <CardHeader>
         <CardTitle className="text-xl font-headline">Manage Resume</CardTitle>
         <CardDescription>
-            Upload your resume (PDF, DOCX, TXT). Our AI will attempt to parse it. 
-            Plain text (.txt) files yield the best results for AI parsing.
+          Upload your resume (PDF, DOCX, TXT). Our AI will attempt to parse it.
+          Plain text (.txt) files yield the best results for AI parsing.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -127,33 +159,58 @@ export function ResumeUploadForm() {
                 <FileText className="h-6 w-6 text-primary" />
                 <div>
                   <p className="font-medium">{user.resumeFileName}</p>
-                  <p className="text-xs text-muted-foreground">Uploaded. Review profile for auto-filled details.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Uploaded. Review profile for auto-filled details.
+                  </p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleRemoveResume} aria-label="Remove resume">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleRemoveResume}
+                aria-label="Remove resume"
+              >
                 <Trash2 className="h-5 w-5 text-destructive" />
               </Button>
             </div>
-            {user.parsedResumeText && ( 
+            {user.parsedResumeText && (
               <div>
-                <Label className="font-semibold">Parsed Resume Summary (Preview):</Label>
-                <Textarea 
-                  value={user.parsedResumeText} 
-                  readOnly 
-                  rows={5} 
+                <Label className="font-semibold">
+                  Parsed Resume Summary (Preview):
+                </Label>
+                <Textarea
+                  value={user.parsedResumeText}
+                  readOnly
+                  rows={5}
                   className="mt-1 bg-muted/20 text-sm"
                   aria-label="Parsed resume content preview"
                 />
               </div>
             )}
-             <Button type="button" onClick={() => { setFile(null); /* Effectively, allow new upload by clearing current file if one was selected but not submitted */ if(user?.resumeFileName) { /* If a resume already exists, this button means "replace" */ } }} disabled={isProcessing} variant="outline" className="w-full sm:w-auto">
-                <UploadCloud className="mr-2 h-4 w-4" /> Upload New or Replace Resume
+            <Button
+              type="button"
+              onClick={() => {
+                setFile(null);
+                /* Effectively, allow new upload by clearing current file if one was selected but not submitted */ if (
+                  user?.resumeFileName
+                ) {
+                  /* If a resume already exists, this button means "replace" */
+                }
+              }}
+              disabled={isProcessing}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              <UploadCloud className="mr-2 h-4 w-4" /> Upload New or Replace
+              Resume
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="resumeFile" className="sr-only">Resume File</Label>
+              <Label htmlFor="resumeFile" className="sr-only">
+                Resume File
+              </Label>
               <div className="flex items-center justify-center w-full">
                 <label
                   htmlFor="resumeFile"
@@ -162,16 +219,33 @@ export function ResumeUploadForm() {
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <UploadCloud className="w-10 h-10 mb-3 text-primary" />
                     <p className="mb-2 text-sm text-foreground/80">
-                      <span className="font-semibold">Click to upload</span> or drag and drop
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
                     </p>
-                    <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, TXT (MAX. 5MB)</p>
+                    <p className="text-xs text-muted-foreground">
+                      PDF, DOC, DOCX, TXT (MAX. 5MB)
+                    </p>
                   </div>
-                  <Input id="resumeFile" type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" />
+                  <Input
+                    id="resumeFile"
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.txt"
+                  />
                 </label>
               </div>
             </div>
-            {file && <p className="text-sm text-muted-foreground">Selected file: {file.name}</p>}
-            <Button type="submit" disabled={!file || isProcessing} className="w-full sm:w-auto">
+            {file && (
+              <p className="text-sm text-muted-foreground">
+                Selected file: {file.name}
+              </p>
+            )}
+            <Button
+              type="submit"
+              disabled={!file || isProcessing}
+              className="w-full sm:w-auto"
+            >
               {isProcessing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

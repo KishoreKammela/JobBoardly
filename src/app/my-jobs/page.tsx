@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 import { MyJobsDisplay } from '@/components/MyJobsDisplay'; // Renamed component
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +6,8 @@ import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-export default function MyJobsPage() { // Renamed page function
+export default function MyJobsPage() {
+  // Renamed page function
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -33,7 +33,9 @@ export default function MyJobsPage() { // Renamed page function
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold mb-2 font-headline">My Jobs</h1>
-        <p className="text-muted-foreground">Manage your saved and applied jobs.</p>
+        <p className="text-muted-foreground">
+          Manage your saved and applied jobs.
+        </p>
       </div>
       <Separator />
       <MyJobsDisplay />

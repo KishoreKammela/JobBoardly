@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview This file defines the AI-powered candidate matching flow for employers.
@@ -11,37 +10,53 @@
  * - `AIPoweredCandidateMatchingOutput`: The output type for the function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const AIPoweredCandidateMatchingInputSchema = z.object({
   jobDescription: z
     .string()
-    .describe('A detailed job description, including responsibilities, qualifications, and preferred skills.'),
+    .describe(
+      'A detailed job description, including responsibilities, qualifications, and preferred skills.'
+    ),
   candidateProfiles: z
     .string()
-    .describe('A list/collection of candidate profiles. Each profile should include candidate ID (uid), skills, experience, headline, and other relevant information.'),
+    .describe(
+      'A list/collection of candidate profiles. Each profile should include candidate ID (uid), skills, experience, headline, and other relevant information.'
+    ),
 });
 
-export type AIPoweredCandidateMatchingInput = z.infer<typeof AIPoweredCandidateMatchingInputSchema>;
+export type AIPoweredCandidateMatchingInput = z.infer<
+  typeof AIPoweredCandidateMatchingInputSchema
+>;
 
 const AIPoweredCandidateMatchingOutputSchema = z.object({
   relevantCandidateIDs: z
     .array(z.string())
-    .describe('An array of candidate UIDs that are most relevant to the job description.'),
-  reasoning: z.string().describe('Explanation of why these candidates were picked, highlighting key matches.'),
+    .describe(
+      'An array of candidate UIDs that are most relevant to the job description.'
+    ),
+  reasoning: z
+    .string()
+    .describe(
+      'Explanation of why these candidates were picked, highlighting key matches.'
+    ),
 });
 
-export type AIPoweredCandidateMatchingOutput = z.infer<typeof AIPoweredCandidateMatchingOutputSchema>;
+export type AIPoweredCandidateMatchingOutput = z.infer<
+  typeof AIPoweredCandidateMatchingOutputSchema
+>;
 
-export async function aiPoweredCandidateMatching(input: AIPoweredCandidateMatchingInput): Promise<AIPoweredCandidateMatchingOutput> {
+export async function aiPoweredCandidateMatching(
+  input: AIPoweredCandidateMatchingInput
+): Promise<AIPoweredCandidateMatchingOutput> {
   return aiPoweredCandidateMatchingFlow(input);
 }
 
 const prompt = ai.definePrompt({
   name: 'aiPoweredCandidateMatchingPrompt',
-  input: {schema: AIPoweredCandidateMatchingInputSchema},
-  output: {schema: AIPoweredCandidateMatchingOutputSchema},
+  input: { schema: AIPoweredCandidateMatchingInputSchema },
+  output: { schema: AIPoweredCandidateMatchingOutputSchema },
   prompt: `You are an expert AI recruitment assistant. Your task is to match candidates to a given job description.
 You will receive a detailed job description and a collection of candidate profiles.
 
@@ -69,12 +84,15 @@ const aiPoweredCandidateMatchingFlow = ai.defineFlow(
     inputSchema: AIPoweredCandidateMatchingInputSchema,
     outputSchema: AIPoweredCandidateMatchingOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input) => {
+    const { output } = await prompt(input);
     if (!output) {
-        // Handle cases where AI might return no output or an unexpected format
-        console.warn('AI Candidate Matching flow returned no output from AI.');
-        return { relevantCandidateIDs: [], reasoning: 'AI did not return a valid response or found no matches.' };
+      // Handle cases where AI might return no output or an unexpected format
+      console.warn('AI Candidate Matching flow returned no output from AI.');
+      return {
+        relevantCandidateIDs: [],
+        reasoning: 'AI did not return a valid response or found no matches.',
+      };
     }
     return output;
   }

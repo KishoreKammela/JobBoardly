@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 import { EmployerLoginForm } from '@/components/employer/EmployerLoginForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -32,7 +31,7 @@ export default function EmployerLoginPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null; 
+  if (user && !authLoading) return null;
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-150px)] items-center justify-center py-12">

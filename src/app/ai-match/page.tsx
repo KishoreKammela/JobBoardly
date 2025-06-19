@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 import { AiJobMatcher } from '@/components/AiJobMatcher';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';

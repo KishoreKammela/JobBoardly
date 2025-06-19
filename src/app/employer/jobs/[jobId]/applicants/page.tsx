@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 import { JobApplicantsDisplay } from '@/components/employer/JobApplicantsDisplay';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,7 +12,8 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 //   };
 // }
 
-export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/) { // params removed from props
+export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/) {
+  // params removed from props
   const params = useParams(); // Use the hook
   const jobId = params.jobId as string; // Extract jobId from hook's return value
   const { user, loading } = useAuth();
@@ -23,7 +23,9 @@ export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(`/auth/login?redirect=${encodeURIComponent(currentPathname)}`);
+      router.replace(
+        `/auth/login?redirect=${encodeURIComponent(currentPathname)}`
+      );
     } else if (user.role !== 'employer') {
       router.replace('/');
     }
@@ -36,11 +38,13 @@ export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2 font-headline">Job Applicants</h1>
+        <h1 className="text-3xl font-bold mb-2 font-headline">
+          Job Applicants
+        </h1>
         {/* We might fetch and display job title here if JobApplicantsDisplay doesn't do it */}
       </div>
       <Separator />
@@ -48,4 +52,3 @@ export default function JobApplicantsPage(/*{ params }: JobApplicantsPageProps*/
     </div>
   );
 }
-

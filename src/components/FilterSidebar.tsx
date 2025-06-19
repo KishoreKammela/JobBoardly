@@ -1,12 +1,17 @@
-
-"use client";
+'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, RotateCcw, Save, AlertCircle } from 'lucide-react'; // Added Save
+import { Search, RotateCcw, Save } from 'lucide-react'; // Added Save
 import type React from 'react';
 import { useState } from 'react';
 import type { Filters } from '@/types'; // Import Filters from global types
@@ -21,16 +26,17 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-
+} from '@/components/ui/alert-dialog';
 
 interface FilterSidebarProps {
   onFilterChange: (filters: Filters) => void;
   initialFilters?: Partial<Filters>;
 }
 
-export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarProps) {
+export function FilterSidebar({
+  onFilterChange,
+  initialFilters,
+}: FilterSidebarProps) {
   const defaultFilters: Filters = {
     searchTerm: '',
     location: '',
@@ -47,21 +53,24 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleCheckboxChange = (name: keyof Filters, checked: boolean | 'indeterminate') => {
-     setFilters(prev => ({
+  const handleCheckboxChange = (
+    name: keyof Filters,
+    checked: boolean | 'indeterminate'
+  ) => {
+    setFilters((prev) => ({
       ...prev,
       [name]: checked === true,
     }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -75,7 +84,7 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
   const handleReset = () => {
     setFilters(defaultFilters);
     onFilterChange(defaultFilters);
-  }
+  };
 
   const handleOpenSaveSearchDialog = () => {
     if (!user || user.role !== 'jobSeeker') {
@@ -108,7 +117,7 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
           description: `"${searchName}" has been added to your saved searches.`,
         });
         setIsSaveSearchAlertOpen(false);
-        setSearchName(''); 
+        setSearchName('');
       } catch (error) {
         toast({
           title: 'Error Saving Search',
@@ -118,7 +127,6 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
       }
     }
   };
-
 
   return (
     <Card className="sticky top-24 shadow-sm">
@@ -171,7 +179,9 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
               id="isRemote"
               name="isRemote"
               checked={filters.isRemote}
-              onCheckedChange={(checked) => handleCheckboxChange('isRemote', checked)}
+              onCheckedChange={(checked) =>
+                handleCheckboxChange('isRemote', checked)
+              }
             />
             <Label htmlFor="isRemote" className="font-medium">
               Remote Only
@@ -179,27 +189,41 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
           </div>
           <div className="flex flex-col gap-2 pt-2">
             <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" className="flex-1 min-w-[120px]">
+              <Button type="submit" className="flex-1 min-w-[120px]">
                 <Search className="mr-2 h-4 w-4" /> Apply Filters
-                </Button>
-                <Button type="button" variant="outline" onClick={handleReset} className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto">
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+              >
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
-                </Button>
+              </Button>
             </div>
             {user && user.role === 'jobSeeker' && (
-                <Button type="button" variant="outline" onClick={handleOpenSaveSearchDialog} className="w-full">
-                    <Save className="mr-2 h-4 w-4" /> Save This Search
-                </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenSaveSearchDialog}
+                className="w-full"
+              >
+                <Save className="mr-2 h-4 w-4" /> Save This Search
+              </Button>
             )}
           </div>
         </form>
       </CardContent>
-      <AlertDialog open={isSaveSearchAlertOpen} onOpenChange={setIsSaveSearchAlertOpen}>
+      <AlertDialog
+        open={isSaveSearchAlertOpen}
+        onOpenChange={setIsSaveSearchAlertOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Job Search</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a name for this search. You can manage your saved searches in Settings.
+              Enter a name for this search. You can manage your saved searches
+              in Settings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -214,7 +238,9 @@ export function FilterSidebar({ onFilterChange, initialFilters }: FilterSidebarP
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSaveSearch}>Save Search</AlertDialogAction>
+            <AlertDialogAction onClick={handleConfirmSaveSearch}>
+              Save Search
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
