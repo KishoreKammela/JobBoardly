@@ -1,4 +1,3 @@
-
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -11,6 +10,16 @@ import {
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   AlertCircle,
   ShieldCheck,
@@ -72,12 +81,30 @@ interface JobWithApplicantCount extends Job {
   applicantCount: number;
 }
 
+interface ModalState {
+  isOpen: boolean;
+  title: string;
+  description: React.ReactNode;
+  onConfirmAction: (() => Promise<void>) | null;
+  confirmText: string;
+  confirmVariant: 'default' | 'destructive';
+}
+
+const initialModalState: ModalState = {
+  isOpen: false,
+  title: '',
+  description: '',
+  onConfirmAction: null,
+  confirmText: 'Confirm',
+  confirmVariant: 'default',
+};
+
 function getSortableValue<T>(
   item: T,
   key: keyof T | null
 ): string | number | null | boolean {
   if (!key) return null;
-  const value = item[key as keyof T]; // Type assertion for safety
+  const value = item[key as keyof T];
   if (value instanceof Timestamp) {
     return value.toMillis();
   }
@@ -140,7 +167,12 @@ export default function AdminPage() {
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isAllJobsLoading, setIsAllJobsLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [specificActionLoading, setSpecificActionLoading] = useState<
+    string | null
+  >(null);
+
+  const [modalState, setModalState] = useState<ModalState>(initialModalState);
+  const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsJobsLoading(true);
@@ -149,7 +181,6 @@ export default function AdminPage() {
     setIsAllJobsLoading(true);
 
     try {
-      // Fetch pending jobs (for approval card)
       const pendingJobsQuery = query(
         collection(db, 'jobs'),
         where('status', '==', 'pending'),
@@ -168,7 +199,6 @@ export default function AdminPage() {
       );
       setIsJobsLoading(false);
 
-      // Fetch pending companies (for approval card)
       const pendingCompaniesQuery = query(
         collection(db, 'companies'),
         where('status', '==', 'pending'),
@@ -186,7 +216,6 @@ export default function AdminPage() {
         })
       );
 
-      // Fetch all companies (for manage companies tab)
       const allCompaniesQuery = query(
         collection(db, 'companies'),
         orderBy('createdAt', 'desc')
@@ -223,7 +252,6 @@ export default function AdminPage() {
       setAllCompanies(companiesData);
       setIsCompaniesLoading(false);
 
-      // Fetch all job seekers
       const jobSeekersQuery = query(
         collection(db, 'users'),
         where('role', '==', 'jobSeeker'),
@@ -243,7 +271,6 @@ export default function AdminPage() {
         })
       );
 
-      // Fetch all platform users (admins/superAdmins)
       const platformUsersQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['admin', 'superAdmin']),
@@ -263,7 +290,6 @@ export default function AdminPage() {
       );
       setIsUsersLoading(false);
 
-      // Fetch all jobs (for manage all jobs tab)
       const allJobsQuery = query(
         collection(db, 'jobs'),
         orderBy('createdAt', 'desc')
@@ -293,7 +319,7 @@ export default function AdminPage() {
       );
       setAllJobs(jobsData);
       setIsAllJobsLoading(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching admin data:', error);
       toast({
         title: 'Error',
@@ -326,36 +352,71 @@ export default function AdminPage() {
     }
   }, [user, loading, router, pathname, fetchData]);
 
+  const showConfirmationModal = (
+    title: string,
+    description: React.ReactNode,
+    action: () => Promise<void>,
+    confirmText = 'Confirm',
+    confirmVariant: 'default' | 'destructive' = 'default'
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      description,
+      onConfirmAction: action,
+      confirmText,
+      confirmVariant,
+    });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (modalState.onConfirmAction) {
+      setIsModalActionLoading(true);
+      try {
+        await modalState.onConfirmAction();
+      } catch (e: unknown) {
+        console.error('Error executing confirmed action:', e);
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred while performing action.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsModalActionLoading(false);
+        setModalState(initialModalState);
+      }
+    }
+  };
+
   const handleJobStatusUpdate = async (
     jobId: string,
     newStatus: 'approved' | 'rejected' | 'suspended',
     reason?: string
   ) => {
-    setActionLoading(`job-${jobId}`);
+    setSpecificActionLoading(`job-${jobId}`);
     try {
-      const jobUpdates: { [key: string]: unknown } = {
+      const jobUpdates: Record<string, unknown> = {
         status: newStatus,
         updatedAt: serverTimestamp(),
       };
       if (
         newStatus === 'rejected' ||
         newStatus === 'suspended' ||
-        (newStatus === 'approved' && reason) // reason might be for approval context from pending
+        (newStatus === 'approved' && reason)
       ) {
         jobUpdates.moderationReason =
-          reason || `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
+          reason ||
+          `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
       } else {
         jobUpdates.moderationReason = null;
       }
 
       await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
 
-      // Update pending jobs list
       if (newStatus === 'approved' || newStatus === 'rejected') {
         setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
       }
 
-      // Update all jobs list
       setAllJobs((prevJobs) =>
         prevJobs.map((j) =>
           j.id === jobId
@@ -363,6 +424,7 @@ export default function AdminPage() {
                 ...j,
                 status: newStatus,
                 moderationReason: jobUpdates.moderationReason as string,
+                updatedAt: new Date().toISOString(),
               }
             : j
         )
@@ -372,7 +434,7 @@ export default function AdminPage() {
         title: 'Success',
         description: `Job ${jobId} status updated to ${newStatus}.`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error updating job ${jobId}:`, error);
       toast({
         title: 'Error',
@@ -380,7 +442,7 @@ export default function AdminPage() {
         variant: 'destructive',
       });
     } finally {
-      setActionLoading(null);
+      setSpecificActionLoading(null);
     }
   };
 
@@ -389,10 +451,10 @@ export default function AdminPage() {
     newStatus: 'approved' | 'rejected' | 'suspended' | 'active',
     reason?: string
   ) => {
-    setActionLoading(`company-${companyId}`);
+    setSpecificActionLoading(`company-${companyId}`);
     try {
       const companyDocRef = doc(db, 'companies', companyId);
-      const updateData: { [key: string]: unknown } = {
+      const updateData: Record<string, unknown> = {
         status: newStatus,
         updatedAt: serverTimestamp(),
       };
@@ -417,6 +479,7 @@ export default function AdminPage() {
                 ...c,
                 status: newStatus,
                 moderationReason: updateData.moderationReason as string,
+                updatedAt: new Date().toISOString(),
               }
             : c
         )
@@ -437,7 +500,7 @@ export default function AdminPage() {
           duration: 7000,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error updating company ${companyId}:`, error);
       toast({
         title: 'Error',
@@ -445,7 +508,7 @@ export default function AdminPage() {
         variant: 'destructive',
       });
     } finally {
-      setActionLoading(null);
+      setSpecificActionLoading(null);
     }
   };
 
@@ -453,7 +516,7 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended'
   ) => {
-    if (user?.role !== 'admin' && user?.role !== 'superAdmin') return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return;
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
       (u) => u.uid === userId
     );
@@ -495,7 +558,7 @@ export default function AdminPage() {
       return;
     }
 
-    setActionLoading(`user-${userId}`);
+    setSpecificActionLoading(`user-${userId}`);
     try {
       await updateUserProfileInAuthContext({ uid: userId, status: newStatus });
       if (targetUser.role === 'jobSeeker') {
@@ -511,7 +574,7 @@ export default function AdminPage() {
         title: 'Success',
         description: `User ${userId} status updated to ${newStatus}.`,
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Error updating user status:', e);
       toast({
         title: 'Error',
@@ -519,7 +582,7 @@ export default function AdminPage() {
         variant: 'destructive',
       });
     } finally {
-      setActionLoading(null);
+      setSpecificActionLoading(null);
     }
   };
 
@@ -717,9 +780,16 @@ export default function AdminPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          handleJobStatusUpdate(job.id, 'rejected')
+                          showConfirmationModal(
+                            `Reject Job "${job.title}"?`,
+                            'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
+                            async () =>
+                              handleJobStatusUpdate(job.id, 'rejected'),
+                            'Reject Job',
+                            'destructive'
+                          )
                         }
-                        disabled={actionLoading === `job-${job.id}`}
+                        disabled={specificActionLoading === `job-${job.id}`}
                         aria-label={`Reject job ${job.title}`}
                         className="text-destructive"
                       >
@@ -729,9 +799,15 @@ export default function AdminPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          handleJobStatusUpdate(job.id, 'approved')
+                          showConfirmationModal(
+                            `Approve Job "${job.title}"?`,
+                            'Are you sure you want to approve this job posting? It will become publicly visible.',
+                            async () =>
+                              handleJobStatusUpdate(job.id, 'approved'),
+                            'Approve Job'
+                          )
                         }
-                        disabled={actionLoading === `job-${job.id}`}
+                        disabled={specificActionLoading === `job-${job.id}`}
                         aria-label={`Approve job ${job.title}`}
                         className="text-green-600"
                       >
@@ -791,9 +867,16 @@ export default function AdminPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          handleCompanyStatusUpdate(c.id, 'rejected')
+                          showConfirmationModal(
+                            `Reject Company "${c.name}"?`,
+                            'Are you sure you want to reject this company profile? It will not be publicly visible.',
+                            async () =>
+                              handleCompanyStatusUpdate(c.id, 'rejected'),
+                            'Reject Company',
+                            'destructive'
+                          )
                         }
-                        disabled={actionLoading === `company-${c.id}`}
+                        disabled={specificActionLoading === `company-${c.id}`}
                         aria-label={`Reject company ${c.name}`}
                         className="text-destructive"
                       >
@@ -803,9 +886,15 @@ export default function AdminPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          handleCompanyStatusUpdate(c.id, 'approved')
+                          showConfirmationModal(
+                            `Approve Company "${c.name}"?`,
+                            'Are you sure you want to approve this company profile? It will become publicly visible and operational.',
+                            async () =>
+                              handleCompanyStatusUpdate(c.id, 'approved'),
+                            'Approve Company'
+                          )
                         }
-                        disabled={actionLoading === `company-${c.id}`}
+                        disabled={specificActionLoading === `company-${c.id}`}
                         aria-label={`Approve company ${c.name}`}
                         className="text-green-600"
                       >
@@ -955,10 +1044,7 @@ export default function AdminPage() {
                               asChild
                               aria-label={`View company ${c.name}`}
                             >
-                              <Link
-                                href={`/companies/${c.id}`}
-                                target="_blank"
-                              >
+                              <Link href={`/companies/${c.id}`} target="_blank">
                                 <Eye className="h-5 w-5" />
                               </Link>
                             </Button>
@@ -968,9 +1054,20 @@ export default function AdminPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
-                                    handleCompanyStatusUpdate(c.id, 'approved')
+                                    showConfirmationModal(
+                                      `Approve Company "${c.name}"?`,
+                                      `Are you sure you want to approve ${c.name}? The company will become active.`,
+                                      async () =>
+                                        handleCompanyStatusUpdate(
+                                          c.id,
+                                          'approved'
+                                        ),
+                                      'Approve Company'
+                                    )
                                   }
-                                  disabled={actionLoading === `company-${c.id}`}
+                                  disabled={
+                                    specificActionLoading === `company-${c.id}`
+                                  }
                                   aria-label={`Approve company ${c.name}`}
                                   className="text-green-600"
                                 >
@@ -978,14 +1075,26 @@ export default function AdminPage() {
                                 </Button>
                               )}
                             {c.status !== 'rejected' &&
-                              c.status !== 'pending' && ( // Can't reject if pending from here, use main card
+                              c.status !== 'pending' && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={() =>
-                                    handleCompanyStatusUpdate(c.id, 'rejected')
+                                    showConfirmationModal(
+                                      `Reject Company "${c.name}"?`,
+                                      `Are you sure you want to reject ${c.name}?`,
+                                      async () =>
+                                        handleCompanyStatusUpdate(
+                                          c.id,
+                                          'rejected'
+                                        ),
+                                      'Reject Company',
+                                      'destructive'
+                                    )
                                   }
-                                  disabled={actionLoading === `company-${c.id}`}
+                                  disabled={
+                                    specificActionLoading === `company-${c.id}`
+                                  }
                                   aria-label={`Reject company ${c.name}`}
                                   className="text-destructive"
                                 >
@@ -997,9 +1106,21 @@ export default function AdminPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                  handleCompanyStatusUpdate(c.id, 'suspended')
+                                  showConfirmationModal(
+                                    `Suspend Company "${c.name}"?`,
+                                    `Are you sure you want to suspend ${c.name}? This will also affect associated recruiters.`,
+                                    async () =>
+                                      handleCompanyStatusUpdate(
+                                        c.id,
+                                        'suspended'
+                                      ),
+                                    'Suspend Company',
+                                    'destructive'
+                                  )
                                 }
-                                disabled={actionLoading === `company-${c.id}`}
+                                disabled={
+                                  specificActionLoading === `company-${c.id}`
+                                }
                                 aria-label={`Suspend company ${c.name}`}
                                 className="text-orange-600"
                               >
@@ -1010,9 +1131,17 @@ export default function AdminPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                  handleCompanyStatusUpdate(c.id, 'active')
+                                  showConfirmationModal(
+                                    `Activate Company "${c.name}"?`,
+                                    `Are you sure you want to reactivate ${c.name}?`,
+                                    async () =>
+                                      handleCompanyStatusUpdate(c.id, 'active'),
+                                    'Activate Company'
+                                  )
                                 }
-                                disabled={actionLoading === `company-${c.id}`}
+                                disabled={
+                                  specificActionLoading === `company-${c.id}`
+                                }
                                 aria-label={`Activate company ${c.name}`}
                                 className="text-blue-600"
                               >
@@ -1089,7 +1218,11 @@ export default function AdminPage() {
                       <TableRow>
                         <TableHead
                           onClick={() =>
-                            requestSort('title', jobsSortConfig, setJobsSortConfig)
+                            requestSort(
+                              'title',
+                              jobsSortConfig,
+                              setJobsSortConfig
+                            )
                           }
                           className="cursor-pointer"
                           aria-label="Sort by job title"
@@ -1203,9 +1336,21 @@ export default function AdminPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                  handleJobStatusUpdate(job.id, 'suspended')
+                                  showConfirmationModal(
+                                    `Suspend Job "${job.title}"?`,
+                                    `Are you sure you want to suspend this job? It will be hidden from public view.`,
+                                    async () =>
+                                      handleJobStatusUpdate(
+                                        job.id,
+                                        'suspended'
+                                      ),
+                                    'Suspend Job',
+                                    'destructive'
+                                  )
                                 }
-                                disabled={actionLoading === `job-${job.id}`}
+                                disabled={
+                                  specificActionLoading === `job-${job.id}`
+                                }
                                 aria-label={`Suspend job ${job.title}`}
                                 className="text-orange-600"
                               >
@@ -1216,9 +1361,17 @@ export default function AdminPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                  handleJobStatusUpdate(job.id, 'approved')
-                                } // Activating sets to approved
-                                disabled={actionLoading === `job-${job.id}`}
+                                  showConfirmationModal(
+                                    `Activate Job "${job.title}"?`,
+                                    `Are you sure you want to activate this job? It will become approved and publicly visible.`,
+                                    async () =>
+                                      handleJobStatusUpdate(job.id, 'approved'),
+                                    'Activate Job'
+                                  )
+                                }
+                                disabled={
+                                  specificActionLoading === `job-${job.id}`
+                                }
                                 aria-label={`Activate job ${job.title}`}
                                 className="text-blue-600"
                               >
@@ -1427,14 +1580,24 @@ export default function AdminPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() =>
-                                handleUserStatusUpdate(
-                                  u.uid,
-                                  u.status === 'active' ? 'suspended' : 'active'
-                                )
-                              }
+                              onClick={() => {
+                                const newStatus =
+                                  u.status === 'active'
+                                    ? 'suspended'
+                                    : 'active';
+                                showConfirmationModal(
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
+                                  `Are you sure you want to ${newStatus} this user account?`,
+                                  async () =>
+                                    handleUserStatusUpdate(u.uid, newStatus),
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                  newStatus === 'suspended'
+                                    ? 'destructive'
+                                    : 'default'
+                                );
+                              }}
                               disabled={
-                                actionLoading === `user-${u.uid}` ||
+                                specificActionLoading === `user-${u.uid}` ||
                                 user?.uid === u.uid
                               }
                               aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
@@ -1666,14 +1829,24 @@ export default function AdminPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() =>
-                                handleUserStatusUpdate(
-                                  u.uid,
-                                  u.status === 'active' ? 'suspended' : 'active'
-                                )
-                              }
+                              onClick={() => {
+                                const newStatus =
+                                  u.status === 'active'
+                                    ? 'suspended'
+                                    : 'active';
+                                showConfirmationModal(
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} Admin User "${u.name || u.email}"?`,
+                                  `Are you sure you want to ${newStatus} this platform user account?`,
+                                  async () =>
+                                    handleUserStatusUpdate(u.uid, newStatus),
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                  newStatus === 'suspended'
+                                    ? 'destructive'
+                                    : 'default'
+                                );
+                              }}
                               disabled={
-                                actionLoading === `user-${u.uid}` ||
+                                specificActionLoading === `user-${u.uid}` ||
                                 user?.uid === u.uid ||
                                 (user?.role === 'admin' &&
                                   u.role === 'superAdmin') ||
@@ -1738,6 +1911,46 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog
+        open={modalState.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalState(initialModalState);
+            setIsModalActionLoading(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {modalState.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setModalState({ ...modalState, isOpen: false })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeConfirmedAction}
+              disabled={isModalActionLoading}
+              className={
+                modalState.confirmVariant === 'destructive'
+                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  : ''
+              }
+            >
+              {isModalActionLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {modalState.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
