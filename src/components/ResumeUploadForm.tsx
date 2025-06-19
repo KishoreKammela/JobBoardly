@@ -1,5 +1,6 @@
+
 'use client';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import React, { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -115,7 +116,7 @@ export function ResumeUploadForm() {
       }
       setFile(null);
       setPastedResume('');
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -140,7 +141,7 @@ export function ResumeUploadForm() {
       reader.readAsDataURL(file);
       reader.onload = () =>
         processResumeData(reader.result as string, file.name);
-      reader.onerror = (errorReading) => {
+      reader.onerror = (errorReading: ProgressEvent<FileReader>) => {
         console.error('File reading error:', errorReading);
         toast({
           title: 'File Reading Error',
@@ -225,10 +226,12 @@ export function ResumeUploadForm() {
               onClick={() => {
                 setFile(null);
                 setPastedResume('');
+                // Optionally reset other fields in UserProfileForm if they were AI-filled
               }}
               disabled={isProcessing}
               variant="outline"
               className="w-full sm:w-auto"
+              aria-label="Replace current resume"
             >
               <UploadCloud className="mr-2 h-4 w-4" /> Replace Current Resume
             </Button>
@@ -246,6 +249,7 @@ export function ResumeUploadForm() {
                 <label
                   htmlFor="resumeFile"
                   className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer  hover:bg-muted/40 transition-colors ${file ? 'bg-primary/10 border-primary' : 'bg-muted/20'}`}
+                  aria-label="Resume file upload area"
                 >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <UploadCloud className="w-10 h-10 mb-3 text-primary" />
@@ -299,6 +303,9 @@ export function ResumeUploadForm() {
               type="submit"
               disabled={(!file && !pastedResume.trim()) || isProcessing}
               className="w-full sm:w-auto"
+              aria-label={
+                file ? 'Upload and Parse File' : 'Parse Pasted Text'
+              }
             >
               {isProcessing ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

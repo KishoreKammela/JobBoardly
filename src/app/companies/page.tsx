@@ -1,5 +1,6 @@
+
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   collection,
   getDocs,
@@ -65,9 +66,11 @@ export default function CompaniesListPage() {
         });
         setAllCompanies(companiesData);
         setFilteredCompanies(companiesData);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Error fetching companies:', e);
-        setError('Failed to load companies. Please try again later.');
+        setError(
+          `Failed to load companies. Please try again later. Error: ${(e as Error).message}`
+        );
       } finally {
         setIsLoading(false);
       }
@@ -128,8 +131,11 @@ export default function CompaniesListPage() {
           type="text"
           placeholder="Search companies by name or keyword..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearchTerm(e.target.value)
+          }
           className="h-12 text-lg"
+          aria-label="Search companies"
         />
       </div>
       <Separator className="my-8" />
@@ -210,6 +216,7 @@ export default function CompaniesListPage() {
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 variant="outline"
+                aria-label="Previous page of companies"
               >
                 Previous
               </Button>
@@ -222,6 +229,7 @@ export default function CompaniesListPage() {
                 }
                 disabled={currentPage === totalPages}
                 variant="outline"
+                aria-label="Next page of companies"
               >
                 Next
               </Button>

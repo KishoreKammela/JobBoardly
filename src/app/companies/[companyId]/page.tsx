@@ -1,5 +1,6 @@
+
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   doc,
@@ -15,25 +16,24 @@ import { db } from '@/lib/firebase';
 import type { Company, UserProfile, Job } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-// import { Badge } from '@/components/ui/badge'; // Unused
 import {
   Card,
   CardContent,
-  /*CardDescription,*/ CardHeader,
+  CardHeader,
   CardTitle,
   CardFooter,
-} from '@/components/ui/card'; // Removed CardDescription
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Briefcase,
-  /*MapPin,*/ Users,
+  Users,
   Link as LinkIcon,
   Building,
   Loader2,
-  /*AlertCircle,*/ Mail,
+  Mail,
   ExternalLink,
   ShieldAlert,
-} from 'lucide-react'; // Removed MapPin, AlertCircle
+} from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { JobCard } from '@/components/JobCard';
@@ -42,7 +42,6 @@ import Link from 'next/link';
 export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = params.companyId as string;
-  // const router = useRouter(); // Unused
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -139,9 +138,11 @@ export default function CompanyDetailPage() {
             } as Job;
           });
           setJobs(fetchedJobs);
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('Error fetching company details:', e);
-          setError('Failed to load company details. Please try again.');
+          setError(
+            `Failed to load company details. Error: ${(e as Error).message}`
+          );
           setCompany(null);
         } finally {
           setIsLoading(false);

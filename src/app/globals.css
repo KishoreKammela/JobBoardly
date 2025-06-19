@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -101,16 +102,16 @@
     font-size: 10pt;
     line-height: 1.4;
     color: #333;
-    background-color: #fff !important; /* Ensure background is white for printing */
+    background-color: #fff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   .printable-profile-content-wrapper {
     width: 100%;
-    max-width: 100%; /* Use full width for print typically */
+    max-width: 100%;
     margin: 0;
-    padding: 0; /* Usually browser handles margins */
+    padding: 0;
   }
 
   .printable-profile-center {
@@ -118,7 +119,7 @@
   }
 
   .printable-profile-mb-large {
-    margin-bottom: 1.5em; /* Use em for relative spacing */
+    margin-bottom: 1.5em;
   }
   .printable-profile-mb-medium {
     margin-bottom: 0.75em;
@@ -127,7 +128,7 @@
   .printable-profile-h1 {
     font-size: 20pt;
     font-weight: 700;
-    color: #0056b3; /* Darker blue for better print contrast */
+    color: #0056b3;
     margin-bottom: 0.25em;
   }
 
@@ -176,10 +177,6 @@
     color: #0056b3;
     text-decoration: none;
   }
-  .printable-profile-link:hover {
-    /* Hover not relevant for print */
-    text-decoration: underline;
-  }
 
   .printable-profile-section {
     margin-bottom: 1em;
@@ -204,7 +201,7 @@
   .printable-profile-relevant-tag {
     font-size: 8pt;
     font-weight: bold;
-    color: #17a2b8; /* A teal that might print better */
+    color: #17a2b8;
     margin-left: 0.5em;
     background-color: #e0f7fa;
     padding: 0.1em 0.3em;
@@ -214,12 +211,12 @@
   .printable-profile-grid-cols-2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75em; /* Use em for gaps */
+    gap: 0.75em;
   }
 
   .printable-profile-list-none {
     list-style: none;
-    padding-left: 0; /* Reset padding */
+    padding-left: 0;
     margin: 0;
   }
 
@@ -243,7 +240,7 @@
     margin-bottom: 0.2em;
   }
   .printable-profile-detail-item strong {
-    font-weight: 600; /* Slightly bolder for print */
+    font-weight: 600;
   }
 
   .printable-profile-truncate-note {
@@ -255,13 +252,12 @@
     padding-top: 0.75em;
   }
 
-  /* Hide elements not relevant for printing */
   .no-print,
   nav,
   footer,
   button,
   [role='button'],
-  .bg-muted\/20,
+  .bg-muted\/20, /* Corrected from .bg-muted\\/20 */
   .shadow-xl,
   header,
   #headlessui-portal-root,
@@ -270,21 +266,19 @@
   }
   .container,
   .container > div {
-    /* Target specific containers if needed */
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
     box-shadow: none !important;
     border: none !important;
   }
-  /* Remove shadows and borders from cards in print */
   .card,
   .printable-profile-content-wrapper .card {
     box-shadow: none !important;
     border: none !important;
-    background-color: #fff !important; /* Ensure card background is white */
+    background-color: #fff !important;
   }
   main {
-    padding: 0 !important; /* remove padding from main element for printing */
+    padding: 0 !important;
   }
 }

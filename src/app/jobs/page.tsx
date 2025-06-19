@@ -1,5 +1,6 @@
+
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { JobCard } from '@/components/JobCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
@@ -94,9 +95,11 @@ export default function JobsPage() {
         });
         setAllJobs(jobsData);
         setFilteredJobs(jobsData);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('Error fetching jobs:', e);
-        setError('Failed to load jobs. Please try again later.');
+        setError(
+          `Failed to load jobs. Please try again later. Error: ${(e as Error).message}`
+        );
       } finally {
         setIsLoading(false);
       }
@@ -222,7 +225,9 @@ export default function JobsPage() {
               placeholder="Search job title, company, or skills..."
               className="w-full h-12 pl-10 text-base rounded-lg shadow-sm"
               value={globalSearchTerm}
-              onChange={(e) => setGlobalSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setGlobalSearchTerm(e.target.value)
+              }
               aria-label="Search jobs"
             />
           </div>

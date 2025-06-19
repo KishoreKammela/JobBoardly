@@ -1,5 +1,6 @@
+
 'use client';
-import { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
+import React, { useState, type ChangeEvent, type FormEvent, useEffect } from 'react';
 import type { Job, ParsedJobData, Company } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,9 +150,9 @@ export function PostJobForm() {
       } else {
         setJobData((prev) => ({
           ...initialJobData,
-          ...prev,
+          ...prev, // Keep company details if set
           status: 'pending',
-        })); // Retain company details if already set
+        }));
       }
     };
     initializeForm();
@@ -166,7 +167,7 @@ export function PostJobForm() {
       setJobData((prev) => ({ ...prev, [name]: checked }));
     } else {
       setJobData((prev) => {
-        let newValue: any = value;
+        let newValue: string | number | undefined = value;
         if (name === 'salaryMin' || name === 'salaryMax') {
           newValue = value === '' ? undefined : parseFloat(value);
           if (isNaN(newValue as number)) newValue = undefined;
@@ -258,14 +259,15 @@ export function PostJobForm() {
         }
         setFile(null);
       };
-      reader.onerror = () => {
+      reader.onerror = (errorEvent: ProgressEvent<FileReader>) => {
+        console.error('File Reading Error:', errorEvent);
         toast({
           title: 'File Reading Error',
           description: 'Could not read the selected file.',
           variant: 'destructive',
         });
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error parsing job description:', error);
       const errorMessage =
         error instanceof Error
@@ -321,8 +323,8 @@ export function PostJobForm() {
 
       if (editingJobId) {
         const jobDocRef = doc(db, 'jobs', editingJobId);
-        jobPayload.status = 'pending';
-        jobPayload.moderationReason = null; // Explicitly set to null to clear previous reason
+        jobPayload.status = 'pending'; // Always resubmit as pending
+        jobPayload.moderationReason = null; // Clear previous reason
         await updateDoc(jobDocRef, jobPayload as { [key: string]: any });
         toast({
           title: 'Job Updated & Resubmitted for Approval!',
@@ -352,11 +354,11 @@ export function PostJobForm() {
         setFile(null);
       }
       router.push('/employer/posted-jobs');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving job:', error);
       toast({
         title: editingJobId ? 'Job Update Failed' : 'Job Posting Failed',
-        description: 'Could not save the job. Please try again.',
+        description: `Could not save the job. Error: ${(error as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -392,7 +394,6 @@ export function PostJobForm() {
     );
   }
   if (!user.companyId && !authCompany && !currentCompanyDetails.id) {
-    // Check currentCompanyDetails.id as well
     return (
       <Card>
         <CardHeader>
@@ -469,6 +470,7 @@ export function PostJobForm() {
               <label
                 htmlFor="jobDescriptionFile"
                 className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors"
+                aria-label="Upload job description file area"
               >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <UploadCloud className="w-8 h-8 mb-2 text-primary" />
@@ -499,6 +501,7 @@ export function PostJobForm() {
                   size="sm"
                   onClick={handleParseDocument}
                   disabled={isParsing || !file}
+                  aria-label="Parse uploaded document"
                 >
                   {isParsing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -523,6 +526,7 @@ export function PostJobForm() {
                 onChange={handleChange}
                 required
                 placeholder="e.g., Senior Software Engineer"
+                aria-label="Job Title"
               />
             </div>
             <div>
@@ -533,6 +537,7 @@ export function PostJobForm() {
                 value={jobData.location || ''}
                 onChange={handleChange}
                 placeholder="e.g., San Francisco, CA or Remote"
+                aria-label="Job Location"
               />
             </div>
           </div>
@@ -546,7 +551,7 @@ export function PostJobForm() {
                   handleSelectChange('type', value as Job['type'])
                 }
               >
-                <SelectTrigger id="type">
+                <SelectTrigger id="type" aria-label="Select job type">
                   <SelectValue placeholder="Select job type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -568,8 +573,13 @@ export function PostJobForm() {
                     isRemote: Boolean(checked),
                   }))
                 }
+                aria-labelledby="isRemoteLabel"
               />
-              <Label htmlFor="isRemote" className="font-medium">
+              <Label
+                htmlFor="isRemote"
+                className="font-medium"
+                id="isRemoteLabel"
+              >
                 This job is remote
               </Label>
             </div>
@@ -583,6 +593,7 @@ export function PostJobForm() {
               value={skillsInput}
               onChange={handleSkillsChange}
               placeholder="e.g., React, Node.js, Project Management"
+              aria-label="Required Skills"
             />
           </div>
 
@@ -598,6 +609,7 @@ export function PostJobForm() {
                 placeholder="e.g., 800000"
                 value={jobData.salaryMin === undefined ? '' : jobData.salaryMin}
                 onChange={handleChange}
+                aria-label="Minimum Salary"
               />
               {jobData.salaryMin !== undefined && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -616,6 +628,7 @@ export function PostJobForm() {
                 placeholder="e.g., 1200000"
                 value={jobData.salaryMax === undefined ? '' : jobData.salaryMax}
                 onChange={handleChange}
+                aria-label="Maximum Salary"
               />
               {jobData.salaryMax !== undefined && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -635,6 +648,7 @@ export function PostJobForm() {
               rows={12}
               placeholder="Provide a detailed job description, responsibilities, and qualifications..."
               required
+              aria-label="Job Description"
             />
           </div>
 
@@ -644,6 +658,11 @@ export function PostJobForm() {
               isSubmitting || isParsing || !user?.uid || !user.companyId
             }
             className="w-full sm:w-auto"
+            aria-label={
+              editingJobId
+                ? 'Update and Resubmit Job'
+                : 'Submit Job for Approval'
+            }
           >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

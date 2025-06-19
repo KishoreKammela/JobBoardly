@@ -1,10 +1,11 @@
+
 'use client';
 import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Download, Eye } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
@@ -20,7 +21,7 @@ export default function ProfilePage() {
   const handlePrintProfile = useReactToPrint({
     content: () => printableProfileRef.current,
     documentTitle: `${user?.name || 'UserProfile'}_JobBoardly`,
-    onPrintError: () =>
+    onPrintError: (_error: Error) =>
       alert('There was an error printing the profile. Please try again.'),
   });
 

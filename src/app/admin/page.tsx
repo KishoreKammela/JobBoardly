@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -20,14 +21,13 @@ import {
   Briefcase,
   Building,
   Eye,
-  Search as SearchIcon,
   ChevronsUpDown,
   ExternalLink,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import {
@@ -41,6 +41,7 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
+  type FieldValue,
 } from 'firebase/firestore';
 import type { Job, UserProfile, Company } from '@/types';
 import Link from 'next/link';
@@ -131,7 +132,6 @@ export default function AdminPage() {
     setIsUsersLoading(true);
 
     try {
-      // Fetch Pending Jobs
       const jobsQuery = query(
         collection(db, 'jobs'),
         where('status', '==', 'pending'),
@@ -152,7 +152,6 @@ export default function AdminPage() {
       );
       setIsJobsLoading(false);
 
-      // Fetch Pending Companies
       const pendingCompaniesQuery = query(
         collection(db, 'companies'),
         where('status', '==', 'pending'),
@@ -172,7 +171,6 @@ export default function AdminPage() {
         )
       );
 
-      // Fetch All Companies
       const allCompaniesQuery = query(
         collection(db, 'companies'),
         orderBy('createdAt', 'desc')
@@ -184,7 +182,6 @@ export default function AdminPage() {
             id: companyDoc.id,
             ...companyDoc.data(),
           } as Company;
-          // Approximated counts - real counts need aggregation or denormalization
           company.jobCount = (
             await getCountFromServer(
               query(
@@ -210,7 +207,6 @@ export default function AdminPage() {
       setAllCompanies(companiesData);
       setIsCompaniesLoading(false);
 
-      // Fetch All Job Seekers
       const jobSeekersQuery = query(
         collection(db, 'users'),
         where('role', '==', 'jobSeeker'),
@@ -234,7 +230,6 @@ export default function AdminPage() {
         )
       );
 
-      // Fetch All Platform Users (Admins, SuperAdmins)
       const platformUsersQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['admin', 'superAdmin']),
@@ -257,7 +252,7 @@ export default function AdminPage() {
         )
       );
       setIsUsersLoading(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching admin data:', error);
       toast({
         title: 'Error',
@@ -307,11 +302,11 @@ export default function AdminPage() {
         title: 'Success',
         description: `Job ${jobId} status updated to ${newStatus}.`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error updating job ${jobId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update job ${jobId}.`,
+        description: `Failed to update job ${jobId}. Error: ${(error as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -327,7 +322,10 @@ export default function AdminPage() {
     setActionLoading(`company-${companyId}`);
     try {
       const companyDocRef = doc(db, 'companies', companyId);
-      const updateData: any = {
+      const updateData: Partial<Company> & {
+        updatedAt: FieldValue;
+        moderationReason?: string | null;
+      } = {
         status: newStatus,
         updatedAt: serverTimestamp(),
       };
@@ -338,9 +336,8 @@ export default function AdminPage() {
       } else {
         updateData.moderationReason = null;
       }
-      await updateDoc(companyDocRef, updateData);
+      await updateDoc(companyDocRef, updateData as { [key: string]: any });
 
-      // Update local state for all companies and pending companies
       setAllCompanies((prev) =>
         prev.map((c) =>
           c.id === companyId
@@ -368,11 +365,11 @@ export default function AdminPage() {
           duration: 7000,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error updating company ${companyId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update company ${companyId}.`,
+        description: `Failed to update company ${companyId}. Error: ${(error as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -428,8 +425,7 @@ export default function AdminPage() {
 
     setActionLoading(`user-${userId}`);
     try {
-      await updateUserProfileInAuthContext({ uid: userId, status: newStatus }); // Use context function for consistency
-      // Update local state for relevant user list
+      await updateUserProfileInAuthContext({ uid: userId, status: newStatus });
       if (targetUser.role === 'jobSeeker') {
         setAllJobSeekers((prev) =>
           prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
@@ -443,11 +439,11 @@ export default function AdminPage() {
         title: 'Success',
         description: `User ${userId} status updated to ${newStatus}.`,
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Error updating user status:', e);
       toast({
         title: 'Error',
-        description: 'Failed to update user status.',
+        description: `Failed to update user status. Error: ${(e as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -455,7 +451,6 @@ export default function AdminPage() {
     }
   };
 
-  // Generic sort request handler
   const requestSort = <T,>(
     key: keyof T,
     config: SortConfig<T>,
@@ -468,7 +463,6 @@ export default function AdminPage() {
     setConfig({ key, direction });
   };
 
-  // Generic memoized sorted items
   const useSortedItems = <T,>(
     items: T[],
     config: SortConfig<T>,
@@ -523,7 +517,6 @@ export default function AdminPage() {
     ['name', 'email']
   );
 
-  // Generic paginated items
   const usePaginatedItems = <T,>(items: T[], currentPage: number) => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -757,7 +750,9 @@ export default function AdminPage() {
               <Input
                 placeholder="Search companies by name or website..."
                 value={companiesSearchTerm}
-                onChange={(e) => setCompaniesSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setCompaniesSearchTerm(e.target.value)
+                }
                 className="max-w-sm mt-2"
                 aria-label="Search companies"
               />
@@ -773,6 +768,7 @@ export default function AdminPage() {
               ) : (
                 <>
                   <Table>
+                    <TableCaption>A list of all companies.</TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead
@@ -866,7 +862,7 @@ export default function AdminPage() {
                           <TableCell className="text-right space-x-1">
                             {c.status !== 'approved' && (
                               <Button
-                                size="xs"
+                                size="sm"
                                 onClick={() =>
                                   handleCompanyStatusUpdate(c.id, 'approved')
                                 }
@@ -879,7 +875,7 @@ export default function AdminPage() {
                             {c.status !== 'rejected' &&
                               c.status !== 'pending' && (
                                 <Button
-                                  size="xs"
+                                  size="sm"
                                   variant="outline"
                                   onClick={() =>
                                     handleCompanyStatusUpdate(c.id, 'rejected')
@@ -892,7 +888,7 @@ export default function AdminPage() {
                               )}
                             {c.status !== 'suspended' ? (
                               <Button
-                                size="xs"
+                                size="sm"
                                 variant="destructive"
                                 onClick={() =>
                                   handleCompanyStatusUpdate(c.id, 'suspended')
@@ -904,7 +900,7 @@ export default function AdminPage() {
                               </Button>
                             ) : (
                               <Button
-                                size="xs"
+                                size="sm"
                                 variant="secondary"
                                 onClick={() =>
                                   handleCompanyStatusUpdate(c.id, 'active')
@@ -964,7 +960,9 @@ export default function AdminPage() {
               <Input
                 placeholder="Search job seekers by name or email..."
                 value={jobSeekersSearchTerm}
-                onChange={(e) => setJobSeekersSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setJobSeekersSearchTerm(e.target.value)
+                }
                 className="max-w-sm mt-2"
                 aria-label="Search job seekers"
               />
@@ -980,6 +978,9 @@ export default function AdminPage() {
               ) : (
                 <>
                   <Table>
+                    <TableCaption>
+                      A list of all job seeker users.
+                    </TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead
@@ -1101,7 +1102,7 @@ export default function AdminPage() {
                               : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            <Button variant="outline" size="xs" asChild>
+                            <Button variant="outline" size="sm" asChild>
                               <Link
                                 href={`/employer/candidates/${u.uid}`}
                                 target="_blank"
@@ -1116,7 +1117,7 @@ export default function AdminPage() {
                                   ? 'destructive'
                                   : 'default'
                               }
-                              size="xs"
+                              size="sm"
                               onClick={() =>
                                 handleUserStatusUpdate(
                                   u.uid,
@@ -1182,7 +1183,9 @@ export default function AdminPage() {
               <Input
                 placeholder="Search admins by name or email..."
                 value={platformUsersSearchTerm}
-                onChange={(e) => setPlatformUsersSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPlatformUsersSearchTerm(e.target.value)
+                }
                 className="max-w-sm mt-2"
                 aria-label="Search platform users"
               />
@@ -1200,6 +1203,9 @@ export default function AdminPage() {
               ) : (
                 <>
                   <Table>
+                    <TableCaption>
+                      A list of platform administrators.
+                    </TableCaption>
                     <TableHeader>
                       <TableRow>
                         <TableHead
@@ -1345,7 +1351,7 @@ export default function AdminPage() {
                                   ? 'destructive'
                                   : 'default'
                               }
-                              size="xs"
+                              size="sm"
                               onClick={() =>
                                 handleUserStatusUpdate(
                                   u.uid,

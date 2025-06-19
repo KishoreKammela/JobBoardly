@@ -1,3 +1,4 @@
+
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,10 +90,12 @@ export function FilterSidebar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // onFilterChange(filters); // This is now handled by useEffect
   };
 
   const handleReset = () => {
     setFilters(defaultSidebarFilters);
+    // onFilterChange(defaultSidebarFilters); // This is now handled by useEffect
   };
 
   const handleOpenSaveSearchDialog = () => {
@@ -130,10 +133,10 @@ export function FilterSidebar({
         });
         setIsSaveSearchAlertOpen(false);
         setSearchName('');
-      } catch (error) {
+      } catch (error: unknown) {
         toast({
           title: 'Error Saving Search',
-          description: 'Could not save your search. Please try again.',
+          description: `Could not save your search. Error: ${(error as Error).message}`,
           variant: 'destructive',
         });
       }
@@ -261,7 +264,9 @@ export function FilterSidebar({
             <Input
               id="searchNameInput"
               value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSearchName(e.target.value)
+              }
               placeholder="e.g., Remote React Jobs"
               className="mt-1"
               aria-label="Name for saved search"

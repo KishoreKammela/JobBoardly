@@ -1,3 +1,4 @@
+
 'use client';
 import type {
   UserProfile,
@@ -173,51 +174,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               dobString = undefined;
             }
 
-            const experiences = (rawData.experiences || []).map((exp: any) => ({
-              id: exp.id || uuidv4(),
-              companyName: exp.companyName || '',
-              jobRole: exp.jobRole || '',
-              startDate: exp.startDate || undefined,
-              endDate: exp.endDate || undefined,
-              currentlyWorking: exp.currentlyWorking || false,
-              description: exp.description || '',
-              annualCTC:
-                exp.annualCTC === null ||
-                exp.annualCTC === undefined ||
-                isNaN(Number(exp.annualCTC))
-                  ? undefined
-                  : Number(exp.annualCTC),
-            }));
-            const educations = (rawData.educations || []).map((edu: any) => ({
-              id: edu.id || uuidv4(),
-              level: edu.level || 'Graduate',
-              degreeName: edu.degreeName || '',
-              instituteName: edu.instituteName || '',
-              startYear:
-                edu.startYear === null ||
-                edu.startYear === undefined ||
-                isNaN(Number(edu.startYear))
-                  ? undefined
-                  : Number(edu.startYear),
-              endYear:
-                edu.endYear === null ||
-                edu.endYear === undefined ||
-                isNaN(Number(edu.endYear))
-                  ? undefined
-                  : Number(edu.endYear),
-              specialization: edu.specialization || '',
-              courseType: edu.courseType || 'Full Time',
-              isMostRelevant: edu.isMostRelevant || false,
-              description: edu.description || '',
-            }));
-            const languages = (rawData.languages || []).map((lang: any) => ({
-              id: lang.id || uuidv4(),
-              languageName: lang.languageName || '',
-              proficiency: lang.proficiency || 'Beginner',
-              canRead: lang.canRead || false,
-              canWrite: lang.canWrite || false,
-              canSpeak: lang.canSpeak || false,
-            }));
+            const experiences = (rawData.experiences || []).map(
+              (exp: Partial<ExperienceEntry>) => ({
+                id: exp.id || uuidv4(),
+                companyName: exp.companyName || '',
+                jobRole: exp.jobRole || '',
+                startDate: exp.startDate || undefined,
+                endDate: exp.endDate || undefined,
+                currentlyWorking: exp.currentlyWorking || false,
+                description: exp.description || '',
+                annualCTC:
+                  exp.annualCTC === null ||
+                  exp.annualCTC === undefined ||
+                  isNaN(Number(exp.annualCTC))
+                    ? undefined
+                    : Number(exp.annualCTC),
+              })
+            );
+            const educations = (rawData.educations || []).map(
+              (edu: Partial<EducationEntry>) => ({
+                id: edu.id || uuidv4(),
+                level: edu.level || 'Graduate',
+                degreeName: edu.degreeName || '',
+                instituteName: edu.instituteName || '',
+                startYear:
+                  edu.startYear === null ||
+                  edu.startYear === undefined ||
+                  isNaN(Number(edu.startYear))
+                    ? undefined
+                    : Number(edu.startYear),
+                endYear:
+                  edu.endYear === null ||
+                  edu.endYear === undefined ||
+                  isNaN(Number(edu.endYear))
+                    ? undefined
+                    : Number(edu.endYear),
+                specialization: edu.specialization || '',
+                courseType: edu.courseType || 'Full Time',
+                isMostRelevant: edu.isMostRelevant || false,
+                description: edu.description || '',
+              })
+            );
+            const languages = (rawData.languages || []).map(
+              (lang: Partial<LanguageEntry>) => ({
+                id: lang.id || uuidv4(),
+                languageName: lang.languageName || '',
+                proficiency: lang.proficiency || 'Beginner',
+                canRead: lang.canRead || false,
+                canWrite: lang.canWrite || false,
+                canSpeak: lang.canSpeak || false,
+              })
+            );
 
             const profileData: UserProfile = {
               uid: fbUser.uid,
@@ -236,13 +243,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 rawData.lastActive instanceof Timestamp
                   ? rawData.lastActive.toDate().toISOString()
                   : rawData.lastActive,
-              savedSearches: (rawData.savedSearches || []).map((s: any) => ({
-                ...s,
-                createdAt:
-                  s.createdAt instanceof Timestamp
-                    ? s.createdAt.toDate().toISOString()
-                    : s.createdAt,
-              })),
+              savedSearches: (rawData.savedSearches || []).map(
+                (s: Partial<SavedSearch>) => ({
+                  ...s,
+                  createdAt:
+                    s.createdAt instanceof Timestamp
+                      ? s.createdAt.toDate().toISOString()
+                      : s.createdAt,
+                })
+              ),
               experiences:
                 experiences.length > 0
                   ? experiences
@@ -269,7 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 rawData.totalMonthsExperience === null
                   ? undefined
                   : rawData.totalMonthsExperience,
-            };
+            } as UserProfile;
             setUser(profileData);
 
             if (profileData.theme) {
@@ -306,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             setCompany(null);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(
             'AuthContext: Error fetching user or company profile from Firestore:',
             error
@@ -436,7 +445,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userProfileData[typedKey] !== undefined) {
         finalProfileDataForFirestore[key] = userProfileData[typedKey];
       } else {
-        // Ensure nullable fields for jobSeeker are set to null if undefined
         if (
           role === 'jobSeeker' &&
           (key === 'dateOfBirth' ||
@@ -454,17 +462,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       finalProfileDataForFirestore.experiences =
         finalProfileDataForFirestore.experiences &&
         finalProfileDataForFirestore.experiences.length > 0
-          ? finalProfileDataForFirestore.experiences
+          ? finalProfileDataForFirestore.experiences.map(
+              (exp: Partial<ExperienceEntry>) => ({
+                id: exp.id || uuidv4(),
+                companyName: exp.companyName || '',
+                jobRole: exp.jobRole || '',
+                startDate: exp.startDate || null,
+                endDate: exp.endDate || null,
+                currentlyWorking: exp.currentlyWorking || false,
+                description: exp.description || '',
+                annualCTC: exp.annualCTC === undefined ? null : exp.annualCTC,
+              })
+            )
           : [];
       finalProfileDataForFirestore.educations =
         finalProfileDataForFirestore.educations &&
         finalProfileDataForFirestore.educations.length > 0
-          ? finalProfileDataForFirestore.educations
+          ? finalProfileDataForFirestore.educations.map(
+              (edu: Partial<EducationEntry>) => ({
+                id: edu.id || uuidv4(),
+                level: edu.level || 'Graduate',
+                degreeName: edu.degreeName || '',
+                instituteName: edu.instituteName || '',
+                startYear: edu.startYear === undefined ? null : edu.startYear,
+                endYear: edu.endYear === undefined ? null : edu.endYear,
+                specialization: edu.specialization || '',
+                courseType: edu.courseType || 'Full Time',
+                isMostRelevant: edu.isMostRelevant || false,
+                description: edu.description || '',
+              })
+            )
           : [];
       finalProfileDataForFirestore.languages =
         finalProfileDataForFirestore.languages &&
         finalProfileDataForFirestore.languages.length > 0
-          ? finalProfileDataForFirestore.languages
+          ? finalProfileDataForFirestore.languages.map(
+              (lang: Partial<LanguageEntry>) => ({
+                id: lang.id || uuidv4(),
+                languageName: lang.languageName || '',
+                proficiency: lang.proficiency || 'Beginner',
+                canRead: lang.canRead || false,
+                canWrite: lang.canWrite || false,
+                canSpeak: lang.canSpeak || false,
+              })
+            )
           : [];
     }
 
@@ -496,7 +537,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         applyTheme(fullProfile.theme);
       }
       return fullProfile;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(
         'AuthContext: Firestore setDoc FAILED for UID:',
         fbUser.uid,
@@ -530,7 +571,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fbUser = userCredential.user;
       await createUserProfileInFirestore(fbUser, name, role, companyName);
       return fbUser;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: registerUser error', error);
       throw error;
     }
@@ -613,58 +654,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             rawData.lastActive instanceof Timestamp
               ? rawData.lastActive.toDate().toISOString()
               : rawData.lastActive,
-          savedSearches: (rawData.savedSearches || []).map((s: any) => ({
-            ...s,
-            createdAt:
-              s.createdAt instanceof Timestamp
-                ? s.createdAt.toDate().toISOString()
-                : s.createdAt,
-          })),
-          experiences: (rawData.experiences || []).map((exp: any) => ({
-            id: exp.id || uuidv4(),
-            companyName: exp.companyName || '',
-            jobRole: exp.jobRole || '',
-            startDate: exp.startDate || undefined,
-            endDate: exp.endDate || undefined,
-            currentlyWorking: exp.currentlyWorking || false,
-            description: exp.description || '',
-            annualCTC:
-              exp.annualCTC === null ||
-              exp.annualCTC === undefined ||
-              isNaN(Number(exp.annualCTC))
-                ? undefined
-                : Number(exp.annualCTC),
-          })),
-          educations: (rawData.educations || []).map((edu: any) => ({
-            id: edu.id || uuidv4(),
-            level: edu.level || 'Graduate',
-            degreeName: edu.degreeName || '',
-            instituteName: edu.instituteName || '',
-            startYear:
-              edu.startYear === null ||
-              edu.startYear === undefined ||
-              isNaN(Number(edu.startYear))
-                ? undefined
-                : Number(edu.startYear),
-            endYear:
-              edu.endYear === null ||
-              edu.endYear === undefined ||
-              isNaN(Number(edu.endYear))
-                ? undefined
-                : Number(edu.endYear),
-            specialization: edu.specialization || '',
-            courseType: edu.courseType || 'Full Time',
-            isMostRelevant: edu.isMostRelevant || false,
-            description: edu.description || '',
-          })),
-          languages: (rawData.languages || []).map((lang: any) => ({
-            id: lang.id || uuidv4(),
-            languageName: lang.languageName || '',
-            proficiency: lang.proficiency || 'Beginner',
-            canRead: lang.canRead || false,
-            canWrite: lang.canWrite || false,
-            canSpeak: lang.canSpeak || false,
-          })),
+          savedSearches: (rawData.savedSearches || []).map(
+            (s: Partial<SavedSearch>) => ({
+              ...s,
+              createdAt:
+                s.createdAt instanceof Timestamp
+                  ? s.createdAt.toDate().toISOString()
+                  : s.createdAt,
+            })
+          ),
+          experiences: (rawData.experiences || []).map(
+            (exp: Partial<ExperienceEntry>) => ({
+              id: exp.id || uuidv4(),
+              companyName: exp.companyName || '',
+              jobRole: exp.jobRole || '',
+              startDate: exp.startDate || undefined,
+              endDate: exp.endDate || undefined,
+              currentlyWorking: exp.currentlyWorking || false,
+              description: exp.description || '',
+              annualCTC:
+                exp.annualCTC === null ||
+                exp.annualCTC === undefined ||
+                isNaN(Number(exp.annualCTC))
+                  ? undefined
+                  : Number(exp.annualCTC),
+            })
+          ),
+          educations: (rawData.educations || []).map(
+            (edu: Partial<EducationEntry>) => ({
+              id: edu.id || uuidv4(),
+              level: edu.level || 'Graduate',
+              degreeName: edu.degreeName || '',
+              instituteName: edu.instituteName || '',
+              startYear:
+                edu.startYear === null ||
+                edu.startYear === undefined ||
+                isNaN(Number(edu.startYear))
+                  ? undefined
+                  : Number(edu.startYear),
+              endYear:
+                edu.endYear === null ||
+                edu.endYear === undefined ||
+                isNaN(Number(edu.endYear))
+                  ? undefined
+                  : Number(edu.endYear),
+              specialization: edu.specialization || '',
+              courseType: edu.courseType || 'Full Time',
+              isMostRelevant: edu.isMostRelevant || false,
+              description: edu.description || '',
+            })
+          ),
+          languages: (rawData.languages || []).map(
+            (lang: Partial<LanguageEntry>) => ({
+              id: lang.id || uuidv4(),
+              languageName: lang.languageName || '',
+              proficiency: lang.proficiency || 'Beginner',
+              canRead: lang.canRead || false,
+              canWrite: lang.canWrite || false,
+              canSpeak: lang.canSpeak || false,
+            })
+          ),
           totalYearsExperience:
             rawData.totalYearsExperience === null
               ? undefined
@@ -673,7 +722,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             rawData.totalMonthsExperience === null
               ? undefined
               : rawData.totalMonthsExperience,
-        };
+        } as UserProfile;
 
         let updatesNeeded = false;
         const updates: Partial<UserProfile> & {
@@ -784,7 +833,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       return fbUser;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: signInWithSocial error', error);
       throw error;
     }
@@ -803,7 +852,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(null);
       setCompany(null);
       applyTheme('system');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: logout error', error);
       throw error;
     }
@@ -828,7 +877,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       await reauthenticateWithCredential(firebaseUser, credential);
       await firebaseUpdatePassword(firebaseUser, newPassword);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: changeUserPassword error', error);
       throw error;
     }
@@ -843,102 +892,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userDocRef = doc(db, 'users', user.uid);
     const payloadForFirestore: { [key: string]: any } = {};
 
-    // Iterate over updatedData and build payloadForFirestore carefully
     (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
       const value = updatedData[key];
+      const nullableFields: Array<keyof UserProfile> = [
+        'dateOfBirth',
+        'currentCTCValue',
+        'expectedCTCValue',
+        'totalYearsExperience',
+        'totalMonthsExperience',
+        'avatarUrl',
+        'headline',
+        'mobileNumber',
+        'portfolioUrl',
+        'linkedinUrl',
+        'homeState',
+        'homeCity',
+        'parsedResumeText',
+        'resumeUrl',
+        'resumeFileName',
+      ];
 
       if (value === undefined) {
-        // For these specific optional fields, if they are undefined (e.g., cleared in form),
-        // we send null to Firestore to explicitly clear them or mark them as not set.
-        const nullableFields: Array<keyof UserProfile> = [
-          'dateOfBirth',
-          'currentCTCValue',
-          'expectedCTCValue',
-          'totalYearsExperience',
-          'totalMonthsExperience',
-          'avatarUrl',
-          'headline',
-          'mobileNumber',
-          'portfolioUrl',
-          'linkedinUrl',
-          'homeState',
-          'homeCity',
-          'parsedResumeText',
-          'resumeUrl',
-          'resumeFileName',
-        ];
         if (nullableFields.includes(key)) {
           payloadForFirestore[key] = null;
         }
-        // Otherwise, if value is undefined, it's intentionally skipped and not added to payloadForFirestore.
       } else if (Array.isArray(value)) {
-        // Deep clone and clean array items
-        payloadForFirestore[key] = value
-          .map((item) => {
-            if (typeof item === 'object' && item !== null) {
-              const cleanedItem: { [k: string]: any } = {};
-              for (const prop in item) {
-                // Ensure properties within objects in arrays are also not undefined
-                if (item[prop] !== undefined) {
-                  cleanedItem[prop] = item[prop];
-                } else {
-                  // Convert nested undefined to null for Firestore compatibility
-                  cleanedItem[prop] = null;
-                }
+        payloadForFirestore[key] = value.map((item) => {
+          if (typeof item === 'object' && item !== null) {
+            const cleanedItem: { [k: string]: any } = {};
+            for (const prop in item) {
+              if (item[prop] !== undefined) {
+                cleanedItem[prop] = item[prop];
+              } else {
+                cleanedItem[prop] = null;
               }
-              // Ensure date fields within array objects (like ExperienceEntry) are null if empty strings
-              if (cleanedItem.startDate === '') cleanedItem.startDate = null;
-              if (cleanedItem.endDate === '') cleanedItem.endDate = null;
-              if (cleanedItem.startYear === '') cleanedItem.startYear = null;
-              if (cleanedItem.endYear === '') cleanedItem.endYear = null;
-              return cleanedItem;
             }
-            return item;
-          })
-          .filter((item) => item !== undefined); // Filter out any top-level undefined items in the array (should be rare)
+            if (cleanedItem.startDate === '') cleanedItem.startDate = null;
+            if (cleanedItem.endDate === '') cleanedItem.endDate = null;
+            if (cleanedItem.startYear === '') cleanedItem.startYear = null;
+            if (cleanedItem.endYear === '') cleanedItem.endYear = null;
+            return cleanedItem;
+          }
+          return item;
+        });
       } else {
         payloadForFirestore[key] = value;
       }
     });
 
-    // Always add timestamps for update and activity
     payloadForFirestore.updatedAt = serverTimestamp();
     payloadForFirestore.lastActive = serverTimestamp();
 
     if (Object.keys(payloadForFirestore).length > 2) {
-      // Check if there's more than just timestamps
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-
-        // Update local state
-        // Create a new user object for state update, merging current user state with updatedData
-        // This ensures local state reflects the intended changes, including 'undefined' for optional fields if that's how the form clears them.
         const updatedUserForState: UserProfile = { ...user };
         for (const key in updatedData) {
-          // Iterate original updatedData for local state
           if (key !== 'updatedAt' && key !== 'lastActive') {
-            // Timestamps will be updated based on Firestore's potential conversion
             (updatedUserForState as any)[key] = (updatedData as any)[key];
           }
         }
-        // Simulate server timestamp update for local state immediately
         updatedUserForState.updatedAt = new Date().toISOString();
         updatedUserForState.lastActive = new Date().toISOString();
-
         setUser(updatedUserForState);
-
         if (updatedData.theme) {
-          // Use updatedData for theme as it reflects the direct user choice
           applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('AuthContext: updateUserProfile error', error);
-        // For debugging, you might want to log the payload that caused the error:
-        // console.error('Firestore payload that might have caused error:', payloadForFirestore);
         throw error;
       }
     } else if (user) {
-      // Only timestamps changed or no data change
       try {
         await updateDoc(userDocRef, {
           updatedAt: serverTimestamp(),
@@ -949,7 +973,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updatedAt: new Date().toISOString(),
           lastActive: new Date().toISOString(),
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(
           'AuthContext: updateUserProfile (timestamps only) error',
           error
@@ -979,12 +1003,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...updatedData,
       updatedAt: serverTimestamp(),
     };
-    delete dataToUpdate.id; // id should not be part of the update payload
+    delete dataToUpdate.id;
 
-    // Ensure no undefined values are sent
     Object.keys(dataToUpdate).forEach((key) => {
       if (dataToUpdate[key] === undefined) {
-        dataToUpdate[key] = null; // Or delete dataToUpdate[key];
+        dataToUpdate[key] = null;
       }
     });
 
@@ -994,7 +1017,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         (prevCompany) =>
           ({ ...prevCompany, ...dataToUpdate, id: companyId }) as Company
       );
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: updateCompanyProfile error', error);
       throw error;
     }
@@ -1034,7 +1057,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 appliedJobIds: [...(prevUser?.appliedJobIds || []), job.id],
               }) as UserProfile
           );
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('AuthContext: applyForJob error', error);
           throw error;
         }
@@ -1060,12 +1083,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
     } else {
-      updates.employerNotes = null; // Explicitly set to null if undefined
+      updates.employerNotes = null;
     }
 
     try {
       await updateDoc(applicationDocRef, updates as { [x: string]: any });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('AuthContext: updateApplicationStatus error', error);
       throw error;
     }
@@ -1094,7 +1117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               savedJobIds: [...(prevUser?.savedJobIds || []), jobId],
             }) as UserProfile
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('AuthContext: saveJob error', error);
         throw error;
       }
@@ -1121,7 +1144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ),
             }) as UserProfile
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('AuthContext: unsaveJob error', error);
         throw error;
       }
@@ -1159,7 +1182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               savedSearches: [...(prevUser?.savedSearches || []), newSearch],
             }) as UserProfile
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('AuthContext: saveSearch error', error);
         throw error;
       }
@@ -1188,7 +1211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ),
               }) as UserProfile
           );
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('AuthContext: deleteSearch error', error);
           throw error;
         }
