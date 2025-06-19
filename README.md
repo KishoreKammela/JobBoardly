@@ -66,22 +66,27 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 
 ### For Admins & Super Admins:
 
-- **Admin Dashboard (Tabbed Interface)**:
-  - **Companies Management**:
+- **Admin Dashboard (Tabbed Interface)**: Centralized management with a tabbed interface. All tables utilize consistent icon-based actions for a cleaner and more intuitive user experience.
+  - **Companies Management Tab**:
     - Table view: Name, Website, Status, Jobs Posted, Applications Received, Created At.
-    - Actions: Approve, Reject, **Suspend/Activate** company (suspending a company also suspends its recruiters).
-    - Search, sort, and pagination for company data.
-  - **Job Seekers Management**:
+    - Actions (Icon-based): View Company Profile (`Eye`), Approve (`CheckCircle2`), Reject (`XCircle`), Suspend (`Ban`)/Activate (`CheckSquare`) company. Suspending a company also suspends its associated recruiters.
+    - Search, sort, and pagination.
+  - **All Jobs Management Tab**:
+    - Table view: Job Title, Company, Status (approved, pending, rejected, suspended), Applicants Count, Created At, Updated At.
+    - Actions (Icon-based): View public job page (`Eye`), Edit job (links to employer's edit page - `Edit3`), Suspend (`Ban`)/Activate (`CheckSquare`) job (to 'approved' status).
+    - Search, sort, and pagination.
+  - **Job Seekers Management Tab**:
     - Table view: Name, Email, Status (active/suspended), Profile Searchable, Jobs Applied, Last Active, Joined Date.
-    - Actions: **Preview Profile** (opens seeker's public profile view), **Suspend/Activate** user.
+    - Actions (Icon-based): Preview Job Seeker Profile (`Eye`), Suspend (`Ban`)/Activate (`CheckSquare`) user.
     - Search, sort, and pagination.
-  - **Platform Users Management (Admins/SuperAdmins)**:
+  - **Platform Users Management Tab (Admins/SuperAdmins)**:
     - Table view: Name, Email, Role, Status, Last Active, Joined Date.
-    - Actions: **Suspend/Activate Admin** (SuperAdmin only).
+    - Actions (Icon-based): Suspend (`Ban`)/Activate (`CheckSquare`) Admin/SuperAdmin users. (SuperAdmin role required to manage other Admins/SuperAdmins; self-action restricted).
     - Search, sort, and pagination.
-  - **Job Listing Moderation**: Review, approve, or reject job postings. Job titles link to public detail pages.
-  - **Company Profile Moderation**: Review, approve, or reject new company profiles.
-- **Protected Admin Route**: Access restricted, with a dedicated admin login page at `/auth/admin/login`.
+  - **Quick Moderation Cards (Dashboard Overview)**:
+    - **Pending Job Approvals**: Quickly approve (`CheckCircle2`) or reject (`XCircle`) newly submitted job postings.
+    - **Pending Company Approvals**: Quickly approve (`CheckCircle2`) or reject (`XCircle`) new company profiles.
+- **Protected Admin Route**: Access restricted to users with "admin" or "superAdmin" roles, with a dedicated admin login page at `/auth/admin/login`.
 - **SuperAdmin Role**: Can manage (suspend/activate) regular admin accounts.
 
 ### General Platform Features:
