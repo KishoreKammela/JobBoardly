@@ -12,8 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Save } from 'lucide-react';
-import type React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Filters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -255,7 +254,8 @@ export function FilterSidebar({
             <AlertDialogTitle>Save Job Search</AlertDialogTitle>
             <AlertDialogDescription>
               Enter a name for this search. It will include your current keyword
-              "{currentGlobalSearchTerm || 'none'}" and the selected filters.
+              &quot;{currentGlobalSearchTerm || 'none'}&quot; and the selected
+              filters.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

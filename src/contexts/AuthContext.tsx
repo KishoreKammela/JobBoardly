@@ -16,7 +16,7 @@ import React, {
   createContext,
   useContext,
   useState,
-  ReactNode,
+  type ReactNode,
   useEffect,
 } from 'react';
 import { auth, db } from '@/lib/firebase';
@@ -509,7 +509,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      await setDoc(userDocRef, finalProfileDataForFirestore);
+      await setDoc(
+        userDocRef,
+        finalProfileDataForFirestore as { [key: string]: any }
+      );
       const fullProfile = {
         ...userProfileData,
         uid: fbUser.uid,
@@ -916,7 +919,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           payloadForFirestore[key] = null;
         }
       } else if (Array.isArray(value)) {
-        payloadForFirestore[key] = value.map((item) => {
+        payloadForFirestore[key] = value.map((item: any) => {
           if (typeof item === 'object' && item !== null) {
             const cleanedItem: { [k: string]: any } = {};
             for (const prop in item) {
@@ -945,11 +948,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (Object.keys(payloadForFirestore).length > 2) {
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState: UserProfile = { ...user };
+        const updatedUserForState: UserProfile = { ...user } as UserProfile;
         for (const key in updatedData) {
-          if (key !== 'updatedAt' && key !== 'lastActive') {
-            (updatedUserForState as any)[key] = (updatedData as any)[key];
-          }
+          (updatedUserForState as { [key: string]: any })[key] = (
+            updatedData as { [key: string]: any }
+          )[key];
         }
         updatedUserForState.updatedAt = new Date().toISOString();
         updatedUserForState.lastActive = new Date().toISOString();
@@ -971,7 +974,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...user,
           updatedAt: new Date().toISOString(),
           lastActive: new Date().toISOString(),
-        });
+        } as UserProfile);
       } catch (error: unknown) {
         console.error(
           'AuthContext: updateUserProfile (timestamps only) error',

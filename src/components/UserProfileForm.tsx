@@ -52,7 +52,7 @@ import {
   Home,
   Cake,
   Phone,
-  AtSign, // Alternative to Mail if needed for consistency
+  AtSign,
 } from 'lucide-react';
 import {
   Popover,
@@ -101,6 +101,43 @@ const createEmptyLanguage = (): LanguageEntry => ({
   canSpeak: false,
 });
 
+const initialUserFormData: Partial<UserProfile> = {
+  name: '',
+  avatarUrl: '',
+  headline: '',
+  skills: [],
+  experiences: [createEmptyExperience()],
+  educations: [createEmptyEducation()],
+  languages: [createEmptyLanguage()],
+  mobileNumber: '',
+  availability: 'Flexible',
+  portfolioUrl: '',
+  linkedinUrl: '',
+  preferredLocations: [],
+  jobSearchStatus: 'activelyLooking',
+  isProfileSearchable: true,
+  gender: 'Prefer not to say',
+  dateOfBirth: undefined,
+  currentCTCValue: undefined,
+  currentCTCConfidential: false,
+  expectedCTCValue: undefined,
+  expectedCTCNegotiable: false,
+  homeState: '',
+  homeCity: '',
+  parsedResumeText: '',
+  totalYearsExperience: 0,
+  totalMonthsExperience: 0,
+};
+
+const initialCompanyFormData: Partial<Company> = {
+  name: '',
+  description: '',
+  websiteUrl: '',
+  logoUrl: '',
+  bannerImageUrl: '',
+  status: 'pending',
+};
+
 export function UserProfileForm() {
   const {
     user,
@@ -111,48 +148,12 @@ export function UserProfileForm() {
   } = useAuth();
   const { toast } = useToast();
 
-  const initialUserFormData: Partial<UserProfile> = {
-    name: '',
-    avatarUrl: '',
-    headline: '',
-    skills: [],
-    experiences: [createEmptyExperience()],
-    educations: [createEmptyEducation()],
-    languages: [createEmptyLanguage()],
-    mobileNumber: '',
-    availability: 'Flexible',
-    portfolioUrl: '',
-    linkedinUrl: '',
-    preferredLocations: [],
-    jobSearchStatus: 'activelyLooking',
-    isProfileSearchable: true,
-    gender: 'Prefer not to say',
-    dateOfBirth: undefined,
-    currentCTCValue: undefined,
-    currentCTCConfidential: false,
-    expectedCTCValue: undefined,
-    expectedCTCNegotiable: false,
-    homeState: '',
-    homeCity: '',
-    parsedResumeText: '',
-    totalYearsExperience: 0,
-    totalMonthsExperience: 0,
-  };
-
-  const initialCompanyFormData: Partial<Company> = {
-    name: '',
-    description: '',
-    websiteUrl: '',
-    logoUrl: '',
-    bannerImageUrl: '',
-    status: 'pending',
-  };
-
-  const [userFormData, setUserFormData] =
-    useState<Partial<UserProfile>>(initialUserFormData);
-  const [companyFormData, setCompanyFormData] = useState<Partial<Company>>(
-    initialCompanyFormData
-  );
+  const [userFormData, setUserFormData] = useState<Partial<UserProfile>>({
+    ...initialUserFormData,
+  });
+  const [companyFormData, setCompanyFormData] = useState<Partial<Company>>({
+    ...initialCompanyFormData,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
@@ -293,8 +294,8 @@ export function UserProfileForm() {
         }
       }
     } else {
-      setUserFormData(initialUserFormData);
-      setCompanyFormData(initialCompanyFormData);
+      setUserFormData({ ...initialUserFormData });
+      setCompanyFormData({ ...initialCompanyFormData });
       setSkillsInput('');
       setLocationsInput('');
       setCompanyRecruiters([]);
@@ -308,7 +309,7 @@ export function UserProfileForm() {
     const checked = (e.target as HTMLInputElement).checked;
 
     setUserFormData((prev) => {
-      let newValue: any = value;
+      let newValue: string | number | boolean | undefined = value;
       if (type === 'checkbox') {
         newValue = checked;
       } else if (
@@ -320,10 +321,10 @@ export function UserProfileForm() {
         newValue = value === '' ? undefined : parseFloat(value);
         if (isNaN(newValue as number)) newValue = undefined;
         if (name === 'totalMonthsExperience' && newValue !== undefined) {
-          newValue = Math.max(0, Math.min(11, newValue));
+          newValue = Math.max(0, Math.min(11, newValue as number));
         }
         if (name === 'totalYearsExperience' && newValue !== undefined) {
-          newValue = Math.max(0, newValue);
+          newValue = Math.max(0, newValue as number);
         }
       }
       return { ...prev, [name]: newValue };
@@ -403,7 +404,7 @@ export function UserProfileForm() {
     >,
     index: number,
     field: keyof T,
-    value: any,
+    value: string | boolean | number | undefined | HTMLInputElement,
     inputType?: string
   ) => {
     setUserFormData((prev) => {
@@ -411,7 +412,7 @@ export function UserProfileForm() {
       if (newArray[index]) {
         let processedValue = value;
         if (inputType === 'checkbox') {
-          processedValue = (value as unknown as HTMLInputElement).checked;
+          processedValue = (value as HTMLInputElement).checked;
         } else if (inputType === 'number') {
           if (
             field === 'annualCTC' ||
@@ -422,15 +423,15 @@ export function UserProfileForm() {
               value === ''
                 ? undefined
                 : field === 'annualCTC'
-                  ? parseFloat(value)
-                  : parseInt(value, 10);
+                  ? parseFloat(value as string)
+                  : parseInt(value as string, 10);
             if (isNaN(processedValue as number)) processedValue = undefined;
           }
         }
         newArray[index] = {
           ...newArray[index],
           [field]: processedValue,
-        };
+        } as T;
       }
       return { ...prev, [arrayName]: newArray };
     });
@@ -668,6 +669,7 @@ export function UserProfileForm() {
                         <Button
                           variant="outline"
                           className={`w-full justify-start text-left font-normal ${!userFormData.dateOfBirth && 'text-muted-foreground'}`}
+                          aria-label="Pick date of birth"
                         >
                           <CalendarDays className="mr-2 h-4 w-4" />
                           {dobDate ? (
@@ -701,7 +703,7 @@ export function UserProfileForm() {
                         handleUserSelectChange('gender', value)
                       }
                     >
-                      <SelectTrigger id="gender">
+                      <SelectTrigger id="gender" aria-label="Select gender">
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -891,8 +893,14 @@ export function UserProfileForm() {
                           Boolean(checked)
                         )
                       }
+                      aria-labelledby="currentCTCConfidentialLabel"
                     />
-                    <Label htmlFor="currentCTCConfidential">Confidential</Label>
+                    <Label
+                      htmlFor="currentCTCConfidential"
+                      id="currentCTCConfidentialLabel"
+                    >
+                      Confidential
+                    </Label>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
@@ -930,8 +938,14 @@ export function UserProfileForm() {
                           Boolean(checked)
                         )
                       }
+                      aria-labelledby="expectedCTCNegotiableLabel"
                     />
-                    <Label htmlFor="expectedCTCNegotiable">Negotiable</Label>
+                    <Label
+                      htmlFor="expectedCTCNegotiable"
+                      id="expectedCTCNegotiableLabel"
+                    >
+                      Negotiable
+                    </Label>
                   </div>
                 </div>
               </div>
@@ -1009,6 +1023,7 @@ export function UserProfileForm() {
                               <Button
                                 variant="outline"
                                 className={`w-full justify-start text-left font-normal ${!exp.startDate && 'text-muted-foreground'}`}
+                                aria-label="Pick experience start date"
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
                                 {expStartDateObj ? (
@@ -1046,6 +1061,7 @@ export function UserProfileForm() {
                                 variant="outline"
                                 disabled={exp.currentlyWorking}
                                 className={`w-full justify-start text-left font-normal ${!exp.endDate && !exp.currentlyWorking && 'text-muted-foreground'}`}
+                                aria-label="Pick experience end date"
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
                                 {exp.currentlyWorking ? (
@@ -1089,11 +1105,15 @@ export function UserProfileForm() {
                                 'experiences',
                                 index,
                                 'currentlyWorking',
-                                Boolean(checked)
+                                checked as boolean
                               )
                             }
+                            aria-labelledby={`exp-current-label-${exp.id}`}
                           />
-                          <Label htmlFor={`exp-current-${exp.id}`}>
+                          <Label
+                            htmlFor={`exp-current-${exp.id}`}
+                            id={`exp-current-label-${exp.id}`}
+                          >
                             I currently work here
                           </Label>
                         </div>
@@ -1151,6 +1171,7 @@ export function UserProfileForm() {
                           size="sm"
                           onClick={() => removeArrayItem('experiences', exp.id)}
                           className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
+                          aria-label={`Remove experience ${exp.jobRole || 'entry'}`}
                         >
                           <Trash2 className="h-4 w-4" /> Remove Experience
                         </Button>
@@ -1165,6 +1186,7 @@ export function UserProfileForm() {
                     addArrayItem('experiences', createEmptyExperience)
                   }
                   className="flex items-center gap-1"
+                  aria-label="Add another work experience"
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Experience
                 </Button>
@@ -1199,7 +1221,10 @@ export function UserProfileForm() {
                             )
                           }
                         >
-                          <SelectTrigger id={`edu-level-${edu.id}`}>
+                          <SelectTrigger
+                            id={`edu-level-${edu.id}`}
+                            aria-label={`Select education level for ${edu.degreeName || 'entry'}`}
+                          >
                             <SelectValue placeholder="Select level" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1292,7 +1317,10 @@ export function UserProfileForm() {
                             )
                           }
                         >
-                          <SelectTrigger id={`edu-courseType-${edu.id}`}>
+                          <SelectTrigger
+                            id={`edu-courseType-${edu.id}`}
+                            aria-label={`Select course type for ${edu.degreeName || 'entry'}`}
+                          >
                             <SelectValue placeholder="Select course type" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1356,11 +1384,15 @@ export function UserProfileForm() {
                             'educations',
                             index,
                             'isMostRelevant',
-                            Boolean(checked)
+                            checked as boolean
                           )
                         }
+                        aria-labelledby={`edu-relevant-label-${edu.id}`}
                       />
-                      <Label htmlFor={`edu-relevant-${edu.id}`}>
+                      <Label
+                        htmlFor={`edu-relevant-${edu.id}`}
+                        id={`edu-relevant-label-${edu.id}`}
+                      >
                         This is my most relevant/important educational
                         qualification
                       </Label>
@@ -1391,6 +1423,7 @@ export function UserProfileForm() {
                         size="sm"
                         onClick={() => removeArrayItem('educations', edu.id)}
                         className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
+                        aria-label={`Remove education ${edu.degreeName || 'entry'}`}
                       >
                         <Trash2 className="h-4 w-4" /> Remove Education
                       </Button>
@@ -1404,6 +1437,7 @@ export function UserProfileForm() {
                     addArrayItem('educations', createEmptyEducation)
                   }
                   className="flex items-center gap-1"
+                  aria-label="Add another education entry"
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Education
                 </Button>
@@ -1458,7 +1492,10 @@ export function UserProfileForm() {
                             )
                           }
                         >
-                          <SelectTrigger id={`lang-proficiency-${lang.id}`}>
+                          <SelectTrigger
+                            id={`lang-proficiency-${lang.id}`}
+                            aria-label={`Select proficiency for ${lang.languageName || 'language'}`}
+                          >
                             <SelectValue placeholder="Select proficiency" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1482,11 +1519,17 @@ export function UserProfileForm() {
                               'languages',
                               index,
                               'canRead',
-                              Boolean(checked)
+                              checked as boolean
                             )
                           }
+                          aria-labelledby={`lang-read-label-${lang.id}`}
                         />
-                        <Label htmlFor={`lang-read-${lang.id}`}>Read</Label>
+                        <Label
+                          htmlFor={`lang-read-${lang.id}`}
+                          id={`lang-read-label-${lang.id}`}
+                        >
+                          Read
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1497,11 +1540,17 @@ export function UserProfileForm() {
                               'languages',
                               index,
                               'canWrite',
-                              Boolean(checked)
+                              checked as boolean
                             )
                           }
+                          aria-labelledby={`lang-write-label-${lang.id}`}
                         />
-                        <Label htmlFor={`lang-write-${lang.id}`}>Write</Label>
+                        <Label
+                          htmlFor={`lang-write-${lang.id}`}
+                          id={`lang-write-label-${lang.id}`}
+                        >
+                          Write
+                        </Label>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -1512,11 +1561,17 @@ export function UserProfileForm() {
                               'languages',
                               index,
                               'canSpeak',
-                              Boolean(checked)
+                              checked as boolean
                             )
                           }
+                          aria-labelledby={`lang-speak-label-${lang.id}`}
                         />
-                        <Label htmlFor={`lang-speak-${lang.id}`}>Speak</Label>
+                        <Label
+                          htmlFor={`lang-speak-${lang.id}`}
+                          id={`lang-speak-label-${lang.id}`}
+                        >
+                          Speak
+                        </Label>
                       </div>
                     </div>
                     {(userFormData.languages || []).length > 1 && (
@@ -1526,6 +1581,7 @@ export function UserProfileForm() {
                         size="sm"
                         onClick={() => removeArrayItem('languages', lang.id)}
                         className="mt-2 text-destructive hover:text-destructive flex items-center gap-1"
+                        aria-label={`Remove language ${lang.languageName || 'entry'}`}
                       >
                         <Trash2 className="h-4 w-4" /> Remove Language
                       </Button>
@@ -1537,6 +1593,7 @@ export function UserProfileForm() {
                   variant="outline"
                   onClick={() => addArrayItem('languages', createEmptyLanguage)}
                   className="flex items-center gap-1"
+                  aria-label="Add another language"
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Language
                 </Button>
@@ -1595,7 +1652,10 @@ export function UserProfileForm() {
                         handleUserSelectChange('jobSearchStatus', value)
                       }
                     >
-                      <SelectTrigger id="jobSearchStatus">
+                      <SelectTrigger
+                        id="jobSearchStatus"
+                        aria-label="Select job search status"
+                      >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1617,7 +1677,10 @@ export function UserProfileForm() {
                         handleUserSelectChange('availability', value)
                       }
                     >
-                      <SelectTrigger id="availability">
+                      <SelectTrigger
+                        id="availability"
+                        aria-label="Select availability"
+                      >
                         <SelectValue placeholder="Select availability" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1819,6 +1882,7 @@ export function UserProfileForm() {
           type="submit"
           disabled={isLoading || authLoading}
           className="text-lg py-3 px-6"
+          aria-label="Save all profile changes"
         >
           {(isLoading || authLoading) && (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />

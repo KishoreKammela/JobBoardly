@@ -43,27 +43,27 @@ export function checkPasswordStrength(password: string): PasswordStrength {
     {
       text: 'At least 8 characters',
       met: password.length >= 8,
-      regex: /.{8,}/,
+      // regex: /.{8,}/, // unused
     },
     {
       text: 'At least one uppercase letter',
       met: /[A-Z]/.test(password),
-      regex: /[A-Z]/,
+      // regex: /[A-Z]/, // unused
     },
     {
       text: 'At least one lowercase letter',
       met: /[a-z]/.test(password),
-      regex: /[a-z]/,
+      // regex: /[a-z]/, // unused
     },
     {
       text: 'At least one number',
       met: /[0-9]/.test(password),
-      regex: /[0-9]/,
+      // regex: /[0-9]/, // unused
     },
     {
       text: 'At least one special character (e.g., !@#$%^&*)',
       met: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      regex: /[!@#$%^&*(),.?":{}|<>]/,
+      // regex: /[!@#$%^&*(),.?":{}|<>]/, // unused
     },
   ];
 
@@ -80,6 +80,6 @@ export function checkPasswordStrength(password: string): PasswordStrength {
   return {
     isValid: issues.length === 0,
     issues,
-    criteria: criteria.map(({ regex, ...rest }) => rest), // Don't return regex
+    criteria: criteria.map(({ met, text }) => ({ met, text })),
   };
 }

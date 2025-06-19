@@ -78,11 +78,11 @@ export function CandidateSearchResults({
         });
         setAllCandidates(candidatesData);
         setFilteredAndSortedCandidates(candidatesData);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('Error fetching candidates:', e);
         setError(
           'Failed to load candidates. ' +
-            (e.message || 'Please try again later.')
+            ((e as Error).message || 'Please try again later.')
         );
       } finally {
         setIsLoading(false);

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Job } from '@/types'; // Added Application
+import type { Job } from '@/types';
 import {
   Card,
   CardContent,
@@ -31,7 +31,7 @@ import {
   Timestamp,
   orderBy,
   getCountFromServer,
-} from 'firebase/firestore'; // Added getCountFromServer
+} from 'firebase/firestore';
 
 interface JobWithApplicantCount extends Job {
   applicantCount: number;
@@ -99,10 +99,11 @@ export function PostedJobsDisplay() {
 
         const jobsData = await Promise.all(jobsDataPromises);
         setPostedJobs(jobsData);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('Error fetching posted jobs:', e);
         setError(
-          e.message || 'Failed to load your posted jobs. Please try again.'
+          (e as Error).message ||
+            'Failed to load your posted jobs. Please try again.'
         );
       } finally {
         setIsLoading(false);

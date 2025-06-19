@@ -38,10 +38,19 @@ import {
   doc,
   getDoc,
   Timestamp,
+  type FieldValue,
 } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINR } from '@/lib/utils';
+
+const initialJobDataGlobal: Partial<Job> = {
+  type: 'Full-time',
+  isRemote: false,
+  status: 'pending',
+  salaryMin: undefined,
+  salaryMax: undefined,
+};
 
 export function PostJobForm() {
   const { user, company: authCompany } = useAuth();
@@ -50,15 +59,9 @@ export function PostJobForm() {
   const searchParams = useSearchParams();
   const editingJobId = searchParams.get('edit');
 
-  const initialJobData: Partial<Job> = {
-    type: 'Full-time',
-    isRemote: false,
-    status: 'pending',
-    salaryMin: undefined,
-    salaryMax: undefined,
-  };
-
-  const [jobData, setJobData] = useState<Partial<Job>>(initialJobData);
+  const [jobData, setJobData] = useState<Partial<Job>>({
+    ...initialJobDataGlobal,
+  });
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
@@ -153,7 +156,7 @@ export function PostJobForm() {
         setIsLoadingJob(false);
       } else {
         setJobData((prev) => ({
-          ...initialJobData,
+          ...initialJobDataGlobal,
           ...prev, // Keep company details if set
           status: 'pending',
         }));
@@ -309,7 +312,10 @@ export function PostJobForm() {
     setIsSubmitting(true);
 
     try {
-      const jobPayload: Partial<Job> & { updatedAt: any; createdAt?: any } = {
+      const jobPayload: Partial<Job> & {
+        updatedAt: FieldValue;
+        createdAt?: FieldValue;
+      } = {
         title: jobData.title || '',
         company: currentCompanyDetails.name || 'N/A Company',
         companyId: user.companyId,
@@ -327,8 +333,8 @@ export function PostJobForm() {
 
       if (editingJobId) {
         const jobDocRef = doc(db, 'jobs', editingJobId);
-        jobPayload.status = 'pending'; // Always resubmit as pending
-        jobPayload.moderationReason = null; // Clear previous reason
+        jobPayload.status = 'pending';
+        jobPayload.moderationReason = null;
         await updateDoc(jobDocRef, jobPayload as { [key: string]: any });
         toast({
           title: 'Job Updated & Resubmitted for Approval!',
@@ -348,7 +354,7 @@ export function PostJobForm() {
 
       if (!editingJobId) {
         setJobData({
-          ...initialJobData,
+          ...initialJobDataGlobal,
           company: currentCompanyDetails.name,
           companyId: user.companyId,
           companyLogoUrl: currentCompanyDetails.logoUrl,
@@ -451,12 +457,12 @@ export function PostJobForm() {
             </p>
             {jobData.status === 'rejected' && jobData.moderationReason && (
               <p className="text-xs text-destructive mt-1">
-                Admin Reason: {jobData.moderationReason}
+                Rejection Reason: {jobData.moderationReason}
               </p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
               Editing and saving this job will resubmit it for admin approval
-              (status will become 'pending').
+              (status will become &apos;pending&apos;).
             </p>
           </div>
         )}

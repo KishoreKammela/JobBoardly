@@ -16,7 +16,6 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Users,
   Briefcase,
   Building,
   Eye,
@@ -66,7 +65,10 @@ interface SortConfig<T> {
   direction: SortDirection;
 }
 
-function getSortableValue<T>(item: T, key: keyof T | null): any {
+function getSortableValue<T>(
+  item: T,
+  key: keyof T | null
+): string | number | null | boolean {
   if (!key) return null;
   const value = item[key];
   if (value instanceof Timestamp) {
@@ -75,7 +77,7 @@ function getSortableValue<T>(item: T, key: keyof T | null): any {
   if (typeof value === 'string') {
     return value.toLowerCase();
   }
-  return value;
+  return value as string | number | null | boolean;
 }
 
 export default function AdminPage() {
@@ -255,7 +257,7 @@ export default function AdminPage() {
       console.error('Error fetching admin data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load some admin data.',
+        description: `Failed to load some admin data. ${(error as Error).message}`,
         variant: 'destructive',
       });
       setIsJobsLoading(false);
@@ -290,12 +292,20 @@ export default function AdminPage() {
   ) => {
     setActionLoading(`job-${jobId}`);
     try {
-      await updateDoc(doc(db, 'jobs', jobId), {
+      const jobUpdates: Partial<Job> & { updatedAt: FieldValue } = {
         status: newStatus,
-        moderationReason:
-          newStatus === 'rejected' ? reason || 'Rejected by admin' : null,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (newStatus === 'rejected') {
+        jobUpdates.moderationReason = reason || 'Rejected by admin';
+      } else {
+        jobUpdates.moderationReason = null;
+      }
+
+      await updateDoc(
+        doc(db, 'jobs', jobId),
+        jobUpdates as { [key: string]: any }
+      );
       setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
       toast({
         title: 'Success',
@@ -1104,6 +1114,7 @@ export default function AdminPage() {
                                 href={`/employer/candidates/${u.uid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                aria-label={`View profile of ${u.name}`}
                               >
                                 <Eye className="mr-1 h-3 w-3" /> Profile
                               </Link>

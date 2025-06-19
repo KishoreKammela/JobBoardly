@@ -45,8 +45,7 @@ import { formatCurrencyINR } from '@/lib/utils';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
-import { Button } from '@/components/ui/button'; // Keep for other buttons
-import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -321,30 +320,23 @@ export default function CandidateDetailPage() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  whiteSpace: 'nowrap',
-                  borderRadius: '0.375rem', // rounded-md
-                  fontSize: '0.875rem', // text-sm
-                  fontWeight: 500, // font-medium
-                  outline: '2px solid transparent',
-                  outlineOffset: '2px',
-                  transitionProperty:
-                    'color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter',
-                  transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                  transitionDuration: '150ms',
-                  borderWidth: '1px',
-                  borderColor: 'hsl(var(--input))', // border-input
-                  backgroundColor: 'hsl(var(--background))', // bg-background
-                  paddingLeft: '1rem', // px-4
-                  paddingRight: '1rem', // px-4
-                  paddingTop: '0.5rem', // py-2
-                  paddingBottom: '0.5rem', // py-2
-                  height: '2.5rem', // h-10
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  border: '1px solid #ccc',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
                 }}
-                className="hover:bg-accent hover:text-accent-foreground w-full sm:w-auto"
                 aria-label="Download candidate profile as PDF"
               >
-                <Download className="mr-2 h-4 w-4" /> Download PDF
+                <Download
+                  style={{
+                    marginRight: '0.5rem',
+                    height: '1rem',
+                    width: '1rem',
+                  }}
+                />{' '}
+                Download PDF
               </button>
             </div>
           </div>
