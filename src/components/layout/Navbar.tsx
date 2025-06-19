@@ -1,4 +1,3 @@
-
 'use client';
 import Link from 'next/link';
 import {
@@ -25,7 +24,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +31,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 } from '@/components/ui/dropdown-menu';
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserRole } from '@/types';
@@ -219,14 +216,7 @@ export function Navbar() {
     if (!user) return 'U';
     if (user.role === 'employer' && user.companyId && !user.avatarUrl) {
       return user.name ? user.name.substring(0, 1).toUpperCase() : 'E';
-      return user.name ? user.name.substring(0, 1).toUpperCase() : 'E';
     }
-    return user.name
-      ? user.name.substring(0, 1).toUpperCase()
-      : user.email
-        ? user.email.substring(0, 1).toUpperCase()
-        : 'U';
-  };
     return user.name
       ? user.name.substring(0, 1).toUpperCase()
       : user.email
@@ -246,9 +236,7 @@ export function Navbar() {
 
   const isEmployerPage = pathname.startsWith('/employer');
   const loginLink = isEmployerPage ? '/employer/login' : '/auth/login';
-  const registerLink = isEmployerPage
-    ? '/employer/register'
-    : '/auth/register';
+  const registerLink = isEmployerPage ? '/employer/register' : '/auth/register';
 
   const getRenderedMainNavLinks = () => {
     if (loading) return [];
@@ -293,10 +281,6 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2 text-primary hover:text-primary/90 transition-colors"
         >
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-primary hover:text-primary/90 transition-colors"
-        >
           <Briefcase className="h-7 w-7" />
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
@@ -318,7 +302,6 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           {loading ? (
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : user ? (
             // Logged-in User: Avatar Dropdown (acts as main menu on mobile)
             <DropdownMenu>
@@ -328,20 +311,7 @@ export function Navbar() {
                   className="relative h-9 w-9 rounded-full"
                   aria-label="User account menu"
                 >
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
-                  aria-label="User account menu"
-                >
                   <Avatar className="h-9 w-9">
-                    <AvatarImage
-                      src={
-                        user.avatarUrl ||
-                        `https://placehold.co/40x40.png?text=${getAvatarFallback()}`
-                      }
-                      alt={user.name || 'User'}
-                      data-ai-hint="user avatar"
-                    />
                     <AvatarImage
                       src={
                         user.avatarUrl ||
@@ -357,9 +327,6 @@ export function Navbar() {
               <DropdownMenuContent className="w-64" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.name}
-                    </p>
                     <p className="text-sm font-medium leading-none">
                       {user.name}
                     </p>
@@ -409,10 +376,6 @@ export function Navbar() {
                   onClick={handleLogout}
                   className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 w-full"
                 >
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 w-full"
-                >
                   <LogIn className="h-4 w-4 rotate-180" />
                   Logout
                 </DropdownMenuItem>
@@ -422,16 +385,6 @@ export function Navbar() {
             // Logged-out User: Buttons for Desktop, Hamburger for Mobile
             <>
               <div className="hidden md:flex items-center gap-2">
-                <Button variant="ghost" asChild size="sm">
-                  <Link href={loginLink}>
-                    <LogIn className="h-4 w-4 mr-1.5" /> Login
-                  </Link>
-                </Button>
-                <Button asChild size="sm">
-                  <Link href={registerLink}>
-                    <UserPlus className="h-4 w-4 mr-1.5" /> Sign Up
-                  </Link>
-                </Button>
                 <Button variant="ghost" asChild size="sm">
                   <Link href={loginLink}>
                     <LogIn className="h-4 w-4 mr-1.5" /> Login
@@ -453,44 +406,10 @@ export function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56" align="end" forceMount>
                     {renderedMainNavLinks.map((link) => (
-                      <DropdownMenuItem key={`mobile-main-${link.href}`} asChild>
-                        <Link
-                          href={link.href}
-                          className="flex items-center gap-2 cursor-pointer w-full"
-                        >
-                          {link.icon}
-                          {link.label}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={loginLink}
-                        className="flex items-center gap-2 cursor-pointer w-full"
+                      <DropdownMenuItem
+                        key={`mobile-main-${link.href}`}
+                        asChild
                       >
-                        <LogIn className="h-4 w-4" /> Login
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link
-                        href={registerLink}
-                        className="flex items-center gap-2 cursor-pointer w-full"
-                      >
-                        <UserPlus className="h-4 w-4" /> Sign Up
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Open menu">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    {renderedMainNavLinks.map((link) => (
-                      <DropdownMenuItem key={`mobile-main-${link.href}`} asChild>
                         <Link
                           href={link.href}
                           className="flex items-center gap-2 cursor-pointer w-full"
