@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { UserProfile } from '@/types';
 import { CandidateCard } from './CandidateCard';
 import { AlertCircle, Loader2, UserSearch } from 'lucide-react';
@@ -38,7 +38,8 @@ export function CandidateSearchResults({
   const [allCandidates, setAllCandidates] = useState<UserProfile[]>([]);
   const [filteredAndSortedCandidates, setFilteredAndSortedCandidates] =
     useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // True for initial fetch
+  const [isFiltering, setIsFiltering] = useState(false); // True for subsequent filter applications
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -47,6 +48,7 @@ export function CandidateSearchResults({
   useEffect(() => {
     const fetchCandidates = async () => {
       setIsLoading(true);
+      setIsFiltering(false);
       setError(null);
       try {
         const usersCollectionRef = collection(db, 'users');
@@ -54,7 +56,7 @@ export function CandidateSearchResults({
           usersCollectionRef,
           where('role', '==', 'jobSeeker'),
           where('isProfileSearchable', '==', true),
-          orderBy('updatedAt', 'desc')
+          orderBy('updatedAt', 'desc') // Default sort for initial fetch
         );
 
         const querySnapshot = await getDocs(q);
@@ -78,6 +80,7 @@ export function CandidateSearchResults({
           } as UserProfile;
         });
         setAllCandidates(candidatesData);
+        setFilteredAndSortedCandidates(candidatesData); // Initially show all
       } catch (e: any) {
         console.error('Error fetching candidates:', e);
         setError(
@@ -92,9 +95,9 @@ export function CandidateSearchResults({
   }, []);
 
   useEffect(() => {
-    if (isLoading && allCandidates.length === 0) return;
+    if (isLoading) return; // Don't filter if initial load isn't done
 
-    setIsLoading(true);
+    setIsFiltering(true);
 
     const applyFilters = (
       candidates: UserProfile[],
@@ -105,8 +108,6 @@ export function CandidateSearchResults({
       // Keyword search
       if (currentFilters.searchTerm) {
         const lowerSearchTerm = currentFilters.searchTerm.toLowerCase();
-
-        // Handle quoted phrases for exact match
         const phraseMatches = lowerSearchTerm.match(/"([^"]+)"/g);
         let remainingSearchTerm = lowerSearchTerm;
 
@@ -147,7 +148,6 @@ export function CandidateSearchResults({
         }
       }
 
-      // Location filter (Preferred Locations)
       if (currentFilters.location) {
         const lowerLocation = currentFilters.location.toLowerCase();
         tempFiltered = tempFiltered.filter((candidate) =>
@@ -156,31 +156,23 @@ export function CandidateSearchResults({
           )
         );
       }
-
-      // Home State filter
       if (currentFilters.homeState) {
         const lowerHomeState = currentFilters.homeState.toLowerCase();
         tempFiltered = tempFiltered.filter((candidate) =>
           candidate.homeState?.toLowerCase().includes(lowerHomeState)
         );
       }
-
-      // Home City filter
       if (currentFilters.homeCity) {
         const lowerHomeCity = currentFilters.homeCity.toLowerCase();
         tempFiltered = tempFiltered.filter((candidate) =>
           candidate.homeCity?.toLowerCase().includes(lowerHomeCity)
         );
       }
-
-      // Gender filter
       if (currentFilters.gender && currentFilters.gender !== 'all') {
         tempFiltered = tempFiltered.filter(
           (candidate) => candidate.gender === currentFilters.gender
         );
       }
-
-      // Availability filter
       if (
         currentFilters.availability &&
         currentFilters.availability !== 'all'
@@ -191,8 +183,6 @@ export function CandidateSearchResults({
             currentFilters.availability.toLowerCase()
         );
       }
-
-      // Job Search Status filter
       if (
         currentFilters.jobSearchStatus &&
         currentFilters.jobSearchStatus !== 'all'
@@ -203,8 +193,6 @@ export function CandidateSearchResults({
             currentFilters.jobSearchStatus?.toLowerCase()
         );
       }
-
-      // Expected CTC filter (using expectedCTCValue)
       if (currentFilters.desiredSalaryMin !== undefined) {
         tempFiltered = tempFiltered.filter(
           (c) =>
@@ -219,8 +207,6 @@ export function CandidateSearchResults({
             c.expectedCTCValue <= currentFilters.desiredSalaryMax!
         );
       }
-
-      // Recent Activity filter (profile updatedAt)
       if (
         currentFilters.recentActivity &&
         currentFilters.recentActivity !== 'any'
@@ -236,29 +222,40 @@ export function CandidateSearchResults({
 
         tempFiltered = tempFiltered.filter((c) => {
           const updatedAt = c.updatedAt
-            ? new Date(c.updatedAt as string) // Ensure it's a string from UserProfile
-            : new Date(0); // If no updatedAt, treat as very old
+            ? new Date(c.updatedAt as string)
+            : new Date(0);
           return updatedAt >= cutoffDate;
         });
       }
-      // Default sort by updatedAt desc if no other sort is applied (already fetched this way)
-      return tempFiltered;
+      return tempFiltered.sort((a, b) => {
+        // Keep default sort by updatedAt desc
+        const dateA = a.updatedAt
+          ? new Date(a.updatedAt as string).getTime()
+          : 0;
+        const dateB = b.updatedAt
+          ? new Date(b.updatedAt as string).getTime()
+          : 0;
+        return dateB - dateA;
+      });
     };
 
     setFilteredAndSortedCandidates(
       applyFilters(allCandidates, debouncedFilters)
     );
     setCurrentPage(1);
-    setIsLoading(false);
+    setIsFiltering(false);
   }, [debouncedFilters, allCandidates, isLoading]);
 
   const totalPages = Math.ceil(
     filteredAndSortedCandidates.length / CANDIDATES_PER_PAGE
   );
-  const paginatedCandidates = filteredAndSortedCandidates.slice(
-    (currentPage - 1) * CANDIDATES_PER_PAGE,
-    currentPage * CANDIDATES_PER_PAGE
-  );
+  const paginatedCandidates = useMemo(() => {
+    const startIndex = (currentPage - 1) * CANDIDATES_PER_PAGE;
+    return filteredAndSortedCandidates.slice(
+      startIndex,
+      startIndex + CANDIDATES_PER_PAGE
+    );
+  }, [filteredAndSortedCandidates, currentPage]);
 
   const CandidateSkeletonCard = () => (
     <Card
@@ -293,29 +290,16 @@ export function CandidateSearchResults({
     </Card>
   );
 
-  if (
-    isLoading &&
-    paginatedCandidates.length === 0 &&
-    allCandidates.length === 0
-  ) {
-    // Show skeletons only on initial full load
+  if (isLoading || isFiltering) {
     return (
       <div
         className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
       >
-        {Array.from({ length: viewMode === 'grid' ? 6 : 3 }).map((_, index) => (
+        {Array.from({
+          length: viewMode === 'grid' ? CANDIDATES_PER_PAGE : 4,
+        }).map((_, index) => (
           <CandidateSkeletonCard key={index} />
         ))}
-      </div>
-    );
-  }
-
-  if (isLoading && allCandidates.length > 0) {
-    // Show loading indicator if filtering existing data
-    return (
-      <div className="flex justify-center items-center py-10">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2">Applying filters...</p>
       </div>
     );
   }
@@ -330,7 +314,7 @@ export function CandidateSearchResults({
     );
   }
 
-  if (paginatedCandidates.length === 0 && !isLoading) {
+  if (paginatedCandidates.length === 0 && !isLoading && !isFiltering) {
     return (
       <Alert>
         <UserSearch className="h-5 w-5" />

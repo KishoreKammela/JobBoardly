@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertCircle,
   ShieldCheck,
@@ -18,16 +19,15 @@ import {
   Users,
   Briefcase,
   Building,
-  BarChart3,
-  Flag,
-  ListChecks,
-  Search as SearchIcon, // Renamed to avoid conflict
-  Eye, // Added Eye icon
+  Eye,
+  Search as SearchIcon,
+  ChevronsUpDown,
+  ExternalLink,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useEffect, useState, useMemo } from 'react'; // Added useMemo
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import {
@@ -40,6 +40,7 @@ import {
   Timestamp,
   orderBy,
   serverTimestamp,
+  getCountFromServer,
 } from 'firebase/firestore';
 import type { Job, UserProfile, Company } from '@/types';
 import Link from 'next/link';
@@ -52,138 +53,222 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Input } from '@/components/ui/input'; // Added Input
-import { useDebounce } from '@/hooks/use-debounce'; // Added useDebounce
+import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useToast } from '@/hooks/use-toast';
 
 const ITEMS_PER_PAGE = 10;
+
+type SortDirection = 'asc' | 'desc';
+
+interface SortConfig<T> {
+  key: keyof T | null;
+  direction: SortDirection;
+}
+
+function getSortableValue<T>(item: T, key: keyof T | null): any {
+  if (!key) return null;
+  const value = item[key];
+  if (value instanceof Timestamp) {
+    return value.toMillis();
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  return value;
+}
 
 export default function AdminPage() {
   const {
     user,
     loading,
-    updateUserProfile: updateUserProfileInAuth,
-  } = useAuth(); // Added updateUserProfileInAuth
+    updateUserProfile: updateUserProfileInAuthContext,
+  } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [pendingCompanies, setPendingCompanies] = useState<Company[]>([]);
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
 
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const debouncedUserSearchTerm = useDebounce(userSearchTerm, 300);
-  const [userCurrentPage, setUserCurrentPage] = useState(1);
+  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
+  const [allJobSeekers, setAllJobSeekers] = useState<UserProfile[]>([]);
+  const [allPlatformUsers, setAllPlatformUsers] = useState<UserProfile[]>([]);
+
+  const [companiesSearchTerm, setCompaniesSearchTerm] = useState('');
+  const [jobSeekersSearchTerm, setJobSeekersSearchTerm] = useState('');
+  const [platformUsersSearchTerm, setPlatformUsersSearchTerm] = useState('');
+
+  const debouncedCompaniesSearchTerm = useDebounce(companiesSearchTerm, 300);
+  const debouncedJobSeekersSearchTerm = useDebounce(jobSeekersSearchTerm, 300);
+  const debouncedPlatformUsersSearchTerm = useDebounce(
+    platformUsersSearchTerm,
+    300
+  );
+
+  const [companiesCurrentPage, setCompaniesCurrentPage] = useState(1);
+  const [jobSeekersCurrentPage, setJobSeekersCurrentPage] = useState(1);
+  const [platformUsersCurrentPage, setPlatformUsersCurrentPage] = useState(1);
+
+  const [companiesSortConfig, setCompaniesSortConfig] = useState<
+    SortConfig<Company>
+  >({ key: 'createdAt', direction: 'desc' });
+  const [jobSeekersSortConfig, setJobSeekersSortConfig] = useState<
+    SortConfig<UserProfile>
+  >({ key: 'createdAt', direction: 'desc' });
+  const [platformUsersSortConfig, setPlatformUsersSortConfig] = useState<
+    SortConfig<UserProfile>
+  >({ key: 'createdAt', direction: 'desc' });
 
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // For individual actions
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const fetchPendingJobs = async () => {
+  const fetchData = useCallback(async () => {
     setIsJobsLoading(true);
-    try {
-      const jobsRef = collection(db, 'jobs');
-      const q = query(
-        jobsRef,
-        where('status', '==', 'pending'),
-        orderBy('createdAt', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const jobs = snapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-            postedDate:
-              doc.data().postedDate instanceof Timestamp
-                ? doc.data().postedDate.toDate().toISOString().split('T')[0]
-                : doc.data().postedDate,
-            createdAt:
-              doc.data().createdAt instanceof Timestamp
-                ? doc.data().createdAt.toDate().toISOString()
-                : doc.data().createdAt,
-            updatedAt:
-              doc.data().updatedAt instanceof Timestamp
-                ? doc.data().updatedAt.toDate().toISOString()
-                : doc.data().updatedAt,
-          }) as Job
-      );
-      setPendingJobs(jobs);
-    } catch (error) {
-      console.error('Error fetching pending jobs:', error);
-    } finally {
-      setIsJobsLoading(false);
-    }
-  };
-
-  const fetchPendingCompanies = async () => {
     setIsCompaniesLoading(true);
+    setIsUsersLoading(true);
+
     try {
-      const companiesRef = collection(db, 'companies');
-      const q = query(
-        companiesRef,
+      // Fetch Pending Jobs
+      const jobsQuery = query(
+        collection(db, 'jobs'),
         where('status', '==', 'pending'),
         orderBy('createdAt', 'desc')
       );
-      const snapshot = await getDocs(q);
-      const companies = snapshot.docs.map(
-        (d) =>
-          ({
-            id: d.id,
-            ...d.data(),
-            createdAt:
-              d.data().createdAt instanceof Timestamp
-                ? d.data().createdAt.toDate().toISOString()
-                : d.data().createdAt,
-            updatedAt:
-              d.data().updatedAt instanceof Timestamp
-                ? d.data().updatedAt.toDate().toISOString()
-                : d.data().updatedAt,
-          }) as Company
+      const jobsSnapshot = await getDocs(jobsQuery);
+      setPendingJobs(
+        jobsSnapshot.docs.map(
+          (d) =>
+            ({
+              id: d.id,
+              ...d.data(),
+              createdAt: (d.data().createdAt as Timestamp)
+                ?.toDate()
+                .toISOString(),
+            }) as Job
+        )
       );
-      setPendingCompanies(companies);
-    } catch (error) {
-      console.error('Error fetching pending companies:', error);
-    } finally {
-      setIsCompaniesLoading(false);
-    }
-  };
+      setIsJobsLoading(false);
 
-  const fetchAllUsers = async () => {
-    setIsUsersLoading(true);
-    try {
-      const usersRef = collection(db, 'users');
-      // For more complex sorting (e.g. by name, role), consider client-side or more specific queries.
-      const q = query(usersRef, orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const usersList = snapshot.docs.map(
-        (doc) =>
-          ({
-            uid: doc.id,
-            ...doc.data(),
-            createdAt:
-              doc.data().createdAt instanceof Timestamp
-                ? doc.data().createdAt.toDate().toISOString()
-                : doc.data().createdAt
-                  ? String(doc.data().createdAt)
-                  : 'N/A',
-            lastActive:
-              doc.data().lastActive instanceof Timestamp
-                ? doc.data().lastActive.toDate().toISOString()
-                : doc.data().lastActive,
-            updatedAt:
-              doc.data().updatedAt instanceof Timestamp
-                ? doc.data().updatedAt.toDate().toISOString()
-                : doc.data().updatedAt,
-          }) as UserProfile
+      // Fetch Pending Companies
+      const pendingCompaniesQuery = query(
+        collection(db, 'companies'),
+        where('status', '==', 'pending'),
+        orderBy('createdAt', 'desc')
       );
-      setAllUsers(usersList);
+      const pendingCompaniesSnapshot = await getDocs(pendingCompaniesQuery);
+      setPendingCompanies(
+        pendingCompaniesSnapshot.docs.map(
+          (d) =>
+            ({
+              id: d.id,
+              ...d.data(),
+              createdAt: (d.data().createdAt as Timestamp)
+                ?.toDate()
+                .toISOString(),
+            }) as Company
+        )
+      );
+
+      // Fetch All Companies
+      const allCompaniesQuery = query(
+        collection(db, 'companies'),
+        orderBy('createdAt', 'desc')
+      );
+      const allCompaniesSnapshot = await getDocs(allCompaniesQuery);
+      const companiesData = await Promise.all(
+        allCompaniesSnapshot.docs.map(async (companyDoc) => {
+          const company = {
+            id: companyDoc.id,
+            ...companyDoc.data(),
+          } as Company;
+          // Approximated counts - real counts need aggregation or denormalization
+          company.jobCount = (
+            await getCountFromServer(
+              query(
+                collection(db, 'jobs'),
+                where('companyId', '==', company.id)
+              )
+            )
+          ).data().count;
+          company.applicationCount = (
+            await getCountFromServer(
+              query(
+                collection(db, 'applications'),
+                where('companyId', '==', company.id)
+              )
+            )
+          ).data().count;
+          company.createdAt = (company.createdAt as Timestamp)
+            ?.toDate()
+            .toISOString();
+          return company;
+        })
+      );
+      setAllCompanies(companiesData);
+      setIsCompaniesLoading(false);
+
+      // Fetch All Job Seekers
+      const jobSeekersQuery = query(
+        collection(db, 'users'),
+        where('role', '==', 'jobSeeker'),
+        orderBy('createdAt', 'desc')
+      );
+      const jobSeekersSnapshot = await getDocs(jobSeekersQuery);
+      setAllJobSeekers(
+        jobSeekersSnapshot.docs.map(
+          (d) =>
+            ({
+              uid: d.id,
+              ...d.data(),
+              createdAt: (d.data().createdAt as Timestamp)
+                ?.toDate()
+                .toISOString(),
+              lastActive: (d.data().lastActive as Timestamp)
+                ?.toDate()
+                .toISOString(),
+              jobsAppliedCount: (d.data().appliedJobIds || []).length,
+            }) as UserProfile
+        )
+      );
+
+      // Fetch All Platform Users (Admins, SuperAdmins)
+      const platformUsersQuery = query(
+        collection(db, 'users'),
+        where('role', 'in', ['admin', 'superAdmin']),
+        orderBy('createdAt', 'desc')
+      );
+      const platformUsersSnapshot = await getDocs(platformUsersQuery);
+      setAllPlatformUsers(
+        platformUsersSnapshot.docs.map(
+          (d) =>
+            ({
+              uid: d.id,
+              ...d.data(),
+              createdAt: (d.data().createdAt as Timestamp)
+                ?.toDate()
+                .toISOString(),
+              lastActive: (d.data().lastActive as Timestamp)
+                ?.toDate()
+                .toISOString(),
+            }) as UserProfile
+        )
+      );
+      setIsUsersLoading(false);
     } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
+      console.error('Error fetching admin data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load some admin data.',
+        variant: 'destructive',
+      });
+      setIsJobsLoading(false);
+      setIsCompaniesLoading(false);
       setIsUsersLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (loading) return;
@@ -192,17 +277,17 @@ export default function AdminPage() {
         `/auth/admin/login?redirect=${encodeURIComponent(pathname)}`
       );
     } else if (user.role !== 'admin' && user.role !== 'superAdmin') {
-      // Allow superAdmin
-      if (user.role === 'jobSeeker') router.replace('/jobs');
-      else if (user.role === 'employer')
-        router.replace('/employer/posted-jobs');
-      else router.replace('/');
+      router.replace(
+        user.role === 'jobSeeker'
+          ? '/jobs'
+          : user.role === 'employer'
+            ? '/employer/posted-jobs'
+            : '/'
+      );
     } else {
-      fetchPendingJobs();
-      fetchPendingCompanies();
-      fetchAllUsers();
+      fetchData();
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, fetchData]);
 
   const handleJobStatusUpdate = async (
     jobId: string,
@@ -211,16 +296,24 @@ export default function AdminPage() {
   ) => {
     setActionLoading(`job-${jobId}`);
     try {
-      const jobRef = doc(db, 'jobs', jobId);
-      await updateDoc(jobRef, {
+      await updateDoc(doc(db, 'jobs', jobId), {
         status: newStatus,
         moderationReason:
           newStatus === 'rejected' ? reason || 'Rejected by admin' : null,
         updatedAt: serverTimestamp(),
       });
-      setPendingJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+      setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
+      toast({
+        title: 'Success',
+        description: `Job ${jobId} status updated to ${newStatus}.`,
+      });
     } catch (error) {
-      console.error(`Error updating job ${jobId} to ${newStatus}:`, error);
+      console.error(`Error updating job ${jobId}:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to update job ${jobId}.`,
+        variant: 'destructive',
+      });
     } finally {
       setActionLoading(null);
     }
@@ -228,33 +321,60 @@ export default function AdminPage() {
 
   const handleCompanyStatusUpdate = async (
     companyId: string,
-    newStatus: 'approved' | 'rejected' | 'suspended', // Added suspended
+    newStatus: 'approved' | 'rejected' | 'suspended' | 'active',
     reason?: string
   ) => {
     setActionLoading(`company-${companyId}`);
     try {
-      const companyRef = doc(db, 'companies', companyId);
-      await updateDoc(companyRef, {
+      const companyDocRef = doc(db, 'companies', companyId);
+      const updateData: any = {
         status: newStatus,
-        moderationReason:
-          newStatus === 'rejected' || newStatus === 'suspended'
-            ? reason ||
-              `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`
-            : null,
         updatedAt: serverTimestamp(),
-      });
-      // If company is approved/rejected, remove from pending. If suspended, it might remain in an "all companies" list if we had one.
-      if (newStatus === 'approved' || newStatus === 'rejected') {
-        setPendingCompanies((prevCompanies) =>
-          prevCompanies.filter((c) => c.id !== companyId)
-        );
+      };
+      if (newStatus === 'rejected' || newStatus === 'suspended') {
+        updateData.moderationReason =
+          reason ||
+          `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`;
+      } else {
+        updateData.moderationReason = null;
       }
-      // Potentially refetch all companies or update local state if managing a full list.
-    } catch (error) {
-      console.error(
-        `Error updating company ${companyId} to ${newStatus}:`,
-        error
+      await updateDoc(companyDocRef, updateData);
+
+      // Update local state for all companies and pending companies
+      setAllCompanies((prev) =>
+        prev.map((c) =>
+          c.id === companyId
+            ? {
+                ...c,
+                status: newStatus,
+                moderationReason: updateData.moderationReason,
+              }
+            : c
+        )
       );
+      if (newStatus === 'approved' || newStatus === 'rejected') {
+        setPendingCompanies((prev) => prev.filter((c) => c.id !== companyId));
+      }
+
+      toast({
+        title: 'Success',
+        description: `Company ${companyId} status updated to ${newStatus}.`,
+      });
+
+      if (newStatus === 'suspended') {
+        toast({
+          title: 'Note',
+          description: `Suspending associated recruiters must be done manually via User Management or via backend logic (not yet implemented).`,
+          duration: 7000,
+        });
+      }
+    } catch (error) {
+      console.error(`Error updating company ${companyId}:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to update company ${companyId}.`,
+        variant: 'destructive',
+      });
     } finally {
       setActionLoading(null);
     }
@@ -264,53 +384,179 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended'
   ) => {
-    if (user?.role !== 'admin' && user?.role !== 'superAdmin') return; // Basic check
+    if (user?.role !== 'admin' && user?.role !== 'superAdmin') return;
+    const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
+      (u) => u.uid === userId
+    );
 
-    const targetUser = allUsers.find((u) => u.uid === userId);
-    if (user?.role === 'admin' && targetUser?.role === 'admin') {
-      alert(
-        'Admins cannot suspend other admins. This action requires SuperAdmin privileges.'
-      );
+    if (!targetUser) {
+      toast({
+        title: 'Error',
+        description: 'User not found.',
+        variant: 'destructive',
+      });
       return;
     }
-    if (user?.role === 'admin' && targetUser?.role === 'superAdmin') {
-      alert('Admins cannot suspend SuperAdmins.');
+
+    if (user.uid === userId) {
+      toast({
+        title: 'Action Denied',
+        description: 'You cannot change your own status.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (
+      user.role === 'admin' &&
+      (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
+    ) {
+      toast({
+        title: 'Action Denied',
+        description: 'Admins cannot suspend other Admins or SuperAdmins.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (targetUser.role === 'superAdmin' && user.role !== 'superAdmin') {
+      toast({
+        title: 'Action Denied',
+        description: 'Only SuperAdmins can manage other SuperAdmins.',
+        variant: 'destructive',
+      });
       return;
     }
 
     setActionLoading(`user-${userId}`);
     try {
-      await updateUserProfileInAuth({ uid: userId, status: newStatus }); // Using AuthContext for consistency
-      setAllUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.uid === userId ? { ...u, status: newStatus } : u
-        )
-      );
+      await updateUserProfileInAuthContext({ uid: userId, status: newStatus }); // Use context function for consistency
+      // Update local state for relevant user list
+      if (targetUser.role === 'jobSeeker') {
+        setAllJobSeekers((prev) =>
+          prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
+        );
+      } else {
+        setAllPlatformUsers((prev) =>
+          prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
+        );
+      }
+      toast({
+        title: 'Success',
+        description: `User ${userId} status updated to ${newStatus}.`,
+      });
     } catch (e) {
       console.error('Error updating user status:', e);
-      alert('Failed to update user status.');
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status.',
+        variant: 'destructive',
+      });
     } finally {
       setActionLoading(null);
     }
   };
 
-  const filteredUsers = useMemo(() => {
-    if (!debouncedUserSearchTerm) return allUsers;
-    const lowerSearch = debouncedUserSearchTerm.toLowerCase();
-    return allUsers.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(lowerSearch) ||
-        u.email?.toLowerCase().includes(lowerSearch) ||
-        u.role?.toLowerCase().includes(lowerSearch)
-    );
-  }, [allUsers, debouncedUserSearchTerm]);
+  // Generic sort request handler
+  const requestSort = <T,>(
+    key: keyof T,
+    config: SortConfig<T>,
+    setConfig: React.Dispatch<React.SetStateAction<SortConfig<T>>>
+  ) => {
+    let direction: SortDirection = 'asc';
+    if (config.key === key && config.direction === 'asc') {
+      direction = 'desc';
+    }
+    setConfig({ key, direction });
+  };
 
-  const paginatedUsers = useMemo(() => {
-    const startIndex = (userCurrentPage - 1) * ITEMS_PER_PAGE;
-    return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredUsers, userCurrentPage]);
+  // Generic memoized sorted items
+  const useSortedItems = <T,>(
+    items: T[],
+    config: SortConfig<T>,
+    searchTerm: string,
+    searchKeys: (keyof T)[]
+  ) => {
+    return useMemo(() => {
+      let sortableItems = [...items];
+      if (searchTerm) {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        sortableItems = sortableItems.filter((item) =>
+          searchKeys.some((key) => {
+            const value = item[key];
+            return (
+              typeof value === 'string' &&
+              value.toLowerCase().includes(lowerSearchTerm)
+            );
+          })
+        );
+      }
+      if (config.key !== null) {
+        sortableItems.sort((a, b) => {
+          const valA = getSortableValue(a, config.key);
+          const valB = getSortableValue(b, config.key);
+          if (valA === null || valA === undefined) return 1;
+          if (valB === null || valB === undefined) return -1;
+          if (valA < valB) return config.direction === 'asc' ? -1 : 1;
+          if (valA > valB) return config.direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      return sortableItems;
+    }, [items, config, searchTerm, searchKeys]);
+  };
 
-  const totalUserPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const sortedCompanies = useSortedItems(
+    allCompanies,
+    companiesSortConfig,
+    debouncedCompaniesSearchTerm,
+    ['name', 'websiteUrl']
+  );
+  const sortedJobSeekers = useSortedItems(
+    allJobSeekers,
+    jobSeekersSortConfig,
+    debouncedJobSeekersSearchTerm,
+    ['name', 'email']
+  );
+  const sortedPlatformUsers = useSortedItems(
+    allPlatformUsers,
+    platformUsersSortConfig,
+    debouncedPlatformUsersSearchTerm,
+    ['name', 'email']
+  );
+
+  // Generic paginated items
+  const usePaginatedItems = <T,>(items: T[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  };
+
+  const paginatedCompanies = usePaginatedItems(
+    sortedCompanies,
+    companiesCurrentPage
+  );
+  const paginatedJobSeekers = usePaginatedItems(
+    sortedJobSeekers,
+    jobSeekersCurrentPage
+  );
+  const paginatedPlatformUsers = usePaginatedItems(
+    sortedPlatformUsers,
+    platformUsersCurrentPage
+  );
+
+  const totalCompaniesPages = Math.ceil(
+    sortedCompanies.length / ITEMS_PER_PAGE
+  );
+  const totalJobSeekersPages = Math.ceil(
+    sortedJobSeekers.length / ITEMS_PER_PAGE
+  );
+  const totalPlatformUsersPages = Math.ceil(
+    sortedPlatformUsers.length / ITEMS_PER_PAGE
+  );
+
+  const renderSortIcon = <T,>(key: keyof T, config: SortConfig<T>) => {
+    if (config.key !== key)
+      return <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />;
+    return config.direction === 'asc' ? '🔼' : '🔽';
+  };
 
   if (loading || (!user && !loading)) {
     return (
@@ -319,7 +565,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
   if (user && user.role !== 'admin' && user.role !== 'superAdmin') {
     return (
       <div className="container mx-auto py-10">
@@ -341,7 +586,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage users, job postings, company profiles, and platform settings.
+            Manage platform users, jobs, and companies.{' '}
             {user?.role === 'superAdmin' && (
               <Badge variant="destructive" className="ml-2">
                 Super Admin
@@ -364,66 +609,37 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             {isJobsLoading ? (
-              <div className="flex justify-center items-center py-6">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                <span className="ml-2">Loading pending jobs...</span>
+              <div className="flex items-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
+                Loading...
               </div>
             ) : pendingJobs.length === 0 ? (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>No Pending Jobs</AlertTitle>
                 <AlertDescription>
-                  There are currently no job postings awaiting approval.
+                  No job postings awaiting approval.
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {pendingJobs.map((job) => (
                   <Card key={job.id} className="shadow-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg font-semibold">
-                            <Link
-                              href={`/jobs/${job.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-primary hover:underline"
-                              title="View job posting in new tab"
-                            >
-                              {job.title}
-                            </Link>
-                          </CardTitle>
-                          <CardDescription className="text-xs">
-                            Company:{' '}
-                            {job.companyId && job.company ? (
-                              <Link
-                                href={`/companies/${job.companyId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline"
-                                aria-label={`View company profile for ${job.company}`}
-                              >
-                                {job.company}
-                              </Link>
-                            ) : (
-                              job.company
-                            )}{' '}
-                            | Location: {job.location} | Posted:{' '}
-                            {typeof job.postedDate === 'string'
-                              ? job.postedDate
-                              : (job.postedDate as Timestamp)
-                                  ?.toDate()
-                                  .toLocaleDateString()}
-                          </CardDescription>
-                        </div>
-                        <Badge variant="secondary">{job.type}</Badge>
-                      </div>
+                    <CardHeader className="pb-2">
+                      <Link
+                        href={`/jobs/${job.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary hover:underline"
+                      >
+                        <CardTitle className="text-md">{job.title}</CardTitle>
+                      </Link>
+                      <CardDescription className="text-xs">
+                        Company: {job.company} | Posted:{' '}
+                        {new Date(job.createdAt as string).toLocaleDateString()}
+                      </CardDescription>
                     </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground line-clamp-2 pb-3">
-                      {job.description}
-                    </CardContent>
-                    <CardFooter className="flex justify-end gap-2">
+                    <CardFooter className="flex justify-end gap-2 pt-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -431,14 +647,8 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'rejected')
                         }
                         disabled={actionLoading === `job-${job.id}`}
-                        aria-label={`Reject job ${job.title}`}
                       >
-                        {actionLoading === `job-${job.id}` &&
-                        actionLoading.startsWith(`job-${job.id}`) ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                        )}{' '}
+                        <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
                         Reject
                       </Button>
                       <Button
@@ -447,15 +657,8 @@ export default function AdminPage() {
                           handleJobStatusUpdate(job.id, 'approved')
                         }
                         disabled={actionLoading === `job-${job.id}`}
-                        aria-label={`Approve job ${job.title}`}
                       >
-                        {actionLoading === `job-${job.id}` &&
-                        actionLoading.startsWith(`job-${job.id}`) ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                        )}{' '}
-                        Approve
+                        <CheckCircle className="mr-1 h-4 w-4" /> Approve
                       </Button>
                     </CardFooter>
                   </Card>
@@ -476,82 +679,56 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             {isCompaniesLoading ? (
-              <div className="flex justify-center items-center py-6">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                <span className="ml-2">Loading pending companies...</span>
+              <div className="flex items-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
+                Loading...
               </div>
             ) : pendingCompanies.length === 0 ? (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>No Pending Companies</AlertTitle>
                 <AlertDescription>
-                  There are currently no new company profiles awaiting approval.
+                  No new company profiles awaiting approval.
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {pendingCompanies.map((company) => (
-                  <Card key={company.id} className="shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg font-semibold">
-                        <Link
-                          href={`/companies/${company.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline"
-                          title="View company profile in new tab (if accessible)"
-                          aria-label={`View company profile for ${company.name}`}
-                        >
-                          {company.name}
-                        </Link>
-                      </CardTitle>
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {pendingCompanies.map((c) => (
+                  <Card key={c.id} className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <Link
+                        href={`/companies/${c.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary hover:underline"
+                      >
+                        <CardTitle className="text-md">{c.name}</CardTitle>
+                      </Link>
                       <CardDescription className="text-xs">
                         Registered:{' '}
-                        {company.createdAt
-                          ? typeof company.createdAt === 'string'
-                            ? new Date(company.createdAt).toLocaleDateString()
-                            : (company.createdAt as unknown as Timestamp)
-                                ?.toDate()
-                                .toLocaleDateString()
-                          : 'N/A'}
+                        {new Date(c.createdAt as string).toLocaleDateString()}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground line-clamp-2 pb-3">
-                      {company.description || 'No description provided.'}
-                    </CardContent>
-                    <CardFooter className="flex justify-end gap-2">
+                    <CardFooter className="flex justify-end gap-2 pt-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          handleCompanyStatusUpdate(company.id, 'rejected')
+                          handleCompanyStatusUpdate(c.id, 'rejected')
                         }
-                        disabled={actionLoading === `company-${company.id}`}
-                        aria-label={`Reject company ${company.name}`}
+                        disabled={actionLoading === `company-${c.id}`}
                       >
-                        {actionLoading === `company-${company.id}` &&
-                        actionLoading.startsWith(`company-${company.id}`) ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                        )}{' '}
+                        <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
                         Reject
                       </Button>
                       <Button
                         size="sm"
                         onClick={() =>
-                          handleCompanyStatusUpdate(company.id, 'approved')
+                          handleCompanyStatusUpdate(c.id, 'approved')
                         }
-                        disabled={actionLoading === `company-${company.id}`}
-                        aria-label={`Approve company ${company.name}`}
+                        disabled={actionLoading === `company-${c.id}`}
                       >
-                        {actionLoading === `company-${company.id}` &&
-                        actionLoading.startsWith(`company-${company.id}`) ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                        )}{' '}
-                        Approve
+                        <CheckCircle className="mr-1 h-4 w-4" /> Approve
                       </Button>
                     </CardFooter>
                   </Card>
@@ -562,263 +739,647 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users /> User Management ({filteredUsers.length} of{' '}
-            {allUsers.length})
-          </CardTitle>
-          <CardDescription>
-            View, search, and manage registered users on the platform.
-          </CardDescription>
-          <div className="mt-4">
-            <Input
-              placeholder="Search users by name, email, or role..."
-              value={userSearchTerm}
-              onChange={(e) => setUserSearchTerm(e.target.value)}
-              className="max-w-sm"
-              aria-label="Search users"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isUsersLoading ? (
-            <div className="flex justify-center items-center py-6">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-              <span className="ml-2">Loading users...</span>
-            </div>
-          ) : paginatedUsers.length === 0 ? (
-            <p className="text-muted-foreground">
-              {debouncedUserSearchTerm
-                ? 'No users match your search.'
-                : 'No users found.'}
-            </p>
-          ) : (
-            <div className="max-h-[500px] overflow-y-auto">
-              <Table>
-                <TableCaption>A list of all registered users.</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedUsers.map((u) => (
-                    <TableRow key={u.uid}>
-                      <TableCell className="font-medium">
-                        {u.name || 'N/A'}
-                      </TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            u.role === 'admin' || u.role === 'superAdmin'
-                              ? 'default'
-                              : u.role === 'employer'
-                                ? 'secondary'
-                                : 'outline'
-                          }
-                        >
-                          {u.role.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            u.status === 'active' ? 'secondary' : 'destructive'
-                          }
-                          className={
-                            u.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }
-                        >
-                          {u.status?.toUpperCase() || 'ACTIVE'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {u.createdAt
-                          ? typeof u.createdAt === 'string'
-                            ? new Date(u.createdAt).toLocaleDateString()
-                            : (u.createdAt as unknown as Timestamp)
-                                ?.toDate()
-                                .toLocaleDateString()
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {u.lastActive
-                          ? typeof u.lastActive === 'string'
-                            ? new Date(u.lastActive).toLocaleString()
-                            : (u.lastActive as unknown as Timestamp)
-                                ?.toDate()
-                                .toLocaleString()
-                          : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        {u.role === 'jobSeeker' && (
-                          <Button variant="outline" size="sm" asChild>
-                            <Link
-                              href={`/employer/candidates/${u.uid}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Preview profile of ${u.name}`}
-                            >
-                              <Eye className="mr-1 h-4 w-4" /> Preview
-                            </Link>
-                          </Button>
-                        )}
-                        <Button
-                          variant={
-                            u.status === 'active' ? 'destructive' : 'default'
-                          }
-                          size="sm"
+      <Tabs defaultValue="companies">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="companies">Companies</TabsTrigger>
+          <TabsTrigger value="jobSeekers">Job Seekers</TabsTrigger>
+          <TabsTrigger value="platformUsers">Platform Users</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="companies">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage Companies ({sortedCompanies.length})</CardTitle>
+              <Input
+                placeholder="Search companies by name or website..."
+                value={companiesSearchTerm}
+                onChange={(e) => setCompaniesSearchTerm(e.target.value)}
+                className="max-w-sm mt-2"
+                aria-label="Search companies"
+              />
+            </CardHeader>
+            <CardContent>
+              {isCompaniesLoading ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
+                  Loading companies...
+                </div>
+              ) : paginatedCompanies.length === 0 ? (
+                <p className="text-muted-foreground">No companies found.</p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
                           onClick={() =>
-                            handleUserStatusUpdate(
-                              u.uid,
-                              u.status === 'active' ? 'suspended' : 'active'
+                            requestSort(
+                              'name',
+                              companiesSortConfig,
+                              setCompaniesSortConfig
                             )
                           }
-                          disabled={
-                            actionLoading === `user-${u.uid}` ||
-                            (user?.role === 'admin' &&
-                              (u.role === 'admin' ||
-                                u.role === 'superAdmin')) ||
-                            user?.uid === u.uid
-                          }
-                          aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
+                          className="cursor-pointer"
                         >
-                          {actionLoading === `user-${u.uid}` ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : u.status === 'active' ? (
-                            'Suspend'
-                          ) : (
-                            'Activate'
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          {totalUserPages > 1 && (
-            <div className="mt-6 flex justify-center items-center gap-2">
-              <Button
-                onClick={() =>
-                  setUserCurrentPage((prev) => Math.max(1, prev - 1))
-                }
-                disabled={userCurrentPage === 1}
-                variant="outline"
-                aria-label="Previous page of users"
-              >
-                Previous
-              </Button>
-              <span
-                className="text-sm text-muted-foreground"
-                aria-live="polite"
-              >
-                Page {userCurrentPage} of {totalUserPages}
-              </span>
-              <Button
-                onClick={() =>
-                  setUserCurrentPage((prev) =>
-                    Math.min(totalUserPages, prev + 1)
-                  )
-                }
-                disabled={userCurrentPage === totalUserPages}
-                variant="outline"
-                aria-label="Next page of users"
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          Name {renderSortIcon('name', companiesSortConfig)}
+                        </TableHead>
+                        <TableHead>Website</TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'status',
+                              companiesSortConfig,
+                              setCompaniesSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Status {renderSortIcon('status', companiesSortConfig)}
+                        </TableHead>
+                        <TableHead>Jobs Posted</TableHead>
+                        <TableHead>Apps Received</TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'createdAt',
+                              companiesSortConfig,
+                              setCompaniesSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Created At{' '}
+                          {renderSortIcon('createdAt', companiesSortConfig)}
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedCompanies.map((c) => (
+                        <TableRow key={c.id}>
+                          <TableCell className="font-medium">
+                            {c.name}
+                          </TableCell>
+                          <TableCell>
+                            <a
+                              href={c.websiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline flex items-center gap-1"
+                            >
+                              {c.websiteUrl || 'N/A'}{' '}
+                              {c.websiteUrl && (
+                                <ExternalLink className="h-3 w-3" />
+                              )}
+                            </a>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                c.status === 'approved'
+                                  ? 'default'
+                                  : c.status === 'rejected' ||
+                                      c.status === 'suspended'
+                                    ? 'destructive'
+                                    : 'secondary'
+                              }
+                            >
+                              {c.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{c.jobCount ?? 'N/A'}</TableCell>
+                          <TableCell>{c.applicationCount ?? 'N/A'}</TableCell>
+                          <TableCell>
+                            {c.createdAt
+                              ? new Date(
+                                  c.createdAt as string
+                                ).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right space-x-1">
+                            {c.status !== 'approved' && (
+                              <Button
+                                size="xs"
+                                onClick={() =>
+                                  handleCompanyStatusUpdate(c.id, 'approved')
+                                }
+                                disabled={actionLoading === `company-${c.id}`}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                            {c.status !== 'rejected' &&
+                              c.status !== 'pending' && (
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() =>
+                                    handleCompanyStatusUpdate(c.id, 'rejected')
+                                  }
+                                  disabled={actionLoading === `company-${c.id}`}
+                                >
+                                  Reject
+                                </Button>
+                              )}
+                            {c.status !== 'suspended' ? (
+                              <Button
+                                size="xs"
+                                variant="destructive"
+                                onClick={() =>
+                                  handleCompanyStatusUpdate(c.id, 'suspended')
+                                }
+                                disabled={actionLoading === `company-${c.id}`}
+                              >
+                                Suspend
+                              </Button>
+                            ) : (
+                              <Button
+                                size="xs"
+                                variant="secondary"
+                                onClick={() =>
+                                  handleCompanyStatusUpdate(c.id, 'active')
+                                }
+                                disabled={actionLoading === `company-${c.id}`}
+                              >
+                                Activate
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {totalCompaniesPages > 1 && (
+                    <div className="mt-4 flex justify-center items-center gap-2">
+                      <Button
+                        onClick={() =>
+                          setCompaniesCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={companiesCurrentPage === 1}
+                        variant="outline"
+                      >
+                        Previous
+                      </Button>
+                      <span>
+                        Page {companiesCurrentPage} of {totalCompaniesPages}
+                      </span>
+                      <Button
+                        onClick={() =>
+                          setCompaniesCurrentPage((p) =>
+                            Math.min(totalCompaniesPages, p + 1)
+                          )
+                        }
+                        disabled={companiesCurrentPage === totalCompaniesPages}
+                        variant="outline"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Advanced Moderation & Analytics (Placeholders)</CardTitle>
-          <CardDescription>
-            Future sections for more detailed platform management tools.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="bg-muted/30">
+        <TabsContent value="jobSeekers">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ListChecks /> Content Flagging System
+              <CardTitle>
+                Manage Job Seekers ({sortedJobSeekers.length})
               </CardTitle>
+              <Input
+                placeholder="Search job seekers by name or email..."
+                value={jobSeekersSearchTerm}
+                onChange={(e) => setJobSeekersSearchTerm(e.target.value)}
+                className="max-w-sm mt-2"
+                aria-label="Search job seekers"
+              />
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Review flagged jobs, company profiles, and user-generated
-                content. (Coming Soon)
-              </p>
+              {isUsersLoading ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
+                  Loading job seekers...
+                </div>
+              ) : paginatedJobSeekers.length === 0 ? (
+                <p className="text-muted-foreground">No job seekers found.</p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'name',
+                              jobSeekersSortConfig,
+                              setJobSeekersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Name {renderSortIcon('name', jobSeekersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'email',
+                              jobSeekersSortConfig,
+                              setJobSeekersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Email {renderSortIcon('email', jobSeekersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'status',
+                              jobSeekersSortConfig,
+                              setJobSeekersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Status{' '}
+                          {renderSortIcon('status', jobSeekersSortConfig)}
+                        </TableHead>
+                        <TableHead>Profile Searchable</TableHead>
+                        <TableHead>Jobs Applied</TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'lastActive',
+                              jobSeekersSortConfig,
+                              setJobSeekersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Last Active{' '}
+                          {renderSortIcon('lastActive', jobSeekersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'createdAt',
+                              jobSeekersSortConfig,
+                              setJobSeekersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Joined{' '}
+                          {renderSortIcon('createdAt', jobSeekersSortConfig)}
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedJobSeekers.map((u) => (
+                        <TableRow key={u.uid}>
+                          <TableCell className="font-medium">
+                            {u.name || 'N/A'}
+                          </TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                u.status === 'active'
+                                  ? 'secondary'
+                                  : 'destructive'
+                              }
+                              className={
+                                u.status === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }
+                            >
+                              {u.status?.toUpperCase() || 'ACTIVE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {u.isProfileSearchable ? (
+                              <CheckCircle className="text-green-500 h-5 w-5" />
+                            ) : (
+                              <XCircle className="text-red-500 h-5 w-5" />
+                            )}
+                          </TableCell>
+                          <TableCell>{u.jobsAppliedCount ?? 'N/A'}</TableCell>
+                          <TableCell>
+                            {u.lastActive
+                              ? new Date(
+                                  u.lastActive as string
+                                ).toLocaleString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {u.createdAt
+                              ? new Date(
+                                  u.createdAt as string
+                                ).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right space-x-1">
+                            <Button variant="outline" size="xs" asChild>
+                              <Link
+                                href={`/employer/candidates/${u.uid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Eye className="mr-1 h-3 w-3" /> Profile
+                              </Link>
+                            </Button>
+                            <Button
+                              variant={
+                                u.status === 'active'
+                                  ? 'destructive'
+                                  : 'default'
+                              }
+                              size="xs"
+                              onClick={() =>
+                                handleUserStatusUpdate(
+                                  u.uid,
+                                  u.status === 'active' ? 'suspended' : 'active'
+                                )
+                              }
+                              disabled={
+                                actionLoading === `user-${u.uid}` ||
+                                user?.uid === u.uid
+                              }
+                            >
+                              {u.status === 'active' ? 'Suspend' : 'Activate'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {totalJobSeekersPages > 1 && (
+                    <div className="mt-4 flex justify-center items-center gap-2">
+                      <Button
+                        onClick={() =>
+                          setJobSeekersCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={jobSeekersCurrentPage === 1}
+                        variant="outline"
+                      >
+                        Previous
+                      </Button>
+                      <span>
+                        Page {jobSeekersCurrentPage} of {totalJobSeekersPages}
+                      </span>
+                      <Button
+                        onClick={() =>
+                          setJobSeekersCurrentPage((p) =>
+                            Math.min(totalJobSeekersPages, p + 1)
+                          )
+                        }
+                        disabled={
+                          jobSeekersCurrentPage === totalJobSeekersPages
+                        }
+                        variant="outline"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
-          <Card className="bg-muted/30">
+        </TabsContent>
+
+        <TabsContent value="platformUsers">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart3 /> Platform Analytics
+              <CardTitle>
+                Manage Platform Users ({sortedPlatformUsers.length})
               </CardTitle>
+              <Input
+                placeholder="Search admins by name or email..."
+                value={platformUsersSearchTerm}
+                onChange={(e) => setPlatformUsersSearchTerm(e.target.value)}
+                className="max-w-sm mt-2"
+                aria-label="Search platform users"
+              />
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                View moderation queue trends, violation statistics, and overall
-                platform health. (Coming Soon)
-              </p>
+              {isUsersLoading ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
+                  Loading platform users...
+                </div>
+              ) : paginatedPlatformUsers.length === 0 ? (
+                <p className="text-muted-foreground">
+                  No platform users (Admins/SuperAdmins) found.
+                </p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'name',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Name {renderSortIcon('name', platformUsersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'email',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Email{' '}
+                          {renderSortIcon('email', platformUsersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'role',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Role {renderSortIcon('role', platformUsersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'status',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Status{' '}
+                          {renderSortIcon('status', platformUsersSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'lastActive',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Last Active{' '}
+                          {renderSortIcon(
+                            'lastActive',
+                            platformUsersSortConfig
+                          )}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'createdAt',
+                              platformUsersSortConfig,
+                              setPlatformUsersSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                        >
+                          Joined{' '}
+                          {renderSortIcon('createdAt', platformUsersSortConfig)}
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedPlatformUsers.map((u) => (
+                        <TableRow key={u.uid}>
+                          <TableCell className="font-medium">
+                            {u.name || 'N/A'}
+                          </TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                u.role === 'superAdmin'
+                                  ? 'destructive'
+                                  : 'default'
+                              }
+                            >
+                              {u.role.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                u.status === 'active'
+                                  ? 'secondary'
+                                  : 'destructive'
+                              }
+                              className={
+                                u.status === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                              }
+                            >
+                              {u.status?.toUpperCase() || 'ACTIVE'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {u.lastActive
+                              ? new Date(
+                                  u.lastActive as string
+                                ).toLocaleString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {u.createdAt
+                              ? new Date(
+                                  u.createdAt as string
+                                ).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant={
+                                u.status === 'active'
+                                  ? 'destructive'
+                                  : 'default'
+                              }
+                              size="xs"
+                              onClick={() =>
+                                handleUserStatusUpdate(
+                                  u.uid,
+                                  u.status === 'active' ? 'suspended' : 'active'
+                                )
+                              }
+                              disabled={
+                                actionLoading === `user-${u.uid}` ||
+                                user?.uid === u.uid ||
+                                (user?.role === 'admin' &&
+                                  u.role === 'superAdmin') ||
+                                (user?.role === 'admin' &&
+                                  u.role === 'admin' &&
+                                  u.uid !== user.uid &&
+                                  user.role !== 'superAdmin')
+                              }
+                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name}`}
+                            >
+                              {u.status === 'active' ? 'Suspend' : 'Activate'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {totalPlatformUsersPages > 1 && (
+                    <div className="mt-4 flex justify-center items-center gap-2">
+                      <Button
+                        onClick={() =>
+                          setPlatformUsersCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={platformUsersCurrentPage === 1}
+                        variant="outline"
+                      >
+                        Previous
+                      </Button>
+                      <span>
+                        Page {platformUsersCurrentPage} of{' '}
+                        {totalPlatformUsersPages}
+                      </span>
+                      <Button
+                        onClick={() =>
+                          setPlatformUsersCurrentPage((p) =>
+                            Math.min(totalPlatformUsersPages, p + 1)
+                          )
+                        }
+                        disabled={
+                          platformUsersCurrentPage === totalPlatformUsersPages
+                        }
+                        variant="outline"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
-          <Card className="bg-muted/30">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Flag /> Policy & Appeals
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Manage platform policies, issue warnings, and handle
-                user/company appeals. (Coming Soon)
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="col-span-1 md:col-span-2 lg:col-span-3 bg-muted/30">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ShieldCheck /> General Admin Notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
-                <li>
-                  To make a user an admin, manually update their
-                  &apos;role&apos; field to &apos;admin&apos; or
-                  &apos;superAdmin&apos; in Firestore &apos;users&apos;
-                  collection.
-                </li>
-                <li>Ensure their &apos;status&apos; is &apos;active&apos;.</li>
-                <li>
-                  SuperAdmins can suspend/activate Admins. Admins cannot suspend
-                  other Admins or SuperAdmins.
-                </li>
-                <li>
-                  Suspending a company automatically suspends its recruiters
-                  (this logic needs backend implementation or careful manual
-                  management if not automated by rules).
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

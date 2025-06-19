@@ -23,15 +23,15 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 // localStorage key for search history
 const SEARCH_HISTORY_STORAGE_KEY = 'jobboardly-search-history';
 
 export function SettingsForm() {
-  const { user, updateUserProfile, loading: authLoading } = useAuth(); // Get user and updateUserProfile
+  const { user, updateUserProfile, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<Partial<UserProfile>>({
-    theme: 'system',
+    theme: 'system', // Default theme
     jobBoardDisplay: 'list',
     itemsPerPage: 10,
     jobAlerts: {
@@ -57,7 +57,6 @@ export function SettingsForm() {
         },
       });
     }
-    // Load search history from localStorage
     const storedSearchHistory = localStorage.getItem(
       SEARCH_HISTORY_STORAGE_KEY
     );
@@ -81,6 +80,20 @@ export function SettingsForm() {
     value: string
   ) => {
     setSettings((prev) => ({ ...prev, [name]: value }));
+    if (name === 'theme' && user) {
+      // Apply theme immediately for preview
+      const root = window.document.documentElement;
+      root.classList.remove('light', 'dark');
+      if (value === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches
+          ? 'dark'
+          : 'light';
+        root.classList.add(systemTheme);
+      } else {
+        root.classList.add(value);
+      }
+    }
   };
 
   const handleSelectChange = (name: 'itemsPerPage', value: string) => {
@@ -113,7 +126,6 @@ export function SettingsForm() {
     }
     setIsLoading(true);
     try {
-      // Only send fields that are part of UserProfile to updateUserProfile
       const profileUpdates: Partial<UserProfile> = {
         theme: settings.theme,
         jobBoardDisplay: settings.jobBoardDisplay,
@@ -315,6 +327,7 @@ export function SettingsForm() {
                 size="sm"
                 onClick={handleClearSearchHistory}
                 className="mt-3"
+                aria-label="Clear job search history"
               >
                 <Trash2 className="mr-2 h-4 w-4" /> Clear Search History
               </Button>

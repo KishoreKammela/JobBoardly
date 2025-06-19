@@ -8,7 +8,7 @@ import type {
   Application,
   ApplicationStatus,
   Job,
-} from '@/types'; // Added Job
+} from '@/types';
 import React, {
   createContext,
   useContext,
@@ -16,13 +16,7 @@ import React, {
   ReactNode,
   useEffect,
 } from 'react';
-import {
-  auth,
-  db,
-  // googleProvider, // Unused
-  // githubProvider, // Unused
-  // microsoftProvider, // Unused
-} from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import {
   onAuthStateChanged,
   signOut,
@@ -31,6 +25,9 @@ import {
   signInWithPopup,
   type User as FirebaseUser,
   type AuthProvider as FirebaseAuthProvider,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword as firebaseUpdatePassword,
 } from 'firebase/auth';
 import {
   doc,
@@ -39,12 +36,12 @@ import {
   updateDoc,
   serverTimestamp,
   collection,
-  /*query, where, getDocs,*/ arrayUnion,
+  arrayUnion,
   arrayRemove,
   Timestamp,
-  type FieldValue /*writeBatch, addDoc*/,
-} from 'firebase/firestore'; // Removed query, where, getDocs, writeBatch, addDoc
-import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs for saved searches
+  type FieldValue,
+} from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -82,6 +79,10 @@ interface AuthContextType {
     newStatus: ApplicationStatus,
     employerNotes?: string
   ) => Promise<void>;
+  changeUserPassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
+          await updateDoc(userDocRef, { lastActive: serverTimestamp() }); // Update lastActive on auth state change
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const profileData = {
@@ -105,6 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ...userDocSnap.data(),
             } as UserProfile;
             setUser(profileData);
+            // Apply theme from user profile
+            if (profileData.theme) {
+              applyTheme(profileData.theme);
+            }
+
             if (profileData.role === 'employer' && profileData.companyId) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
               const companyDocSnap = await getDoc(companyDocRef);
@@ -137,12 +144,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         setCompany(null);
+        applyTheme('system'); // Default to system theme if no user
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+    const root = window.document.documentElement;
+    root.classList.remove('light', 'dark');
+
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light';
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.add(theme);
+    }
+  };
+
+  // Listen to system theme changes if user preference is 'system'
+  useEffect(() => {
+    if (user?.theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme('system');
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [user?.theme]);
 
   const createUserProfileInFirestore = async (
     fbUser: FirebaseUser,
@@ -182,6 +215,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       avatarUrl: fbUser.photoURL || undefined,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
+      lastActive: serverTimestamp() as Timestamp,
+      status: 'active',
+      theme: 'system', // Default theme
+      jobBoardDisplay: 'list',
+      itemsPerPage: 10,
+      jobAlerts: {
+        newJobsMatchingProfile: true,
+        savedSearchAlerts: false,
+        applicationStatusUpdates: true,
+      },
     };
 
     if (role === 'employer') {
@@ -193,7 +236,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.savedSearches = [];
       userProfileData.headline = '';
       userProfileData.skills = [];
-      userProfileData.mobileNumber = ''; // Initialize mobile number
+      userProfileData.mobileNumber = '';
+      userProfileData.experiences = [];
+      userProfileData.educations = [];
+      userProfileData.languages = [];
     }
 
     const finalProfileDataForFirestore: { [key: string]: any } = {};
@@ -207,6 +253,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
       setUser(finalProfileDataForFirestore as UserProfile);
+      if (finalProfileDataForFirestore.theme) {
+        applyTheme(finalProfileDataForFirestore.theme);
+      }
       return finalProfileDataForFirestore as UserProfile;
     } catch (error) {
       console.error(
@@ -247,12 +296,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     pass: string
   ): Promise<FirebaseUser> => {
-    // try { // Useless try-catch removed
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     return userCredential.user;
-    // } catch (error) { // Useless try-catch removed
-    //     throw error;
-    // }
   };
 
   const signInWithSocial = async (
@@ -280,7 +325,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ...userDocSnap.data(),
         } as UserProfile;
         let updatesNeeded = false;
-        const updates: Partial<UserProfile> & { updatedAt?: FieldValue } = {};
+        const updates: Partial<UserProfile> & {
+          updatedAt?: FieldValue;
+          lastActive?: FieldValue;
+        } = {};
+        updates.lastActive = serverTimestamp();
 
         if (existingProfile.role !== role) {
           updates.role = role;
@@ -313,13 +362,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.mobileNumber = '';
           updatesNeeded = true;
         }
+        if (!existingProfile.theme) {
+          updates.theme = 'system';
+          updatesNeeded = true;
+        }
 
         if (updatesNeeded) {
           updates.updatedAt = serverTimestamp();
           await updateDoc(userDocRef, updates);
           setUser({ ...existingProfile, ...updates } as UserProfile);
+          if (updates.theme) applyTheme(updates.theme);
         } else {
+          await updateDoc(userDocRef, { lastActive: serverTimestamp() });
           setUser(existingProfile);
+          if (existingProfile.theme) applyTheme(existingProfile.theme);
           if (
             existingProfile.role === 'employer' &&
             existingProfile.companyId
@@ -348,12 +404,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      if (user && user.uid) {
+        // Update lastActive before signing out
+        const userDocRef = doc(db, 'users', user.uid);
+        await updateDoc(userDocRef, { lastActive: serverTimestamp() });
+      }
       await signOut(auth);
       setUser(null);
       setFirebaseUser(null);
       setCompany(null);
+      applyTheme('system'); // Reset to system theme on logout
     } catch (error) {
       console.error('AuthContext: logout error', error);
+      throw error;
+    }
+  };
+
+  const changeUserPassword = async (
+    currentPassword: string,
+    newPassword: string
+  ) => {
+    if (!firebaseUser) {
+      throw new Error('User not authenticated.');
+    }
+    try {
+      const credential = EmailAuthProvider.credential(
+        firebaseUser.email!,
+        currentPassword
+      );
+      await reauthenticateWithCredential(firebaseUser, credential);
+      await firebaseUpdatePassword(firebaseUser, newPassword);
+    } catch (error) {
+      console.error('AuthContext: changeUserPassword error', error);
       throw error;
     }
   };
@@ -363,6 +445,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocRef = doc(db, 'users', user.uid);
       const dataToUpdate: { [key: string]: any } = {
         updatedAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
       };
       for (const key in updatedData) {
         if (updatedData[key as keyof UserProfile] !== undefined) {
@@ -370,12 +453,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (Object.keys(dataToUpdate).length > 1) {
+      if (Object.keys(dataToUpdate).length > 2) {
+        // Check if more than just timestamps are being updated
         try {
           await updateDoc(userDocRef, dataToUpdate);
           setUser(
             (prevUser) => ({ ...prevUser, ...dataToUpdate }) as UserProfile
           );
+          if (dataToUpdate.theme) {
+            applyTheme(dataToUpdate.theme);
+          }
         } catch (error) {
           console.error('AuthContext: updateUserProfile error', error);
           throw error;
@@ -446,6 +533,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await updateDoc(userDocRef, {
             appliedJobIds: arrayUnion(job.id),
             updatedAt: serverTimestamp(),
+            lastActive: serverTimestamp(),
           });
           setUser(
             (prevUser) =>
@@ -474,7 +562,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const applicationDocRef = doc(db, 'applications', applicationId);
     const updates: Partial<Application> & { updatedAt: FieldValue } = {
-      // Ensure updatedAt is part of the type
       status: newStatus,
       updatedAt: serverTimestamp(),
     };
@@ -503,6 +590,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await updateDoc(userDocRef, {
           savedJobIds: arrayUnion(jobId),
           updatedAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
         });
         setUser(
           (prevUser) =>
@@ -527,6 +615,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await updateDoc(userDocRef, {
           savedJobIds: arrayRemove(jobId),
           updatedAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
         });
         setUser(
           (prevUser) =>
@@ -566,6 +655,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await updateDoc(userDocRef, {
           savedSearches: arrayUnion(newSearch),
           updatedAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
         });
         setUser(
           (prevUser) =>
@@ -592,6 +682,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await updateDoc(userDocRef, {
             savedSearches: arrayRemove(searchToDelete),
             updatedAt: serverTimestamp(),
+            lastActive: serverTimestamp(),
           });
           setUser(
             (prevUser) =>
@@ -635,6 +726,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         saveSearch,
         deleteSearch,
         updateApplicationStatus,
+        changeUserPassword,
       }}
     >
       {!loading && children}

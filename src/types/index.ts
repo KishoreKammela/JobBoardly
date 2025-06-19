@@ -49,7 +49,7 @@ export interface SavedSearch {
 
 export interface LanguageEntry {
   id: string;
-  languageName: string; // Changed from 'language'
+  languageName: string;
   proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Native';
   canRead: boolean;
   canWrite: boolean;
@@ -98,8 +98,8 @@ export interface Company {
   updatedAt: Timestamp | Date | string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   moderationReason?: string;
-  jobCount?: number;
-  applicationCount?: number;
+  jobCount?: number; // For admin display, ideally aggregated
+  applicationCount?: number; // For admin display, ideally aggregated
 }
 
 export interface Job {
@@ -202,7 +202,6 @@ export interface UserProfile {
   linkedinUrl?: string;
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  // desiredSalary is now expectedCTCValue for consistency. Keep for legacy if any, but prefer expectedCTCValue.
   isProfileSearchable?: boolean;
   resumeUrl?: string;
   resumeFileName?: string;
@@ -217,22 +216,20 @@ export interface UserProfile {
   isCompanyAdmin?: boolean;
 
   // Admin/System Usage
-  jobsAppliedCount?: number;
+  jobsAppliedCount?: number; // Derived from appliedJobIds.length for job seekers
   lastActive?: Timestamp | Date | string;
 }
 
 export interface ParsedResumeData {
   name?: string;
   email?: string;
+  mobileNumber?: string;
   headline?: string;
   skills?: string[];
-  // Experience and Education from resume are now primarily parsed into structured data
-  // but a raw text summary can still be useful.
-  experience?: string; // Changed from experienceSummary to match UserProfileForm
-  education?: string; // Changed from educationSummary
+  experience?: string; // Summary of experience
+  education?: string; // Summary of education
   portfolioUrl?: string;
   linkedinUrl?: string;
-  mobileNumber?: string; // Added mobile number
 }
 
 export interface ParsedJobData {

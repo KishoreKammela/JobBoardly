@@ -1,9 +1,18 @@
 'use client';
+'use client';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Card,
   CardContent,
@@ -22,6 +31,8 @@ import {
   Github,
   Shell,
   Chrome,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { FirebaseError } from 'firebase/app';
@@ -30,9 +41,17 @@ import {
   githubProvider,
   microsoftProvider,
 } from '@/lib/firebase';
+import {
+  googleProvider,
+  githubProvider,
+  microsoftProvider,
+} from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
+import { checkPasswordStrength, type PasswordStrength } from '@/lib/utils';
 
 export function EmployerRegisterForm() {
+  const [recruiterName, setRecruiterName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [recruiterName, setRecruiterName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,11 +61,20 @@ export function EmployerRegisterForm() {
   const { registerUser, signInWithSocial } = useAuth();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>(
+    checkPasswordStrength('')
+  );
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const pass = e.target.value;
+    setPassword(pass);
+    setPasswordStrength(checkPasswordStrength(pass));
+  };
 
   const handleRegisterSuccess = () => {
     toast({
       title: 'Registration Successful',
-      description: `Welcome, ${recruiterName || 'Recruiter'} from ${companyName || 'your company'}! Please complete your company profile.`,
+      description: `Welcome, ${recruiterName || 'Recruiter'} from ${companyName || 'your company'}! Your company profile is pending admin approval.`,
     });
     // Redirection is handled by useEffect in parent page /employer/register/page.tsx
   };
@@ -61,8 +89,23 @@ export function EmployerRegisterForm() {
       });
       return;
     }
+    if (!passwordStrength.isValid) {
+      toast({
+        title: 'Weak Password',
+        description: `Please ensure your password meets all criteria: ${passwordStrength.issues.join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsLoading(true);
     try {
+      await registerUser(
+        email,
+        password,
+        recruiterName,
+        'employer' as UserRole,
+        companyName
+      );
       await registerUser(
         email,
         password,
@@ -80,7 +123,20 @@ export function EmployerRegisterForm() {
       } else if (firebaseError.code === 'auth/weak-password') {
         friendlyMessage =
           'Password is too weak. Please use at least 6 characters.';
+      const firebaseError = error as FirebaseError;
+      console.error('Registration error:', firebaseError.message);
+      let friendlyMessage = 'Registration failed. Please try again.';
+      if (firebaseError.code === 'auth/email-already-in-use') {
+        friendlyMessage = 'This email address is already in use.';
+      } else if (firebaseError.code === 'auth/weak-password') {
+        friendlyMessage =
+          'Password is too weak. Please use at least 6 characters.';
       }
+      toast({
+        title: 'Registration Failed',
+        description: friendlyMessage,
+        variant: 'destructive',
+      });
       toast({
         title: 'Registration Failed',
         description: friendlyMessage,
@@ -90,6 +146,17 @@ export function EmployerRegisterForm() {
     setIsLoading(false);
   };
 
+  const handleSocialSignUp = async (
+    providerName: 'google' | 'github' | 'microsoft'
+  ) => {
+    if (!companyName.trim() && providerName) {
+      toast({
+        title: 'Company Name Required',
+        description:
+          'Please enter the company name before signing up with a social provider for a new company.',
+        variant: 'destructive',
+      });
+      return;
   const handleSocialSignUp = async (
     providerName: 'google' | 'github' | 'microsoft'
   ) => {
@@ -113,12 +180,17 @@ export function EmployerRegisterForm() {
       await signInWithSocial(authProvider, 'employer', companyName);
       toast({
         title: 'Sign Up Successful',
-        description: `Welcome! Please complete your company profile.`,
+        description: `Welcome! Your company profile is pending admin approval.`,
       });
       handleRegisterSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
+      toast({
+        title: 'Social Sign Up Failed',
+        description: `Could not sign up with ${providerName}. ${firebaseError.message}`,
+        variant: 'destructive',
+      });
       toast({
         title: 'Social Sign Up Failed',
         description: `Could not sign up with ${providerName}. ${firebaseError.message}`,
@@ -133,7 +205,11 @@ export function EmployerRegisterForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-headline flex items-center justify-center gap-2">
           <Building className="h-6 w-6" /> Register Your Company
+          <Building className="h-6 w-6" /> Register Your Company
         </CardTitle>
+        <CardDescription>
+          Join JobBoardly to find the best talent for your team.
+        </CardDescription>
         <CardDescription>
           Join JobBoardly to find the best talent for your team.
         </CardDescription>
@@ -143,6 +219,7 @@ export function EmployerRegisterForm() {
           <div className="space-y-2">
             <Label htmlFor="companyNameActual">Company Name</Label>
             <Input
+              id="companyNameActual"
               id="companyNameActual"
               type="text"
               placeholder="Your Company Inc."
@@ -181,14 +258,38 @@ export function EmployerRegisterForm() {
             <Input
               id="password"
               type="password"
-              placeholder="Create a strong password (min. 6 characters)"
+              placeholder="Create a strong password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               required
-              minLength={6}
               aria-label="Password for registration"
             />
+            <ul className="mt-2 space-y-1 text-xs">
+              {passwordStrength.criteria.map((criterion, index) => (
+                <li
+                  key={index}
+                  className={`flex items-center ${criterion.met ? 'text-green-600' : 'text-destructive'}`}
+                >
+                  {criterion.met ? (
+                    <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                  ) : (
+                    <XCircle className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  {criterion.text}
+                </li>
+              ))}
+            </ul>
           </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !!isSocialLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <UserPlus className="mr-2 h-4 w-4" />
+            )}
           <Button
             type="submit"
             className="w-full"
@@ -248,6 +349,51 @@ export function EmployerRegisterForm() {
             Sign up with Microsoft
           </Button>
         </div>
+        <p className="text-sm text-center text-muted-foreground mb-3">
+          Or sign up with your company account (ensure Company Name above is
+          filled if new):
+        </p>
+        <div className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => handleSocialSignUp('google')}
+            disabled={isLoading || !!isSocialLoading}
+          >
+            {isSocialLoading === 'google' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Chrome className="mr-2 h-4 w-4" />
+            )}{' '}
+            Sign up with Google
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => handleSocialSignUp('github')}
+            disabled={isLoading || !!isSocialLoading}
+          >
+            {isSocialLoading === 'github' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Github className="mr-2 h-4 w-4" />
+            )}{' '}
+            Sign up with GitHub
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => handleSocialSignUp('microsoft')}
+            disabled={isLoading || !!isSocialLoading}
+          >
+            {isSocialLoading === 'microsoft' ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Shell className="mr-2 h-4 w-4" />
+            )}{' '}
+            Sign up with Microsoft
+          </Button>
+        </div>
       </CardContent>
       <CardFooter className="text-sm flex flex-col items-center space-y-2">
         <p className="w-full text-center">
@@ -258,11 +404,22 @@ export function EmployerRegisterForm() {
             >
               Sign in
             </Link>
+            <Link
+              href={`/employer/login${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}
+            >
+              Sign in
+            </Link>
           </Button>
         </p>
         <p className="w-full text-center">
+        <p className="w-full text-center">
           Are you a job seeker?{' '}
           <Button variant="link" asChild className="p-0 h-auto">
+            <Link
+              href={`/auth/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}
+            >
+              Register here
+            </Link>
             <Link
               href={`/auth/register${searchParams.get('redirect') ? `?redirect=${searchParams.get('redirect')}` : ''}`}
             >

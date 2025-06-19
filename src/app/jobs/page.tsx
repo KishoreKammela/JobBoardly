@@ -12,7 +12,7 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
-} from '@/components/ui/card'; // Removed CardTitle
+} from '@/components/ui/card';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -32,7 +32,8 @@ export default function JobsPage() {
 
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // True initially for fetching all jobs
+  const [isFiltering, setIsFiltering] = useState(false); // For subsequent filter operations
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -49,7 +50,8 @@ export default function JobsPage() {
 
   useEffect(() => {
     const fetchJobs = async () => {
-      setIsLoading(true);
+      setIsLoading(true); // Initial full load
+      setIsFiltering(false);
       setError(null);
       try {
         const jobsCollectionRef = collection(db, 'jobs');
@@ -72,30 +74,31 @@ export default function JobsPage() {
             createdAt:
               data.createdAt instanceof Timestamp
                 ? data.createdAt.toDate().toISOString()
-                : data.createdAt, // Keep as ISO string
+                : data.createdAt,
             updatedAt:
               data.updatedAt instanceof Timestamp
                 ? data.updatedAt.toDate().toISOString()
-                : data.updatedAt, // Keep as ISO string
+                : data.updatedAt,
           } as Job;
         });
         setAllJobs(jobsData);
+        setFilteredJobs(jobsData); // Initially show all
       } catch (e) {
         console.error('Error fetching jobs:', e);
         setError('Failed to load jobs. Please try again later.');
         console.error('Error fetching jobs:', e);
         setError('Failed to load jobs. Please try again later.');
       } finally {
-        setIsLoading(false); // Initial fetch done
+        setIsLoading(false);
       }
     };
     fetchJobs();
   }, []);
 
   useEffect(() => {
-    if (isLoading && allJobs.length === 0) return; // Don't filter if initial load isn't done
+    if (isLoading) return; // Don't filter if initial load isn't done
 
-    setIsLoading(true); // Indicate filtering is in progress
+    setIsFiltering(true);
 
     const newFilteredJobs = allJobs.filter((job) => {
       const searchTermMatch =
@@ -130,7 +133,10 @@ export default function JobsPage() {
         debouncedFilters.recentActivity &&
         debouncedFilters.recentActivity !== 'any'
       ) {
-        const jobDate = new Date(job.updatedAt || (job.postedDate as string));
+        // Use updatedAt if available, otherwise createdAt, then postedDate as fallback
+        const dateToCompareStr =
+          job.updatedAt || job.createdAt || job.postedDate;
+        const jobDate = new Date(dateToCompareStr as string);
         const now = new Date();
         const cutoffDate = new Date();
         if (debouncedFilters.recentActivity === '24h')
@@ -151,8 +157,8 @@ export default function JobsPage() {
       );
     });
     setFilteredJobs(newFilteredJobs);
-    setCurrentPage(1); // Reset to first page on filter change
-    setIsLoading(false); // Filtering done
+    setCurrentPage(1);
+    setIsFiltering(false);
   }, [debouncedFilters, allJobs, isLoading]);
 
   const paginatedJobs = useMemo(() => {
@@ -210,12 +216,11 @@ export default function JobsPage() {
       <main className="w-full md:w-3/4 lg:w-4/5">
         <div className="mb-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold font-headline">
-            {isLoading && filteredJobs.length === 0
+            {isLoading && allJobs.length === 0
               ? 'Loading Jobs...'
-              : `Found ${filteredJobs.length} Approved Jobs`}
-            {isLoading && filteredJobs.length === 0
-              ? 'Loading Jobs...'
-              : `Found ${filteredJobs.length} Approved Jobs`}
+              : isFiltering
+                ? 'Filtering Jobs...'
+                : `Found ${filteredJobs.length} Approved Jobs`}
           </h2>
           <div className="flex gap-2">
             <Button
@@ -265,7 +270,7 @@ export default function JobsPage() {
           </Alert>
         )}
 
-        {isLoading && paginatedJobs.length === 0 ? (
+        {(isLoading && allJobs.length === 0) || isFiltering ? (
           <div
             className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
           >
@@ -300,10 +305,14 @@ export default function JobsPage() {
                   }
                   disabled={currentPage === 1}
                   variant="outline"
+                  aria-label="Previous page of jobs"
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span
+                  className="text-sm text-muted-foreground"
+                  aria-live="polite"
+                >
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -316,6 +325,7 @@ export default function JobsPage() {
                   }
                   disabled={currentPage === totalPages}
                   variant="outline"
+                  aria-label="Next page of jobs"
                 >
                   Next
                 </Button>
