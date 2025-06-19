@@ -10,19 +10,33 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Filter, RotateCcw, Briefcase } from 'lucide-react';
+import { Filter, RotateCcw, Briefcase, Save } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { CandidateFilters } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface CandidateFilterSidebarProps {
   onFilterChange: (filters: Omit<CandidateFilters, 'searchTerm'>) => void;
   initialFilters?: Partial<Omit<CandidateFilters, 'searchTerm'>>;
+  currentGlobalSearchTerm?: string;
 }
 
 export function CandidateFilterSidebar({
   onFilterChange,
   initialFilters,
+  currentGlobalSearchTerm = '',
 }: CandidateFilterSidebarProps) {
   const defaultSidebarFilters: Omit<CandidateFilters, 'searchTerm'> = {
     location: '',
@@ -38,6 +52,10 @@ export function CandidateFilterSidebar({
   const [filters, setFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>(
     defaultSidebarFilters
   );
+  const [searchName, setSearchName] = useState('');
+  const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
+  const { user, company, saveCandidateSearch } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     onFilterChange(filters);
@@ -70,6 +88,65 @@ export function CandidateFilterSidebar({
 
   const handleReset = () => {
     setFilters(defaultSidebarFilters);
+  };
+
+  const isSaveDisabled = () => {
+    if (!user || user.role !== 'employer') return true;
+    return company?.status === 'suspended' || company?.status === 'deleted';
+  };
+
+  const handleOpenSaveSearchDialog = () => {
+    if (!user || user.role !== 'employer') {
+      toast({
+        title: 'Action Denied',
+        description: 'Only employers can save candidate searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (isSaveDisabled()) {
+      toast({
+        title: 'Company Account Restricted',
+        description:
+          'Cannot save searches as your company account is currently restricted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSearchName(currentGlobalSearchTerm || 'My Candidate Search');
+    setIsSaveSearchAlertOpen(true);
+  };
+
+  const handleConfirmSaveSearch = async () => {
+    if (!searchName.trim()) {
+      toast({
+        title: 'Name Required',
+        description: 'Please enter a name for your search.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (user && user.role === 'employer') {
+      try {
+        const fullFiltersToSave: CandidateFilters = {
+          ...filters,
+          searchTerm: currentGlobalSearchTerm,
+        };
+        await saveCandidateSearch(searchName, fullFiltersToSave);
+        toast({
+          title: 'Candidate Search Saved!',
+          description: `"${searchName}" has been added to your saved candidate searches.`,
+        });
+        setIsSaveSearchAlertOpen(false);
+        setSearchName('');
+      } catch (error: unknown) {
+        toast({
+          title: 'Error Saving Search',
+          description: `Could not save your search. Error: ${(error as Error).message}`,
+          variant: 'destructive',
+        });
+      }
+    }
   };
 
   return (
@@ -231,7 +308,7 @@ export function CandidateFilterSidebar({
             </Select>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -241,9 +318,55 @@ export function CandidateFilterSidebar({
             >
               <RotateCcw className="mr-2 h-4 w-4" /> Reset Filters
             </Button>
+            {user && user.role === 'employer' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenSaveSearchDialog}
+                className="w-full"
+                aria-label="Save current candidate search criteria"
+                disabled={isSaveDisabled()}
+              >
+                <Save className="mr-2 h-4 w-4" /> Save Current Search
+              </Button>
+            )}
           </div>
         </form>
       </CardContent>
+      <AlertDialog
+        open={isSaveSearchAlertOpen}
+        onOpenChange={setIsSaveSearchAlertOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Candidate Search</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a name for this search. It will include your current keyword
+              &quot;{currentGlobalSearchTerm || 'none'}&quot; and the selected
+              filters.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Label htmlFor="candidateSearchNameInput">Search Name</Label>
+            <Input
+              id="candidateSearchNameInput"
+              value={searchName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSearchName(e.target.value)
+              }
+              placeholder="e.g., Senior Frontend Leads"
+              className="mt-1"
+              aria-label="Name for saved candidate search"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSaveSearch}>
+              Save Search
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

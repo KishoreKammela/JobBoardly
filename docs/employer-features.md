@@ -81,6 +81,7 @@ To empower employers to efficiently find and connect with qualified candidates b
     - Recent Profile Activity (e.g., profile updated in the last 7 days).
     - Minimum Years of Experience.
   - **View Modes**: Grid or List view for search results.
+  - **Save Current Search**: Ability to save the current combination of search term and filters as a "Saved Candidate Search" with a custom name. (See Settings for management). Saving a search requires confirmation.
   - _Note_: Disabled if the company account is 'suspended' or 'deleted'.
 - **AI-Powered Candidate Matching (`/employer/ai-candidate-match`)**:
   - Input a job description (either by pasting text or uploading a document for AI parsing).
@@ -93,6 +94,11 @@ To empower employers to efficiently find and connect with qualified candidates b
 - Customize basic platform preferences:
   - Theme (Light, Dark, System). (Available even if company suspended/deleted).
   - Notification preferences (for application updates, etc.). (Disabled if company suspended/deleted).
+- **Manage Saved Candidate Searches**: View a list of your saved candidate search criteria.
+  - **Apply Search**: Click a saved search to navigate to the `/employer/find-candidates` page with those filters pre-applied.
+  - **Delete Search**: Remove a saved candidate search. Requires confirmation.
+  - (Saving new searches is done from the `/employer/find-candidates` page filter sidebar).
+  - _Note_: Applying or deleting saved candidate searches disabled if company account 'suspended'/'deleted'.
 
 ## 3. User Journey Maps (Employer)
 
@@ -153,6 +159,30 @@ graph TD
     CP_Option -- Yes --> CP_End[End Preview]
 ```
 
+### Journey 4: Saving and Using a Candidate Search
+
+```mermaid
+graph TD
+    CS_Start[Start: Employer wants to find candidates] --> CS_Login[Login as Employer]
+    CS_Login --> CS_NavToSearch[/employer/find-candidates]
+    CS_NavToSearch --> CS_ApplyFilters[Apply various filters and keyword search]
+    CS_ApplyFilters --> CS_ViewResults[View search results]
+    CS_ViewResults --> CS_SaveOpt{Save this search?}
+    CS_SaveOpt -- Yes --> CS_ClickSave[Click 'Save Current Search']
+    CS_ClickSave --> CS_NameSearch[Enter search name & Confirm]
+    CS_NameSearch --> CS_SearchSaved[Search criteria saved]
+    CS_SearchSaved --> CS_Later[Later...]
+    CS_Later --> CS_GoToSettings[/settings]
+    CS_GoToSettings --> CS_ViewSavedSearches[View 'My Saved Candidate Searches']
+    CS_ViewSavedSearches --> CS_SelectSaved{Choose a saved search}
+    CS_SelectSaved -- Apply --> CS_RedirectToSearch[Redirect to /employer/find-candidates with filters applied]
+    CS_SelectSaved -- Delete --> CS_ConfirmDelete[Confirm Delete]
+    CS_ConfirmDelete -- Yes --> CS_SearchDeleted[Search deleted]
+    CS_SearchDeleted --> CS_GoToSettings
+    CS_ConfirmDelete -- No --> CS_ViewSavedSearches
+    CS_SaveOpt -- No --> CS_End[Continue browsing or new search]
+```
+
 ## 4. Page Routes
 
 | Route                                | Description                                                                                                                                                                       | Access Level             |
@@ -161,19 +191,19 @@ graph TD
 | `/employer/register`                 | Employer and new company registration page.                                                                                                                                       | Public                   |
 | `/employer/login`                    | Employer login page. If company is 'deleted', feature access restricted post-auth.                                                                                                | Public                   |
 | `/profile`                           | Manage recruiter profile; if Company Admin, also manage Company Profile. Company profile editing restricted if company 'suspended'/'deleted'. Profile save requires confirmation. | Employer                 |
-| `/employer/profile/preview`          | (New) Company Admins can preview their public company profile.                                                                                                                    | Employer (Company Admin) |
+| `/employer/profile/preview`          | Company Admins can preview their public company profile.                                                                                                                          | Employer (Company Admin) |
 | `/employer/post-job`                 | Form to create/edit job. Disabled if company 'suspended'/'deleted'. Submitting/updating requires confirmation.                                                                    | Employer                 |
 | `/employer/posted-jobs`              | Dashboard of posted jobs. Actions restricted if company 'suspended'/'deleted' or job 'suspended'.                                                                                 | Employer                 |
 | `/employer/jobs/[jobId]/applicants`  | View/manage applicants. Disabled if company 'suspended'/'deleted' or job 'suspended'. Status updates require confirmation.                                                        | Employer                 |
-| `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'.                                                                                                              | Employer                 |
+| `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'. Can save search criteria.                                                                                    | Employer                 |
 | `/employer/candidates/[candidateId]` | View candidate profile.                                                                                                                                                           | Employer                 |
 | `/employer/ai-candidate-match`       | AI candidate matcher. Disabled if company 'suspended'/'deleted'.                                                                                                                  | Employer                 |
-| `/settings`                          | Manage settings. Most disabled if company 'suspended'/'deleted', except theme.                                                                                                    | Employer                 |
+| `/settings`                          | Manage settings (theme, saved candidate searches). Most disabled if company 'suspended'/'deleted', except theme. Deleting saved search needs confirm.                             | Employer                 |
 | `/auth/change-password`              | Page to change password. (Accessible if company suspended/deleted). Password change requires confirmation.                                                                        | Employer                 |
 
 ## 5. Key "API" Interactions (Data Flows with Genkit & Firebase)
 
-Employers use Genkit flows for AI-assisted tasks and interact with Firebase Firestore for data storage and management. Critical write operations (job posts, applicant status, profile updates) are now preceded by confirmation modals.
+Employers use Genkit flows for AI-assisted tasks and interact with Firebase Firestore for data storage and management. Critical write operations (job posts, applicant status, profile updates, saving/deleting searches) are preceded by confirmation modals.
 
 - **Job Description Parsing (`parseJobDescriptionFlow`):** (As before)
 - **AI-Powered Candidate Matching (`aiPoweredCandidateMatching`):** (As before, but UI access restricted if company suspended/deleted)
@@ -181,6 +211,20 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
   - **Company Profile**: Updated in `companies` collection. Admin approval required for new/significant changes. Saving requires confirmation. Editing restricted if company status is 'suspended' or 'deleted'.
   - **Job Postings**: Created/updated in `jobs` collection. Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended' or 'deleted' or if job itself is admin-suspended.
   - **Application Management**: Employers update `status` and `employerNotes` in `application` documents. Status updates require confirmation. Management restricted if company/job is suspended/deleted.
+- **Saving a Candidate Search:**
+  - **Action**: User clicks "Save Current Search" in candidate filter sidebar, names the search, confirms.
+  - **Input Data**: Search name (string), current `CandidateFilters` object.
+  - **Interaction**: Calls `saveCandidateSearch` in `AuthContext`.
+    - Creates a `SavedCandidateSearch` object (with unique ID, name, filters, `createdAt` timestamp).
+    - Updates the `users` document in Firestore by adding the new `SavedCandidateSearch` object to the `savedCandidateSearches` array (using `arrayUnion`).
+  - **Effect**: Search criteria saved to employer's user profile.
+- **Deleting a Saved Candidate Search:**
+  - **Action**: User clicks "Delete" on a saved candidate search in settings, confirms.
+  - **Input Data**: `searchId` (string).
+  - **Interaction**: Calls `deleteCandidateSearch` in `AuthContext`.
+    - Finds the `SavedCandidateSearch` object by `searchId` in the user's local state.
+    - Updates the `users` document in Firestore by removing the `SavedCandidateSearch` object from the `savedCandidateSearches` array (using `arrayRemove`).
+  - **Effect**: Saved search removed from employer's user profile.
 
 ## 6. Future Updates (Potential Enhancements)
 
@@ -194,6 +238,7 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **Interview Scheduling Integration**: Connect with calendar tools to streamline interview scheduling.
 - **Team Management**: For Company Admins to invite and manage recruiter accounts (currently admin task).
 - **Clearer guidance for recruiters** whose company account is suspended or deleted.
+- **Enhanced candidate search analytics**: Insights on search effectiveness.
 
 ---
 

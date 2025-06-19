@@ -14,7 +14,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { Filters } from '@/types';
+import type { Filters, CandidateFilters } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -46,7 +46,8 @@ const defaultModalState: ModalState = {
 };
 
 export default function SettingsPage() {
-  const { user, loading, deleteSearch } = useAuth();
+  const { user, loading, deleteSearch, deleteCandidateSearch, company } =
+    useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -96,48 +97,48 @@ export default function SettingsPage() {
     }
   };
 
-  const performDeleteSearch = async (searchId: string) => {
+  const performDeleteJobSearch = async (searchId: string) => {
     if (!user || user.role !== 'jobSeeker') return;
     try {
       await deleteSearch(searchId);
       toast({
-        title: 'Search Deleted',
-        description: 'The saved search has been removed.',
+        title: 'Job Search Deleted',
+        description: 'The saved job search has been removed.',
       });
     } catch (error: unknown) {
       toast({
         title: 'Error',
-        description: 'Could not delete the search. Please try again.',
+        description: 'Could not delete the job search. Please try again.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleDeleteSearch = (searchId: string, searchName: string) => {
+  const handleDeleteJobSearch = (searchId: string, searchName: string) => {
     if (user?.status === 'suspended') {
       toast({
         title: 'Account Suspended',
         description:
-          'You cannot delete saved searches while your account is suspended.',
+          'You cannot delete saved job searches while your account is suspended.',
         variant: 'destructive',
       });
       return;
     }
     showConfirmationModal(
-      `Delete Saved Search "${searchName}"?`,
-      'Are you sure you want to delete this saved search? This action cannot be undone.',
-      () => performDeleteSearch(searchId),
-      'Delete Search',
+      `Delete Saved Job Search "${searchName}"?`,
+      'Are you sure you want to delete this saved job search? This action cannot be undone.',
+      () => performDeleteJobSearch(searchId),
+      'Delete Job Search',
       'destructive'
     );
   };
 
-  const handleApplySavedSearch = (filters: Filters) => {
+  const handleApplySavedJobSearch = (filters: Filters) => {
     if (user?.status === 'suspended') {
       toast({
         title: 'Account Suspended',
         description:
-          'You cannot apply saved searches while your account is suspended.',
+          'You cannot apply saved job searches while your account is suspended.',
         variant: 'destructive',
       });
       return;
@@ -151,6 +152,74 @@ export default function SettingsPage() {
     if (filters.recentActivity && filters.recentActivity !== 'any')
       queryParams.set('activity', filters.recentActivity);
     router.push(`/jobs?${queryParams.toString()}`);
+  };
+
+  const performDeleteCandidateSearch = async (searchId: string) => {
+    if (!user || user.role !== 'employer') return;
+    try {
+      await deleteCandidateSearch(searchId);
+      toast({
+        title: 'Candidate Search Deleted',
+        description: 'The saved candidate search has been removed.',
+      });
+    } catch (error: unknown) {
+      toast({
+        title: 'Error',
+        description: 'Could not delete the candidate search. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteCandidateSearch = (
+    searchId: string,
+    searchName: string
+  ) => {
+    if (company?.status === 'suspended' || company?.status === 'deleted') {
+      toast({
+        title: 'Company Account Restricted',
+        description:
+          'You cannot delete saved candidate searches while your company account is restricted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    showConfirmationModal(
+      `Delete Saved Candidate Search "${searchName}"?`,
+      'Are you sure you want to delete this saved candidate search? This action cannot be undone.',
+      () => performDeleteCandidateSearch(searchId),
+      'Delete Candidate Search',
+      'destructive'
+    );
+  };
+
+  const handleApplySavedCandidateSearch = (filters: CandidateFilters) => {
+    if (company?.status === 'suspended' || company?.status === 'deleted') {
+      toast({
+        title: 'Company Account Restricted',
+        description:
+          'You cannot apply saved candidate searches while your company account is restricted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const queryParams = new URLSearchParams();
+    if (filters.searchTerm) queryParams.set('q', filters.searchTerm);
+    if (filters.location) queryParams.set('loc', filters.location);
+    if (filters.availability && filters.availability !== 'all')
+      queryParams.set('avail', filters.availability);
+    if (filters.jobSearchStatus && filters.jobSearchStatus !== 'all')
+      queryParams.set('status', filters.jobSearchStatus);
+    if (filters.desiredSalaryMin !== undefined)
+      queryParams.set('minSal', filters.desiredSalaryMin.toString());
+    if (filters.desiredSalaryMax !== undefined)
+      queryParams.set('maxSal', filters.desiredSalaryMax.toString());
+    if (filters.recentActivity && filters.recentActivity !== 'any')
+      queryParams.set('activity', filters.recentActivity);
+    if (filters.minExperienceYears !== undefined)
+      queryParams.set('minExp', filters.minExperienceYears.toString());
+
+    router.push(`/employer/find-candidates?${queryParams.toString()}`);
   };
 
   if (loading || !user) {
@@ -179,7 +248,7 @@ export default function SettingsPage() {
           <Card className="w-full shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl font-headline">
-                My Saved Searches
+                My Saved Job Searches
               </CardTitle>
               <CardDescription>
                 Manage your saved job searches. Click a search to re-apply its
@@ -196,7 +265,9 @@ export default function SettingsPage() {
                     >
                       <div>
                         <button
-                          onClick={() => handleApplySavedSearch(search.filters)}
+                          onClick={() =>
+                            handleApplySavedJobSearch(search.filters)
+                          }
                           className="font-medium text-primary hover:underline text-left"
                           title="Apply this search"
                           disabled={user.status === 'suspended'}
@@ -223,10 +294,10 @@ export default function SettingsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() =>
-                          handleDeleteSearch(search.id, search.name)
+                          handleDeleteJobSearch(search.id, search.name)
                         }
                         className="text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
-                        aria-label={`Delete saved search ${search.name}`}
+                        aria-label={`Delete saved job search ${search.name}`}
                         disabled={user.status === 'suspended'}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -236,8 +307,8 @@ export default function SettingsPage() {
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  You have no saved searches yet. You can save a search from the
-                  jobs page filter sidebar.
+                  You have no saved job searches yet. You can save a search from
+                  the jobs page filter sidebar.
                 </p>
               )}
             </CardContent>
@@ -251,6 +322,98 @@ export default function SettingsPage() {
           </Card>
         </>
       )}
+
+      {user.role === 'employer' && (
+        <>
+          <Separator />
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline">
+                My Saved Candidate Searches
+              </CardTitle>
+              <CardDescription>
+                Manage your saved candidate searches. Click a search to re-apply
+                its filters.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {user.savedCandidateSearches &&
+              user.savedCandidateSearches.length > 0 ? (
+                <ul className="space-y-3">
+                  {user.savedCandidateSearches.map((search) => (
+                    <li
+                      key={search.id}
+                      className="flex items-center justify-between p-3 border rounded-md bg-muted/20 hover:bg-muted/30 transition-colors group"
+                    >
+                      <div>
+                        <button
+                          onClick={() =>
+                            handleApplySavedCandidateSearch(search.filters)
+                          }
+                          className="font-medium text-primary hover:underline text-left"
+                          title="Apply this candidate search"
+                          disabled={
+                            company?.status === 'suspended' ||
+                            company?.status === 'deleted'
+                          }
+                        >
+                          {search.name}
+                        </button>
+                        <p className="text-xs text-muted-foreground">
+                          Keywords: {search.filters.searchTerm || 'Any'} |
+                          Location: {search.filters.location || 'Any'} |
+                          Availability:{' '}
+                          {search.filters.availability === 'all'
+                            ? 'Any'
+                            : search.filters.availability}{' '}
+                          | Min Exp:{' '}
+                          {search.filters.minExperienceYears ?? 'Any'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Saved:{' '}
+                          {new Date(
+                            search.createdAt as string
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          handleDeleteCandidateSearch(search.id, search.name)
+                        }
+                        className="text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Delete saved candidate search ${search.name}`}
+                        disabled={
+                          company?.status === 'suspended' ||
+                          company?.status === 'deleted'
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  You have no saved candidate searches yet. You can save a
+                  search from the find candidates page filter sidebar.
+                </p>
+              )}
+            </CardContent>
+            {user.savedCandidateSearches &&
+              user.savedCandidateSearches.length > 0 && (
+                <CardFooter>
+                  <p className="text-xs text-muted-foreground">
+                    Click on a search name to apply it to the find candidates
+                    page.
+                  </p>
+                </CardFooter>
+              )}
+          </Card>
+        </>
+      )}
+
       <AlertDialog
         open={modalState.isOpen}
         onOpenChange={(open) => {

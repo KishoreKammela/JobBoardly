@@ -22,8 +22,6 @@ import {
   Eye,
   AlertTriangle,
   Ban,
-  Bookmark,
-  BarChart3, // For Platform Analytics
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';

@@ -45,6 +45,13 @@ export interface SavedSearch {
   createdAt: Timestamp | Date | string;
 }
 
+export interface SavedCandidateSearch {
+  id: string;
+  name: string;
+  filters: CandidateFilters;
+  createdAt: Timestamp | Date | string;
+}
+
 export interface LanguageEntry {
   id: string;
   languageName: string;
@@ -206,7 +213,9 @@ export interface UserProfile {
 
   appliedJobIds?: string[];
   savedJobIds?: string[];
-  savedSearches?: SavedSearch[]; // Added for saved searches
+  savedSearches?: SavedSearch[];
+
+  savedCandidateSearches?: SavedCandidateSearch[]; // Added for employers
 
   companyId?: string;
   isCompanyAdmin?: boolean;

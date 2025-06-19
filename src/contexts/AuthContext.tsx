@@ -11,6 +11,8 @@ import type {
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
+  CandidateFilters,
+  SavedCandidateSearch,
 } from '@/types';
 import React, {
   createContext,
@@ -78,6 +80,11 @@ interface AuthContextType {
   ) => Promise<FirebaseUser>;
   saveSearch: (searchName: string, filters: Filters) => Promise<void>;
   deleteSearch: (searchId: string) => Promise<void>;
+  saveCandidateSearch: (
+    searchName: string,
+    filters: CandidateFilters
+  ) => Promise<void>;
+  deleteCandidateSearch: (searchId: string) => Promise<void>;
   updateApplicationStatus: (
     applicationId: string,
     newStatus: ApplicationStatus,
@@ -266,13 +273,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               savedSearches: (rawData.savedSearches || []).map(
                 (s: Partial<SavedSearch>) => ({
                   ...s,
-                  id: s.id || uuidv4(), // Ensure ID for older saved searches
+                  id: s.id || uuidv4(),
                   createdAt:
                     s.createdAt instanceof Timestamp
                       ? s.createdAt.toDate().toISOString()
-                      : s.createdAt || new Date().toISOString(), // Fallback for older entries
+                      : s.createdAt || new Date().toISOString(),
                 })
               ),
+              savedCandidateSearches: (
+                rawData.savedCandidateSearches || []
+              ).map((s: Partial<SavedCandidateSearch>) => ({
+                ...s,
+                id: s.id || uuidv4(),
+                createdAt:
+                  s.createdAt instanceof Timestamp
+                    ? s.createdAt.toDate().toISOString()
+                    : s.createdAt || new Date().toISOString(),
+              })),
               experiences:
                 experiences.length > 0
                   ? experiences
@@ -433,6 +450,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (role === 'employer') {
       userProfileData.companyId = userCompanyId;
       userProfileData.isCompanyAdmin = userIsCompanyAdmin;
+      userProfileData.savedCandidateSearches = [];
     } else if (role === 'jobSeeker') {
       userProfileData.appliedJobIds = [];
       userProfileData.savedJobIds = [];
@@ -545,6 +563,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }));
     }
 
+    if (role === 'employer') {
+      finalProfileDataForFirestore.savedCandidateSearches =
+        finalProfileDataForFirestore.savedCandidateSearches || [];
+    }
+
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
       const fullProfile = {
@@ -557,6 +580,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         experiences: finalProfileDataForFirestore.experiences || [],
         educations: finalProfileDataForFirestore.educations || [],
         languages: finalProfileDataForFirestore.languages || [],
+        savedCandidateSearches:
+          finalProfileDataForFirestore.savedCandidateSearches || [],
         totalYearsExperience:
           finalProfileDataForFirestore.totalYearsExperience === null
             ? undefined
@@ -716,6 +741,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   : s.createdAt || new Date().toISOString(),
             })
           ),
+          savedCandidateSearches: (rawData.savedCandidateSearches || []).map(
+            (s: Partial<SavedCandidateSearch>) => ({
+              ...s,
+              id: s.id || uuidv4(),
+              createdAt:
+                s.createdAt instanceof Timestamp
+                  ? s.createdAt.toDate().toISOString()
+                  : s.createdAt || new Date().toISOString(),
+            })
+          ),
           experiences: (rawData.experiences || []).map(
             (exp: Partial<ExperienceEntry>) => ({
               id: exp.id || uuidv4(),
@@ -804,6 +839,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (role === 'jobSeeker' && !existingProfile.savedSearches) {
           updates.savedSearches = [];
+          updatesNeeded = true;
+        }
+        if (role === 'employer' && !existingProfile.savedCandidateSearches) {
+          updates.savedCandidateSearches = [];
           updatesNeeded = true;
         }
         if (role === 'jobSeeker' && existingProfile.experiences === undefined) {
@@ -1306,19 +1345,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: uuidv4(),
       name: searchName,
       filters,
-      createdAt: new Date(), // Use client-side Date object
+      createdAt: new Date(), // Use client-generated Date
     };
 
     try {
-      // Pass the newSearchObject directly to arrayUnion.
-      // Firestore will convert newSearchObject.createdAt (Date) to a Timestamp.
       await updateDoc(userDocRef, {
         savedSearches: arrayUnion(newSearchObject),
         updatedAt: serverTimestamp(),
         lastActive: serverTimestamp(),
       });
-
-      // For local state, convert createdAt to ISO string
       setUser((prevUser) => {
         const updatedLocalSearches = [
           ...(prevUser?.savedSearches || []),
@@ -1365,7 +1400,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
 
     if (searchToDelete) {
-      // Prepare searchToDelete with Firestore Timestamp for arrayRemove if it's a Date string
       const searchToDeleteForFirestore = {
         ...searchToDelete,
         createdAt: Timestamp.fromDate(
@@ -1394,6 +1428,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const saveCandidateSearch = async (
+    searchName: string,
+    filters: CandidateFilters
+  ) => {
+    if (!user || !user.uid || user.role !== 'employer') {
+      toast({
+        title: 'Action Denied',
+        description: 'Only employers can save candidate searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (company?.status === 'suspended' || company?.status === 'deleted') {
+      toast({
+        title: 'Company Account Restricted',
+        description:
+          'Cannot save searches as your company account is currently restricted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const userDocRef = doc(db, 'users', user.uid);
+    const newSearchObject: SavedCandidateSearch = {
+      id: uuidv4(),
+      name: searchName,
+      filters,
+      createdAt: new Date(), // Use client-generated Date
+    };
+
+    try {
+      await updateDoc(userDocRef, {
+        savedCandidateSearches: arrayUnion(newSearchObject),
+        updatedAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
+      });
+      setUser((prevUser) => {
+        const updatedLocalSearches = [
+          ...(prevUser?.savedCandidateSearches || []),
+          {
+            ...newSearchObject,
+            createdAt: (newSearchObject.createdAt as Date).toISOString(),
+          },
+        ];
+        return {
+          ...prevUser,
+          savedCandidateSearches: updatedLocalSearches,
+        } as UserProfile;
+      });
+    } catch (error: unknown) {
+      console.error('AuthContext: saveCandidateSearch error', error);
+      throw error;
+    }
+  };
+
+  const deleteCandidateSearch = async (searchId: string) => {
+    if (
+      !user ||
+      !user.uid ||
+      user.role !== 'employer' ||
+      !user.savedCandidateSearches
+    ) {
+      toast({
+        title: 'Action Denied',
+        description:
+          'Only employers can delete their saved candidate searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (company?.status === 'suspended' || company?.status === 'deleted') {
+      toast({
+        title: 'Company Account Restricted',
+        description:
+          'Cannot delete searches as your company account is currently restricted.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const userDocRef = doc(db, 'users', user.uid);
+    const searchToDelete = user.savedCandidateSearches.find(
+      (s) => s.id === searchId
+    );
+
+    if (searchToDelete) {
+      const searchToDeleteForFirestore = {
+        ...searchToDelete,
+        createdAt: Timestamp.fromDate(
+          new Date(searchToDelete.createdAt as string)
+        ),
+      };
+      try {
+        await updateDoc(userDocRef, {
+          savedCandidateSearches: arrayRemove(searchToDeleteForFirestore),
+          updatedAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
+        });
+        setUser(
+          (prevUser) =>
+            ({
+              ...prevUser,
+              savedCandidateSearches: (
+                prevUser?.savedCandidateSearches || []
+              ).filter((s) => s.id !== searchId),
+            }) as UserProfile
+        );
+      } catch (error: unknown) {
+        console.error('AuthContext: deleteCandidateSearch error', error);
+        throw error;
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -1414,6 +1560,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithSocial,
         saveSearch,
         deleteSearch,
+        saveCandidateSearch,
+        deleteCandidateSearch,
         updateApplicationStatus,
         changeUserPassword,
       }}
