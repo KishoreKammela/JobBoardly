@@ -23,7 +23,12 @@ import {
 } from '@/ai/flows/parse-job-description-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import type { UserProfile } from '@/types';
+import type {
+  UserProfile,
+  ExperienceEntry,
+  EducationEntry,
+  LanguageEntry,
+} from '@/types';
 import { CandidateCard } from '@/components/employer/CandidateCard';
 import { db } from '@/lib/firebase';
 import {
@@ -37,6 +42,41 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { useRouter, usePathname } from 'next/navigation';
 import { formatCurrencyINR } from '@/lib/utils';
+
+const formatExperiencesForAICandidate = (
+  experiences?: ExperienceEntry[]
+): string => {
+  if (!experiences || experiences.length === 0)
+    return 'No work experience listed.';
+  return experiences
+    .map(
+      (exp) =>
+        `Company: ${exp.companyName}, Role: ${exp.jobRole}, Duration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}${exp.annualCTC ? `, CTC: ${formatCurrencyINR(exp.annualCTC)}` : ''}. Description: ${exp.description || 'N/A'}`
+    )
+    .join('; ');
+};
+
+const formatEducationsForAICandidate = (
+  educations?: EducationEntry[]
+): string => {
+  if (!educations || educations.length === 0) return 'No education listed.';
+  return educations
+    .map(
+      (edu) =>
+        `Level: ${edu.level}, Degree: ${edu.degreeName}, Institute: ${edu.instituteName}, Batch: ${edu.startYear || 'N/A'}-${edu.endYear || 'N/A'}, Specialization: ${edu.specialization || 'N/A'}, Course: ${edu.courseType || 'N/A'}. Description: ${edu.description || 'N/A'}`
+    )
+    .join('; ');
+};
+
+const formatLanguagesForAICandidate = (languages?: LanguageEntry[]): string => {
+  if (!languages || languages.length === 0) return 'No languages listed.';
+  return languages
+    .map(
+      (lang) =>
+        `${lang.languageName} (Proficiency: ${lang.proficiency}, Read: ${lang.canRead ? 'Y' : 'N'}, Write: ${lang.canWrite ? 'Y' : 'N'}, Speak: ${lang.canSpeak ? 'Y' : 'N'})`
+    )
+    .join(', ');
+};
 
 export default function AiCandidateMatchPage() {
   const { user, loading: authLoading } = useAuth();
@@ -123,19 +163,29 @@ export default function AiCandidateMatchPage() {
         profileString += `Name: ${c.name || 'N/A'}\n`;
         if (c.email) profileString += `Email: ${c.email}\n`;
         if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`;
-        if (c.headline) profileString += `Headline: ${c.headline}\n`;
+        if (c.headline) profileText += `Headline: ${c.headline}\n`;
+        if (c.gender) profileText += `Gender: ${c.gender}\n`;
+        if (c.dateOfBirth) profileText += `Date of Birth: ${c.dateOfBirth}\n`;
+        if (c.homeState) profileText += `Home State: ${c.homeState}\n`;
+        if (c.homeCity) profileText += `Home City: ${c.homeCity}\n`;
+
+        if (c.currentCTCValue !== undefined) {
+          profileString += `Current CTC (INR): ${formatCurrencyINR(c.currentCTCValue)} ${c.currentCTCConfidential ? '(Confidential)' : ''}\n`;
+        }
+        if (c.expectedCTCValue !== undefined) {
+          profileString += `Expected CTC (INR): ${formatCurrencyINR(c.expectedCTCValue)} ${c.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
+        }
+
         if (c.skills && c.skills.length > 0) {
           profileString += `Skills: ${c.skills.join(', ')}\n`;
         }
         if (c.languages && c.languages.length > 0) {
-          profileString += `Languages: ${c.languages.map((l) => `${l.language}${l.proficiency ? ` (${l.proficiency})` : ''}`).join(', ')}\n`;
+          profileString += `Languages: ${formatLanguagesForAICandidate(c.languages)}\n`;
         }
-        if (c.experience) {
-          profileString += `Work Experience Summary:\n${c.experience}\n`;
-        }
-        if (c.education) {
-          profileString += `Education Summary:\n${c.education}\n`;
-        }
+
+        profileString += `Work Experience Summary:\n${formatExperiencesForAICandidate(c.experiences)}\n`;
+        profileString += `Education Summary:\n${formatEducationsForAICandidate(c.educations)}\n`;
+
         if (c.portfolioUrl) profileString += `Portfolio: ${c.portfolioUrl}\n`;
         if (c.linkedinUrl) profileString += `LinkedIn: ${c.linkedinUrl}\n`;
         if (c.preferredLocations && c.preferredLocations.length > 0) {
@@ -145,9 +195,7 @@ export default function AiCandidateMatchPage() {
           profileString += `Current Job Search Status: ${c.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
         if (c.availability)
           profileString += `Availability to Start: ${c.availability}\n`;
-        if (c.desiredSalary) {
-          profileString += `Desired Annual Salary (INR): ${formatCurrencyINR(c.desiredSalary)} (raw: ${c.desiredSalary})\n`;
-        }
+
         if (c.parsedResumeText) {
           profileString += `\n--- Additional Resume Summary (from parsed document) ---\n${c.parsedResumeText}\n`;
         }

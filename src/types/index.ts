@@ -46,11 +46,40 @@ export interface SavedSearch {
 
 export interface LanguageEntry {
   id: string;
-  language: string;
-  proficiency?: string; // e.g., "Native", "Fluent", "Conversational", "Basic"
-  canSpeak?: boolean;
-  canWrite?: boolean;
-  canRead?: boolean;
+  languageName: string;
+  proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Native';
+  canRead: boolean;
+  canWrite: boolean;
+  canSpeak: boolean;
+}
+
+export interface ExperienceEntry {
+  id: string;
+  companyName: string;
+  jobRole: string;
+  startDate?: string; // YYYY-MM
+  endDate?: string; // YYYY-MM
+  currentlyWorking: boolean;
+  description?: string;
+  annualCTC?: number;
+}
+
+export interface EducationEntry {
+  id: string;
+  level:
+    | 'Post Graduate'
+    | 'Graduate'
+    | 'Schooling (XII)'
+    | 'Schooling (X)'
+    | 'Certification / Other';
+  degreeName: string;
+  instituteName: string;
+  startYear?: number;
+  endYear?: number;
+  specialization?: string;
+  courseType?: 'Full Time' | 'Part Time' | 'Distance Learning';
+  isMostRelevant?: boolean;
+  description?: string;
 }
 
 export interface Company {
@@ -144,29 +173,49 @@ export interface UserProfile {
     savedSearchAlerts: boolean;
     applicationStatusUpdates: boolean;
   };
+
+  // Job Seeker Specific Fields
   headline?: string;
-  skills?: string[];
-  experience?: string;
-  education?: string;
-  languages?: LanguageEntry[];
+  skills?: string[]; // General skills summary, can be auto-populated
+  parsedResumeText?: string; // Summary from resume parsing
+
+  // New Detailed Fields for Job Seeker
+  gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
+  dateOfBirth?: string; // YYYY-MM-DD
+  currentCTCValue?: number;
+  currentCTCConfidential?: boolean;
+  expectedCTCValue?: number;
+  expectedCTCNegotiable?: boolean;
+  homeState?: string;
+  homeCity?: string;
+
+  experiences?: ExperienceEntry[];
+  educations?: EducationEntry[];
+  languages?: LanguageEntry[]; // Changed from string[]
+
   mobileNumber?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
-  desiredSalary?: number;
+  desiredSalary?: number; // This is now expectedCTCValue for consistency
   isProfileSearchable?: boolean;
   resumeUrl?: string;
   resumeFileName?: string;
-  parsedResumeText?: string;
+
+  // User Activity
   appliedJobIds?: string[];
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
+
+  // Employer Specific Fields
   companyId?: string;
   isCompanyAdmin?: boolean;
-  jobsAppliedCount?: number;
-  lastActive?: Timestamp | Date | string;
+
+  // Admin/System Usage
+  jobsAppliedCount?: number; // Potentially for admin view
+  lastActive?: Timestamp | Date | string; // For admin view
 }
 
 export interface ParsedResumeData {
@@ -174,8 +223,10 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string;
-  education?: string;
+  // Experience and Education from resume are now primarily parsed into structured data
+  // but a raw text summary can still be useful.
+  experienceSummary?: string; // Raw text summary of experience
+  educationSummary?: string; // Raw text summary of education
   portfolioUrl?: string;
   linkedinUrl?: string;
 }

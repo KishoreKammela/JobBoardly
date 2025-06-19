@@ -20,7 +20,12 @@ import {
 } from '@/ai/flows/ai-powered-job-matching';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Job } from '@/types';
+import type {
+  Job,
+  ExperienceEntry,
+  EducationEntry,
+  LanguageEntry,
+} from '@/types';
 import { JobCard } from '@/components/JobCard';
 import { db } from '@/lib/firebase';
 import {
@@ -33,6 +38,37 @@ import {
 } from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrencyINR } from '@/lib/utils';
+
+const formatExperiencesForAI = (experiences?: ExperienceEntry[]): string => {
+  if (!experiences || experiences.length === 0)
+    return 'No work experience listed.';
+  return experiences
+    .map(
+      (exp) =>
+        `Company: ${exp.companyName}\nRole: ${exp.jobRole}\nDuration: ${exp.startDate || 'N/A'} to ${exp.currentlyWorking ? 'Present' : exp.endDate || 'N/A'}\n${exp.annualCTC ? `CTC: ${formatCurrencyINR(exp.annualCTC)}\n` : ''}Description: ${exp.description || 'N/A'}`
+    )
+    .join('\n\n');
+};
+
+const formatEducationsForAI = (educations?: EducationEntry[]): string => {
+  if (!educations || educations.length === 0) return 'No education listed.';
+  return educations
+    .map(
+      (edu) =>
+        `Level: ${edu.level}\nDegree: ${edu.degreeName}\nInstitute: ${edu.instituteName}\nBatch: ${edu.startYear || 'N/A'} - ${edu.endYear || 'N/A'}\nSpecialization: ${edu.specialization || 'N/A'}\nCourse Type: ${edu.courseType || 'N/A'}\nDescription: ${edu.description || 'N/A'}`
+    )
+    .join('\n\n');
+};
+
+const formatLanguagesForAI = (languages?: LanguageEntry[]): string => {
+  if (!languages || languages.length === 0) return 'No languages listed.';
+  return languages
+    .map(
+      (lang) =>
+        `${lang.languageName} (Proficiency: ${lang.proficiency}, Read: ${lang.canRead ? 'Yes' : 'No'}, Write: ${lang.canWrite ? 'Yes' : 'No'}, Speak: ${lang.canSpeak ? 'Yes' : 'No'})`
+    )
+    .join(', ');
+};
 
 export function AiJobMatcher() {
   const { user } = useAuth();
@@ -55,19 +91,29 @@ export function AiJobMatcher() {
       profileText += `Email: ${user.email || 'N/A'}\n`;
       if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`;
       if (user.headline) profileText += `Headline: ${user.headline}\n`;
+      if (user.gender) profileText += `Gender: ${user.gender}\n`;
+      if (user.dateOfBirth)
+        profileText += `Date of Birth: ${user.dateOfBirth}\n`;
+      if (user.homeState) profileText += `Home State: ${user.homeState}\n`;
+      if (user.homeCity) profileText += `Home City: ${user.homeCity}\n`;
+
+      if (user.currentCTCValue !== undefined) {
+        profileText += `Current CTC (INR): ${formatCurrencyINR(user.currentCTCValue)} ${user.currentCTCConfidential ? '(Confidential)' : ''}\n`;
+      }
+      if (user.expectedCTCValue !== undefined) {
+        profileText += `Expected CTC (INR): ${formatCurrencyINR(user.expectedCTCValue)} ${user.expectedCTCNegotiable ? '(Negotiable)' : ''}\n`;
+      }
 
       if (user.skills && user.skills.length > 0) {
         profileText += `Skills: ${user.skills.join(', ')}\n`;
       }
       if (user.languages && user.languages.length > 0) {
-        profileText += `Languages: ${user.languages.map((l) => `${l.language}${l.proficiency ? ` (${l.proficiency})` : ''}`).join(', ')}\n`;
+        profileText += `Languages: ${formatLanguagesForAI(user.languages)}\n`;
       }
-      if (user.experience) {
-        profileText += `Work Experience Summary:\n${user.experience}\n`;
-      }
-      if (user.education) {
-        profileText += `Education Summary:\n${user.education}\n`;
-      }
+
+      profileText += `\n--- Work Experience ---\n${formatExperiencesForAI(user.experiences)}\n`;
+      profileText += `\n--- Education ---\n${formatEducationsForAI(user.educations)}\n`;
+
       if (user.portfolioUrl) profileText += `Portfolio: ${user.portfolioUrl}\n`;
       if (user.linkedinUrl) profileText += `LinkedIn: ${user.linkedinUrl}\n`;
 
@@ -78,9 +124,6 @@ export function AiJobMatcher() {
         profileText += `Current Job Search Status: ${user.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
       if (user.availability)
         profileText += `Availability to Start: ${user.availability}\n`;
-      if (user.desiredSalary) {
-        profileText += `Desired Annual Salary (INR): ${formatCurrencyINR(user.desiredSalary)} (raw: ${user.desiredSalary})\n`;
-      }
 
       if (user.parsedResumeText) {
         profileText += `\n--- Additional Resume Summary (from parsed document) ---\n${user.parsedResumeText}`;

@@ -1,6 +1,12 @@
 'use client';
 import { useState, useEffect, type FormEvent } from 'react';
-import type { UserProfile, Company, LanguageEntry } from '@/types';
+import type {
+  UserProfile,
+  Company,
+  LanguageEntry,
+  ExperienceEntry,
+  EducationEntry,
+} from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +17,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Select,
@@ -20,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -31,7 +39,11 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  Languages,
+  Languages as LanguagesIcon, // Renamed to avoid conflict
+  PlusCircle,
+  Trash2,
+  Briefcase,
+  GraduationCap,
 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -40,6 +52,40 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINR } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+
+// Helper function to create an empty experience entry
+const createEmptyExperience = (): ExperienceEntry => ({
+  id: uuidv4(),
+  companyName: '',
+  jobRole: '',
+  startDate: '',
+  endDate: '',
+  currentlyWorking: false,
+  description: '',
+});
+
+// Helper function to create an empty education entry
+const createEmptyEducation = (): EducationEntry => ({
+  id: uuidv4(),
+  level: 'Graduate',
+  degreeName: '',
+  instituteName: '',
+  startYear: undefined,
+  endYear: undefined,
+  courseType: 'Full Time',
+  isMostRelevant: false,
+  description: '',
+});
+
+// Helper function to create an empty language entry
+const createEmptyLanguage = (): LanguageEntry => ({
+  id: uuidv4(),
+  languageName: '',
+  proficiency: 'Beginner',
+  canRead: false,
+  canWrite: false,
+  canSpeak: false,
+});
 
 export function UserProfileForm() {
   const {
@@ -56,8 +102,8 @@ export function UserProfileForm() {
     avatarUrl: '',
     headline: '',
     skills: [],
-    experience: '',
-    education: '',
+    experiences: [],
+    educations: [],
     languages: [],
     mobileNumber: '',
     availability: 'Flexible',
@@ -65,8 +111,15 @@ export function UserProfileForm() {
     linkedinUrl: '',
     preferredLocations: [],
     jobSearchStatus: 'activelyLooking',
-    desiredSalary: undefined,
     isProfileSearchable: true,
+    gender: 'Prefer not to say',
+    dateOfBirth: '',
+    currentCTCValue: undefined,
+    currentCTCConfidential: false,
+    expectedCTCValue: undefined,
+    expectedCTCNegotiable: false,
+    homeState: '',
+    homeCity: '',
   };
 
   const initialCompanyFormData: Partial<Company> = {
@@ -86,7 +139,7 @@ export function UserProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
-  const [languagesInput, setLanguagesInput] = useState('');
+
   const [companyRecruiters, setCompanyRecruiters] = useState<UserProfile[]>([]);
   const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(false);
 
@@ -97,26 +150,31 @@ export function UserProfileForm() {
         avatarUrl: user.avatarUrl || '',
         headline: user.headline || '',
         skills: user.skills || [],
-        experience: user.experience || '',
-        education: user.education || '',
-        languages: user.languages || [],
+        experiences: user.experiences || [createEmptyExperience()], // Initialize with one empty if none
+        educations: user.educations || [createEmptyEducation()], // Initialize with one empty if none
+        languages: user.languages || [createEmptyLanguage()], // Initialize with one empty if none
         mobileNumber: user.mobileNumber || '',
         availability: user.availability || 'Flexible',
         portfolioUrl: user.portfolioUrl || '',
         linkedinUrl: user.linkedinUrl || '',
         preferredLocations: user.preferredLocations || [],
         jobSearchStatus: user.jobSearchStatus || 'activelyLooking',
-        desiredSalary: user.desiredSalary,
         isProfileSearchable:
           user.isProfileSearchable !== undefined
             ? user.isProfileSearchable
             : true,
+        gender: user.gender || 'Prefer not to say',
+        dateOfBirth: user.dateOfBirth || '',
+        currentCTCValue: user.currentCTCValue,
+        currentCTCConfidential: user.currentCTCConfidential || false,
+        expectedCTCValue: user.expectedCTCValue,
+        expectedCTCNegotiable: user.expectedCTCNegotiable || false,
+        homeState: user.homeState || '',
+        homeCity: user.homeCity || '',
+        parsedResumeText: user.parsedResumeText || '',
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
-      setLanguagesInput(
-        (user.languages || []).map((l) => l.language).join(', ')
-      );
 
       if (user.role === 'employer' && company) {
         setCompanyFormData({
@@ -183,7 +241,6 @@ export function UserProfileForm() {
       setCompanyFormData(initialCompanyFormData);
       setSkillsInput('');
       setLocationsInput('');
-      setLanguagesInput('');
       setCompanyRecruiters([]);
     }
   }, [user, company, toast]);
@@ -191,16 +248,28 @@ export function UserProfileForm() {
   const handleUserChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setUserFormData((prev) => ({
       ...prev,
       [name]:
-        name === 'desiredSalary'
-          ? value
+        type === 'checkbox'
+          ? checked
+          : (name === 'currentCTCValue' || name === 'expectedCTCValue') && value
             ? parseFloat(value)
-            : undefined
-          : value,
+            : value,
     }));
+  };
+
+  const handleUserSelectChange = (name: keyof UserProfile, value: string) => {
+    setUserFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUserSwitchChange = (
+    name: keyof UserProfile,
+    checked: boolean
+  ) => {
+    setUserFormData((prev) => ({ ...prev, [name]: checked }));
   };
 
   const handleCompanyChange = (
@@ -234,40 +303,60 @@ export function UserProfileForm() {
     }));
   };
 
-  const handleLanguagesInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+  // Handlers for dynamic array fields (Experience, Education, Language)
+  const handleArrayFieldChange = <T extends { id: string }>(
+    arrayName: keyof Pick<
+      UserProfile,
+      'experiences' | 'educations' | 'languages'
+    >,
+    index: number,
+    field: keyof T,
+    value: any,
+    type?: string
   ) => {
-    const val = e.target.value;
-    setLanguagesInput(val);
-    const languageNames = val
-      .split(',')
-      .map((name) => name.trim())
-      .filter((name) => name);
-
     setUserFormData((prev) => {
-      const existingLanguages = prev.languages || [];
-      const newLanguages: LanguageEntry[] = languageNames.map((name) => {
-        const existingEntry = existingLanguages.find(
-          (l) => l.language.toLowerCase() === name.toLowerCase()
-        );
-        return (
-          existingEntry || {
-            id: uuidv4(),
-            language: name,
-            proficiency: 'Conversational',
-          }
-        ); // Add default proficiency
-      });
-      return { ...prev, languages: newLanguages };
+      const newArray = [...((prev[arrayName] as T[]) || [])];
+      if (newArray[index]) {
+        newArray[index] = {
+          ...newArray[index],
+          [field]:
+            type === 'checkbox'
+              ? (value as unknown as HTMLInputElement).checked
+              : type === 'number' && value
+                ? parseFloat(value)
+                : value,
+        };
+      }
+      return { ...prev, [arrayName]: newArray };
     });
   };
 
-  const handleSelectChange = (name: keyof UserProfile, value: string) => {
-    setUserFormData((prev) => ({ ...prev, [name]: value }));
+  const addArrayItem = <T extends { id: string }>(
+    arrayName: keyof Pick<
+      UserProfile,
+      'experiences' | 'educations' | 'languages'
+    >,
+    creatorFunc: () => T
+  ) => {
+    setUserFormData((prev) => ({
+      ...prev,
+      [arrayName]: [...((prev[arrayName] as T[]) || []), creatorFunc()],
+    }));
   };
 
-  const handleSwitchChange = (name: keyof UserProfile, checked: boolean) => {
-    setUserFormData((prev) => ({ ...prev, [name]: checked }));
+  const removeArrayItem = <T extends { id: string }>(
+    arrayName: keyof Pick<
+      UserProfile,
+      'experiences' | 'educations' | 'languages'
+    >,
+    idToRemove: string
+  ) => {
+    setUserFormData((prev) => ({
+      ...prev,
+      [arrayName]: ((prev[arrayName] as T[]) || []).filter(
+        (item) => item.id !== idToRemove
+      ),
+    }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -275,26 +364,46 @@ export function UserProfileForm() {
     if (!user) return;
     setIsLoading(true);
 
+    // Filter out empty/incomplete array entries before saving
+    const finalExperiences = (userFormData.experiences || []).filter(
+      (exp) => exp.companyName && exp.jobRole
+    );
+    const finalEducations = (userFormData.educations || []).filter(
+      (edu) => edu.degreeName && edu.instituteName
+    );
+    const finalLanguages = (userFormData.languages || []).filter(
+      (lang) => lang.languageName
+    );
+
     try {
       const userUpdatePayload: Partial<UserProfile> = {
         name: userFormData.name,
         avatarUrl: userFormData.avatarUrl,
+        updatedAt: new Date().toISOString(), // Ensure updatedAt is updated
       };
       if (user.role === 'jobSeeker') {
         Object.assign(userUpdatePayload, {
           headline: userFormData.headline,
           skills: userFormData.skills,
-          experience: userFormData.experience,
-          education: userFormData.education,
-          languages: userFormData.languages,
+          experiences: finalExperiences,
+          educations: finalEducations,
+          languages: finalLanguages,
           mobileNumber: userFormData.mobileNumber,
           availability: userFormData.availability,
           portfolioUrl: userFormData.portfolioUrl,
           linkedinUrl: userFormData.linkedinUrl,
           preferredLocations: userFormData.preferredLocations,
           jobSearchStatus: userFormData.jobSearchStatus,
-          desiredSalary: userFormData.desiredSalary,
           isProfileSearchable: userFormData.isProfileSearchable,
+          gender: userFormData.gender,
+          dateOfBirth: userFormData.dateOfBirth,
+          currentCTCValue: userFormData.currentCTCValue,
+          currentCTCConfidential: userFormData.currentCTCConfidential,
+          expectedCTCValue: userFormData.expectedCTCValue,
+          expectedCTCNegotiable: userFormData.expectedCTCNegotiable,
+          homeState: userFormData.homeState,
+          homeCity: userFormData.homeCity,
+          parsedResumeText: userFormData.parsedResumeText, // Keep this from resume parsing
         });
       }
       await updateUserProfile(userUpdatePayload);
@@ -356,11 +465,11 @@ export function UserProfileForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Personal Details Card */}
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center gap-2">
-            <User />{' '}
-            {isJobSeeker ? 'Your Job Seeker Profile' : 'Your Recruiter Profile'}
+            <User /> Personal Information
           </CardTitle>
           <CardDescription>Manage your personal details.</CardDescription>
         </CardHeader>
@@ -400,7 +509,6 @@ export function UserProfileForm() {
               data-ai-hint="avatar photo"
             />
           </div>
-
           {isJobSeeker && (
             <>
               <div>
@@ -426,76 +534,711 @@ export function UserProfileForm() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="desiredSalary">
-                    Desired Salary (Annual, INR)
-                  </Label>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={userFormData.gender || 'Prefer not to say'}
+                    onValueChange={(value) =>
+                      handleUserSelectChange('gender', value)
+                    }
+                  >
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="Prefer not to say">
+                        Prefer not to say
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
                   <Input
-                    id="desiredSalary"
-                    name="desiredSalary"
-                    type="number"
-                    placeholder="e.g., 1200000 for 12 LPA"
-                    value={userFormData.desiredSalary || ''}
+                    id="dateOfBirth"
+                    name="dateOfBirth"
+                    type="date"
+                    value={userFormData.dateOfBirth || ''}
                     onChange={handleUserChange}
                   />
-                  {userFormData.desiredSalary && (
+                </div>
+                <div>
+                  <Label htmlFor="skillsInput">
+                    Key Skills (comma-separated)
+                  </Label>
+                  <Input
+                    id="skillsInput"
+                    name="skillsInput"
+                    value={skillsInput}
+                    onChange={handleSkillsChange}
+                    placeholder="e.g., React, Node.js, Project Management"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="homeState">Home State</Label>
+                  <Input
+                    id="homeState"
+                    name="homeState"
+                    value={userFormData.homeState || ''}
+                    onChange={handleUserChange}
+                    placeholder="e.g., California"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="homeCity">Home City</Label>
+                  <Input
+                    id="homeCity"
+                    name="homeCity"
+                    value={userFormData.homeCity || ''}
+                    onChange={handleUserChange}
+                    placeholder="e.g., San Francisco"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Job Seeker Specific Sections */}
+      {isJobSeeker && (
+        <>
+          {/* Professional Summary Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center gap-2">
+                Professional Summary
+              </CardTitle>
+              <CardDescription>
+                A brief overview of your career. This can be auto-filled from
+                your resume.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                id="parsedResumeText"
+                name="parsedResumeText"
+                value={userFormData.parsedResumeText || ''}
+                onChange={handleUserChange}
+                rows={6}
+                placeholder="Your professional summary, often extracted from your resume..."
+              />
+            </CardContent>
+          </Card>
+
+          {/* Compensation Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline">
+                Compensation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div>
+                  <Label htmlFor="currentCTCValue">
+                    Current Annual CTC (INR)
+                  </Label>
+                  <Input
+                    id="currentCTCValue"
+                    name="currentCTCValue"
+                    type="number"
+                    placeholder="e.g., 1600000"
+                    value={userFormData.currentCTCValue || ''}
+                    onChange={handleUserChange}
+                  />
+                  {userFormData.currentCTCValue && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Formatted: {formatCurrencyINR(userFormData.desiredSalary)}
+                      Formatted:{' '}
+                      {formatCurrencyINR(userFormData.currentCTCValue)}
                     </p>
                   )}
                 </div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Checkbox
+                    id="currentCTCConfidential"
+                    name="currentCTCConfidential"
+                    checked={userFormData.currentCTCConfidential}
+                    onCheckedChange={(checked) =>
+                      handleUserSwitchChange(
+                        'currentCTCConfidential',
+                        Boolean(checked)
+                      )
+                    }
+                  />
+                  <Label htmlFor="currentCTCConfidential">Confidential</Label>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="skillsInput">Skills (comma-separated)</Label>
-                <Input
-                  id="skillsInput"
-                  name="skillsInput"
-                  value={skillsInput}
-                  onChange={handleSkillsChange}
-                  placeholder="e.g., React, Node.js, Project Management"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div>
+                  <Label htmlFor="expectedCTCValue">
+                    Expected Annual CTC (INR)
+                  </Label>
+                  <Input
+                    id="expectedCTCValue"
+                    name="expectedCTCValue"
+                    type="number"
+                    placeholder="e.g., 2000000"
+                    value={userFormData.expectedCTCValue || ''}
+                    onChange={handleUserChange}
+                  />
+                  {userFormData.expectedCTCValue && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Formatted:{' '}
+                      {formatCurrencyINR(userFormData.expectedCTCValue)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Checkbox
+                    id="expectedCTCNegotiable"
+                    name="expectedCTCNegotiable"
+                    checked={userFormData.expectedCTCNegotiable}
+                    onCheckedChange={(checked) =>
+                      handleUserSwitchChange(
+                        'expectedCTCNegotiable',
+                        Boolean(checked)
+                      )
+                    }
+                  />
+                  <Label htmlFor="expectedCTCNegotiable">Negotiable</Label>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="languagesInput">
-                  Languages (comma-separated, e.g., English, Spanish)
-                </Label>
-                <Input
-                  id="languagesInput"
-                  name="languagesInput"
-                  value={languagesInput}
-                  onChange={handleLanguagesInputChange}
-                  placeholder="e.g., English, Spanish, German (Basic)"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Proficiency will be defaulted. For detailed proficiency, edit
-                  later.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="experience">
-                  Experience (Markdown supported)
-                </Label>
-                <Textarea
-                  id="experience"
-                  name="experience"
-                  value={userFormData.experience || ''}
-                  onChange={handleUserChange}
-                  rows={10}
-                  placeholder="Describe your professional experience..."
-                />
-              </div>
-              <div>
-                <Label htmlFor="education">
-                  Education (Markdown supported)
-                </Label>
-                <Textarea
-                  id="education"
-                  name="education"
-                  value={userFormData.education || ''}
-                  onChange={handleUserChange}
-                  rows={4}
-                  placeholder="e.g., B.S. Computer Science - XYZ University"
-                />
-              </div>
+            </CardContent>
+          </Card>
+
+          {/* Experiences Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center gap-2">
+                <Briefcase /> Work Experience
+              </CardTitle>
+              <CardDescription>
+                Detail your professional background.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(userFormData.experiences || []).map((exp, index) => (
+                <Card key={exp.id} className="p-4 bg-muted/30">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <Label htmlFor={`exp-company-${exp.id}`}>
+                        Company Name *
+                      </Label>
+                      <Input
+                        id={`exp-company-${exp.id}`}
+                        value={exp.companyName}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'experiences',
+                            index,
+                            'companyName',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`exp-role-${exp.id}`}>Job Role *</Label>
+                      <Input
+                        id={`exp-role-${exp.id}`}
+                        value={exp.jobRole}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'experiences',
+                            index,
+                            'jobRole',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 items-end">
+                    <div>
+                      <Label htmlFor={`exp-start-${exp.id}`}>
+                        Start Date (YYYY-MM)
+                      </Label>
+                      <Input
+                        id={`exp-start-${exp.id}`}
+                        type="month"
+                        value={exp.startDate}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'experiences',
+                            index,
+                            'startDate',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`exp-end-${exp.id}`}>
+                        End Date (YYYY-MM)
+                      </Label>
+                      <Input
+                        id={`exp-end-${exp.id}`}
+                        type="month"
+                        value={exp.endDate}
+                        disabled={exp.currentlyWorking}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'experiences',
+                            index,
+                            'endDate',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Checkbox
+                        id={`exp-current-${exp.id}`}
+                        checked={exp.currentlyWorking}
+                        onCheckedChange={(checked) =>
+                          handleArrayFieldChange(
+                            'experiences',
+                            index,
+                            'currentlyWorking',
+                            checked
+                          )
+                        }
+                      />
+                      <Label htmlFor={`exp-current-${exp.id}`}>
+                        Currently working here
+                      </Label>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor={`exp-ctc-${exp.id}`}>
+                      Annual CTC (INR, Optional)
+                    </Label>
+                    <Input
+                      id={`exp-ctc-${exp.id}`}
+                      type="number"
+                      value={exp.annualCTC || ''}
+                      onChange={(e) =>
+                        handleArrayFieldChange(
+                          'experiences',
+                          index,
+                          'annualCTC',
+                          e.target.value,
+                          'number'
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="mt-3">
+                    <Label htmlFor={`exp-desc-${exp.id}`}>Description</Label>
+                    <Textarea
+                      id={`exp-desc-${exp.id}`}
+                      value={exp.description}
+                      onChange={(e) =>
+                        handleArrayFieldChange(
+                          'experiences',
+                          index,
+                          'description',
+                          e.target.value
+                        )
+                      }
+                      rows={3}
+                    />
+                  </div>
+                  {(userFormData.experiences || []).length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeArrayItem('experiences', exp.id)}
+                      className="mt-2 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Remove Experience
+                    </Button>
+                  )}
+                </Card>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  addArrayItem('experiences', createEmptyExperience)
+                }
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Experience
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Education Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center gap-2">
+                <GraduationCap /> Education
+              </CardTitle>
+              <CardDescription>
+                Your educational qualifications.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(userFormData.educations || []).map((edu, index) => (
+                <Card key={edu.id} className="p-4 bg-muted/30">
+                  <div>
+                    <Label htmlFor={`edu-level-${edu.id}`}>Level *</Label>
+                    <Select
+                      value={edu.level}
+                      onValueChange={(value) =>
+                        handleArrayFieldChange(
+                          'educations',
+                          index,
+                          'level',
+                          value
+                        )
+                      }
+                    >
+                      <SelectTrigger id={`edu-level-${edu.id}`}>
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Post Graduate">
+                          Post Graduate
+                        </SelectItem>
+                        <SelectItem value="Graduate">Graduate</SelectItem>
+                        <SelectItem value="Schooling (XII)">
+                          Schooling (XII)
+                        </SelectItem>
+                        <SelectItem value="Schooling (X)">
+                          Schooling (X)
+                        </SelectItem>
+                        <SelectItem value="Certification / Other">
+                          Certification / Other
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-3">
+                    <div>
+                      <Label htmlFor={`edu-degree-${edu.id}`}>
+                        Degree/Certificate Name *
+                      </Label>
+                      <Input
+                        id={`edu-degree-${edu.id}`}
+                        value={edu.degreeName}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'degreeName',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`edu-institute-${edu.id}`}>
+                        Institute Name *
+                      </Label>
+                      <Input
+                        id={`edu-institute-${edu.id}`}
+                        value={edu.instituteName}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'instituteName',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <Label htmlFor={`edu-startYear-${edu.id}`}>
+                        Start Year
+                      </Label>
+                      <Input
+                        id={`edu-startYear-${edu.id}`}
+                        type="number"
+                        placeholder="YYYY"
+                        value={edu.startYear || ''}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'startYear',
+                            e.target.value,
+                            'number'
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`edu-endYear-${edu.id}`}>End Year</Label>
+                      <Input
+                        id={`edu-endYear-${edu.id}`}
+                        type="number"
+                        placeholder="YYYY"
+                        value={edu.endYear || ''}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'endYear',
+                            e.target.value,
+                            'number'
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 items-end">
+                    <div>
+                      <Label htmlFor={`edu-specialization-${edu.id}`}>
+                        Specialization
+                      </Label>
+                      <Input
+                        id={`edu-specialization-${edu.id}`}
+                        value={edu.specialization || ''}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'specialization',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`edu-courseType-${edu.id}`}>
+                        Course Type
+                      </Label>
+                      <Select
+                        value={edu.courseType || 'Full Time'}
+                        onValueChange={(value) =>
+                          handleArrayFieldChange(
+                            'educations',
+                            index,
+                            'courseType',
+                            value
+                          )
+                        }
+                      >
+                        <SelectTrigger id={`edu-courseType-${edu.id}`}>
+                          <SelectValue placeholder="Select course type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Full Time">Full Time</SelectItem>
+                          <SelectItem value="Part Time">Part Time</SelectItem>
+                          <SelectItem value="Distance Learning">
+                            Distance Learning
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Checkbox
+                      id={`edu-relevant-${edu.id}`}
+                      checked={edu.isMostRelevant}
+                      onCheckedChange={(checked) =>
+                        handleArrayFieldChange(
+                          'educations',
+                          index,
+                          'isMostRelevant',
+                          checked
+                        )
+                      }
+                    />
+                    <Label htmlFor={`edu-relevant-${edu.id}`}>
+                      This is my most relevant/important educational
+                      qualification
+                    </Label>
+                  </div>
+                  <div>
+                    <Label htmlFor={`edu-desc-${edu.id}`}>Description</Label>
+                    <Textarea
+                      id={`edu-desc-${edu.id}`}
+                      value={edu.description}
+                      onChange={(e) =>
+                        handleArrayFieldChange(
+                          'educations',
+                          index,
+                          'description',
+                          e.target.value
+                        )
+                      }
+                      rows={2}
+                    />
+                  </div>
+                  {(userFormData.educations || []).length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeArrayItem('educations', edu.id)}
+                      className="mt-2 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Remove Education
+                    </Button>
+                  )}
+                </Card>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addArrayItem('educations', createEmptyEducation)}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Education
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Languages Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline flex items-center gap-2">
+                <LanguagesIcon /> Languages
+              </CardTitle>
+              <CardDescription>
+                Languages you know and your proficiency.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(userFormData.languages || []).map((lang, index) => (
+                <Card key={lang.id} className="p-4 bg-muted/30">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <Label htmlFor={`lang-name-${lang.id}`}>
+                        Language Name *
+                      </Label>
+                      <Input
+                        id={`lang-name-${lang.id}`}
+                        value={lang.languageName}
+                        onChange={(e) =>
+                          handleArrayFieldChange(
+                            'languages',
+                            index,
+                            'languageName',
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`lang-proficiency-${lang.id}`}>
+                        Proficiency *
+                      </Label>
+                      <Select
+                        value={lang.proficiency}
+                        onValueChange={(value) =>
+                          handleArrayFieldChange(
+                            'languages',
+                            index,
+                            'proficiency',
+                            value
+                          )
+                        }
+                      >
+                        <SelectTrigger id={`lang-proficiency-${lang.id}`}>
+                          <SelectValue placeholder="Select proficiency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Beginner">Beginner</SelectItem>
+                          <SelectItem value="Intermediate">
+                            Intermediate
+                          </SelectItem>
+                          <SelectItem value="Advanced">Advanced</SelectItem>
+                          <SelectItem value="Native">Native</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4 mb-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`lang-read-${lang.id}`}
+                        checked={lang.canRead}
+                        onCheckedChange={(checked) =>
+                          handleArrayFieldChange(
+                            'languages',
+                            index,
+                            'canRead',
+                            checked
+                          )
+                        }
+                      />
+                      <Label htmlFor={`lang-read-${lang.id}`}>Read</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`lang-write-${lang.id}`}
+                        checked={lang.canWrite}
+                        onCheckedChange={(checked) =>
+                          handleArrayFieldChange(
+                            'languages',
+                            index,
+                            'canWrite',
+                            checked
+                          )
+                        }
+                      />
+                      <Label htmlFor={`lang-write-${lang.id}`}>Write</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`lang-speak-${lang.id}`}
+                        checked={lang.canSpeak}
+                        onCheckedChange={(checked) =>
+                          handleArrayFieldChange(
+                            'languages',
+                            index,
+                            'canSpeak',
+                            checked
+                          )
+                        }
+                      />
+                      <Label htmlFor={`lang-speak-${lang.id}`}>Speak</Label>
+                    </div>
+                  </div>
+                  {(userFormData.languages || []).length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeArrayItem('languages', lang.id)}
+                      className="mt-2 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Remove Language
+                    </Button>
+                  )}
+                </Card>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => addArrayItem('languages', createEmptyLanguage)}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Language
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Preferences & Links Card */}
+          <Card className="w-full shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-xl font-headline">
+                Preferences & Links
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="portfolioUrl">Portfolio URL</Label>
@@ -536,7 +1279,7 @@ export function UserProfileForm() {
                   <Select
                     value={userFormData.jobSearchStatus || 'activelyLooking'}
                     onValueChange={(value) =>
-                      handleSelectChange('jobSearchStatus', value)
+                      handleUserSelectChange('jobSearchStatus', value)
                     }
                   >
                     <SelectTrigger id="jobSearchStatus">
@@ -558,7 +1301,7 @@ export function UserProfileForm() {
                   <Select
                     value={userFormData.availability || 'Flexible'}
                     onValueChange={(value) =>
-                      handleSelectChange('availability', value)
+                      handleUserSelectChange('availability', value)
                     }
                   >
                     <SelectTrigger id="availability">
@@ -582,7 +1325,7 @@ export function UserProfileForm() {
                   id="isProfileSearchable"
                   checked={!!userFormData.isProfileSearchable}
                   onCheckedChange={(checked) =>
-                    handleSwitchChange('isProfileSearchable', checked)
+                    handleUserSwitchChange('isProfileSearchable', checked)
                   }
                   aria-label="Profile searchable toggle"
                 />
@@ -594,15 +1337,16 @@ export function UserProfileForm() {
                     <Eye className="h-4 w-4" />
                   ) : (
                     <EyeOff className="h-4 w-4" />
-                  )}
+                  )}{' '}
                   My profile is searchable by employers
                 </Label>
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
+      {/* Company Profile Card (for Company Admins) */}
       {isCompanyAdmin && company && user.companyId && (
         <Card className="w-full shadow-lg">
           <CardHeader>
@@ -754,18 +1498,19 @@ export function UserProfileForm() {
         </Card>
       )}
 
-      <div className="mt-6 text-right">
+      {/* Save Button */}
+      <CardFooter>
         <Button
           type="submit"
           disabled={isLoading || authLoading}
-          className="w-full sm:w-auto text-lg py-6 px-8"
+          className="w-full sm:w-auto text-lg py-6 px-8 ml-auto"
         >
           {(isLoading || authLoading) && (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           )}
           Save All Changes
         </Button>
-      </div>
+      </CardFooter>
     </form>
   );
 }
