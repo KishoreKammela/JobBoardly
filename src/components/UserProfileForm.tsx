@@ -67,6 +67,16 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrencyINR } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parse, isValid } from 'date-fns';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const createEmptyExperience = (): ExperienceEntry => ({
   id: uuidv4(),
@@ -138,6 +148,24 @@ const initialCompanyFormData: Partial<Company> = {
   status: 'pending',
 };
 
+interface ModalState {
+  isOpen: boolean;
+  title: string;
+  description: React.ReactNode;
+  onConfirmAction: (() => Promise<void>) | null;
+  confirmText: string;
+  confirmVariant: 'default' | 'destructive';
+}
+
+const defaultModalState: ModalState = {
+  isOpen: false,
+  title: '',
+  description: '',
+  onConfirmAction: null,
+  confirmText: 'Confirm',
+  confirmVariant: 'default',
+};
+
 export function UserProfileForm() {
   const {
     user,
@@ -148,18 +176,20 @@ export function UserProfileForm() {
   } = useAuth();
   const { toast } = useToast();
 
-  const [userFormData, setUserFormData] = useState<Partial<UserProfile>>({
-    ...initialUserFormData,
-  });
-  const [companyFormData, setCompanyFormData] = useState<Partial<Company>>({
-    ...initialCompanyFormData,
-  });
+  const [userFormData, setUserFormData] =
+    useState<Partial<UserProfile>>(initialUserFormData);
+  const [companyFormData, setCompanyFormData] = useState<Partial<Company>>(
+    initialCompanyFormData
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [skillsInput, setSkillsInput] = useState('');
   const [locationsInput, setLocationsInput] = useState('');
 
   const [companyRecruiters, setCompanyRecruiters] = useState<UserProfile[]>([]);
   const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(false);
+
+  const [modalState, setModalState] = useState<ModalState>(defaultModalState);
+  const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -282,7 +312,7 @@ export function UserProfileForm() {
                 }
               }
               setCompanyRecruiters(fetchedRecruiters);
-            } catch (error) {
+            } catch (error: unknown) {
               console.error('Error fetching company recruiters:', error);
             } finally {
               setIsFetchingRecruiters(false);
@@ -294,8 +324,8 @@ export function UserProfileForm() {
         }
       }
     } else {
-      setUserFormData({ ...initialUserFormData });
-      setCompanyFormData({ ...initialCompanyFormData });
+      setUserFormData(initialUserFormData);
+      setCompanyFormData(initialCompanyFormData);
       setSkillsInput('');
       setLocationsInput('');
       setCompanyRecruiters([]);
@@ -465,8 +495,43 @@ export function UserProfileForm() {
     }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const showConfirmationModal = (
+    title: string,
+    description: React.ReactNode,
+    action: () => Promise<void>,
+    confirmText = 'Confirm',
+    confirmVariant: 'default' | 'destructive' = 'default'
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      description,
+      onConfirmAction: action,
+      confirmText,
+      confirmVariant,
+    });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (modalState.onConfirmAction) {
+      setIsModalActionLoading(true);
+      try {
+        await modalState.onConfirmAction();
+      } catch (e: unknown) {
+        console.error('Error executing confirmed action:', e);
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsModalActionLoading(false);
+        setModalState(defaultModalState);
+      }
+    }
+  };
+
+  const performSave = async () => {
     if (!user) return;
     setIsLoading(true);
 
@@ -544,15 +609,26 @@ export function UserProfileForm() {
         title: 'Profile Updated',
         description: 'Your information has been successfully updated.',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
       toast({
         title: 'Update Failed',
         description: 'Could not update your profile. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    showConfirmationModal(
+      'Confirm Profile Update',
+      'Are you sure you want to save these changes to your profile?',
+      performSave,
+      'Save Changes'
+    );
   };
 
   if (authLoading) {
@@ -1891,6 +1967,46 @@ export function UserProfileForm() {
           Save All Changes
         </Button>
       </div>
+
+      <AlertDialog
+        open={modalState.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalState(defaultModalState);
+            setIsModalActionLoading(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {modalState.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setModalState({ ...modalState, isOpen: false })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeConfirmedAction}
+              disabled={isModalActionLoading}
+              className={
+                modalState.confirmVariant === 'destructive'
+                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  : ''
+              }
+            >
+              {isModalActionLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {modalState.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

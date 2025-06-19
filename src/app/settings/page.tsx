@@ -3,7 +3,7 @@ import { SettingsForm } from '@/components/SettingsForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Trash2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Card,
@@ -16,12 +16,42 @@ import {
 import { Button } from '@/components/ui/button';
 import type { Filters } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+interface ModalState {
+  isOpen: boolean;
+  title: string;
+  description: React.ReactNode;
+  onConfirmAction: (() => Promise<void>) | null;
+  confirmText: string;
+  confirmVariant: 'default' | 'destructive';
+}
+
+const defaultModalState: ModalState = {
+  isOpen: false,
+  title: '',
+  description: '',
+  onConfirmAction: null,
+  confirmText: 'Confirm',
+  confirmVariant: 'default',
+};
 
 export default function SettingsPage() {
   const { user, loading, deleteSearch } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  const [modalState, setModalState] = useState<ModalState>(defaultModalState);
+  const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -30,7 +60,43 @@ export default function SettingsPage() {
     }
   }, [user, loading, router, pathname]);
 
-  const handleDeleteSearch = async (searchId: string) => {
+  const showConfirmationModal = (
+    title: string,
+    description: React.ReactNode,
+    action: () => Promise<void>,
+    confirmText = 'Confirm',
+    confirmVariant: 'default' | 'destructive' = 'default'
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      description,
+      onConfirmAction: action,
+      confirmText,
+      confirmVariant,
+    });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (modalState.onConfirmAction) {
+      setIsModalActionLoading(true);
+      try {
+        await modalState.onConfirmAction();
+      } catch (e: unknown) {
+        console.error('Error executing confirmed action:', e);
+        toast({
+          title: 'Error',
+          description: 'An unexpected error occurred.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsModalActionLoading(false);
+        setModalState(defaultModalState);
+      }
+    }
+  };
+
+  const performDeleteSearch = async (searchId: string) => {
     if (!user || user.role !== 'jobSeeker') return;
     try {
       await deleteSearch(searchId);
@@ -38,13 +104,23 @@ export default function SettingsPage() {
         title: 'Search Deleted',
         description: 'The saved search has been removed.',
       });
-    } catch (error) {
+    } catch (error: unknown) {
       toast({
         title: 'Error',
         description: 'Could not delete the search. Please try again.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handleDeleteSearch = (searchId: string, searchName: string) => {
+    showConfirmationModal(
+      `Delete Saved Search "${searchName}"?`,
+      'Are you sure you want to delete this saved search? This action cannot be undone.',
+      () => performDeleteSearch(searchId),
+      'Delete Search',
+      'destructive'
+    );
   };
 
   const handleApplySavedSearch = (filters: Filters) => {
@@ -124,9 +200,11 @@ export default function SettingsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteSearch(search.id)}
+                        onClick={() =>
+                          handleDeleteSearch(search.id, search.name)
+                        }
                         className="text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
-                        aria-label="Delete saved search"
+                        aria-label={`Delete saved search ${search.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -150,6 +228,45 @@ export default function SettingsPage() {
           </Card>
         </>
       )}
+      <AlertDialog
+        open={modalState.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalState(defaultModalState);
+            setIsModalActionLoading(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {modalState.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setModalState({ ...modalState, isOpen: false })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeConfirmedAction}
+              disabled={isModalActionLoading}
+              className={
+                modalState.confirmVariant === 'destructive'
+                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                  : ''
+              }
+            >
+              {isModalActionLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {modalState.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

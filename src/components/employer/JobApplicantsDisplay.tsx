@@ -4,14 +4,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Job, Application, ApplicationStatus } from '@/types';
 import { EmployerManagedApplicationStatuses } from '@/types';
-// import { CandidateCard } from './CandidateCard'; // Unused
-import {
-  AlertCircle,
-  Loader2,
-  UserCircle,
-  Edit2,
-  /*MessageSquare,*/ Filter,
-} from 'lucide-react'; // Removed MessageSquare
+import { AlertCircle, Loader2, UserCircle, Edit2, Filter } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { db } from '@/lib/firebase';
 import {
@@ -46,10 +39,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface JobApplicantsDisplayProps {
   jobId: string;
 }
+
+interface ModalState {
+  isOpen: boolean;
+  title: string;
+  description: React.ReactNode;
+  onConfirmAction: (() => Promise<void>) | null;
+  confirmText: string;
+}
+
+const defaultModalState: ModalState = {
+  isOpen: false,
+  title: '',
+  description: '',
+  onConfirmAction: null,
+  confirmText: 'Confirm',
+};
 
 export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
   const { user, updateApplicationStatus } = useAuth();
@@ -66,6 +85,8 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | 'All'>(
     'All'
   );
+  const [modalState, setModalState] = useState<ModalState>(defaultModalState);
+  const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchJobAndApplicants = async () => {
@@ -94,7 +115,9 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         }
         const jobData = { id: jobDocSnap.id, ...jobDocSnap.data() } as Job;
 
-        if (jobData.postedById !== user.uid) {
+        // Ensure the current employer is the one who posted the job
+        // Or, if company structure allows, any recruiter from the same company
+        if (jobData.companyId !== user.companyId) {
           setError(
             'You do not have permission to view applicants for this job.'
           );
@@ -168,13 +191,41 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
     }
   }, [statusFilter, allApplications]);
 
-  const handleStatusChange = async (
+  const showConfirmationModal = (
+    title: string,
+    description: React.ReactNode,
+    action: () => Promise<void>,
+    confirmText = 'Confirm'
+  ) => {
+    setModalState({
+      isOpen: true,
+      title,
+      description,
+      onConfirmAction: action,
+      confirmText,
+    });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (modalState.onConfirmAction) {
+      setIsModalActionLoading(true);
+      try {
+        await modalState.onConfirmAction();
+      } catch (e: unknown) {
+        // Specific errors handled in individual action functions
+      } finally {
+        setIsModalActionLoading(false);
+        setModalState(defaultModalState);
+      }
+    }
+  };
+
+  const performStatusUpdate = async (
     applicationId: string,
     newStatus: ApplicationStatus
   ) => {
     try {
       await updateApplicationStatus(applicationId, newStatus);
-      // Update both allApplications and subsequently filteredApplications via its own useEffect
       setAllApplications((prevApps) =>
         prevApps.map((app) =>
           app.id === applicationId
@@ -186,7 +237,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         title: 'Status Updated',
         description: 'Applicant status has been changed.',
       });
-    } catch (err) {
+    } catch (err: unknown) {
       toast({
         title: 'Error',
         description: 'Failed to update status.',
@@ -194,6 +245,19 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
       });
       console.error('Failed to update status:', err);
     }
+  };
+
+  const handleStatusChange = (
+    applicationId: string,
+    applicantName: string,
+    newStatus: ApplicationStatus
+  ) => {
+    showConfirmationModal(
+      `Change ${applicantName}'s Status?`,
+      `Are you sure you want to change this applicant's status to "${newStatus}"?`,
+      () => performStatusUpdate(applicationId, newStatus),
+      `Set to ${newStatus}`
+    );
   };
 
   const handleSaveNotes = async (applicationId: string) => {
@@ -224,7 +288,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         description: 'Employer notes have been updated.',
       });
       setEditingNotesFor(null);
-    } catch (err) {
+    } catch (err: unknown) {
       toast({
         title: 'Error',
         description: 'Failed to save notes.',
@@ -438,7 +502,11 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
                   <Select
                     value={app.status}
                     onValueChange={(newStatus) =>
-                      handleStatusChange(app.id, newStatus as ApplicationStatus)
+                      handleStatusChange(
+                        app.id,
+                        app.applicantName,
+                        newStatus as ApplicationStatus
+                      )
                     }
                   >
                     <SelectTrigger
@@ -476,6 +544,40 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
           ))}
         </div>
       )}
+      <AlertDialog
+        open={modalState.isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalState(defaultModalState);
+            setIsModalActionLoading(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{modalState.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {modalState.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setModalState({ ...modalState, isOpen: false })}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeConfirmedAction}
+              disabled={isModalActionLoading}
+            >
+              {isModalActionLoading && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {modalState.confirmText}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
