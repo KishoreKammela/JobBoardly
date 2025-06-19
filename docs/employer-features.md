@@ -38,7 +38,7 @@ To empower employers to efficiently find and connect with qualified candidates b
 
 - **Create & Edit Job Postings (`/employer/post-job`)**:
   - Intuitive form to input job details: Title, Location, Type (Full-time, Part-time, etc.), Remote status, Salary range (Min/Max INR), Skills.
-  - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields. _Note: Plain text (.txt) is recommended for best parsing results._
+  - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields. _Note: Plain text (.txt) is recommended for best parsing results with the current AI model._
   - **Screening Questions**: Add custom screening questions (text input, yes/no) to job postings. These questions are presented to job seekers during the application process.
   - Submitting new jobs or updating existing ones requires confirmation.
 - **Job Status**:
@@ -116,7 +116,7 @@ graph TD
     F_check_status -- Suspended --> G_suspended[Go to Post Job, Feature Disabled]
     C -- Yes --> F
     F_check_status -- Active/Approved --> G[Navigate to Post Job: /employer/post-job]
-    G --> H[Fill Job Details or Parse JD Document]
+    G --> H[Fill Job Details or Upload/Parse JD Document with AI]
     H --> I[Add Screening Questions Optional]
     I --> J_confirm[Confirm Job Submission]
     J_confirm -- Yes --> J[Submit Job for Admin Approval]
@@ -192,7 +192,7 @@ graph TD
 | `/employer/login`                    | Employer login page. If company is 'deleted', feature access restricted post-auth.                                                                                                | Public                   |
 | `/profile`                           | Manage recruiter profile; if Company Admin, also manage Company Profile. Company profile editing restricted if company 'suspended'/'deleted'. Profile save requires confirmation. | Employer                 |
 | `/employer/profile/preview`          | Company Admins can preview their public company profile.                                                                                                                          | Employer (Company Admin) |
-| `/employer/post-job`                 | Form to create/edit job. Disabled if company 'suspended'/'deleted'. Submitting/updating requires confirmation.                                                                    | Employer                 |
+| `/employer/post-job`                 | Form to create/edit job. Supports AI parsing of JD. Disabled if company 'suspended'/'deleted'. Submitting/updating requires confirmation.                                         | Employer                 |
 | `/employer/posted-jobs`              | Dashboard of posted jobs. Actions restricted if company 'suspended'/'deleted' or job 'suspended'.                                                                                 | Employer                 |
 | `/employer/jobs/[jobId]/applicants`  | View/manage applicants. Disabled if company 'suspended'/'deleted' or job 'suspended'. Status updates require confirmation.                                                        | Employer                 |
 | `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'. Can save search criteria.                                                                                    | Employer                 |
@@ -205,7 +205,13 @@ graph TD
 
 Employers use Genkit flows for AI-assisted tasks and interact with Firebase Firestore for data storage and management. Critical write operations (job posts, applicant status, profile updates, saving/deleting searches) are preceded by confirmation modals.
 
-- **Job Description Parsing (`parseJobDescriptionFlow`):** (As before)
+- **Job Description Parsing (`parseJobDescriptionFlow`):**
+  - **Action**: Employer uploads a job description document (PDF, DOCX, TXT) on `/employer/post-job` and clicks "Parse Document".
+  - **Input Data**: File data URI.
+  - **Interaction**: Calls Genkit flow `parseJobDescriptionFlow`.
+    - AI attempts to parse title, description, skills, location, job type, salary range.
+  - **Output/Effect**: Form fields on `/employer/post-job` are pre-filled with extracted data. User can then review/edit.
+  - _Note_: Currently, plain text files (.txt) are recommended for best parsing results with the AI model.
 - **AI-Powered Candidate Matching (`aiPoweredCandidateMatching`):** (As before, but UI access restricted if company suspended/deleted)
 - **Company & Job Data (Firebase Firestore):**
   - **Company Profile**: Updated in `companies` collection. Admin approval required for new/significant changes. Saving requires confirmation. Editing restricted if company status is 'suspended' or 'deleted'.
@@ -214,15 +220,15 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **Saving a Candidate Search:**
   - **Action**: User clicks "Save Current Search" in candidate filter sidebar, names the search, confirms.
   - **Input Data**: Search name (string), current `CandidateFilters` object.
-  - **Interaction**: Calls `saveCandidateSearch` in `AuthContext`.
+  - **Interaction**: Calls `saveCandidateSearch` in `EmployerActionsContext`.
     - Creates a `SavedCandidateSearch` object (with unique ID, name, filters, `createdAt` timestamp).
     - Updates the `users` document in Firestore by adding the new `SavedCandidateSearch` object to the `savedCandidateSearches` array (using `arrayUnion`).
   - **Effect**: Search criteria saved to employer's user profile.
 - **Deleting a Saved Candidate Search:**
   - **Action**: User clicks "Delete" on a saved candidate search in settings, confirms.
   - **Input Data**: `searchId` (string).
-  - **Interaction**: Calls `deleteCandidateSearch` in `AuthContext`.
-    - Finds the `SavedCandidateSearch` object by `searchId` in the user's local state.
+  - **Interaction**: Calls `deleteCandidateSearch` in `EmployerActionsContext`.
+    - Finds the `SavedCandidateSearch` object by `searchId` in the user's local state (from AuthContext).
     - Updates the `users` document in Firestore by removing the `SavedCandidateSearch` object from the `savedCandidateSearches` array (using `arrayRemove`).
   - **Effect**: Saved search removed from employer's user profile.
 

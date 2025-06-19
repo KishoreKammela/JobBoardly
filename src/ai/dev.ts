@@ -3,5 +3,5 @@ config();
 
 import '@/ai/flows/ai-powered-job-matching.ts';
 import '@/ai/flows/parse-resume-flow.ts';
-import '@/ai/flows/parse-job-description-flow.ts';
+import '@/ai/flows/parse-job-description-flow.ts'; // Added new flow
 import '@/ai/flows/ai-powered-candidate-matching.ts'; // Added new flow
