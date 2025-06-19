@@ -115,7 +115,7 @@ export interface Job {
   salaryMax?: number;
   companyLogoUrl?: string;
   postedById: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'suspended'; // Added 'suspended'
   moderationReason?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;

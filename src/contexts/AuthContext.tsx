@@ -146,7 +146,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
-          await updateDoc(userDocRef, { lastActive: serverTimestamp() });
+          await setDoc(
+            userDocRef,
+            { lastActive: serverTimestamp() },
+            { merge: true }
+          );
+
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const rawData = userDocSnap.data();
@@ -436,7 +441,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
     }
-    const finalProfileDataForFirestore: Record<string, any> = {};
+    const finalProfileDataForFirestore: Record<string, unknown> = {};
     for (const key in userProfileData) {
       const typedKey = key as keyof UserProfile;
       const value = userProfileData[typedKey];
@@ -444,7 +449,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (value !== undefined) {
         finalProfileDataForFirestore[key] = value;
       } else {
-        // Explicitly set undefined optional fields to null for Firestore
         const nullableJobSeekerFields: Array<keyof UserProfile> = [
           'dateOfBirth',
           'currentCTCValue',
@@ -468,15 +472,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ) {
           finalProfileDataForFirestore[key] = null;
         }
-        // For employer or other roles, if a field is optional and undefined,
-        // it will be omitted unless specifically handled here.
         if (role === 'employer' && typedKey === 'avatarUrl') {
           finalProfileDataForFirestore[key] = null;
         }
       }
     }
 
-    // Ensure arrays are initialized properly if empty
     if (role === 'jobSeeker') {
       finalProfileDataForFirestore.skills =
         finalProfileDataForFirestore.skills || [];
@@ -529,27 +530,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
-      // Reconstruct UserProfile for state with correct types after Firestore save
       const fullProfile = {
-        ...userProfileData, // Contains initial values, some might be serverTimestamps
+        ...userProfileData,
         uid: fbUser.uid,
         email: fbUser.email,
-        // Simulate serverTimestamp resolution for local state
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastActive: new Date().toISOString(),
-        // Use processed arrays for local state
         experiences: finalProfileDataForFirestore.experiences || [],
         educations: finalProfileDataForFirestore.educations || [],
         languages: finalProfileDataForFirestore.languages || [],
         totalYearsExperience:
           finalProfileDataForFirestore.totalYearsExperience === null
             ? undefined
-            : finalProfileDataForFirestore.totalYearsExperience,
+            : (finalProfileDataForFirestore.totalYearsExperience as number),
         totalMonthsExperience:
           finalProfileDataForFirestore.totalMonthsExperience === null
             ? undefined
-            : finalProfileDataForFirestore.totalMonthsExperience,
+            : (finalProfileDataForFirestore.totalMonthsExperience as number),
       } as UserProfile;
 
       setUser(fullProfile);
@@ -746,7 +744,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } as UserProfile;
 
         let updatesNeeded = false;
-        const updates: Record<string, any> = {};
+        const updates: Record<string, unknown> = {};
         updates.lastActive = serverTimestamp();
 
         if (existingProfile.role !== role) {
@@ -826,7 +824,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.updatedAt = serverTimestamp();
           await updateDoc(userDocRef, updates);
           setUser({ ...existingProfile, ...updates } as UserProfile);
-          if (updates.theme) applyTheme(updates.theme);
+          if (updates.theme)
+            applyTheme(updates.theme as 'light' | 'dark' | 'system');
         } else {
           await updateDoc(userDocRef, { lastActive: serverTimestamp() });
           setUser(existingProfile);
@@ -917,7 +916,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const userDocRef = doc(db, 'users', user.uid);
-    const payloadForFirestore: Record<string, any> = {};
+    const payloadForFirestore: { [key: string]: unknown } = {};
 
     const nullableFields: Array<keyof UserProfile> = [
       'dateOfBirth',
@@ -935,7 +934,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'parsedResumeText',
       'resumeUrl',
       'resumeFileName',
-      'companyId', // For employers who might not have one initially if created by admin
+      'companyId',
     ];
 
     (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
@@ -945,7 +944,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (nullableFields.includes(key)) {
           payloadForFirestore[key] = null;
         }
-        // If not in nullableFields and is undefined, it's omitted
       } else if (Array.isArray(value)) {
         if (
           key === 'experiences' ||
@@ -953,10 +951,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           key === 'languages'
         ) {
           payloadForFirestore[key] = value.map((item: any) => {
-            const cleanedItem: Record<string, any> = { ...item };
+            const cleanedItem: { [key: string]: unknown } = { ...item };
             Object.keys(cleanedItem).forEach((prop) => {
               if (cleanedItem[prop] === undefined) {
-                // Convert specific undefineds in array objects to null if they should be nullable
                 if (
                   (prop === 'startDate' ||
                     prop === 'endDate' ||
@@ -970,7 +967,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ) {
                   cleanedItem[prop] = null;
                 } else {
-                  // If not specifically nullable, remove the undefined property
                   delete cleanedItem[prop];
                 }
               }
@@ -978,7 +974,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return cleanedItem;
           });
         } else {
-          payloadForFirestore[key] = value; // For other arrays like skills, preferredLocations
+          payloadForFirestore[key] = value;
         }
       } else {
         payloadForFirestore[key] = value;
@@ -994,20 +990,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         payloadForFirestore.updatedAt &&
         payloadForFirestore.lastActive)
     ) {
-      // Ensure more than just timestamps are being updated
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState: UserProfile = { ...user } as UserProfile; // Create a mutable copy
-        // Merge changes into the local state, handling potential nulls from Firestore
+        const updatedUserForState: UserProfile = { ...user } as UserProfile;
         for (const key in payloadForFirestore) {
           if (key !== 'updatedAt' && key !== 'lastActive') {
-            // Timestamps will be resolved from Firestore read or simulated
             const typedKey = key as keyof UserProfile;
             (updatedUserForState[typedKey] as any) = payloadForFirestore[key];
           }
         }
-        updatedUserForState.updatedAt = new Date().toISOString(); // Simulate timestamp for local state
-        updatedUserForState.lastActive = new Date().toISOString(); // Simulate timestamp
+        updatedUserForState.updatedAt = new Date().toISOString();
+        updatedUserForState.lastActive = new Date().toISOString();
         setUser(updatedUserForState);
         if (updatedData.theme) {
           applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
@@ -1017,7 +1010,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     } else if (user) {
-      // Only timestamps changed
       try {
         await updateDoc(userDocRef, {
           updatedAt: serverTimestamp(),
@@ -1054,15 +1046,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Unauthorized to update company profile.');
     }
     const companyDocRef = doc(db, 'companies', companyId);
-    const dataToUpdate: Record<string, any> = {
+    const dataToUpdate: { [key: string]: unknown } = {
       ...updatedData,
       updatedAt: serverTimestamp(),
     };
-    delete dataToUpdate.id; // id should not be part of update payload
+    delete dataToUpdate.id;
 
     Object.keys(dataToUpdate).forEach((key) => {
       if (dataToUpdate[key] === undefined) {
-        // For company profile, ensure optional fields are set to null if cleared
         const companyNullableFields: Array<keyof Company> = [
           'description',
           'websiteUrl',
@@ -1073,7 +1064,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (companyNullableFields.includes(key as keyof Company)) {
           dataToUpdate[key] = null;
         } else {
-          delete dataToUpdate[key]; // Or remove if schema allows absence
+          delete dataToUpdate[key];
         }
       }
     });
@@ -1111,7 +1102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const userDocRef = doc(db, 'users', user.uid);
         try {
-          await setDoc(applicationRef, newApplication as Record<string, any>);
+          await setDoc(
+            applicationRef,
+            newApplication as Record<string, unknown>
+          );
           await updateDoc(userDocRef, {
             appliedJobIds: arrayUnion(job.id),
             updatedAt: serverTimestamp(),
@@ -1143,14 +1137,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Only employers can update application status.');
     }
     const applicationDocRef = doc(db, 'applications', applicationId);
-    const updates: Record<string, any> = {
+    const updates: { [key: string]: unknown } = {
       status: newStatus,
       updatedAt: serverTimestamp(),
     };
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
     } else {
-      updates.employerNotes = null; // Explicitly set to null if undefined
+      updates.employerNotes = null;
     }
 
     try {
@@ -1238,7 +1232,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       try {
         await updateDoc(userDocRef, {
-          savedSearches: arrayUnion(newSearch as any), // Cast to any for arrayUnion with complex object
+          savedSearches: arrayUnion(newSearch as Record<string, unknown>),
           updatedAt: serverTimestamp(),
           lastActive: serverTimestamp(),
         });
@@ -1265,7 +1259,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (searchToDelete) {
         try {
           await updateDoc(userDocRef, {
-            savedSearches: arrayRemove(searchToDelete as any), // Cast to any for arrayRemove
+            savedSearches: arrayRemove(
+              searchToDelete as Record<string, unknown>
+            ),
             updatedAt: serverTimestamp(),
             lastActive: serverTimestamp(),
           });

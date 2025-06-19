@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -14,13 +15,16 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   Briefcase,
   Building,
   Eye,
   ChevronsUpDown,
   ExternalLink,
+  Ban,
+  CheckSquare,
+  Edit3,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -64,12 +68,16 @@ interface SortConfig<T> {
   direction: SortDirection;
 }
 
+interface JobWithApplicantCount extends Job {
+  applicantCount: number;
+}
+
 function getSortableValue<T>(
   item: T,
   key: keyof T | null
 ): string | number | null | boolean {
   if (!key) return null;
-  const value = item[key];
+  const value = item[key as keyof T]; // Type assertion for safety
   if (value instanceof Timestamp) {
     return value.toMillis();
   }
@@ -95,10 +103,12 @@ export default function AdminPage() {
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [allJobSeekers, setAllJobSeekers] = useState<UserProfile[]>([]);
   const [allPlatformUsers, setAllPlatformUsers] = useState<UserProfile[]>([]);
+  const [allJobs, setAllJobs] = useState<JobWithApplicantCount[]>([]);
 
   const [companiesSearchTerm, setCompaniesSearchTerm] = useState('');
   const [jobSeekersSearchTerm, setJobSeekersSearchTerm] = useState('');
   const [platformUsersSearchTerm, setPlatformUsersSearchTerm] = useState('');
+  const [jobsSearchTerm, setJobsSearchTerm] = useState('');
 
   const debouncedCompaniesSearchTerm = useDebounce(companiesSearchTerm, 300);
   const debouncedJobSeekersSearchTerm = useDebounce(jobSeekersSearchTerm, 300);
@@ -106,10 +116,12 @@ export default function AdminPage() {
     platformUsersSearchTerm,
     300
   );
+  const debouncedJobsSearchTerm = useDebounce(jobsSearchTerm, 300);
 
   const [companiesCurrentPage, setCompaniesCurrentPage] = useState(1);
   const [jobSeekersCurrentPage, setJobSeekersCurrentPage] = useState(1);
   const [platformUsersCurrentPage, setPlatformUsersCurrentPage] = useState(1);
+  const [jobsCurrentPage, setJobsCurrentPage] = useState(1);
 
   const [companiesSortConfig, setCompaniesSortConfig] = useState<
     SortConfig<Company>
@@ -120,26 +132,32 @@ export default function AdminPage() {
   const [platformUsersSortConfig, setPlatformUsersSortConfig] = useState<
     SortConfig<UserProfile>
   >({ key: 'createdAt', direction: 'desc' });
+  const [jobsSortConfig, setJobsSortConfig] = useState<
+    SortConfig<JobWithApplicantCount>
+  >({ key: 'createdAt', direction: 'desc' });
 
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [isAllJobsLoading, setIsAllJobsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsJobsLoading(true);
     setIsCompaniesLoading(true);
     setIsUsersLoading(true);
+    setIsAllJobsLoading(true);
 
     try {
-      const jobsQuery = query(
+      // Fetch pending jobs (for approval card)
+      const pendingJobsQuery = query(
         collection(db, 'jobs'),
         where('status', '==', 'pending'),
         orderBy('createdAt', 'desc')
       );
-      const jobsSnapshot = await getDocs(jobsQuery);
+      const pendingJobsSnapshot = await getDocs(pendingJobsQuery);
       setPendingJobs(
-        jobsSnapshot.docs.map((d) => {
+        pendingJobsSnapshot.docs.map((d) => {
           const data = d.data();
           return {
             id: d.id,
@@ -150,6 +168,7 @@ export default function AdminPage() {
       );
       setIsJobsLoading(false);
 
+      // Fetch pending companies (for approval card)
       const pendingCompaniesQuery = query(
         collection(db, 'companies'),
         where('status', '==', 'pending'),
@@ -167,6 +186,7 @@ export default function AdminPage() {
         })
       );
 
+      // Fetch all companies (for manage companies tab)
       const allCompaniesQuery = query(
         collection(db, 'companies'),
         orderBy('createdAt', 'desc')
@@ -203,6 +223,7 @@ export default function AdminPage() {
       setAllCompanies(companiesData);
       setIsCompaniesLoading(false);
 
+      // Fetch all job seekers
       const jobSeekersQuery = query(
         collection(db, 'users'),
         where('role', '==', 'jobSeeker'),
@@ -222,6 +243,7 @@ export default function AdminPage() {
         })
       );
 
+      // Fetch all platform users (admins/superAdmins)
       const platformUsersQuery = query(
         collection(db, 'users'),
         where('role', 'in', ['admin', 'superAdmin']),
@@ -240,16 +262,48 @@ export default function AdminPage() {
         })
       );
       setIsUsersLoading(false);
-    } catch (error: unknown) {
+
+      // Fetch all jobs (for manage all jobs tab)
+      const allJobsQuery = query(
+        collection(db, 'jobs'),
+        orderBy('createdAt', 'desc')
+      );
+      const allJobsSnapshot = await getDocs(allJobsQuery);
+      const jobsData = await Promise.all(
+        allJobsSnapshot.docs.map(async (jobDoc) => {
+          const job = {
+            id: jobDoc.id,
+            ...jobDoc.data(),
+          } as Job;
+          const applicantCount = (
+            await getCountFromServer(
+              query(
+                collection(db, 'applications'),
+                where('jobId', '==', job.id)
+              )
+            )
+          ).data().count;
+          return {
+            ...job,
+            applicantCount,
+            createdAt: (job.createdAt as Timestamp)?.toDate().toISOString(),
+            updatedAt: (job.updatedAt as Timestamp)?.toDate().toISOString(),
+          } as JobWithApplicantCount;
+        })
+      );
+      setAllJobs(jobsData);
+      setIsAllJobsLoading(false);
+    } catch (error) {
       console.error('Error fetching admin data:', error);
       toast({
         title: 'Error',
-        description: `Failed to load some admin data. ${error instanceof Error ? error.message : String(error)}`,
+        description: `Failed to load some admin data. ${(error as Error).message}`,
         variant: 'destructive',
       });
       setIsJobsLoading(false);
       setIsCompaniesLoading(false);
       setIsUsersLoading(false);
+      setIsAllJobsLoading(false);
     }
   }, [toast]);
 
@@ -274,29 +328,55 @@ export default function AdminPage() {
 
   const handleJobStatusUpdate = async (
     jobId: string,
-    newStatus: 'approved' | 'rejected',
+    newStatus: 'approved' | 'rejected' | 'suspended',
     reason?: string
   ) => {
     setActionLoading(`job-${jobId}`);
     try {
-      const jobUpdates: Record<string, any> = {
+      const jobUpdates: { [key: string]: unknown } = {
         status: newStatus,
         updatedAt: serverTimestamp(),
-        moderationReason:
-          newStatus === 'rejected' ? reason || 'Rejected by admin' : null,
       };
+      if (
+        newStatus === 'rejected' ||
+        newStatus === 'suspended' ||
+        (newStatus === 'approved' && reason) // reason might be for approval context from pending
+      ) {
+        jobUpdates.moderationReason =
+          reason || `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
+      } else {
+        jobUpdates.moderationReason = null;
+      }
 
       await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
-      setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
+
+      // Update pending jobs list
+      if (newStatus === 'approved' || newStatus === 'rejected') {
+        setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
+      }
+
+      // Update all jobs list
+      setAllJobs((prevJobs) =>
+        prevJobs.map((j) =>
+          j.id === jobId
+            ? {
+                ...j,
+                status: newStatus,
+                moderationReason: jobUpdates.moderationReason as string,
+              }
+            : j
+        )
+      );
+
       toast({
         title: 'Success',
         description: `Job ${jobId} status updated to ${newStatus}.`,
       });
-    } catch (error: unknown) {
+    } catch (error) {
       console.error(`Error updating job ${jobId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update job ${jobId}. Error: ${error instanceof Error ? error.message : String(error)}`,
+        description: `Failed to update job ${jobId}. Error: ${(error as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -312,15 +392,22 @@ export default function AdminPage() {
     setActionLoading(`company-${companyId}`);
     try {
       const companyDocRef = doc(db, 'companies', companyId);
-      const updateData: Record<string, any> = {
+      const updateData: { [key: string]: unknown } = {
         status: newStatus,
         updatedAt: serverTimestamp(),
-        moderationReason:
-          newStatus === 'rejected' || newStatus === 'suspended'
-            ? reason ||
-              `${newStatus === 'rejected' ? 'Rejected' : 'Suspended'} by admin`
-            : null,
       };
+      if (
+        newStatus === 'rejected' ||
+        newStatus === 'suspended' ||
+        (newStatus === 'approved' && reason)
+      ) {
+        updateData.moderationReason =
+          reason ||
+          `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
+      } else {
+        updateData.moderationReason = null;
+      }
+
       await updateDoc(companyDocRef, updateData);
 
       setAllCompanies((prev) =>
@@ -329,7 +416,7 @@ export default function AdminPage() {
             ? {
                 ...c,
                 status: newStatus,
-                moderationReason: updateData.moderationReason,
+                moderationReason: updateData.moderationReason as string,
               }
             : c
         )
@@ -350,11 +437,11 @@ export default function AdminPage() {
           duration: 7000,
         });
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error(`Error updating company ${companyId}:`, error);
       toast({
         title: 'Error',
-        description: `Failed to update company ${companyId}. Error: ${error instanceof Error ? error.message : String(error)}`,
+        description: `Failed to update company ${companyId}. Error: ${(error as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -424,11 +511,11 @@ export default function AdminPage() {
         title: 'Success',
         description: `User ${userId} status updated to ${newStatus}.`,
       });
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Error updating user status:', e);
       toast({
         title: 'Error',
-        description: `Failed to update user status. Error: ${e instanceof Error ? e.message : String(e)}`,
+        description: `Failed to update user status. Error: ${(e as Error).message}`,
         variant: 'destructive',
       });
     } finally {
@@ -501,6 +588,12 @@ export default function AdminPage() {
     debouncedPlatformUsersSearchTerm,
     ['name', 'email']
   );
+  const sortedJobs = useSortedItems(
+    allJobs,
+    jobsSortConfig,
+    debouncedJobsSearchTerm,
+    ['title', 'company']
+  );
 
   const usePaginatedItems = <T,>(items: T[], currentPage: number) => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -519,6 +612,7 @@ export default function AdminPage() {
     sortedPlatformUsers,
     platformUsersCurrentPage
   );
+  const paginatedJobs = usePaginatedItems(sortedJobs, jobsCurrentPage);
 
   const totalCompaniesPages = Math.ceil(
     sortedCompanies.length / ITEMS_PER_PAGE
@@ -529,6 +623,7 @@ export default function AdminPage() {
   const totalPlatformUsersPages = Math.ceil(
     sortedPlatformUsers.length / ITEMS_PER_PAGE
   );
+  const totalJobsPages = Math.ceil(sortedJobs.length / ITEMS_PER_PAGE);
 
   const renderSortIcon = <T,>(key: keyof T, config: SortConfig<T>) => {
     if (config.key !== key)
@@ -619,26 +714,28 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardFooter className="flex justify-end gap-2 pt-2">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() =>
                           handleJobStatusUpdate(job.id, 'rejected')
                         }
                         disabled={actionLoading === `job-${job.id}`}
                         aria-label={`Reject job ${job.title}`}
+                        className="text-destructive"
                       >
-                        <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
-                        Reject
+                        <XCircle className="h-5 w-5" />
                       </Button>
                       <Button
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() =>
                           handleJobStatusUpdate(job.id, 'approved')
                         }
                         disabled={actionLoading === `job-${job.id}`}
                         aria-label={`Approve job ${job.title}`}
+                        className="text-green-600"
                       >
-                        <CheckCircle className="mr-1 h-4 w-4" /> Approve
+                        <CheckCircle2 className="h-5 w-5" />
                       </Button>
                     </CardFooter>
                   </Card>
@@ -691,26 +788,28 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardFooter className="flex justify-end gap-2 pt-2">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() =>
                           handleCompanyStatusUpdate(c.id, 'rejected')
                         }
                         disabled={actionLoading === `company-${c.id}`}
                         aria-label={`Reject company ${c.name}`}
+                        className="text-destructive"
                       >
-                        <XCircle className="mr-1 h-4 w-4 text-destructive" />{' '}
-                        Reject
+                        <XCircle className="h-5 w-5" />
                       </Button>
                       <Button
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() =>
                           handleCompanyStatusUpdate(c.id, 'approved')
                         }
                         disabled={actionLoading === `company-${c.id}`}
                         aria-label={`Approve company ${c.name}`}
+                        className="text-green-600"
                       >
-                        <CheckCircle className="mr-1 h-4 w-4" /> Approve
+                        <CheckCircle2 className="h-5 w-5" />
                       </Button>
                     </CardFooter>
                   </Card>
@@ -722,8 +821,9 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="companies">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="companies">Companies</TabsTrigger>
+          <TabsTrigger value="allJobs">All Jobs</TabsTrigger>
           <TabsTrigger value="jobSeekers">Job Seekers</TabsTrigger>
           <TabsTrigger value="platformUsers">Platform Users</TabsTrigger>
         </TabsList>
@@ -810,7 +910,11 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell>
                             <a
-                              href={c.websiteUrl}
+                              href={
+                                c.websiteUrl?.startsWith('http')
+                                  ? c.websiteUrl
+                                  : `https://${c.websiteUrl}`
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary hover:underline flex items-center gap-1"
@@ -824,7 +928,7 @@ export default function AdminPage() {
                           <TableCell>
                             <Badge
                               variant={
-                                c.status === 'approved'
+                                c.status === 'approved' || c.status === 'active'
                                   ? 'default'
                                   : c.status === 'rejected' ||
                                       c.status === 'suspended'
@@ -845,55 +949,74 @@ export default function AdminPage() {
                               : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            {c.status !== 'approved' && (
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  handleCompanyStatusUpdate(c.id, 'approved')
-                                }
-                                disabled={actionLoading === `company-${c.id}`}
-                                aria-label={`Approve company ${c.name}`}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              aria-label={`View company ${c.name}`}
+                            >
+                              <Link
+                                href={`/companies/${c.id}`}
+                                target="_blank"
                               >
-                                Approve
-                              </Button>
-                            )}
-                            {c.status !== 'rejected' &&
-                              c.status !== 'pending' && (
+                                <Eye className="h-5 w-5" />
+                              </Link>
+                            </Button>
+                            {c.status !== 'approved' &&
+                              c.status !== 'active' && (
                                 <Button
-                                  size="sm"
-                                  variant="outline"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleCompanyStatusUpdate(c.id, 'approved')
+                                  }
+                                  disabled={actionLoading === `company-${c.id}`}
+                                  aria-label={`Approve company ${c.name}`}
+                                  className="text-green-600"
+                                >
+                                  <CheckCircle2 className="h-5 w-5" />
+                                </Button>
+                              )}
+                            {c.status !== 'rejected' &&
+                              c.status !== 'pending' && ( // Can't reject if pending from here, use main card
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={() =>
                                     handleCompanyStatusUpdate(c.id, 'rejected')
                                   }
                                   disabled={actionLoading === `company-${c.id}`}
                                   aria-label={`Reject company ${c.name}`}
+                                  className="text-destructive"
                                 >
-                                  Reject
+                                  <XCircle className="h-5 w-5" />
                                 </Button>
                               )}
                             {c.status !== 'suspended' ? (
                               <Button
-                                size="sm"
-                                variant="destructive"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() =>
                                   handleCompanyStatusUpdate(c.id, 'suspended')
                                 }
                                 disabled={actionLoading === `company-${c.id}`}
                                 aria-label={`Suspend company ${c.name}`}
+                                className="text-orange-600"
                               >
-                                Suspend
+                                <Ban className="h-5 w-5" />
                               </Button>
                             ) : (
                               <Button
-                                size="sm"
-                                variant="secondary"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() =>
                                   handleCompanyStatusUpdate(c.id, 'active')
                                 }
                                 disabled={actionLoading === `company-${c.id}`}
                                 aria-label={`Activate company ${c.name}`}
+                                className="text-blue-600"
                               >
-                                Activate
+                                <CheckSquare className="h-5 w-5" />
                               </Button>
                             )}
                           </TableCell>
@@ -925,6 +1048,212 @@ export default function AdminPage() {
                         disabled={companiesCurrentPage === totalCompaniesPages}
                         variant="outline"
                         aria-label="Next page of companies"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="allJobs">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manage All Jobs ({sortedJobs.length})</CardTitle>
+              <Input
+                placeholder="Search jobs by title or company..."
+                value={jobsSearchTerm}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setJobsSearchTerm(e.target.value)
+                }
+                className="max-w-sm mt-2"
+                aria-label="Search all jobs"
+              />
+            </CardHeader>
+            <CardContent>
+              {isAllJobsLoading ? (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
+                  Loading jobs...
+                </div>
+              ) : paginatedJobs.length === 0 ? (
+                <p className="text-muted-foreground">No jobs found.</p>
+              ) : (
+                <>
+                  <Table>
+                    <TableCaption>A list of all jobs.</TableCaption>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          onClick={() =>
+                            requestSort('title', jobsSortConfig, setJobsSortConfig)
+                          }
+                          className="cursor-pointer"
+                          aria-label="Sort by job title"
+                        >
+                          Job Title {renderSortIcon('title', jobsSortConfig)}
+                        </TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'status',
+                              jobsSortConfig,
+                              setJobsSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                          aria-label="Sort by job status"
+                        >
+                          Status {renderSortIcon('status', jobsSortConfig)}
+                        </TableHead>
+                        <TableHead>Applicants</TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'createdAt',
+                              jobsSortConfig,
+                              setJobsSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                          aria-label="Sort by job creation date"
+                        >
+                          Created At{' '}
+                          {renderSortIcon('createdAt', jobsSortConfig)}
+                        </TableHead>
+                        <TableHead
+                          onClick={() =>
+                            requestSort(
+                              'updatedAt',
+                              jobsSortConfig,
+                              setJobsSortConfig
+                            )
+                          }
+                          className="cursor-pointer"
+                          aria-label="Sort by job update date"
+                        >
+                          Updated At{' '}
+                          {renderSortIcon('updatedAt', jobsSortConfig)}
+                        </TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedJobs.map((job) => (
+                        <TableRow key={job.id}>
+                          <TableCell className="font-medium">
+                            {job.title}
+                          </TableCell>
+                          <TableCell>{job.company}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                job.status === 'approved'
+                                  ? 'default'
+                                  : job.status === 'pending'
+                                    ? 'secondary'
+                                    : 'destructive'
+                              }
+                            >
+                              {job.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{job.applicantCount}</TableCell>
+                          <TableCell>
+                            {job.createdAt
+                              ? new Date(
+                                  job.createdAt as string
+                                ).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {job.updatedAt
+                              ? new Date(
+                                  job.updatedAt as string
+                                ).toLocaleDateString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right space-x-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              aria-label={`View job ${job.title}`}
+                            >
+                              <Link href={`/jobs/${job.id}`} target="_blank">
+                                <Eye className="h-5 w-5" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              aria-label={`Edit job ${job.title}`}
+                            >
+                              <Link href={`/employer/post-job?edit=${job.id}`}>
+                                <Edit3 className="h-5 w-5" />
+                              </Link>
+                            </Button>
+                            {job.status !== 'suspended' ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleJobStatusUpdate(job.id, 'suspended')
+                                }
+                                disabled={actionLoading === `job-${job.id}`}
+                                aria-label={`Suspend job ${job.title}`}
+                                className="text-orange-600"
+                              >
+                                <Ban className="h-5 w-5" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleJobStatusUpdate(job.id, 'approved')
+                                } // Activating sets to approved
+                                disabled={actionLoading === `job-${job.id}`}
+                                aria-label={`Activate job ${job.title}`}
+                                className="text-blue-600"
+                              >
+                                <CheckSquare className="h-5 w-5" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {totalJobsPages > 1 && (
+                    <div className="mt-4 flex justify-center items-center gap-2">
+                      <Button
+                        onClick={() =>
+                          setJobsCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={jobsCurrentPage === 1}
+                        variant="outline"
+                        aria-label="Previous page of jobs"
+                      >
+                        Previous
+                      </Button>
+                      <span>
+                        Page {jobsCurrentPage} of {totalJobsPages}
+                      </span>
+                      <Button
+                        onClick={() =>
+                          setJobsCurrentPage((p) =>
+                            Math.min(totalJobsPages, p + 1)
+                          )
+                        }
+                        disabled={jobsCurrentPage === totalJobsPages}
+                        variant="outline"
+                        aria-label="Next page of jobs"
                       >
                         Next
                       </Button>
@@ -1064,7 +1393,7 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell>
                             {u.isProfileSearchable ? (
-                              <CheckCircle className="text-green-500 h-5 w-5" />
+                              <CheckCircle2 className="text-green-500 h-5 w-5" />
                             ) : (
                               <XCircle className="text-red-500 h-5 w-5" />
                             )}
@@ -1085,23 +1414,19 @@ export default function AdminPage() {
                               : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            <Button variant="outline" size="sm" asChild>
+                            <Button variant="ghost" size="icon" asChild>
                               <Link
                                 href={`/employer/candidates/${u.uid}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label={`View profile of ${u.name || 'user'}`}
                               >
-                                <Eye className="mr-1 h-3 w-3" /> Profile
+                                <Eye className="h-5 w-5" />
                               </Link>
                             </Button>
                             <Button
-                              variant={
-                                u.status === 'active'
-                                  ? 'destructive'
-                                  : 'default'
-                              }
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() =>
                                 handleUserStatusUpdate(
                                   u.uid,
@@ -1113,8 +1438,17 @@ export default function AdminPage() {
                                 user?.uid === u.uid
                               }
                               aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                              className={
+                                u.status === 'active'
+                                  ? 'text-orange-600'
+                                  : 'text-blue-600'
+                              }
                             >
-                              {u.status === 'active' ? 'Suspend' : 'Activate'}
+                              {u.status === 'active' ? (
+                                <Ban className="h-5 w-5" />
+                              ) : (
+                                <CheckSquare className="h-5 w-5" />
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1330,12 +1664,8 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant={
-                                u.status === 'active'
-                                  ? 'destructive'
-                                  : 'default'
-                              }
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() =>
                                 handleUserStatusUpdate(
                                   u.uid,
@@ -1353,8 +1683,17 @@ export default function AdminPage() {
                                   user.role !== 'superAdmin')
                               }
                               aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                              className={
+                                u.status === 'active'
+                                  ? 'text-orange-600'
+                                  : 'text-blue-600'
+                              }
                             >
-                              {u.status === 'active' ? 'Suspend' : 'Activate'}
+                              {u.status === 'active' ? (
+                                <Ban className="h-5 w-5" />
+                              ) : (
+                                <CheckSquare className="h-5 w-5" />
+                              )}
                             </Button>
                           </TableCell>
                         </TableRow>
