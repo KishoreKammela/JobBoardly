@@ -26,83 +26,17 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
   - **Staged Files Linting**: [lint-staged](https://github.com/okonet/lint-staged) - For running linters only on changed files.
   - **Code Quality Analysis**: [SonarQube](https://www.sonarqube.org/) (via `sonarqube-scanner`) - For continuous inspection of code quality.
 
-## Core Features Implemented
+## Core Features Overview
 
-### For Job Seekers:
+JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
-- **User Authentication**: Secure registration and login via email/password and social providers. Includes password strength indicators and a dedicated "Change Password" page. Suspended accounts are prevented from logging in.
-- **User Profile Management**: Create and update personal and professional details. Includes options for profile visibility (searchable by employers or private).
-- **Resume Upload & AI Parsing**: Upload resumes (PDF, DOCX, TXT) or paste text, with AI attempting to parse and pre-fill profile information. Parsed summary stored.
-- **Downloadable PDF Profile**: Download their own profile in a clean, ATS-friendly PDF format.
-- **Profile Preview**: View their own profile as it might appear to employers.
-- **Job Search & Filtering**: Browse job listings with filters for keywords, location, role type, remote options, and **recent activity** (e.g., posted in last 7 days).
-- **Dynamic Job Detail Pages**: View comprehensive details for each job, including share functionality. If a job has screening questions, seekers answer them during application.
-- **Save Jobs & Saved Searches**: Bookmark jobs and save search filter criteria for later viewing and quick application via the settings page.
-- **Application Submission**: Apply for jobs, including answering any employer-defined screening questions. Creates an application document in Firestore.
-- **My Jobs Page**: View and manage saved and applied jobs with filtering options.
-- **AI-Powered Job Matching**: Get AI-driven job recommendations based on a comprehensive profile summary (editable for the session) matched against all available approved jobs. Context includes detailed work experience, education, skills, and preferences.
-- **User Settings**: Customize platform preferences:
-  - **Theme**: Light, Dark, or System preference (stored in Firestore).
-  - Notification preferences.
-  - Manage saved searches.
-  - Job board display preferences (list/grid, items per page).
-
-### For Employers:
-
-- **User Authentication**: Secure registration and login. Includes password strength and "Change Password". Company creation upon first employer registration. Suspended accounts are prevented from logging in.
-- **Company Profile Management**: Set up and manage company details. Company profiles require admin approval before being publicly visible. Current company status (e.g., "Pending", "Approved", "Rejected", "Suspended") visible.
-- **Job Posting & Management**:
-  - Create and publish job listings.
-  - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT) for AI to parse and pre-fill the posting form.
-  - **Screening Questions**: Add custom screening questions (text, yes/no) to job postings.
-  - **Job Status**: Jobs are submitted with a 'pending' status and require admin approval. Editing an existing job displays its current status and resubmits it as 'pending'.
-- **View Posted Jobs**: Manage jobs posted by the company, including applicant counts and job status. Edit existing jobs.
-- **View Applicants**: See candidates who applied for a specific job. View their answers to screening questions. Filter applicants by application status.
-- **Application Status Management**: Update the status of applications (e.g., Reviewed, Interviewing, Hired, Rejected) and add internal notes.
-- **Dynamic Candidate Detail Pages**: View comprehensive profiles of job seekers, including downloadable PDF versions (if enabled by seeker).
-- **Candidate Search & Filtering**: Browse job seeker profiles with advanced filters for keywords (supports basic **boolean logic**: AND, OR, NOT, "phrases"), location, availability, **job search status, desired salary range, and recent profile activity**.
-- **AI-Powered Candidate Matching**: Input a job description (text or file upload) and get AI-driven recommendations for suitable candidates. Context includes detailed candidate work experience, education, skills, and preferences.
-- **User Settings**: Customize basic platform preferences (theme, notifications).
-
-### For Admins & Super Admins:
-
-- **Admin Dashboard (Tabbed Interface)**: Centralized management with a tabbed interface. All tables utilize consistent icon-based actions for a cleaner and more intuitive user experience.
-  - **Companies Management Tab**:
-    - Table view: Name, Website, Status, Jobs Posted, Applications Received, Created At.
-    - Actions (Icon-based): View Company Profile (`Eye`), Approve (`CheckCircle2`), Reject (`XCircle`), Suspend (`Ban`)/Activate (`CheckSquare`) company. Suspending a company also suspends its associated recruiters.
-    - Search, sort, and pagination.
-  - **All Jobs Management Tab**:
-    - Table view: Job Title, Company, Status (approved, pending, rejected, suspended), Applicants Count, Created At, Updated At.
-    - Actions (Icon-based): View public job page (`Eye`), Edit job (links to employer's edit page - `Edit3`), Suspend (`Ban`)/Activate (`CheckSquare`) job (to 'approved' status).
-    - Search, sort, and pagination.
-  - **Job Seekers Management Tab**:
-    - Table view: Name, Email, Status (active/suspended), Profile Searchable, Jobs Applied, Last Active, Joined Date.
-    - Actions (Icon-based): Preview Job Seeker Profile (`Eye`), Suspend (`Ban`)/Activate (`CheckSquare`) user.
-    - Search, sort, and pagination.
-  - **Platform Users Management Tab (Admins/SuperAdmins)**:
-    - Table view: Name, Email, Role, Status, Last Active, Joined Date.
-    - Actions (Icon-based): Suspend (`Ban`)/Activate (`CheckSquare`) Admin/SuperAdmin users. (SuperAdmin role required to manage other Admins/SuperAdmins; self-action restricted).
-    - Search, sort, and pagination.
-  - **Quick Moderation Cards (Dashboard Overview)**:
-    - **Pending Job Approvals**: Quickly approve (`CheckCircle2`) or reject (`XCircle`) newly submitted job postings.
-    - **Pending Company Approvals**: Quickly approve (`CheckCircle2`) or reject (`XCircle`) new company profiles.
-- **Protected Admin Route**: Access restricted to users with "admin" or "superAdmin" roles, with a dedicated admin login page at `/auth/admin/login`.
-- **SuperAdmin Role**: Can manage (suspend/activate) regular admin accounts.
-
-### General Platform Features:
-
-- **Responsive Design**: UI adapts to different screen sizes.
-- **Responsive Navbar**: Adapts, moving items to user dropdown on smaller screens.
-- **Protected Routes**: Secure access to user-specific and role-specific pages.
-- **Intelligent Redirection**: Users redirected based on auth status and role.
-- **Dynamic Routing**: For job details, candidate profiles, company profiles.
-- **Toast Notifications**: For user feedback.
-- **`data-ai-hint` Attributes**: For placeholder images.
-- **Robust Firebase Initialization**: Improved error handling.
-- **Clean UI**: Internal IDs not exposed.
-- **Accessibility**: ARIA labels for icon buttons, semantic HTML for tables.
-- **Privacy**: Placeholder "Privacy Policy" and "Terms ofService" pages linked in footer.
-- **Performance**: Debouncing for search inputs. Optimized PDF profile generation.
+- **For Job Seekers**: User authentication, advanced profile management with resume parsing, downloadable PDF profiles, robust job search and filtering, job saving, one-click applications, AI-powered job matching, and personalized settings.
+  - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
+- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting, screening questions, applicant tracking and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
+  - [Detailed Employer Features](./docs/employer-features.md)
+- **For Administrators**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins). Features quick moderation cards and robust search/sort/pagination for all managed entities.
+  - [Detailed Admin Features](./docs/admin-features.md)
+- **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
 
 ## Folder Structure
 
@@ -138,6 +72,11 @@ A high-level overview of the project's directory structure:
 │   ├── hooks/                  # Custom React hooks (useAuth, useDebounce, useToast, useIsMobile)
 │   ├── lib/                    # Utility functions, Firebase config
 │   └── types/                  # TypeScript type definitions
+├── docs/                       # Detailed feature documentation
+│   ├── admin-features.md
+│   ├── employer-features.md
+│   ├── job-seeker-features.md
+│   └── routes-documentation.md # NEW: Detailed routes list
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -149,6 +88,12 @@ A high-level overview of the project's directory structure:
 ├── tailwind.config.ts
 └── tsconfig.json
 ```
+
+## Detailed Routes
+
+For a comprehensive list and description of all application routes, please see:
+
+- [Application Routes Documentation](./docs/routes-documentation.md)
 
 ## Configuration & Setup
 
@@ -184,7 +129,7 @@ GOOGLE_API_KEY="YOUR_GEMINI_API_KEY_HERE"
 
 ### 2. Firebase Setup
 
-Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled in your Firebase project. Set up necessary composite indexes in Firestore as prompted by errors during development or for query optimization (especially for the Admin Dashboard filtering/sorting if implemented server-side in the future).
+Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled in your Firebase project. Set up necessary composite indexes in Firestore as prompted by errors during development or for query optimization (especially for the Admin Dashboard filtering/sorting).
 
 ## Local Development Setup
 
@@ -209,44 +154,6 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
     ```
     This typically starts the Genkit server on `http://localhost:3400`.
 
-## Key Routes Examples
-
-### Public Routes:
-
-- `/`: Home page
-- `/jobs`: Job listings (paginated)
-- `/jobs/[jobId]`: Job details (with screening questions if any)
-- `/companies`: Company listings (paginated)
-- `/companies/[companyId]`: Company details
-- `/employer`: Employer landing page
-- `/privacy-policy`: Privacy Policy page
-- `/terms-of-service`: Terms of Service page
-
-### Job Seeker Routes (Auth Required):
-
-- `/auth/login`, `/auth/register`
-- `/auth/change-password`: Change password page
-- `/profile`: Job seeker profile management (resume, visibility, PDF download)
-- `/profile/preview`: Preview own profile
-- `/my-jobs`: Saved and applied jobs
-- `/ai-match`: AI job matching
-- `/settings`: Theme, notifications, saved searches
-
-### Employer Routes (Auth Required):
-
-- `/employer/login`, `/employer/register`
-- `/employer/post-job`: Create/edit job (with screening questions)
-- `/employer/posted-jobs`: Manage own jobs
-- `/employer/jobs/[jobId]/applicants`: View applicants (with answers)
-- `/employer/find-candidates`: Search candidates (paginated, boolean search, advanced filters)
-- `/employer/candidates/[candidateId]`: Candidate details (PDF download)
-- `/employer/ai-candidate-match`: AI candidate matching
-
-### Admin Routes (Admin/SuperAdmin Role Required):
-
-- `/auth/admin/login`
-- `/admin`: Admin dashboard (tabs for companies, job seekers, platform users; moderation, suspend/activate features, search, sort, pagination)
-
 ## Admin User Creation
 
 1.  A user registers normally (e.g., as a job seeker or employer).
@@ -255,4 +162,4 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
 4.  Edit the `role` field to `"admin"` or `"superAdmin"`.
 5.  Ensure their `status` field is set to `"active"`.
 
-This README reflects the major features and structure of JobBoardly.
+This README provides a high-level overview and setup guide for JobBoardly. For detailed feature descriptions, please refer to the documents in the `/docs` directory.
