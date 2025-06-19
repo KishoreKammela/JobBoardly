@@ -253,8 +253,8 @@ const PrintableProfileComponent = React.forwardRef<
         <div className="section">
           <h2>Skills</h2>
           <div className="skills-list">
-            {user.skills.map((skill) => (
-              <span key={skill} className="skill-badge">
+            {user.skills.map((skill, index) => (
+              <span key={`${skill}-${index}`} className="skill-badge">
                 {skill}
               </span>
             ))}
@@ -266,8 +266,8 @@ const PrintableProfileComponent = React.forwardRef<
         <div className="section">
           <h2>Languages</h2>
           <div className="languages-list">
-            {user.languages.map((lang) => (
-              <span key={lang} className="language-badge">
+            {user.languages.map((lang, index) => (
+              <span key={`${lang}-${index}`} className="language-badge">
                 {lang}
               </span>
             ))}
