@@ -20,7 +20,7 @@ export interface Filters {
   location: string;
   roleType: string;
   isRemote: boolean;
-  recentActivity?: 'any' | '24h' | '7d' | '30d';
+  recentActivity?: 'any' | '24h' | '7d' | '30d' | null;
 }
 
 export interface CandidateFilters {
@@ -31,11 +31,12 @@ export interface CandidateFilters {
     | 'all'
     | 'activelyLooking'
     | 'openToOpportunities'
-    | 'notLooking';
-  desiredSalaryMin?: number;
-  desiredSalaryMax?: number;
-  recentActivity?: 'any' | '24h' | '7d' | '30d';
-  minExperienceYears?: number;
+    | 'notLooking'
+    | null;
+  desiredSalaryMin?: number | null;
+  desiredSalaryMax?: number | null;
+  recentActivity?: 'any' | '24h' | '7d' | '30d' | null;
+  minExperienceYears?: number | null;
 }
 
 export interface SavedSearch {
@@ -215,7 +216,7 @@ export interface UserProfile {
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
 
-  savedCandidateSearches?: SavedCandidateSearch[]; // Added for employers
+  savedCandidateSearches?: SavedCandidateSearch[];
 
   companyId?: string;
   isCompanyAdmin?: boolean;

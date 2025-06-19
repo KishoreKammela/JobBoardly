@@ -26,7 +26,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './AuthContext'; // Import useAuth to access core user and updateUserProfile
+import { useAuth } from './AuthContext';
 
 interface JobSeekerActionsContextType {
   applyForJob: (job: Job) => Promise<void>;
@@ -47,7 +47,7 @@ export function JobSeekerActionsProvider({
 }: {
   children: ReactNode;
 }) {
-  const { user, updateUserProfile } = useAuth(); // Use the core AuthContext
+  const { user, updateUserProfile } = useAuth();
 
   const applyForJob = useCallback(
     async (job: Job) => {
@@ -209,8 +209,14 @@ export function JobSeekerActionsProvider({
       const newSearchObject: SavedSearch = {
         id: uuidv4(),
         name: searchName,
-        filters,
-        createdAt: new Date(), // Firestore handles serverTimestamp if needed directly, not in arrayUnion
+        filters: {
+          searchTerm: filters.searchTerm,
+          location: filters.location,
+          roleType: filters.roleType,
+          isRemote: filters.isRemote,
+          recentActivity: filters.recentActivity ?? null,
+        },
+        createdAt: new Date(),
       };
       try {
         await updateUserProfile({
@@ -253,17 +259,16 @@ export function JobSeekerActionsProvider({
       const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
       if (searchToDelete) {
         try {
-          // Ensure createdAt is a Firestore Timestamp if needed for arrayRemove
-          // For client-side Date, it might be better to filter and set the whole array
-          // if direct object comparison with arrayRemove is tricky due to Date vs Timestamp.
-          // However, if `savedSearches` in `UserProfile` from AuthContext always uses ISO strings or consistent Date objects, it should work.
-          // For simplicity, we assume the objects are directly comparable or Firestore handles it.
           const searchToDeleteForFirestore = {
             ...searchToDelete,
             createdAt:
               searchToDelete.createdAt instanceof Date
                 ? searchToDelete.createdAt
                 : new Date(searchToDelete.createdAt as string),
+            filters: {
+              ...searchToDelete.filters,
+              recentActivity: searchToDelete.filters.recentActivity ?? null,
+            },
           };
 
           await updateUserProfile({

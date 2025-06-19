@@ -23,7 +23,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './AuthContext'; // Import useAuth to access core user, company and updateUserProfile
+import { useAuth } from './AuthContext';
 
 interface EmployerActionsContextType {
   saveCandidateSearch: (
@@ -43,7 +43,7 @@ const EmployerActionsContext = createContext<
 >(undefined);
 
 export function EmployerActionsProvider({ children }: { children: ReactNode }) {
-  const { user, company, updateUserProfile } = useAuth(); // Use the core AuthContext
+  const { user, company, updateUserProfile } = useAuth();
 
   const saveCandidateSearch = useCallback(
     async (searchName: string, filters: CandidateFilters) => {
@@ -64,11 +64,21 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
+
       const newSearchObject: SavedCandidateSearch = {
         id: uuidv4(),
         name: searchName,
-        filters,
-        createdAt: new Date(),
+        filters: {
+          searchTerm: filters.searchTerm,
+          location: filters.location,
+          availability: filters.availability,
+          jobSearchStatus: filters.jobSearchStatus ?? null,
+          desiredSalaryMin: filters.desiredSalaryMin ?? null,
+          desiredSalaryMax: filters.desiredSalaryMax ?? null,
+          recentActivity: filters.recentActivity ?? null,
+          minExperienceYears: filters.minExperienceYears ?? null,
+        },
+        createdAt: new Date(), // Firestore will convert this to a Timestamp
       };
 
       try {
@@ -122,8 +132,20 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
           ...searchToDelete,
           createdAt:
             searchToDelete.createdAt instanceof Date
-              ? searchToDelete.createdAt
-              : new Date(searchToDelete.createdAt as string),
+              ? searchToDelete.createdAt // Already a Date object
+              : new Date(searchToDelete.createdAt as string), // Convert string/Timestamp to Date
+          filters: {
+            // Ensure nulls are preserved if they were stored as such
+            searchTerm: searchToDelete.filters.searchTerm,
+            location: searchToDelete.filters.location,
+            availability: searchToDelete.filters.availability,
+            jobSearchStatus: searchToDelete.filters.jobSearchStatus ?? null,
+            desiredSalaryMin: searchToDelete.filters.desiredSalaryMin ?? null,
+            desiredSalaryMax: searchToDelete.filters.desiredSalaryMax ?? null,
+            recentActivity: searchToDelete.filters.recentActivity ?? null,
+            minExperienceYears:
+              searchToDelete.filters.minExperienceYears ?? null,
+          },
         };
         try {
           await updateUserProfile({
@@ -160,7 +182,6 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
       if (employerNotes !== undefined) {
         updates.employerNotes = employerNotes;
       } else if (employerNotes === '') {
-        // Allow explicitly clearing notes
         updates.employerNotes = null;
       }
 
