@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, type FormEvent } from 'react';
 import type {
@@ -694,8 +693,7 @@ export function UserProfileForm() {
                   </div>
                   <div>
                     <Label htmlFor="gender" className="flex items-center gap-1">
-                      <Users className="h-4 w-4 text-muted-foreground" />{' '}
-                      Gender
+                      <Users className="h-4 w-4 text-muted-foreground" /> Gender
                     </Label>
                     <Select
                       value={userFormData.gender || 'Prefer not to say'}
@@ -1050,11 +1048,13 @@ export function UserProfileForm() {
                                 className={`w-full justify-start text-left font-normal ${!exp.endDate && !exp.currentlyWorking && 'text-muted-foreground'}`}
                               >
                                 <CalendarDays className="mr-2 h-4 w-4" />
-                                {exp.currentlyWorking
-                                  ? 'Present'
-                                  : expEndDateObj
-                                    ? format(expEndDateObj, 'PPP')
-                                    : <span>Pick a date</span>}
+                                {exp.currentlyWorking ? (
+                                  'Present'
+                                ) : expEndDateObj ? (
+                                  format(expEndDateObj, 'PPP')
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -1149,9 +1149,7 @@ export function UserProfileForm() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() =>
-                            removeArrayItem('experiences', exp.id)
-                          }
+                          onClick={() => removeArrayItem('experiences', exp.id)}
                           className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
                         >
                           <Trash2 className="h-4 w-4" /> Remove Experience
@@ -1391,9 +1389,7 @@ export function UserProfileForm() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() =>
-                          removeArrayItem('educations', edu.id)
-                        }
+                        onClick={() => removeArrayItem('educations', edu.id)}
                         className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
                       >
                         <Trash2 className="h-4 w-4" /> Remove Education
@@ -1539,9 +1535,7 @@ export function UserProfileForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() =>
-                    addArrayItem('languages', createEmptyLanguage)
-                  }
+                  onClick={() => addArrayItem('languages', createEmptyLanguage)}
                   className="flex items-center gap-1"
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Language
@@ -1596,9 +1590,7 @@ export function UserProfileForm() {
                   <div>
                     <Label htmlFor="jobSearchStatus">Job Search Status</Label>
                     <Select
-                      value={
-                        userFormData.jobSearchStatus || 'activelyLooking'
-                      }
+                      value={userFormData.jobSearchStatus || 'activelyLooking'}
                       onValueChange={(value) =>
                         handleUserSelectChange('jobSearchStatus', value)
                       }
@@ -1719,9 +1711,7 @@ export function UserProfileForm() {
                 />
               </div>
               <div>
-                <Label htmlFor="companyWebsiteUrl">
-                  Company Website URL
-                </Label>
+                <Label htmlFor="companyWebsiteUrl">Company Website URL</Label>
                 <Input
                   id="companyWebsiteUrl"
                   name="websiteUrl"
@@ -1787,8 +1777,7 @@ export function UserProfileForm() {
                         <Avatar className="h-10 w-10">
                           <AvatarImage
                             src={
-                              rec.avatarUrl ||
-                              `https://placehold.co/40x40.png`
+                              rec.avatarUrl || `https://placehold.co/40x40.png`
                             }
                             alt={rec.name || 'Recruiter'}
                             data-ai-hint="recruiter avatar"
@@ -1811,8 +1800,8 @@ export function UserProfileForm() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No recruiters currently associated with this company
-                    besides yourself.
+                    No recruiters currently associated with this company besides
+                    yourself.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-2">

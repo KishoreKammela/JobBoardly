@@ -170,7 +170,9 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-your-measurement-id" # Optional, for Anal
 # Ensure this key has access to the Gemini API.
 GOOGLE_API_KEY="YOUR_GEMINI_API_KEY_HERE"
 ```
+
 **Important**:
+
 - If your `.env` file is not in `.gitignore`, **add it now** to prevent accidentally committing your API keys.
 - Create a `.env.example` file with placeholders for these keys to guide other developers or for your own reference.
 - After setting or changing these variables, **you must restart your Next.js development server and Genkit server** for them to take effect.

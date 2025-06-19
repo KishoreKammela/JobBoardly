@@ -1,14 +1,6 @@
-
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Select,
   SelectContent,
@@ -43,20 +35,22 @@ export function CandidateFilterSidebar({
     ...initialFilters,
   };
 
-  const [filters, setFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>(defaultSidebarFilters);
+  const [filters, setFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>(
+    defaultSidebarFilters
+  );
 
   useEffect(() => {
     onFilterChange(filters);
   }, [filters, onFilterChange]);
 
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters((prev) => ({
-    setFilters((prev) => ({
       ...prev,
       [name]:
-        name === 'desiredSalaryMin' || name === 'desiredSalaryMax' || name === 'minExperienceYears'
+        name === 'desiredSalaryMin' ||
+        name === 'desiredSalaryMax' ||
+        name === 'minExperienceYears'
           ? value
             ? parseFloat(value)
             : undefined
@@ -64,7 +58,10 @@ export function CandidateFilterSidebar({
     }));
   };
 
-  const handleSelectChange = (name: keyof Omit<CandidateFilters, 'searchTerm'>, value: string) => {
+  const handleSelectChange = (
+    name: keyof Omit<CandidateFilters, 'searchTerm'>,
+    value: string
+  ) => {
     setFilters((prev) => ({
       ...prev,
       [name]: value,
@@ -97,15 +94,23 @@ export function CandidateFilterSidebar({
             />
           </div>
           <div>
-            <Label htmlFor="minExperienceYears" className="flex items-center gap-1.5">
-              <Briefcase className="h-4 w-4 text-primary/80" /> Min Experience (Years)
+            <Label
+              htmlFor="minExperienceYears"
+              className="flex items-center gap-1.5"
+            >
+              <Briefcase className="h-4 w-4 text-primary/80" /> Min Experience
+              (Years)
             </Label>
             <Input
               id="minExperienceYears"
               name="minExperienceYears"
               type="number"
               placeholder="e.g., 2"
-              value={filters.minExperienceYears || ''}
+              value={
+                filters.minExperienceYears === undefined
+                  ? ''
+                  : filters.minExperienceYears
+              }
               onChange={handleChange}
               min="0"
               aria-label="Minimum years of experience"
@@ -119,11 +124,11 @@ export function CandidateFilterSidebar({
               onValueChange={(value) =>
                 handleSelectChange('availability', value)
               }
-              onValueChange={(value) =>
-                handleSelectChange('availability', value)
-              }
             >
-              <SelectTrigger id="availability" aria-label="Filter by candidate availability">
+              <SelectTrigger
+                id="availability"
+                aria-label="Filter by candidate availability"
+              >
                 <SelectValue placeholder="Select availability" />
               </SelectTrigger>
               <SelectContent>
@@ -144,7 +149,10 @@ export function CandidateFilterSidebar({
                 handleSelectChange('jobSearchStatus', value)
               }
             >
-              <SelectTrigger id="jobSearchStatus" aria-label="Filter by job search status">
+              <SelectTrigger
+                id="jobSearchStatus"
+                aria-label="Filter by job search status"
+              >
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -169,7 +177,11 @@ export function CandidateFilterSidebar({
                 name="desiredSalaryMin"
                 type="number"
                 placeholder="e.g., 500000"
-                value={filters.desiredSalaryMin || ''}
+                value={
+                  filters.desiredSalaryMin === undefined
+                    ? ''
+                    : filters.desiredSalaryMin
+                }
                 onChange={handleChange}
                 aria-label="Minimum expected salary"
               />
@@ -183,7 +195,11 @@ export function CandidateFilterSidebar({
                 name="desiredSalaryMax"
                 type="number"
                 placeholder="e.g., 1500000"
-                value={filters.desiredSalaryMax || ''}
+                value={
+                  filters.desiredSalaryMax === undefined
+                    ? ''
+                    : filters.desiredSalaryMax
+                }
                 onChange={handleChange}
                 aria-label="Maximum expected salary"
               />

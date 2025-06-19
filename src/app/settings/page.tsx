@@ -2,8 +2,8 @@
 import { SettingsForm } from '@/components/SettingsForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Trash2 } from 'lucide-react'; // Added Trash2, ExternalLink
-import { useEffect } from 'react'; // Added useState
+import { Loader2, Trash2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   Card,
@@ -12,10 +12,10 @@ import {
   CardHeader,
   CardTitle,
   CardFooter,
-} from '@/components/ui/card'; // Added Card components
-import { Button } from '@/components/ui/button'; // Added Button
-import type { Filters } from '@/types'; // Added SavedSearch, Filters
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { Filters } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
   const { user, loading, deleteSearch } = useAuth();

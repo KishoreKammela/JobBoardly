@@ -1,4 +1,3 @@
-
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +11,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Filter, RotateCcw, Save } from 'lucide-react'; // Changed Search to Filter
+import { Filter, RotateCcw, Save } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { Filters } from '@/types';
@@ -32,7 +31,7 @@ import {
 interface FilterSidebarProps {
   onFilterChange: (filters: Omit<Filters, 'searchTerm'>) => void;
   initialFilters?: Partial<Omit<Filters, 'searchTerm'>>;
-  currentGlobalSearchTerm?: string; // To include in "Save Search"
+  currentGlobalSearchTerm?: string;
 }
 
 export function FilterSidebar({
@@ -48,7 +47,9 @@ export function FilterSidebar({
     ...initialFilters,
   };
 
-  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>(defaultSidebarFilters);
+  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>(
+    defaultSidebarFilters
+  );
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user, saveSearch } = useAuth();
@@ -57,7 +58,6 @@ export function FilterSidebar({
   useEffect(() => {
     onFilterChange(filters);
   }, [filters, onFilterChange]);
-
 
   const handleCheckboxChange = (
     name: keyof Omit<Filters, 'searchTerm'>,
@@ -69,7 +69,10 @@ export function FilterSidebar({
     }));
   };
 
-  const handleSelectChange = (name: keyof Omit<Filters, 'searchTerm'>, value: string) => {
+  const handleSelectChange = (
+    name: keyof Omit<Filters, 'searchTerm'>,
+    value: string
+  ) => {
     setFilters((prev) => ({
       ...prev,
       [name]: value,
@@ -86,12 +89,10 @@ export function FilterSidebar({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // onFilterChange is called via useEffect
   };
 
   const handleReset = () => {
     setFilters(defaultSidebarFilters);
-    // onFilterChange will be called by useEffect
   };
 
   const handleOpenSaveSearchDialog = () => {
@@ -120,7 +121,7 @@ export function FilterSidebar({
       try {
         const fullFiltersToSave: Filters = {
           ...filters,
-          searchTerm: currentGlobalSearchTerm, // Add the global search term
+          searchTerm: currentGlobalSearchTerm,
         };
         await saveSearch(searchName, fullFiltersToSave);
         toast({
@@ -143,7 +144,7 @@ export function FilterSidebar({
     <Card className="sticky top-24 shadow-sm">
       <CardHeader>
         <CardTitle className="text-xl font-headline flex items-center gap-2">
-            <Filter className="h-5 w-5 text-primary"/> Filter Jobs
+          <Filter className="h-5 w-5 text-primary" /> Filter Jobs
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -220,7 +221,6 @@ export function FilterSidebar({
             </Label>
           </div>
           <div className="flex flex-col gap-2 pt-2">
-            {/* Apply Filters button is implicitly handled by useEffect in parent */}
             <Button
               type="button"
               variant="outline"
@@ -252,7 +252,8 @@ export function FilterSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>Save Job Search</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a name for this search. It will include your current keyword "{currentGlobalSearchTerm || 'none'}" and the selected filters.
+              Enter a name for this search. It will include your current keyword
+              "{currentGlobalSearchTerm || 'none'}" and the selected filters.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

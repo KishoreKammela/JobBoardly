@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -6,7 +5,12 @@ import { JobCard } from '@/components/JobCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
 import type { Job, Filters } from '@/types';
 import { Button } from '@/components/ui/button';
-import { LayoutGrid, List, AlertCircle, Search as SearchIcon } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  AlertCircle,
+  Search as SearchIcon,
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card,
@@ -40,10 +44,14 @@ export default function JobsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const [globalSearchTerm, setGlobalSearchTerm] = useState(searchParams.get('q') || '');
+  const [globalSearchTerm, setGlobalSearchTerm] = useState(
+    searchParams.get('q') || ''
+  );
   const debouncedGlobalSearchTerm = useDebounce(globalSearchTerm, 500);
 
-  const [sidebarFilters, setSidebarFilters] = useState<Omit<Filters, 'searchTerm'>>({
+  const [sidebarFilters, setSidebarFilters] = useState<
+    Omit<Filters, 'searchTerm'>
+  >({
     location: searchParams.get('loc') || '',
     roleType: searchParams.get('type') || 'all',
     isRemote: searchParams.get('remote') === 'true',
@@ -51,7 +59,6 @@ export default function JobsPage() {
       (searchParams.get('activity') as Filters['recentActivity']) || 'any',
   });
   const debouncedSidebarFilters = useDebounce(sidebarFilters, 500);
-
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -87,7 +94,7 @@ export default function JobsPage() {
         });
         setAllJobs(jobsData);
         setFilteredJobs(jobsData);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Error fetching jobs:', e);
         setError('Failed to load jobs. Please try again later.');
       } finally {
@@ -121,7 +128,8 @@ export default function JobsPage() {
 
       const roleTypeMatch =
         debouncedSidebarFilters.roleType === 'all' ||
-        job.type.toLowerCase() === debouncedSidebarFilters.roleType.toLowerCase();
+        job.type.toLowerCase() ===
+          debouncedSidebarFilters.roleType.toLowerCase();
 
       const remoteMatch = !debouncedSidebarFilters.isRemote || job.isRemote;
 
@@ -210,12 +218,12 @@ export default function JobsPage() {
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-                type="search"
-                placeholder="Search job title, company, or skills..."
-                className="w-full h-12 pl-10 text-base rounded-lg shadow-sm"
-                value={globalSearchTerm}
-                onChange={(e) => setGlobalSearchTerm(e.target.value)}
-                aria-label="Search jobs"
+              type="search"
+              placeholder="Search job title, company, or skills..."
+              className="w-full h-12 pl-10 text-base rounded-lg shadow-sm"
+              value={globalSearchTerm}
+              onChange={(e) => setGlobalSearchTerm(e.target.value)}
+              aria-label="Search jobs"
             />
           </div>
           <div className="flex justify-between items-center">
@@ -246,7 +254,6 @@ export default function JobsPage() {
             </div>
           </div>
         </div>
-
 
         {error && (
           <Alert variant="destructive">

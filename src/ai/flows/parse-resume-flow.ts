@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Parses a resume document (provided as a data URI) and extracts structured information.
@@ -11,7 +10,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { ParsedResumeData } from '@/types';
 
 const ParseResumeInputSchema = z.object({
   resumeDataUri: z
@@ -67,7 +65,7 @@ const ParseResumeOutputSchema = z
       .number()
       .optional()
       .describe(
-        'The total years of professional experience, if explicitly mentioned or clearly inferable from the resume content.'
+        'The total years of professional work experience, if explicitly mentioned or clearly inferable from the resume content.'
       ),
   })
   .describe(
@@ -76,9 +74,6 @@ const ParseResumeOutputSchema = z
 
 export type ParseResumeOutput = z.infer<typeof ParseResumeOutputSchema>;
 
-export async function parseResumeFlow(
-  input: ParseResumeInput
-): Promise<ParseResumeOutput> {
 export async function parseResumeFlow(
   input: ParseResumeInput
 ): Promise<ParseResumeOutput> {

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview This file defines the AI-powered job matching flow.
@@ -12,8 +11,6 @@
  * - `AIPoweredJobMatchingOutput`: The output type for the `aiPoweredJobMatching` function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
@@ -30,9 +27,6 @@ const AIPoweredJobMatchingInputSchema = z.object({
     ),
 });
 
-export type AIPoweredJobMatchingInput = z.infer<
-  typeof AIPoweredJobMatchingInputSchema
->;
 export type AIPoweredJobMatchingInput = z.infer<
   typeof AIPoweredJobMatchingInputSchema
 >;
@@ -53,13 +47,7 @@ const AIPoweredJobMatchingOutputSchema = z.object({
 export type AIPoweredJobMatchingOutput = z.infer<
   typeof AIPoweredJobMatchingOutputSchema
 >;
-export type AIPoweredJobMatchingOutput = z.infer<
-  typeof AIPoweredJobMatchingOutputSchema
->;
 
-export async function aiPoweredJobMatching(
-  input: AIPoweredJobMatchingInput
-): Promise<AIPoweredJobMatchingOutput> {
 export async function aiPoweredJobMatching(
   input: AIPoweredJobMatchingInput
 ): Promise<AIPoweredJobMatchingOutput> {
@@ -107,7 +95,7 @@ const aiPoweredJobMatchingFlow = ai.defineFlow(
     inputSchema: AIPoweredJobMatchingInputSchema,
     outputSchema: AIPoweredJobMatchingOutputSchema,
   },
-  async (input) => {
+  async (input: AIPoweredJobMatchingInput) => {
     const { output } = await prompt(input);
     if (!output) {
       console.warn('AI Job Matching flow returned no output from AI.');

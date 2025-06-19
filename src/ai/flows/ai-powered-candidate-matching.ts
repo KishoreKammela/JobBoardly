@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview This file defines the AI-powered candidate matching flow for employers.
@@ -12,8 +11,6 @@
  * - `AIPoweredCandidateMatchingOutput`: The output type for the function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
@@ -30,9 +27,6 @@ const AIPoweredCandidateMatchingInputSchema = z.object({
     ),
 });
 
-export type AIPoweredCandidateMatchingInput = z.infer<
-  typeof AIPoweredCandidateMatchingInputSchema
->;
 export type AIPoweredCandidateMatchingInput = z.infer<
   typeof AIPoweredCandidateMatchingInputSchema
 >;
@@ -53,13 +47,7 @@ const AIPoweredCandidateMatchingOutputSchema = z.object({
 export type AIPoweredCandidateMatchingOutput = z.infer<
   typeof AIPoweredCandidateMatchingOutputSchema
 >;
-export type AIPoweredCandidateMatchingOutput = z.infer<
-  typeof AIPoweredCandidateMatchingOutputSchema
->;
 
-export async function aiPoweredCandidateMatching(
-  input: AIPoweredCandidateMatchingInput
-): Promise<AIPoweredCandidateMatchingOutput> {
 export async function aiPoweredCandidateMatching(
   input: AIPoweredCandidateMatchingInput
 ): Promise<AIPoweredCandidateMatchingOutput> {
@@ -106,9 +94,7 @@ const aiPoweredCandidateMatchingFlow = ai.defineFlow(
     inputSchema: AIPoweredCandidateMatchingInputSchema,
     outputSchema: AIPoweredCandidateMatchingOutputSchema,
   },
-  async (input) => {
-    const { output } = await prompt(input);
-  async (input) => {
+  async (input: AIPoweredCandidateMatchingInput) => {
     const { output } = await prompt(input);
     if (!output) {
       console.warn('AI Candidate Matching flow returned no output from AI.');

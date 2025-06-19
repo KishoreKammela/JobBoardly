@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import type { UserProfile } from '@/types';
@@ -115,17 +114,20 @@ export function CandidateSearchResults({
           for (const andSegment of andSegments) {
             let mustBePresent = true;
             let termToSearch = andSegment;
-            if (andSegment.startsWith("not ")) {
+            if (andSegment.startsWith('not ')) {
               mustBePresent = false;
               termToSearch = andSegment.substring(4).trim();
             }
-            
+
             const phrases = termToSearch.match(/"([^"]+)"/g) || [];
             let remainingTerm = termToSearch;
-            phrases.forEach(phrase => remainingTerm = remainingTerm.replace(phrase, '').trim());
+            phrases.forEach(
+              (phrase) =>
+                (remainingTerm = remainingTerm.replace(phrase, '').trim())
+            );
             const individualTerms = remainingTerm.split(/\s+/).filter(Boolean);
 
-            segmentResults = segmentResults.filter(candidate => {
+            segmentResults = segmentResults.filter((candidate) => {
               const profileText = `
                 ${candidate.name?.toLowerCase() || ''} 
                 ${candidate.headline?.toLowerCase() || ''} 
@@ -133,7 +135,9 @@ export function CandidateSearchResults({
                 ${candidate.parsedResumeText?.toLowerCase() || ''}
                 ${
                   candidate.experiences
-                    ?.map((e) => `${e.jobRole} ${e.companyName} ${e.description}`)
+                    ?.map(
+                      (e) => `${e.jobRole} ${e.companyName} ${e.description}`
+                    )
                     .join(' ')
                     .toLowerCase() || ''
                 }
@@ -159,7 +163,9 @@ export function CandidateSearchResults({
           }
           orResults = orResults.concat(segmentResults);
         }
-        tempFiltered = Array.from(new Set(orResults.map(c => c.uid))).map(uid => orResults.find(c => c.uid === uid)!);
+        tempFiltered = Array.from(new Set(orResults.map((c) => c.uid))).map(
+          (uid) => orResults.find((c) => c.uid === uid)!
+        );
       }
 
       if (currentFilters.location) {
@@ -170,7 +176,7 @@ export function CandidateSearchResults({
           )
         );
       }
-      
+
       if (
         currentFilters.availability &&
         currentFilters.availability !== 'all'
@@ -210,7 +216,7 @@ export function CandidateSearchResults({
 
       if (currentFilters.minExperienceYears !== undefined) {
         tempFiltered = tempFiltered.filter(
-          (c) => 
+          (c) =>
             c.totalYearsExperience !== undefined &&
             c.totalYearsExperience >= currentFilters.minExperienceYears!
         );
@@ -236,7 +242,7 @@ export function CandidateSearchResults({
           return updatedAt >= cutoffDate;
         });
       }
-      
+
       return tempFiltered.sort((a, b) => {
         const dateA = a.updatedAt
           ? new Date(a.updatedAt as string).getTime()
@@ -248,9 +254,7 @@ export function CandidateSearchResults({
       });
     };
 
-    setFilteredAndSortedCandidates(
-      applyFilters(allCandidates, filters)
-    );
+    setFilteredAndSortedCandidates(applyFilters(allCandidates, filters));
     setCurrentPage(1);
     setIsFiltering(false);
   }, [filters, allCandidates, isLoading]);
@@ -312,9 +316,9 @@ export function CandidateSearchResults({
       </div>
     );
   }
-  
+
   if (isFiltering) {
-     return (
+    return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-2">Filtering candidates...</p>

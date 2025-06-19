@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
@@ -18,7 +17,6 @@ import {
   CardHeader,
   CardFooter,
 } from '@/components/ui/card';
-// Removed Button import, will use native button
 import {
   Briefcase,
   GraduationCap,
@@ -47,9 +45,8 @@ import { formatCurrencyINR } from '@/lib/utils';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
-import { cn } from '@/lib/utils'; 
-import { buttonVariants } from '@/components/ui/button'; 
-import { Button } from '@/components/ui/button'; 
+import { Button } from '@/components/ui/button'; // Keep for other buttons
+import Link from 'next/link';
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -121,10 +118,10 @@ export default function CandidateDetailPage() {
                 ) {
                   dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
                 } else {
-                    dobString = ''; 
+                  dobString = undefined;
                 }
               } else {
-                dobString = '';
+                dobString = undefined;
               }
 
               setCandidate({
@@ -143,8 +140,14 @@ export default function CandidateDetailPage() {
                   data.lastActive instanceof Timestamp
                     ? data.lastActive.toDate().toISOString()
                     : data.lastActive,
-                totalYearsExperience: data.totalYearsExperience || 0,
-                totalMonthsExperience: data.totalMonthsExperience || 0,
+                totalYearsExperience:
+                  data.totalYearsExperience === null
+                    ? undefined
+                    : data.totalYearsExperience,
+                totalMonthsExperience:
+                  data.totalMonthsExperience === null
+                    ? undefined
+                    : data.totalMonthsExperience,
               } as UserProfile);
             } else {
               setError('This profile does not belong to a job seeker.');
@@ -225,7 +228,7 @@ export default function CandidateDetailPage() {
   const totalExperienceString = () => {
     const years = candidate.totalYearsExperience || 0;
     const months = candidate.totalMonthsExperience || 0;
-    if (years === 0 && months === 0) return null; // Changed from "N/A" to null
+    if (years === 0 && months === 0) return null;
     let str = '';
     if (years > 0) str += `${years} year${years > 1 ? 's' : ''}`;
     if (months > 0) {
@@ -303,21 +306,42 @@ export default function CandidateDetailPage() {
                       )}
                     </div>
                   )}
-                {candidate.gender && candidate.gender !== 'Prefer not to say' && (
-                  <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <Users className="h-4 w-4" /> Gender: {candidate.gender}
-                  </div>
-                )}
+                {candidate.gender &&
+                  candidate.gender !== 'Prefer not to say' && (
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <Users className="h-4 w-4" /> Gender: {candidate.gender}
+                    </div>
+                  )}
               </div>
             </div>
             <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
               <button
                 onClick={handlePrintProfile}
                 type="button"
-                className={cn(
-                  buttonVariants({ variant: 'outline' }),
-                  'w-full sm:w-auto'
-                )}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  whiteSpace: 'nowrap',
+                  borderRadius: '0.375rem', // rounded-md
+                  fontSize: '0.875rem', // text-sm
+                  fontWeight: 500, // font-medium
+                  outline: '2px solid transparent',
+                  outlineOffset: '2px',
+                  transitionProperty:
+                    'color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter',
+                  transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                  transitionDuration: '150ms',
+                  borderWidth: '1px',
+                  borderColor: 'hsl(var(--input))', // border-input
+                  backgroundColor: 'hsl(var(--background))', // bg-background
+                  paddingLeft: '1rem', // px-4
+                  paddingRight: '1rem', // px-4
+                  paddingTop: '0.5rem', // py-2
+                  paddingBottom: '0.5rem', // py-2
+                  height: '2.5rem', // h-10
+                }}
+                className="hover:bg-accent hover:text-accent-foreground w-full sm:w-auto"
                 aria-label="Download candidate profile as PDF"
               >
                 <Download className="mr-2 h-4 w-4" /> Download PDF
@@ -407,7 +431,8 @@ export default function CandidateDetailPage() {
             <section>
               {(totalExperienceDisplay ||
                 candidate.parsedResumeText ||
-                (candidate.experiences && candidate.experiences.length > 0)) && (
+                (candidate.experiences &&
+                  candidate.experiences.length > 0)) && (
                 <Separator className="my-6" />
               )}
               <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
@@ -537,12 +562,12 @@ export default function CandidateDetailPage() {
                   {candidate.expectedCTCNegotiable && '(Negotiable)'}
                 </p>
               )}
-              {(candidate.currentCTCValue === undefined &&
-                candidate.expectedCTCValue === undefined) && (
-                <p className="text-sm text-muted-foreground">
-                  Compensation details not provided.
-                </p>
-              )}
+              {candidate.currentCTCValue === undefined &&
+                candidate.expectedCTCValue === undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    Compensation details not provided.
+                  </p>
+                )}
             </div>
           </section>
 
@@ -667,4 +692,3 @@ export default function CandidateDetailPage() {
     </div>
   );
 }
-

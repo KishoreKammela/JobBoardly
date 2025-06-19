@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -174,7 +173,10 @@ export default function AiCandidateMatchPage() {
         if (c.homeState) profileString += `Home State: ${c.homeState}\n`;
         if (c.homeCity) profileString += `Home City: ${c.homeCity}\n`;
 
-        if (c.totalYearsExperience !== undefined || c.totalMonthsExperience !== undefined) {
+        if (
+          c.totalYearsExperience !== undefined ||
+          c.totalMonthsExperience !== undefined
+        ) {
           profileString += `Total Experience: ${c.totalYearsExperience || 0} years, ${c.totalMonthsExperience || 0} months\n`;
         }
 
@@ -197,8 +199,7 @@ export default function AiCandidateMatchPage() {
 
         if (c.portfolioUrl)
           profileString += `Portfolio URL: ${c.portfolioUrl}\n`;
-        if (c.linkedinUrl)
-          profileString += `LinkedIn URL: ${c.linkedinUrl}\n`;
+        if (c.linkedinUrl) profileString += `LinkedIn URL: ${c.linkedinUrl}\n`;
         if (c.preferredLocations && c.preferredLocations.length > 0) {
           profileString += `Preferred Locations: ${c.preferredLocations.join(', ')}\n`;
         }

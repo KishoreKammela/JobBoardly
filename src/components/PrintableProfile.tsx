@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type {
   UserProfile,
@@ -29,7 +28,8 @@ const PrintableProfileComponent = React.forwardRef<
 >(({ user }, ref) => {
   if (!user) {
     return (
-      <div ref={ref} className="p-8 font-body bg-white text-black text-sm">
+      // Note: Removed inline styles, relying on classes for print CSS
+      <div ref={ref} className="printable-profile-content-wrapper">
         <p>No user data provided for printing.</p>
       </div>
     );
@@ -38,7 +38,7 @@ const PrintableProfileComponent = React.forwardRef<
   const totalExperienceString = () => {
     const years = user.totalYearsExperience || 0;
     const months = user.totalMonthsExperience || 0;
-    if (years === 0 && months === 0) return null; // Return null if no experience
+    if (years === 0 && months === 0) return null;
     let str = '';
     if (years > 0) str += `${years} year${years > 1 ? 's' : ''}`;
     if (months > 0) {
@@ -60,164 +60,32 @@ const PrintableProfileComponent = React.forwardRef<
         edu.description && edu.description.length > MAX_EDUCATION_DESC_LENGTH
     );
 
-  return (
-    <div
-      ref={ref}
-      className="p-8 font-body bg-white text-black text-sm printable-profile"
-    >
-      <style jsx global>{`
-        @media print {
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .printable-profile {
-            font-size: 9pt;
-            line-height: 1.3;
-            color: #333 !important;
-          }
-          .printable-profile h1,
-          .printable-profile h2,
-          .printable-profile h3,
-          .printable-profile h4 {
-            color: #111 !important;
-            margin-bottom: 0.3rem;
-            font-family: 'Inter', sans-serif;
-          }
-          .printable-profile h1 {
-            font-size: 18pt;
-            font-weight: 700;
-          }
-          .printable-profile h2 {
-            font-size: 14pt;
-            font-weight: 600;
-            margin-top: 1rem;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 0.2rem;
-          }
-          .printable-profile h3 {
-            font-size: 11pt;
-            font-weight: 600;
-            margin-bottom: 0.1rem;
-          }
-          .printable-profile h4 {
-            font-size: 10pt;
-            font-weight: 500;
-            color: #444 !important;
-            margin-bottom: 0.1rem;
-          }
-          .printable-profile strong {
-            font-weight: 600;
-          }
-          .printable-profile a {
-            color: #0056b3 !important;
-            text-decoration: none;
-          }
-          .printable-profile hr {
-            border-top: 1px solid #ddd;
-            margin: 0.8rem 0;
-          }
-          .printable-profile ul.compact-list {
-            margin-left: 0;
-            padding-left: 0;
-            list-style-type: none;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-          }
-          .printable-profile ul.compact-list li {
-            background-color: #f0f0f0;
-            padding: 0.15rem 0.4rem;
-            border-radius: 0.2rem;
-            font-size: 8pt;
-          }
-          .printable-profile .section {
-            margin-bottom: 1rem;
-            page-break-inside: avoid;
-          }
-          .printable-profile .header {
-            text-align: center;
-            margin-bottom: 1.2rem;
-            page-break-after: avoid;
-          }
-          .printable-profile .header p {
-            margin: 0.1rem 0;
-            font-size: 9pt;
-            color: #555 !important;
-          }
-          .printable-profile .entry-item {
-            margin-bottom: 0.8rem;
-            page-break-inside: avoid;
-          }
-          .printable-profile .item-meta {
-            font-size: 8pt;
-            color: #666 !important;
-            margin-bottom: 0.2rem;
-          }
-          .printable-profile .item-description {
-            white-space: pre-wrap;
-            font-size: 9pt;
-            margin-left: 0;
-            padding-left: 0;
-            border-left: none;
-          }
-          .printable-profile .footer-note {
-            margin-top: 1.5rem;
-            font-size: 7pt;
-            color: #777 !important;
-            text-align: center;
-            page-break-before: auto;
-          }
-          .printable-profile .grid-2-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem 1.5rem; /* Adjust gap */
-            page-break-inside: avoid;
-          }
-          .printable-profile .contact-info span,
-          .printable-profile .personal-info-item {
-            margin-right: 0.7rem;
-            display: inline-block; /* For better wrapping in grid */
-          }
-          .printable-profile .contact-info span:last-child,
-          .printable-profile .personal-info-item:last-child {
-            margin-right: 0;
-          }
-           .printable-profile .sub-section { /* New for CTC & Preferences grouping */
-            margin-bottom: 0.8rem;
-            page-break-inside: avoid;
-          }
-          .printable-profile .sub-section h3 {
-            font-size: 10pt;
-            font-weight: 600;
-            color: #333 !important;
-            border-bottom: none; /* No border for sub-section H3 */
-            margin-top: 0.5rem;
-            margin-bottom: 0.2rem;
-          }
-        }
-        .printable-profile {
-          font-family: 'Inter', sans-serif;
-          max-width: 800px;
-          margin: auto;
-          line-height: 1.5;
-        }
-      `}</style>
+  // For print styling, ensure you have corresponding CSS rules
+  // in your globals.css under a @media print query.
+  // e.g., @media print { .printable-profile-h1 { font-size: 18pt !important; } /* ... */ }
 
-      <div className="header">
-        <h1>{user.name}</h1>
-        {user.headline && <p>{user.headline}</p>}
-        <p className="contact-info">
+  return (
+    <div ref={ref} className="printable-profile-content-wrapper">
+      <div className="printable-profile-center printable-profile-mb-large">
+        <h1 className="printable-profile-h1">{user.name}</h1>
+        {user.headline && (
+          <p className="printable-profile-subtext">{user.headline}</p>
+        )}
+        <p className="printable-profile-subtext">
           {user.email && <span>{user.email}</span>}
           {user.mobileNumber && (
             <>
-              {user.email && <span>&bull;</span>}{' '}
+              {user.email && (
+                <span className="printable-profile-bullet">&bull;</span>
+              )}
               <span>{user.mobileNumber}</span>
             </>
           )}
           {(user.homeCity || user.homeState) && (
             <>
-              {(user.email || user.mobileNumber) && <span>&bull;</span>}
+              {(user.email || user.mobileNumber) && (
+                <span className="printable-profile-bullet">&bull;</span>
+              )}
               <span>
                 {user.homeCity}
                 {user.homeCity && user.homeState ? ', ' : ''}
@@ -226,23 +94,27 @@ const PrintableProfileComponent = React.forwardRef<
             </>
           )}
         </p>
-        <p className="contact-info">
+        <p className="printable-profile-subtext">
           {user.portfolioUrl && (
             <a
               href={user.portfolioUrl}
               target="_blank"
               rel="noopener noreferrer"
+              className="printable-profile-link"
             >
               Portfolio
             </a>
           )}
           {user.linkedinUrl && (
             <>
-              {user.portfolioUrl && <span>&bull;</span>}{' '}
+              {user.portfolioUrl && (
+                <span className="printable-profile-bullet">&bull;</span>
+              )}
               <a
                 href={user.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="printable-profile-link"
               >
                 LinkedIn
               </a>
@@ -252,29 +124,29 @@ const PrintableProfileComponent = React.forwardRef<
       </div>
 
       {totalExperienceString() && (
-        <div className="section">
-          <h2>Total Experience</h2>
+        <div className="printable-profile-section">
+          <h2 className="printable-profile-h2">Total Experience</h2>
           <p>{totalExperienceString()}</p>
         </div>
       )}
 
       {user.parsedResumeText && (
-        <div className="section">
-          <h2>Professional Summary</h2>
-          <p className="item-description">
+        <div className="printable-profile-section">
+          <h2 className="printable-profile-h2">Professional Summary</h2>
+          <p className="printable-profile-pre-wrap printable-profile-small-text">
             {truncateText(user.parsedResumeText, MAX_SUMMARY_LENGTH)}
           </p>
         </div>
       )}
 
       {user.experiences && user.experiences.length > 0 && (
-        <div className="section">
-          <h2>Work Experience</h2>
+        <div className="printable-profile-section">
+          <h2 className="printable-profile-h2">Work Experience</h2>
           {user.experiences.map((exp: ExperienceEntry) => (
-            <div key={exp.id} className="entry-item">
-              <h3>{exp.jobRole}</h3>
-              <h4>{exp.companyName}</h4>
-              <p className="item-meta">
+            <div key={exp.id} className="printable-profile-mb-medium">
+              <h3 className="printable-profile-h3">{exp.jobRole}</h3>
+              <h4 className="printable-profile-h4">{exp.companyName}</h4>
+              <p className="printable-profile-date-text">
                 {exp.startDate &&
                 isValid(parse(exp.startDate, 'yyyy-MM-dd', new Date()))
                   ? format(
@@ -295,7 +167,7 @@ const PrintableProfileComponent = React.forwardRef<
                 {exp.annualCTC && ` | CTC: ${formatCurrencyINR(exp.annualCTC)}`}
               </p>
               {exp.description && (
-                <p className="item-description">
+                <p className="printable-profile-pre-wrap printable-profile-small-text">
                   {truncateText(exp.description, MAX_EXPERIENCE_DESC_LENGTH)}
                 </p>
               )}
@@ -305,36 +177,30 @@ const PrintableProfileComponent = React.forwardRef<
       )}
 
       {user.educations && user.educations.length > 0 && (
-        <div className="section">
-          <h2>Education</h2>
+        <div className="printable-profile-section">
+          <h2 className="printable-profile-h2">Education</h2>
           {user.educations.map((edu: EducationEntry) => (
-            <div key={edu.id} className="entry-item">
-              <h3>
+            <div key={edu.id} className="printable-profile-mb-medium">
+              <h3 className="printable-profile-h3">
                 {edu.degreeName}
                 {edu.specialization && `, ${edu.specialization}`}
                 {edu.isMostRelevant && (
-                  <span
-                    style={{
-                      fontSize: '0.8em',
-                      color: '#0056b3',
-                      marginLeft: '5px',
-                    }}
-                  >
+                  <span className="printable-profile-relevant-tag">
                     (Relevant)
                   </span>
                 )}
               </h3>
-              <h4>
+              <h4 className="printable-profile-h4">
                 {edu.instituteName} ({edu.level})
               </h4>
-              <p className="item-meta">
+              <p className="printable-profile-date-text">
                 {edu.startYear && edu.endYear
                   ? `${edu.startYear} - ${edu.endYear}`
                   : edu.endYear || 'N/A'}
                 {edu.courseType && ` | ${edu.courseType}`}
               </p>
               {edu.description && (
-                <p className="item-description">
+                <p className="printable-profile-pre-wrap printable-profile-small-text">
                   {truncateText(edu.description, MAX_EDUCATION_DESC_LENGTH)}
                 </p>
               )}
@@ -343,13 +209,18 @@ const PrintableProfileComponent = React.forwardRef<
         </div>
       )}
 
-      <div className="grid-2-col section">
+      <div className="printable-profile-grid-cols-2">
         <div>
-          <h2>Skills</h2>
+          <h2 className="printable-profile-h2">Skills</h2>
           {user.skills && user.skills.length > 0 ? (
-            <ul className="compact-list">
+            <ul className="printable-profile-list-none printable-profile-flex-wrap">
               {user.skills.map((skill, index) => (
-                <li key={`skill-${index}`}>{skill}</li>
+                <li
+                  key={`skill-${index}`}
+                  className="printable-profile-skill-badge"
+                >
+                  {skill}
+                </li>
               ))}
             </ul>
           ) : (
@@ -357,11 +228,14 @@ const PrintableProfileComponent = React.forwardRef<
           )}
         </div>
         <div>
-          <h2>Languages</h2>
+          <h2 className="printable-profile-h2">Languages</h2>
           {user.languages && user.languages.length > 0 ? (
-            <ul className="compact-list">
+            <ul className="printable-profile-list-none printable-profile-flex-wrap">
               {user.languages.map((lang: LanguageEntry) => (
-                <li key={lang.id || lang.languageName}>
+                <li
+                  key={lang.id || lang.languageName}
+                  className="printable-profile-skill-badge"
+                >
                   {lang.languageName} ({lang.proficiency.substring(0, 3)}.
                   {lang.canRead ? 'R' : ''}
                   {lang.canWrite ? 'W' : ''}
@@ -375,14 +249,14 @@ const PrintableProfileComponent = React.forwardRef<
         </div>
       </div>
 
-      <div className="section">
-        <h2>Other Details</h2>
-        <div className="sub-section">
-          <h3>Personal</h3>
-          <div className="grid-2-col">
+      <div className="printable-profile-section">
+        <h2 className="printable-profile-h2">Other Details</h2>
+        <div className="printable-profile-mb-medium">
+          <h3 className="printable-profile-h3-small">Personal</h3>
+          <div className="printable-profile-grid-cols-2">
             {user.dateOfBirth &&
               isValid(parse(user.dateOfBirth, 'yyyy-MM-dd', new Date())) && (
-                <p className="personal-info-item">
+                <p className="printable-profile-detail-item">
                   <strong>Date of Birth:</strong>{' '}
                   {format(
                     parse(user.dateOfBirth, 'yyyy-MM-dd', new Date()),
@@ -391,18 +265,18 @@ const PrintableProfileComponent = React.forwardRef<
                 </p>
               )}
             {user.gender && user.gender !== 'Prefer not to say' && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Gender:</strong> {user.gender}
               </p>
             )}
           </div>
         </div>
 
-        <div className="sub-section">
-          <h3>Compensation</h3>
-          <div className="grid-2-col">
+        <div className="printable-profile-mb-medium">
+          <h3 className="printable-profile-h3-small">Compensation</h3>
+          <div className="printable-profile-grid-cols-2">
             {user.currentCTCValue !== undefined && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Current CTC:</strong>{' '}
                 {user.currentCTCConfidential
                   ? 'Confidential'
@@ -410,49 +284,53 @@ const PrintableProfileComponent = React.forwardRef<
               </p>
             )}
             {user.expectedCTCValue !== undefined && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Expected CTC:</strong>{' '}
                 {formatCurrencyINR(user.expectedCTCValue)}/year{' '}
                 {user.expectedCTCNegotiable && '(Negotiable)'}
               </p>
             )}
-             {(user.currentCTCValue === undefined && user.expectedCTCValue === undefined) && (
-                <p className="personal-info-item">Not specified.</p>
-             )}
+            {user.currentCTCValue === undefined &&
+              user.expectedCTCValue === undefined && (
+                <p className="printable-profile-detail-item">Not specified.</p>
+              )}
           </div>
         </div>
 
-        <div className="sub-section">
-          <h3>Preferences</h3>
-          <div className="grid-2-col">
+        <div className="printable-profile-mb-medium">
+          <h3 className="printable-profile-h3-small">Preferences</h3>
+          <div className="printable-profile-grid-cols-2">
             {user.preferredLocations && user.preferredLocations.length > 0 && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Preferred Locations:</strong>{' '}
                 {user.preferredLocations.join(', ')}
               </p>
             )}
             {user.availability && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Availability:</strong> {user.availability}
               </p>
             )}
             {user.jobSearchStatus && (
-              <p className="personal-info-item">
+              <p className="printable-profile-detail-item">
                 <strong>Job Search Status:</strong>{' '}
                 {user.jobSearchStatus
                   .replace(/([A-Z])/g, ' $1')
                   .replace(/^./, (str) => str.toUpperCase())}
               </p>
             )}
-             {(!user.preferredLocations || user.preferredLocations.length === 0) && !user.jobSearchStatus && !user.availability && (
-                <p className="personal-info-item">Not specified.</p>
-             )}
+            {(!user.preferredLocations ||
+              user.preferredLocations.length === 0) &&
+              !user.jobSearchStatus &&
+              !user.availability && (
+                <p className="printable-profile-detail-item">Not specified.</p>
+              )}
           </div>
         </div>
       </div>
 
       {hasTruncatedContent && (
-        <div className="footer-note">
+        <div className="printable-profile-truncate-note">
           Note: Some detailed descriptions may have been truncated for brevity.
           For the full profile, please view online if available.
         </div>

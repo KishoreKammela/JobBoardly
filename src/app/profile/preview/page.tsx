@@ -1,4 +1,3 @@
-
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,7 +50,6 @@ import { cn } from '@/lib/utils'; // Added cn import
 import { buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
 import { Button } from '@/components/ui/button'; // Keep this for the "Edit My Profile" button
 
-
 export default function ProfilePreviewPage() {
   const { user: currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -63,7 +61,7 @@ export default function ProfilePreviewPage() {
   const handlePrintProfile = useReactToPrint({
     content: () => {
       if (!printableProfileRef.current) {
-        console.error("Printable content ref is not available.");
+        console.error('Printable content ref is not available.');
         return null;
       }
       return printableProfileRef.current;
@@ -162,7 +160,10 @@ export default function ProfilePreviewPage() {
           <button
             onClick={handlePrintProfile}
             type="button"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex items-center")}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'flex items-center'
+            )}
           >
             <FileText className="mr-2 h-4 w-4" /> Download PDF
           </button>
@@ -217,7 +218,7 @@ export default function ProfilePreviewPage() {
                     </a>
                   </div>
                 )}
-                 {(candidate.homeCity || candidate.homeState) && (
+                {(candidate.homeCity || candidate.homeState) && (
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <Home className="h-4 w-4" />{' '}
                     {candidate.homeCity && <span>{candidate.homeCity}</span>}
@@ -239,11 +240,12 @@ export default function ProfilePreviewPage() {
                       )}
                     </div>
                   )}
-                {candidate.gender && candidate.gender !== 'Prefer not to say' && (
-                  <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <Users className="h-4 w-4" /> Gender: {candidate.gender}
-                  </div>
-                )}
+                {candidate.gender &&
+                  candidate.gender !== 'Prefer not to say' && (
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <Users className="h-4 w-4" /> Gender: {candidate.gender}
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -331,7 +333,8 @@ export default function ProfilePreviewPage() {
             <section>
               {(totalExperienceDisplay ||
                 candidate.parsedResumeText ||
-                (candidate.experiences && candidate.experiences.length > 0)) && (
+                (candidate.experiences &&
+                  candidate.experiences.length > 0)) && (
                 <Separator className="my-6" />
               )}
               <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
@@ -467,12 +470,12 @@ export default function ProfilePreviewPage() {
                   {candidate.expectedCTCNegotiable && '(Negotiable)'}
                 </p>
               )}
-              {(candidate.currentCTCValue === undefined &&
-                candidate.expectedCTCValue === undefined) && (
-                <p className="text-sm text-muted-foreground">
-                  Compensation details not provided.
-                </p>
-              )}
+              {candidate.currentCTCValue === undefined &&
+                candidate.expectedCTCValue === undefined && (
+                  <p className="text-sm text-muted-foreground">
+                    Compensation details not provided.
+                  </p>
+                )}
             </div>
           </section>
 
@@ -585,4 +588,3 @@ export default function ProfilePreviewPage() {
     </div>
   );
 }
-

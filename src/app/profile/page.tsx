@@ -1,5 +1,3 @@
-
-'use client';
 'use client';
 import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
@@ -12,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import Link from 'next/link';
-
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -96,14 +93,14 @@ export default function ProfilePage() {
       <Separator />
 
       {user.role === 'jobSeeker' && (
-         <>
-            <ResumeUploadForm />
-            <Separator />
-         </>
+        <>
+          <ResumeUploadForm />
+          <Separator />
+        </>
       )}
-      
+
       <UserProfileForm />
-      
+
       {user.role === 'jobSeeker' && (
         <div style={{ display: 'none' }}>
           <PrintableProfileComponent ref={printableProfileRef} user={user} />

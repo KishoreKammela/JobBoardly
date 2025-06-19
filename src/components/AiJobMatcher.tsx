@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -98,7 +97,10 @@ export function AiJobMatcher() {
       if (user.homeState) profileText += `Home State: ${user.homeState}\n`;
       if (user.homeCity) profileText += `Home City: ${user.homeCity}\n`;
 
-      if (user.totalYearsExperience !== undefined || user.totalMonthsExperience !== undefined) {
+      if (
+        user.totalYearsExperience !== undefined ||
+        user.totalMonthsExperience !== undefined
+      ) {
         profileText += `Total Experience: ${user.totalYearsExperience || 0} years, ${user.totalMonthsExperience || 0} months\n`;
       }
 

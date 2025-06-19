@@ -1,4 +1,3 @@
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'jobSeeker' | 'employer' | 'admin' | 'superAdmin';
@@ -240,4 +239,3 @@ export interface ParsedJobData {
   salaryMin?: number;
   salaryMax?: number;
 }
-

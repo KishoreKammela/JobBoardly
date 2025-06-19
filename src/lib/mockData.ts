@@ -1,4 +1,3 @@
-
 import type { UserProfile, UserSettings, Job } from '@/types';
 import { Timestamp } from 'firebase/firestore';
 

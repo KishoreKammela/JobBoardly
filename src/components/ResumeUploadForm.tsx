@@ -1,5 +1,3 @@
-
-'use client';
 'use client';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -12,22 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import {
-  UploadCloud,
-  FileText,
-  Loader2,
-  Trash2,
-  Sparkles,
-} from 'lucide-react';
+import { UploadCloud, FileText, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
   parseResumeFlow,
@@ -75,7 +60,6 @@ export function ResumeUploadForm() {
           duration: 9000,
         });
         if (file) {
-          profileUpdates.resumeUrl = URL.createObjectURL(file);
           profileUpdates.resumeFileName = file.name;
         }
       } else {
@@ -98,18 +82,22 @@ export function ResumeUploadForm() {
           profileUpdates.linkedinUrl = parsedData.linkedinUrl;
         if (parsedData.mobileNumber && !user.mobileNumber)
           profileUpdates.mobileNumber = parsedData.mobileNumber;
-        
-        if (parsedData.totalYearsExperience !== undefined && (user.totalYearsExperience === undefined || user.totalYearsExperience === 0)) {
-           profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
-           // Months can be set to 0 if AI only gives years
-           if (user.totalMonthsExperience === undefined || user.totalMonthsExperience === 0) {
-             profileUpdates.totalMonthsExperience = 0;
-           }
+
+        if (
+          parsedData.totalYearsExperience !== undefined &&
+          (user.totalYearsExperience === undefined ||
+            user.totalYearsExperience === 0)
+        ) {
+          profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
+          if (
+            user.totalMonthsExperience === undefined ||
+            user.totalMonthsExperience === 0
+          ) {
+            profileUpdates.totalMonthsExperience = 0;
+          }
         }
 
-
         if (file) {
-          profileUpdates.resumeUrl = URL.createObjectURL(file);
           profileUpdates.resumeFileName = file.name;
         } else if (pastedResume) {
           profileUpdates.resumeFileName = 'Pasted Resume Text';
@@ -128,16 +116,11 @@ export function ResumeUploadForm() {
       setFile(null);
       setPastedResume('');
     } catch (error) {
-      console.error('Error processing resume:', error);
       const errorMessage =
         error instanceof Error
           ? error.message
           : 'An unknown error occurred during parsing.';
       console.error('Error processing resume:', error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'An unknown error occurred during parsing.';
       toast({
         title: 'Resume Processing Error',
         description: `Failed to parse resume and update profile. ${errorMessage}`,
@@ -157,8 +140,8 @@ export function ResumeUploadForm() {
       reader.readAsDataURL(file);
       reader.onload = () =>
         processResumeData(reader.result as string, file.name);
-      reader.onerror = (error) => {
-        console.error('File reading error:', error);
+      reader.onerror = (errorReading) => {
+        console.error('File reading error:', errorReading);
         toast({
           title: 'File Reading Error',
           description: 'Could not read the selected file.',
@@ -191,7 +174,6 @@ export function ResumeUploadForm() {
         'Your resume file and parsed summary have been removed from your profile.',
     });
   };
-  };
 
   return (
     <Card className="w-full shadow-lg">
@@ -215,16 +197,20 @@ export function ResumeUploadForm() {
                 <div>
                   <p className="font-medium">{user.resumeFileName}</p>
                   <p className="text-xs text-muted-foreground">
-                    Current resume on profile.
+                    Current resume on profile.{' '}
+                    {user.resumeUrl && (
+                      <a
+                        href={user.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline"
+                      >
+                        View
+                      </a>
+                    )}
                   </p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleRemoveResume}
-                aria-label="Remove resume"
-              >
               <Button
                 variant="ghost"
                 size="icon"
@@ -266,23 +252,11 @@ export function ResumeUploadForm() {
                     <p className="mb-2 text-sm text-foreground/80">
                       <span className="font-semibold">Click to upload</span> or
                       drag and drop
-                      <span className="font-semibold">Click to upload</span> or
-                      drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, DOC, DOCX, TXT (MAX. 5MB)
                     </p>
                     <p className="text-xs text-muted-foreground">
                       PDF, DOC, DOCX, TXT (MAX. 5MB)
                     </p>
                   </div>
-                  <Input
-                    id="resumeFile"
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.txt"
-                  />
                   <Input
                     id="resumeFile"
                     type="file"

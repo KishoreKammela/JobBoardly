@@ -1,4 +1,3 @@
-
 'use client';
 import type {
   UserProfile,
@@ -96,8 +95,8 @@ const createEmptyExperience = (): ExperienceEntry => ({
   id: uuidv4(),
   companyName: '',
   jobRole: '',
-  startDate: '',
-  endDate: '',
+  startDate: undefined,
+  endDate: undefined,
   currentlyWorking: false,
   description: '',
   annualCTC: undefined,
@@ -114,7 +113,6 @@ const createEmptyEducation = (): EducationEntry => ({
   courseType: 'Full Time',
   isMostRelevant: false,
   description: '',
-  specialization: '',
 });
 
 const createEmptyLanguage = (): LanguageEntry => ({
@@ -126,7 +124,6 @@ const createEmptyLanguage = (): LanguageEntry => ({
   canSpeak: false,
 });
 
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
@@ -135,7 +132,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!auth) {
-      console.warn("AuthContext: Firebase auth instance is not available. Firebase might not be configured correctly (e.g., missing environment variables). Skipping auth state listener.");
+      console.warn(
+        'AuthContext: Firebase auth instance is not available. Firebase might not be configured correctly (e.g., missing environment variables). Skipping auth state listener.'
+      );
       setLoading(false);
       setUser(null);
       setFirebaseUser(null);
@@ -155,68 +154,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             let dobString: string | undefined = undefined;
             if (rawData.dateOfBirth) {
-                if (typeof rawData.dateOfBirth === 'string' && isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))) {
-                    dobString = rawData.dateOfBirth;
-                } else if (rawData.dateOfBirth instanceof Timestamp) {
-                    dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
-                } else if (rawData.dateOfBirth instanceof Date && isValid(rawData.dateOfBirth)) {
-                    dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
-                } else {
-                    dobString = ''; 
-                }
+              if (
+                typeof rawData.dateOfBirth === 'string' &&
+                isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))
+              ) {
+                dobString = rawData.dateOfBirth;
+              } else if (rawData.dateOfBirth instanceof Timestamp) {
+                dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
+              } else if (
+                rawData.dateOfBirth instanceof Date &&
+                isValid(rawData.dateOfBirth)
+              ) {
+                dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
+              } else {
+                dobString = undefined;
+              }
             } else {
-                 dobString = '';
+              dobString = undefined;
             }
-            
-           const experiences = (rawData.experiences || []).map((exp: any) => ({
+
+            const experiences = (rawData.experiences || []).map((exp: any) => ({
               id: exp.id || uuidv4(),
               companyName: exp.companyName || '',
               jobRole: exp.jobRole || '',
-              startDate: exp.startDate || '',
-              endDate: exp.endDate || '',
+              startDate: exp.startDate || undefined,
+              endDate: exp.endDate || undefined,
               currentlyWorking: exp.currentlyWorking || false,
               description: exp.description || '',
-              annualCTC: exp.annualCTC === null || exp.annualCTC === undefined || isNaN(Number(exp.annualCTC)) ? undefined : Number(exp.annualCTC),
+              annualCTC:
+                exp.annualCTC === null ||
+                exp.annualCTC === undefined ||
+                isNaN(Number(exp.annualCTC))
+                  ? undefined
+                  : Number(exp.annualCTC),
             }));
             const educations = (rawData.educations || []).map((edu: any) => ({
               id: edu.id || uuidv4(),
               level: edu.level || 'Graduate',
               degreeName: edu.degreeName || '',
               instituteName: edu.instituteName || '',
-              startYear: edu.startYear === null || edu.startYear === undefined || isNaN(Number(edu.startYear)) ? undefined : Number(edu.startYear),
-              endYear: edu.endYear === null || edu.endYear === undefined || isNaN(Number(edu.endYear)) ? undefined : Number(edu.endYear),
+              startYear:
+                edu.startYear === null ||
+                edu.startYear === undefined ||
+                isNaN(Number(edu.startYear))
+                  ? undefined
+                  : Number(edu.startYear),
+              endYear:
+                edu.endYear === null ||
+                edu.endYear === undefined ||
+                isNaN(Number(edu.endYear))
+                  ? undefined
+                  : Number(edu.endYear),
               specialization: edu.specialization || '',
               courseType: edu.courseType || 'Full Time',
               isMostRelevant: edu.isMostRelevant || false,
               description: edu.description || '',
             }));
-             const languages = (rawData.languages || []).map((lang: any) => ({
-                id: lang.id || uuidv4(),
-                languageName: lang.languageName || '',
-                proficiency: lang.proficiency || 'Beginner',
-                canRead: lang.canRead || false,
-                canWrite: lang.canWrite || false,
-                canSpeak: lang.canSpeak || false,
-             }));
-
+            const languages = (rawData.languages || []).map((lang: any) => ({
+              id: lang.id || uuidv4(),
+              languageName: lang.languageName || '',
+              proficiency: lang.proficiency || 'Beginner',
+              canRead: lang.canRead || false,
+              canWrite: lang.canWrite || false,
+              canSpeak: lang.canSpeak || false,
+            }));
 
             const profileData: UserProfile = {
               uid: fbUser.uid,
-              email: fbUser.email, 
+              email: fbUser.email,
               ...rawData,
               dateOfBirth: dobString,
-              createdAt: rawData.createdAt instanceof Timestamp ? rawData.createdAt.toDate().toISOString() : rawData.createdAt,
-              updatedAt: rawData.updatedAt instanceof Timestamp ? rawData.updatedAt.toDate().toISOString() : rawData.updatedAt,
-              lastActive: rawData.lastActive instanceof Timestamp ? rawData.lastActive.toDate().toISOString() : rawData.lastActive,
+              createdAt:
+                rawData.createdAt instanceof Timestamp
+                  ? rawData.createdAt.toDate().toISOString()
+                  : rawData.createdAt,
+              updatedAt:
+                rawData.updatedAt instanceof Timestamp
+                  ? rawData.updatedAt.toDate().toISOString()
+                  : rawData.updatedAt,
+              lastActive:
+                rawData.lastActive instanceof Timestamp
+                  ? rawData.lastActive.toDate().toISOString()
+                  : rawData.lastActive,
               savedSearches: (rawData.savedSearches || []).map((s: any) => ({
                 ...s,
-                createdAt: s.createdAt instanceof Timestamp ? s.createdAt.toDate().toISOString() : s.createdAt,
+                createdAt:
+                  s.createdAt instanceof Timestamp
+                    ? s.createdAt.toDate().toISOString()
+                    : s.createdAt,
               })),
-              experiences: experiences.length > 0 ? experiences : (rawData.role === 'jobSeeker' ? [createEmptyExperience()] : []),
-              educations: educations.length > 0 ? educations : (rawData.role === 'jobSeeker' ? [createEmptyEducation()] : []),
-              languages: languages.length > 0 ? languages : (rawData.role === 'jobSeeker' ? [createEmptyLanguage()] : []),
-              totalYearsExperience: rawData.totalYearsExperience || 0,
-              totalMonthsExperience: rawData.totalMonthsExperience || 0,
+              experiences:
+                experiences.length > 0
+                  ? experiences
+                  : rawData.role === 'jobSeeker'
+                    ? [createEmptyExperience()]
+                    : [],
+              educations:
+                educations.length > 0
+                  ? educations
+                  : rawData.role === 'jobSeeker'
+                    ? [createEmptyEducation()]
+                    : [],
+              languages:
+                languages.length > 0
+                  ? languages
+                  : rawData.role === 'jobSeeker'
+                    ? [createEmptyLanguage()]
+                    : [],
+              totalYearsExperience:
+                rawData.totalYearsExperience === null
+                  ? undefined
+                  : rawData.totalYearsExperience,
+              totalMonthsExperience:
+                rawData.totalMonthsExperience === null
+                  ? undefined
+                  : rawData.totalMonthsExperience,
             };
             setUser(profileData);
 
@@ -232,8 +284,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setCompany({
                   id: companyDocSnap.id,
                   ...companyRawData,
-                  createdAt: companyRawData.createdAt instanceof Timestamp ? companyRawData.createdAt.toDate().toISOString() : companyRawData.createdAt,
-                  updatedAt: companyRawData.updatedAt instanceof Timestamp ? companyRawData.updatedAt.toDate().toISOString() : companyRawData.updatedAt,
+                  createdAt:
+                    companyRawData.createdAt instanceof Timestamp
+                      ? companyRawData.createdAt.toDate().toISOString()
+                      : companyRawData.createdAt,
+                  updatedAt:
+                    companyRawData.updatedAt instanceof Timestamp
+                      ? companyRawData.updatedAt.toDate().toISOString()
+                      : companyRawData.updatedAt,
                 } as Company);
               } else {
                 setCompany(null);
@@ -265,8 +323,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -357,7 +415,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.educations = [createEmptyEducation()];
       userProfileData.languages = [createEmptyLanguage()];
       userProfileData.gender = 'Prefer not to say';
-      userProfileData.dateOfBirth = '';
+      userProfileData.dateOfBirth = undefined;
       userProfileData.currentCTCValue = undefined;
       userProfileData.currentCTCConfidential = false;
       userProfileData.expectedCTCValue = undefined;
@@ -374,32 +432,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const finalProfileDataForFirestore: { [key: string]: any } = {};
     for (const key in userProfileData) {
-      if (userProfileData[key as keyof typeof userProfileData] !== undefined) {
-        finalProfileDataForFirestore[key] =
-          userProfileData[key as keyof typeof userProfileData];
+      const typedKey = key as keyof UserProfile;
+      if (userProfileData[typedKey] !== undefined) {
+        finalProfileDataForFirestore[key] = userProfileData[typedKey];
+      } else {
+        // Ensure nullable fields for jobSeeker are set to null if undefined
+        if (
+          role === 'jobSeeker' &&
+          (key === 'dateOfBirth' ||
+            key === 'currentCTCValue' ||
+            key === 'expectedCTCValue' ||
+            key === 'totalYearsExperience' ||
+            key === 'totalMonthsExperience')
+        ) {
+          finalProfileDataForFirestore[key] = null;
+        }
       }
     }
-    
+
     if (role === 'jobSeeker') {
-        finalProfileDataForFirestore.experiences = finalProfileDataForFirestore.experiences && finalProfileDataForFirestore.experiences.length > 0 ? finalProfileDataForFirestore.experiences : [];
-        finalProfileDataForFirestore.educations = finalProfileDataForFirestore.educations && finalProfileDataForFirestore.educations.length > 0 ? finalProfileDataForFirestore.educations : [];
-        finalProfileDataForFirestore.languages = finalProfileDataForFirestore.languages && finalProfileDataForFirestore.languages.length > 0 ? finalProfileDataForFirestore.languages : [];
+      finalProfileDataForFirestore.experiences =
+        finalProfileDataForFirestore.experiences &&
+        finalProfileDataForFirestore.experiences.length > 0
+          ? finalProfileDataForFirestore.experiences
+          : [];
+      finalProfileDataForFirestore.educations =
+        finalProfileDataForFirestore.educations &&
+        finalProfileDataForFirestore.educations.length > 0
+          ? finalProfileDataForFirestore.educations
+          : [];
+      finalProfileDataForFirestore.languages =
+        finalProfileDataForFirestore.languages &&
+        finalProfileDataForFirestore.languages.length > 0
+          ? finalProfileDataForFirestore.languages
+          : [];
     }
 
     try {
       await setDoc(userDocRef, finalProfileDataForFirestore);
       const fullProfile = {
-          ...userProfileData, 
-          uid: fbUser.uid, 
-          email: fbUser.email, 
-          createdAt: new Date().toISOString(), 
-          updatedAt: new Date().toISOString(),
-          lastActive: new Date().toISOString(),
-          experiences: finalProfileDataForFirestore.experiences || [],
-          educations: finalProfileDataForFirestore.educations || [],
-          languages: finalProfileDataForFirestore.languages || [],
-          totalYearsExperience: finalProfileDataForFirestore.totalYearsExperience || 0,
-          totalMonthsExperience: finalProfileDataForFirestore.totalMonthsExperience || 0,
+        ...userProfileData,
+        uid: fbUser.uid,
+        email: fbUser.email,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        experiences: finalProfileDataForFirestore.experiences || [],
+        educations: finalProfileDataForFirestore.educations || [],
+        languages: finalProfileDataForFirestore.languages || [],
+        totalYearsExperience:
+          finalProfileDataForFirestore.totalYearsExperience === null
+            ? undefined
+            : finalProfileDataForFirestore.totalYearsExperience,
+        totalMonthsExperience:
+          finalProfileDataForFirestore.totalMonthsExperience === null
+            ? undefined
+            : finalProfileDataForFirestore.totalMonthsExperience,
       } as UserProfile;
 
       setUser(fullProfile);
@@ -429,7 +517,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyName?: string
   ): Promise<FirebaseUser> => {
     if (!auth) {
-      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+      throw new Error(
+        'Firebase Authentication is not configured. Please check your environment variables.'
+      );
     }
     try {
       const userCredential = await createUserWithEmailAndPassword(
@@ -451,7 +541,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     pass: string
   ): Promise<FirebaseUser> => {
     if (!auth) {
-      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+      throw new Error(
+        'Firebase Authentication is not configured. Please check your environment variables.'
+      );
     }
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
     return userCredential.user;
@@ -463,7 +555,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyName?: string
   ): Promise<FirebaseUser> => {
     if (!auth) {
-      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+      throw new Error(
+        'Firebase Authentication is not configured. Please check your environment variables.'
+      );
     }
     try {
       const result = await signInWithPopup(auth, provider);
@@ -481,67 +575,106 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       } else {
         const rawData = userDocSnap.data();
-         let dobString: string | undefined = undefined;
-            if (rawData.dateOfBirth) {
-                 if (typeof rawData.dateOfBirth === 'string' && isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))) {
-                    dobString = rawData.dateOfBirth;
-                } else if (rawData.dateOfBirth instanceof Timestamp) {
-                    dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
-                } else if (rawData.dateOfBirth instanceof Date && isValid(rawData.dateOfBirth)) {
-                    dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
-                } else {
-                    dobString = '';
-                }
-            } else {
-                dobString = '';
-            }
+        let dobString: string | undefined = undefined;
+        if (rawData.dateOfBirth) {
+          if (
+            typeof rawData.dateOfBirth === 'string' &&
+            isValid(parse(rawData.dateOfBirth, 'yyyy-MM-dd', new Date()))
+          ) {
+            dobString = rawData.dateOfBirth;
+          } else if (rawData.dateOfBirth instanceof Timestamp) {
+            dobString = format(rawData.dateOfBirth.toDate(), 'yyyy-MM-dd');
+          } else if (
+            rawData.dateOfBirth instanceof Date &&
+            isValid(rawData.dateOfBirth)
+          ) {
+            dobString = format(rawData.dateOfBirth, 'yyyy-MM-dd');
+          } else {
+            dobString = undefined;
+          }
+        } else {
+          dobString = undefined;
+        }
 
         const existingProfile: UserProfile = {
           uid: fbUser.uid,
           email: fbUser.email,
           ...rawData,
           dateOfBirth: dobString,
-          createdAt: rawData.createdAt instanceof Timestamp ? rawData.createdAt.toDate().toISOString() : rawData.createdAt,
-          updatedAt: rawData.updatedAt instanceof Timestamp ? rawData.updatedAt.toDate().toISOString() : rawData.updatedAt,
-          lastActive: rawData.lastActive instanceof Timestamp ? rawData.lastActive.toDate().toISOString() : rawData.lastActive,
+          createdAt:
+            rawData.createdAt instanceof Timestamp
+              ? rawData.createdAt.toDate().toISOString()
+              : rawData.createdAt,
+          updatedAt:
+            rawData.updatedAt instanceof Timestamp
+              ? rawData.updatedAt.toDate().toISOString()
+              : rawData.updatedAt,
+          lastActive:
+            rawData.lastActive instanceof Timestamp
+              ? rawData.lastActive.toDate().toISOString()
+              : rawData.lastActive,
           savedSearches: (rawData.savedSearches || []).map((s: any) => ({
             ...s,
-            createdAt: s.createdAt instanceof Timestamp ? s.createdAt.toDate().toISOString() : s.createdAt,
+            createdAt:
+              s.createdAt instanceof Timestamp
+                ? s.createdAt.toDate().toISOString()
+                : s.createdAt,
           })),
-           experiences: (rawData.experiences || []).map((exp: any) => ({
-              id: exp.id || uuidv4(),
-              companyName: exp.companyName || '',
-              jobRole: exp.jobRole || '',
-              startDate: exp.startDate || '',
-              endDate: exp.endDate || '',
-              currentlyWorking: exp.currentlyWorking || false,
-              description: exp.description || '',
-              annualCTC: exp.annualCTC === null || exp.annualCTC === undefined || isNaN(Number(exp.annualCTC)) ? undefined : Number(exp.annualCTC),
-            })),
+          experiences: (rawData.experiences || []).map((exp: any) => ({
+            id: exp.id || uuidv4(),
+            companyName: exp.companyName || '',
+            jobRole: exp.jobRole || '',
+            startDate: exp.startDate || undefined,
+            endDate: exp.endDate || undefined,
+            currentlyWorking: exp.currentlyWorking || false,
+            description: exp.description || '',
+            annualCTC:
+              exp.annualCTC === null ||
+              exp.annualCTC === undefined ||
+              isNaN(Number(exp.annualCTC))
+                ? undefined
+                : Number(exp.annualCTC),
+          })),
           educations: (rawData.educations || []).map((edu: any) => ({
-              id: edu.id || uuidv4(),
-              level: edu.level || 'Graduate',
-              degreeName: edu.degreeName || '',
-              instituteName: edu.instituteName || '',
-              startYear: edu.startYear === null || edu.startYear === undefined || isNaN(Number(edu.startYear)) ? undefined : Number(edu.startYear),
-              endYear: edu.endYear === null || edu.endYear === undefined || isNaN(Number(edu.endYear)) ? undefined : Number(edu.endYear),
-              specialization: edu.specialization || '',
-              courseType: edu.courseType || 'Full Time',
-              isMostRelevant: edu.isMostRelevant || false,
-              description: edu.description || '',
+            id: edu.id || uuidv4(),
+            level: edu.level || 'Graduate',
+            degreeName: edu.degreeName || '',
+            instituteName: edu.instituteName || '',
+            startYear:
+              edu.startYear === null ||
+              edu.startYear === undefined ||
+              isNaN(Number(edu.startYear))
+                ? undefined
+                : Number(edu.startYear),
+            endYear:
+              edu.endYear === null ||
+              edu.endYear === undefined ||
+              isNaN(Number(edu.endYear))
+                ? undefined
+                : Number(edu.endYear),
+            specialization: edu.specialization || '',
+            courseType: edu.courseType || 'Full Time',
+            isMostRelevant: edu.isMostRelevant || false,
+            description: edu.description || '',
           })),
           languages: (rawData.languages || []).map((lang: any) => ({
-              id: lang.id || uuidv4(),
-              languageName: lang.languageName || '',
-              proficiency: lang.proficiency || 'Beginner',
-              canRead: lang.canRead || false,
-              canWrite: lang.canWrite || false,
-              canSpeak: lang.canSpeak || false,
+            id: lang.id || uuidv4(),
+            languageName: lang.languageName || '',
+            proficiency: lang.proficiency || 'Beginner',
+            canRead: lang.canRead || false,
+            canWrite: lang.canWrite || false,
+            canSpeak: lang.canSpeak || false,
           })),
-          totalYearsExperience: rawData.totalYearsExperience || 0,
-          totalMonthsExperience: rawData.totalMonthsExperience || 0,
+          totalYearsExperience:
+            rawData.totalYearsExperience === null
+              ? undefined
+              : rawData.totalYearsExperience,
+          totalMonthsExperience:
+            rawData.totalMonthsExperience === null
+              ? undefined
+              : rawData.totalMonthsExperience,
         };
-        
+
         let updatesNeeded = false;
         const updates: Partial<UserProfile> & {
           updatedAt?: FieldValue;
@@ -574,7 +707,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.savedSearches = [];
           updatesNeeded = true;
         }
-         if (role === 'jobSeeker' && existingProfile.experiences === undefined) {
+        if (role === 'jobSeeker' && existingProfile.experiences === undefined) {
           updates.experiences = [createEmptyExperience()];
           updatesNeeded = true;
         }
@@ -598,19 +731,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           updates.theme = 'system';
           updatesNeeded = true;
         }
-        if (role === 'jobSeeker' && existingProfile.totalYearsExperience === undefined) {
+        if (
+          role === 'jobSeeker' &&
+          existingProfile.totalYearsExperience === undefined
+        ) {
           updates.totalYearsExperience = 0;
           updatesNeeded = true;
         }
-        if (role === 'jobSeeker' && existingProfile.totalMonthsExperience === undefined) {
+        if (
+          role === 'jobSeeker' &&
+          existingProfile.totalMonthsExperience === undefined
+        ) {
           updates.totalMonthsExperience = 0;
           updatesNeeded = true;
         }
 
-
         if (updatesNeeded) {
           updates.updatedAt = serverTimestamp();
-          await updateDoc(userDocRef, updates as { [x: string]: any }); 
+          await updateDoc(userDocRef, updates as { [x: string]: any });
           setUser({ ...existingProfile, ...updates } as UserProfile);
           if (updates.theme) applyTheme(updates.theme);
         } else {
@@ -628,12 +766,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
             const companyDocSnap = await getDoc(companyDocRef);
             if (companyDocSnap.exists()) {
-                const companyRawData = companyDocSnap.data();
+              const companyRawData = companyDocSnap.data();
               setCompany({
                 id: companyDocSnap.id,
                 ...companyRawData,
-                 createdAt: companyRawData.createdAt instanceof Timestamp ? companyRawData.createdAt.toDate().toISOString() : companyRawData.createdAt,
-                 updatedAt: companyRawData.updatedAt instanceof Timestamp ? companyRawData.updatedAt.toDate().toISOString() : companyRawData.updatedAt,
+                createdAt:
+                  companyRawData.createdAt instanceof Timestamp
+                    ? companyRawData.createdAt.toDate().toISOString()
+                    : companyRawData.createdAt,
+                updatedAt:
+                  companyRawData.updatedAt instanceof Timestamp
+                    ? companyRawData.updatedAt.toDate().toISOString()
+                    : companyRawData.updatedAt,
               } as Company);
             }
           }
@@ -652,7 +796,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { lastActive: serverTimestamp() });
       }
-      if (auth) { 
+      if (auth) {
         await signOut(auth);
       }
       setUser(null);
@@ -670,7 +814,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     newPassword: string
   ) => {
     if (!auth) {
-      throw new Error("Firebase Authentication is not configured. Please check your environment variables.");
+      throw new Error(
+        'Firebase Authentication is not configured. Please check your environment variables.'
+      );
     }
     if (!firebaseUser || !firebaseUser.email) {
       throw new Error('User not authenticated or email not available.');
@@ -689,47 +835,127 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserProfile = async (updatedData: Partial<UserProfile>) => {
-    if (user && user.uid) {
-      const userDocRef = doc(db, 'users', user.uid);
-      const dataToUpdate: { [key: string]: any } = {
-        updatedAt: serverTimestamp(),
-        lastActive: serverTimestamp(),
-      };
-      for (const key in updatedData) {
-        const typedKey = key as keyof UserProfile;
-        if (updatedData[typedKey] !== undefined) {
-          if (Array.isArray(updatedData[typedKey])) {
-            dataToUpdate[key] = (updatedData[typedKey] as any[]).filter(item => item !== undefined)
-              .map(item => typeof item === 'object' && item !== null ? {...item} : item); 
-          } else {
-            dataToUpdate[key] = updatedData[typedKey];
-          }
-        }
-      }
-
-      if (Object.keys(dataToUpdate).length > 2) { 
-        try {
-          await updateDoc(userDocRef, dataToUpdate);
-           const updatedUserFromState = { ...user, ...updatedData };
-            
-            if (updatedData.experiences) updatedUserFromState.experiences = updatedData.experiences.map(exp => ({...exp}));
-            if (updatedData.educations) updatedUserFromState.educations = updatedData.educations.map(edu => ({...edu}));
-            if (updatedData.languages) updatedUserFromState.languages = updatedData.languages.map(lang => ({...lang}));
-            if (updatedData.skills) updatedUserFromState.skills = [...updatedData.skills];
-            if (updatedData.preferredLocations) updatedUserFromState.preferredLocations = [...updatedData.preferredLocations];
-
-          setUser(updatedUserFromState);
-          if (dataToUpdate.theme) {
-            applyTheme(dataToUpdate.theme);
-          }
-        } catch (error) {
-          console.error('AuthContext: updateUserProfile error', error);
-          throw error;
-        }
-      }
-    } else {
+    if (!user || !user.uid) {
       console.error('AuthContext: User not logged in to update profile.');
       throw new Error('User not logged in to update profile.');
+    }
+
+    const userDocRef = doc(db, 'users', user.uid);
+    const payloadForFirestore: { [key: string]: any } = {};
+
+    // Iterate over updatedData and build payloadForFirestore carefully
+    (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
+      const value = updatedData[key];
+
+      if (value === undefined) {
+        // For these specific optional fields, if they are undefined (e.g., cleared in form),
+        // we send null to Firestore to explicitly clear them or mark them as not set.
+        const nullableFields: Array<keyof UserProfile> = [
+          'dateOfBirth',
+          'currentCTCValue',
+          'expectedCTCValue',
+          'totalYearsExperience',
+          'totalMonthsExperience',
+          'avatarUrl',
+          'headline',
+          'mobileNumber',
+          'portfolioUrl',
+          'linkedinUrl',
+          'homeState',
+          'homeCity',
+          'parsedResumeText',
+          'resumeUrl',
+          'resumeFileName',
+        ];
+        if (nullableFields.includes(key)) {
+          payloadForFirestore[key] = null;
+        }
+        // Otherwise, if value is undefined, it's intentionally skipped and not added to payloadForFirestore.
+      } else if (Array.isArray(value)) {
+        // Deep clone and clean array items
+        payloadForFirestore[key] = value
+          .map((item) => {
+            if (typeof item === 'object' && item !== null) {
+              const cleanedItem: { [k: string]: any } = {};
+              for (const prop in item) {
+                // Ensure properties within objects in arrays are also not undefined
+                if (item[prop] !== undefined) {
+                  cleanedItem[prop] = item[prop];
+                } else {
+                  // Convert nested undefined to null for Firestore compatibility
+                  cleanedItem[prop] = null;
+                }
+              }
+              // Ensure date fields within array objects (like ExperienceEntry) are null if empty strings
+              if (cleanedItem.startDate === '') cleanedItem.startDate = null;
+              if (cleanedItem.endDate === '') cleanedItem.endDate = null;
+              if (cleanedItem.startYear === '') cleanedItem.startYear = null;
+              if (cleanedItem.endYear === '') cleanedItem.endYear = null;
+              return cleanedItem;
+            }
+            return item;
+          })
+          .filter((item) => item !== undefined); // Filter out any top-level undefined items in the array (should be rare)
+      } else {
+        payloadForFirestore[key] = value;
+      }
+    });
+
+    // Always add timestamps for update and activity
+    payloadForFirestore.updatedAt = serverTimestamp();
+    payloadForFirestore.lastActive = serverTimestamp();
+
+    if (Object.keys(payloadForFirestore).length > 2) {
+      // Check if there's more than just timestamps
+      try {
+        await updateDoc(userDocRef, payloadForFirestore);
+
+        // Update local state
+        // Create a new user object for state update, merging current user state with updatedData
+        // This ensures local state reflects the intended changes, including 'undefined' for optional fields if that's how the form clears them.
+        const updatedUserForState: UserProfile = { ...user };
+        for (const key in updatedData) {
+          // Iterate original updatedData for local state
+          if (key !== 'updatedAt' && key !== 'lastActive') {
+            // Timestamps will be updated based on Firestore's potential conversion
+            (updatedUserForState as any)[key] = (updatedData as any)[key];
+          }
+        }
+        // Simulate server timestamp update for local state immediately
+        updatedUserForState.updatedAt = new Date().toISOString();
+        updatedUserForState.lastActive = new Date().toISOString();
+
+        setUser(updatedUserForState);
+
+        if (updatedData.theme) {
+          // Use updatedData for theme as it reflects the direct user choice
+          applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
+        }
+      } catch (error) {
+        console.error('AuthContext: updateUserProfile error', error);
+        // For debugging, you might want to log the payload that caused the error:
+        // console.error('Firestore payload that might have caused error:', payloadForFirestore);
+        throw error;
+      }
+    } else if (user) {
+      // Only timestamps changed or no data change
+      try {
+        await updateDoc(userDocRef, {
+          updatedAt: serverTimestamp(),
+          lastActive: serverTimestamp(),
+        });
+        setUser({
+          ...user,
+          updatedAt: new Date().toISOString(),
+          lastActive: new Date().toISOString(),
+        });
+      } catch (error) {
+        console.error(
+          'AuthContext: updateUserProfile (timestamps only) error',
+          error
+        );
+        throw error;
+      }
     }
   };
 
@@ -753,7 +979,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...updatedData,
       updatedAt: serverTimestamp(),
     };
-    delete dataToUpdate.id;
+    delete dataToUpdate.id; // id should not be part of the update payload
+
+    // Ensure no undefined values are sent
+    Object.keys(dataToUpdate).forEach((key) => {
+      if (dataToUpdate[key] === undefined) {
+        dataToUpdate[key] = null; // Or delete dataToUpdate[key];
+      }
+    });
 
     try {
       await updateDoc(companyDocRef, dataToUpdate);
@@ -826,9 +1059,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
+    } else {
+      updates.employerNotes = null; // Explicitly set to null if undefined
     }
+
     try {
-      await updateDoc(applicationDocRef, updates as { [x:string] : any});
+      await updateDoc(applicationDocRef, updates as { [x: string]: any });
     } catch (error) {
       console.error('AuthContext: updateApplicationStatus error', error);
       throw error;

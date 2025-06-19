@@ -1,5 +1,4 @@
 'use client';
-'use client';
 import { useState, useEffect, type FormEvent } from 'react';
 import type { UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -25,13 +24,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-// localStorage key for search history
 const SEARCH_HISTORY_STORAGE_KEY = 'jobboardly-search-history';
 
 export function SettingsForm() {
   const { user, updateUserProfile, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<Partial<UserProfile>>({
-    theme: 'system', // Default theme
+    theme: 'system',
     jobBoardDisplay: 'list',
     itemsPerPage: 10,
     jobAlerts: {
@@ -81,7 +79,6 @@ export function SettingsForm() {
   ) => {
     setSettings((prev) => ({ ...prev, [name]: value }));
     if (name === 'theme' && user) {
-      // Apply theme immediately for preview
       const root = window.document.documentElement;
       root.classList.remove('light', 'dark');
       if (value === 'system') {
@@ -103,7 +100,6 @@ export function SettingsForm() {
     }));
   };
 
-
   const handleClearSearchHistory = () => {
     setSearchHistory([]);
     localStorage.removeItem(SEARCH_HISTORY_STORAGE_KEY);
@@ -111,7 +107,6 @@ export function SettingsForm() {
       title: 'Search History Cleared',
       description: 'Your job search history has been cleared from this device.',
     });
-  };
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -165,12 +160,6 @@ export function SettingsForm() {
   return (
     <Card className="w-full shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-headline">
-          Account Settings
-        </CardTitle>
-        <CardDescription>
-          Customize your JobBoardly experience and notification preferences.
-        </CardDescription>
         <CardTitle className="text-xl font-headline">
           Account Settings
         </CardTitle>
@@ -273,9 +262,6 @@ export function SettingsForm() {
           )}
 
           <section>
-            <h3 className="text-lg font-semibold mb-3">
-              Notification Preferences
-            </h3>
             <h3 className="text-lg font-semibold mb-3">
               Notification Preferences
             </h3>

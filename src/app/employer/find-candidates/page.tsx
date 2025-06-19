@@ -13,7 +13,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
 
-
 export default function FindCandidatesPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -23,7 +22,9 @@ export default function FindCandidatesPage() {
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const debouncedGlobalSearchTerm = useDebounce(globalSearchTerm, 500);
 
-  const [sidebarFilters, setSidebarFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>({
+  const [sidebarFilters, setSidebarFilters] = useState<
+    Omit<CandidateFilters, 'searchTerm'>
+  >({
     location: '',
     availability: 'all',
     jobSearchStatus: 'all',
@@ -32,10 +33,11 @@ export default function FindCandidatesPage() {
     recentActivity: 'any',
   });
 
-  const [activeCombinedFilters, setActiveCombinedFilters] = useState<CandidateFilters>({
-    searchTerm: debouncedGlobalSearchTerm,
-    ...sidebarFilters,
-  });
+  const [activeCombinedFilters, setActiveCombinedFilters] =
+    useState<CandidateFilters>({
+      searchTerm: debouncedGlobalSearchTerm,
+      ...sidebarFilters,
+    });
 
   useEffect(() => {
     if (loading) return;
@@ -53,7 +55,6 @@ export default function FindCandidatesPage() {
     });
   }, [debouncedGlobalSearchTerm, sidebarFilters]);
 
-
   if (loading || !user || user.role !== 'employer') {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -62,14 +63,19 @@ export default function FindCandidatesPage() {
     );
   }
 
-  const handleSidebarFilterChange = (filters: Omit<CandidateFilters, 'searchTerm'>) => {
+  const handleSidebarFilterChange = (
+    filters: Omit<CandidateFilters, 'searchTerm'>
+  ) => {
     setSidebarFilters(filters);
   };
 
   return (
     <div className="flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-1/4 lg:w-1/5">
-        <CandidateFilterSidebar onFilterChange={handleSidebarFilterChange} initialFilters={sidebarFilters}/>
+        <CandidateFilterSidebar
+          onFilterChange={handleSidebarFilterChange}
+          initialFilters={sidebarFilters}
+        />
       </aside>
       <main className="w-full md:w-3/4 lg:w-4/5 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -105,7 +111,7 @@ export default function FindCandidatesPage() {
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search candidates (e.g., React AND Bangalore, &quot;Data Scientist&quot;)"
+              placeholder='Search candidates (e.g., React AND Bangalore, "Data Scientist")'
               className="w-full h-12 pl-10 text-base rounded-lg shadow-sm"
               value={globalSearchTerm}
               onChange={(e) => setGlobalSearchTerm(e.target.value)}
@@ -113,12 +119,16 @@ export default function FindCandidatesPage() {
             />
           </div>
           <p className="text-xs text-muted-foreground px-1">
-            Use AND/OR/NOT for complex queries, quotes for exact phrases (e.g., &quot;Senior Developer&quot; AND (React OR Angular) NOT Java).
+            Use AND/OR/NOT for complex queries, quotes for exact phrases (e.g.,
+            &quot;Senior Developer&quot; AND (React OR Angular) NOT Java).
             Multiple terms are ANDed by default.
           </p>
         </div>
         <Separator />
-        <CandidateSearchResults viewMode={viewMode} filters={activeCombinedFilters} />
+        <CandidateSearchResults
+          viewMode={viewMode}
+          filters={activeCombinedFilters}
+        />
       </main>
     </div>
   );

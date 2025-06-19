@@ -1,5 +1,4 @@
-
-"use client"
+'use client';
 
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -21,17 +20,17 @@ function Calendar({
       showOutsideDays={showOutsideDays}
       className={cn('p-3', className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center gap-1",
+        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+        month: 'space-y-4',
+        caption: 'flex justify-center pt-1 relative items-center gap-1',
         caption_label: cn(
-          "text-sm font-medium",
-          (props.captionLayout === "dropdown" ||
-            props.captionLayout === "dropdown-buttons") &&
-            "sr-only" 
+          'text-sm font-medium',
+          (props.captionLayout === 'dropdown' ||
+            props.captionLayout === 'dropdown-buttons') &&
+            'sr-only'
         ),
-        caption_dropdowns: "flex gap-1", 
-        nav: "space-x-1 flex items-center",
+        caption_dropdowns: 'flex gap-1',
+        nav: 'space-x-1 flex items-center',
         nav_button: cn(
           buttonVariants({ variant: 'outline' }),
           'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'
@@ -53,8 +52,8 @@ function Calendar({
           'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
         day_today: 'bg-accent text-accent-foreground',
         day_outside:
-          "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-        day_disabled: "text-muted-foreground opacity-50",
+          'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
+        day_disabled: 'text-muted-foreground opacity-50',
         day_range_middle:
           'aria-selected:bg-accent aria-selected:text-accent-foreground',
         day_hidden: 'invisible',
@@ -62,10 +61,16 @@ function Calendar({
       }}
       components={{
         IconLeft: ({ className: iconClassName, ...restProps }) => (
-          <ChevronLeft className={cn("h-4 w-4", iconClassName)} {...restProps} />
+          <ChevronLeft
+            className={cn('h-4 w-4', iconClassName)}
+            {...restProps}
+          />
         ),
         IconRight: ({ className: iconClassName, ...restProps }) => (
-          <ChevronRight className={cn("h-4 w-4", iconClassName)} {...restProps} />
+          <ChevronRight
+            className={cn('h-4 w-4', iconClassName)}
+            {...restProps}
+          />
         ),
         // No custom Dropdown component, react-day-picker will use its default
       }}
@@ -75,5 +80,4 @@ function Calendar({
 }
 Calendar.displayName = 'Calendar';
 
-export { Calendar }
-
+export { Calendar };
