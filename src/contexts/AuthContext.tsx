@@ -42,7 +42,6 @@ import {
   arrayUnion,
   arrayRemove,
   Timestamp,
-  type FieldValue,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
@@ -437,7 +436,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
     }
-
     const finalProfileDataForFirestore: Record<string, any> = {};
     for (const key in userProfileData) {
       const typedKey = key as keyof UserProfile;

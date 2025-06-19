@@ -39,7 +39,6 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
-  type FieldValue,
 } from 'firebase/firestore';
 import type { Job, UserProfile, Company } from '@/types';
 import Link from 'next/link';

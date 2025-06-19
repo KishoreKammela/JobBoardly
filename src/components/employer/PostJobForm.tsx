@@ -38,7 +38,6 @@ import {
   doc,
   getDoc,
   Timestamp,
-  type FieldValue,
 } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
