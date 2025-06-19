@@ -86,42 +86,42 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 
 ```mermaid
 graph TD
-    A[Start: Needs a Job] --> B[Visit JobBoardly];
-    B --> C{Has Account?};
-    C -- No --> D[Register: /auth/register];
-    D --> E[Complete Basic Info];
-    E --> F[Login: /auth/login];
-    C -- Yes --> F;
-    F --> G[Navigate to Profile: /profile];
-    G --> H[Upload/Paste Resume & Complete Profile];
-    H --> I[Set Profile Visibility];
-    I --> J[Search for Jobs: /jobs];
-    J --> K[Filter Jobs];
-    K --> L[View Job Details: /jobs/[jobId]];
-    L --> M{Interested?};
-    M -- Yes --> N[Apply for Job];
-    N --> O[Answer Screening Questions (if any)];
-    O --> P[Application Submitted!];
-    P --> Q[View in My Jobs (Applied): /my-jobs];
-    M -- Save for Later --> S[Save Job];
-    S --> T[View in My Jobs (Saved): /my-jobs];
-    Q --> U[Await Employer Response];
-    T --> L;
+    A[Start: Needs a Job] --> B[Visit JobBoardly]
+    B --> C{Has Account?}
+    C -- No --> D[Register: /auth/register]
+    D --> E[Complete Basic Info]
+    E --> F[Login: /auth/login]
+    C -- Yes --> F
+    F --> G[Navigate to Profile: /profile]
+    G --> H[Upload/Paste Resume & Complete Profile]
+    H --> I[Set Profile Visibility]
+    I --> J[Search for Jobs: /jobs]
+    J --> K[Filter Jobs]
+    K --> L[View Job Details: /jobs/jobId]
+    L --> M{Interested?}
+    M -- Yes --> N[Apply for Job]
+    N --> O[Answer Screening Questions if any]
+    O --> P[Application Submitted!]
+    P --> Q[View in My Jobs Applied: /my-jobs]
+    M -- Save for Later --> S[Save Job]
+    S --> T[View in My Jobs Saved: /my-jobs]
+    Q --> U[Await Employer Response]
+    T --> L
 ```
 
 ### Journey 2: AI Job Matching
 
 ```mermaid
 graph TD
-    A[Logged-in Job Seeker] --> B[Navigate to AI Job Matcher: /ai-match];
-    B --> C[Review/Edit Profile Summary for Session];
-    C --> D[Initiate AI Matching];
-    D --> E[AI Processes Profile vs. All Jobs];
-    E --> F[View Matched Job IDs & Reasoning];
-    F --> G{Explore Matched Job?};
-    G -- Yes --> H[Click Job -> View Details: /jobs/[jobId]];
-    H --> I[Apply or Save Job];
-    G -- No --> J[Refine Profile Summary or Search Manually];
+    A[Logged-in Job Seeker] --> B[Navigate to AI Job Matcher: /ai-match]
+    B --> C[Review/Edit Profile Summary for Session]
+    C --> D[Initiate AI Matching]
+    D --> E[AI Processes Profile vs. All Jobs]
+    E --> F[View Matched Job IDs & Reasoning]
+    F --> G{Explore Matched Job?}
+    G -- Yes --> H[Click Job -> View Details: /jobs/jobId]
+    H --> I[Apply or Save Job]
+    G -- No --> J[Refine Profile Summary or Search Manually]
 ```
 
 ## 4. Page Routes
