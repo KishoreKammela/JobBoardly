@@ -1,6 +1,7 @@
 'use client';
+'use client';
 import { useState, useEffect, type FormEvent } from 'react';
-import type { UserSettings } from '@/types';
+import type { UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -20,67 +21,134 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import { defaultUserSettings } from '@/lib/mockData';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
-// In a real app, these settings would be fetched and saved per user.
-// For now, we'll use localStorage for persistence.
-const SETTINGS_STORAGE_KEY = 'jobboardly-user-settings';
+// localStorage key for search history
+const SEARCH_HISTORY_STORAGE_KEY = 'jobboardly-search-history';
 
 export function SettingsForm() {
-  const [settings, setSettings] = useState<UserSettings>(defaultUserSettings);
+  const { user, updateUserProfile, loading: authLoading } = useAuth(); // Get user and updateUserProfile
+  const [settings, setSettings] = useState<Partial<UserProfile>>({
+    theme: 'system',
+    jobBoardDisplay: 'list',
+    itemsPerPage: 10,
+    jobAlerts: {
+      newJobsMatchingProfile: true,
+      savedSearchAlerts: false,
+      applicationStatusUpdates: true,
+    },
+  });
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (storedSettings) {
-      setSettings(JSON.parse(storedSettings));
+    if (user) {
+      setSettings({
+        theme: user.theme || 'system',
+        jobBoardDisplay: user.jobBoardDisplay || 'list',
+        itemsPerPage: user.itemsPerPage || 10,
+        jobAlerts: user.jobAlerts || {
+          newJobsMatchingProfile: true,
+          savedSearchAlerts: false,
+          applicationStatusUpdates: true,
+        },
+      });
     }
-  }, []);
+    // Load search history from localStorage
+    const storedSearchHistory = localStorage.getItem(
+      SEARCH_HISTORY_STORAGE_KEY
+    );
+    if (storedSearchHistory) {
+      setSearchHistory(JSON.parse(storedSearchHistory));
+    }
+  }, [user]);
 
   const handleSwitchChange = (
-    name: keyof UserSettings['jobAlerts'],
+    name: keyof NonNullable<UserProfile['jobAlerts']>,
     checked: boolean
   ) => {
     setSettings((prev) => ({
       ...prev,
-      jobAlerts: { ...prev.jobAlerts, [name]: checked },
+      jobAlerts: { ...(prev.jobAlerts || {}), [name]: checked },
     }));
   };
 
-  const handleRadioChange = (value: UserSettings['jobBoardDisplay']) => {
-    setSettings((prev) => ({ ...prev, jobBoardDisplay: value }));
+  const handleRadioChange = (
+    name: 'theme' | 'jobBoardDisplay',
+    value: string
+  ) => {
+    setSettings((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (value: string) => {
+  const handleSelectChange = (name: 'itemsPerPage', value: string) => {
     setSettings((prev) => ({
       ...prev,
-      itemsPerPage: parseInt(value, 10) as UserSettings['itemsPerPage'],
+      [name]: parseInt(value, 10) as UserProfile['itemsPerPage'],
     }));
   };
 
+
   const handleClearSearchHistory = () => {
-    setSettings((prev) => ({ ...prev, searchHistory: [] }));
+    setSearchHistory([]);
+    localStorage.removeItem(SEARCH_HISTORY_STORAGE_KEY);
     toast({
       title: 'Search History Cleared',
-      description: 'Your job search history has been cleared.',
+      description: 'Your job search history has been cleared from this device.',
     });
+  };
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to save settings.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-    setIsLoading(false);
-    toast({
-      title: 'Settings Saved',
-      description: 'Your preferences have been updated.',
-    });
+    try {
+      // Only send fields that are part of UserProfile to updateUserProfile
+      const profileUpdates: Partial<UserProfile> = {
+        theme: settings.theme,
+        jobBoardDisplay: settings.jobBoardDisplay,
+        itemsPerPage: settings.itemsPerPage,
+        jobAlerts: settings.jobAlerts,
+      };
+      await updateUserProfile(profileUpdates);
+      toast({
+        title: 'Settings Saved',
+        description: 'Your preferences have been updated.',
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not save settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (authLoading || !user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Settings...</CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full shadow-lg">
@@ -91,58 +159,118 @@ export function SettingsForm() {
         <CardDescription>
           Customize your JobBoardly experience and notification preferences.
         </CardDescription>
+        <CardTitle className="text-xl font-headline">
+          Account Settings
+        </CardTitle>
+        <CardDescription>
+          Customize your JobBoardly experience and notification preferences.
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-8">
           <section>
-            <h3 className="text-lg font-semibold mb-3">Job Board Display</h3>
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block">View Mode</Label>
-                <RadioGroup
-                  value={settings.jobBoardDisplay}
-                  onValueChange={handleRadioChange}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="list" id="view-list" />
-                    <Label htmlFor="view-list">List View</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="grid" id="view-grid" />
-                    <Label htmlFor="view-grid">Grid View</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              <div>
-                <Label htmlFor="itemsPerPage" className="mb-2 block">
-                  Items Per Page
-                </Label>
-                <Select
-                  value={String(settings.itemsPerPage)}
-                  onValueChange={handleSelectChange}
-                >
-                  <SelectTrigger id="itemsPerPage" className="w-[180px]">
-                    <SelectValue placeholder="Select count" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10 items</SelectItem>
-                    <SelectItem value="20">20 items</SelectItem>
-                    <SelectItem value="50">50 items</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <h3 className="text-lg font-semibold mb-3">Appearance</h3>
+            <div>
+              <Label className="mb-2 block">Theme</Label>
+              <RadioGroup
+                value={settings.theme || 'system'}
+                onValueChange={(value) => handleRadioChange('theme', value)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="light"
+                    id="theme-light"
+                    aria-label="Light theme"
+                  />
+                  <Label htmlFor="theme-light">Light</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="dark"
+                    id="theme-dark"
+                    aria-label="Dark theme"
+                  />
+                  <Label htmlFor="theme-dark">Dark</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="system"
+                    id="theme-system"
+                    aria-label="System theme"
+                  />
+                  <Label htmlFor="theme-system">System</Label>
+                </div>
+              </RadioGroup>
             </div>
           </section>
+
+          {user.role === 'jobSeeker' && (
+            <section>
+              <h3 className="text-lg font-semibold mb-3">Job Board Display</h3>
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block">Default View Mode</Label>
+                  <RadioGroup
+                    value={settings.jobBoardDisplay || 'list'}
+                    onValueChange={(value) =>
+                      handleRadioChange('jobBoardDisplay', value)
+                    }
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="list"
+                        id="view-list"
+                        aria-label="List view for job board"
+                      />
+                      <Label htmlFor="view-list">List View</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem
+                        value="grid"
+                        id="view-grid"
+                        aria-label="Grid view for job board"
+                      />
+                      <Label htmlFor="view-grid">Grid View</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div>
+                  <Label htmlFor="itemsPerPage" className="mb-2 block">
+                    Jobs Per Page
+                  </Label>
+                  <Select
+                    value={String(settings.itemsPerPage || 10)}
+                    onValueChange={(value) =>
+                      handleSelectChange('itemsPerPage', value)
+                    }
+                  >
+                    <SelectTrigger id="itemsPerPage" className="w-[180px]">
+                      <SelectValue placeholder="Select count" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 items</SelectItem>
+                      <SelectItem value="20">20 items</SelectItem>
+                      <SelectItem value="50">50 items</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section>
             <h3 className="text-lg font-semibold mb-3">
               Notification Preferences
             </h3>
+            <h3 className="text-lg font-semibold mb-3">
+              Notification Preferences
+            </h3>
             <div className="space-y-3">
               {(
-                Object.keys(settings.jobAlerts) as Array<
-                  keyof UserSettings['jobAlerts']
+                Object.keys(settings.jobAlerts || {}) as Array<
+                  keyof NonNullable<UserProfile['jobAlerts']>
                 >
               ).map((key) => (
                 <div
@@ -154,7 +282,7 @@ export function SettingsForm() {
                   </Label>
                   <Switch
                     id={key}
-                    checked={settings.jobAlerts[key]}
+                    checked={settings.jobAlerts?.[key] || false}
                     onCheckedChange={(checked) =>
                       handleSwitchChange(key, checked)
                     }
@@ -166,19 +294,21 @@ export function SettingsForm() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-1">Search History</h3>
-            {settings.searchHistory.length > 0 ? (
+            <h3 className="text-lg font-semibold mb-1">
+              Search History (Device Specific)
+            </h3>
+            {searchHistory.length > 0 ? (
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 max-h-40 overflow-y-auto bg-muted/20 p-3 rounded-md">
-                {settings.searchHistory.map((term, index) => (
+                {searchHistory.map((term, index) => (
                   <li key={index}>{term}</li>
                 ))}
               </ul>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No search history yet.
+                No search history on this device yet.
               </p>
             )}
-            {settings.searchHistory.length > 0 && (
+            {searchHistory.length > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -192,8 +322,10 @@ export function SettingsForm() {
           </section>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isLoading || authLoading}>
+            {(isLoading || authLoading) && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             Save Settings
           </Button>
         </CardFooter>

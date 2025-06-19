@@ -1,16 +1,28 @@
 'use client';
+'use client';
 import { UserProfileForm } from '@/components/UserProfileForm';
-// ResumeUploadForm is specific to job seekers, so it might be conditionally rendered within UserProfileForm or this page
+import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { Loader2, Download } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { useReactToPrint } from 'react-to-print';
+import { PrintableProfileComponent } from '@/components/PrintableProfile';
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const printableProfileRef = useRef<HTMLDivElement>(null);
+
+  const handlePrintProfile = useReactToPrint({
+    content: () => printableProfileRef.current,
+    documentTitle: `${user?.name || 'UserProfile'}_JobBoardly`,
+    onPrintError: () =>
+      alert('There was an error printing the profile. Please try again.'),
+  });
 
   useEffect(() => {
     if (loading) return;
@@ -33,40 +45,55 @@ export default function ProfilePage() {
     if (user.role === 'employer' && user.isCompanyAdmin)
       return 'Manage Company Profile & Your Recruiter Info';
     if (user.role === 'employer') return 'My Recruiter Profile';
-    if (user.role === 'admin') return 'Admin Profile';
+    if (user.role === 'admin' || user.role === 'superAdmin')
+      return `${user.role === 'superAdmin' ? 'Super Admin' : 'Admin'} Profile`;
     return 'Profile';
   };
 
   const pageDescription = () => {
     if (!user) return 'Please log in to view your profile.';
     if (user.role === 'jobSeeker')
-      return 'View and manage your account details and professional information. Upload your resume below.';
+      return 'View and manage your account details and professional information. Upload your resume and download your profile as a PDF.';
     if (user.role === 'employer' && user.isCompanyAdmin)
       return "Edit your company's public details and your personal recruiter information.";
     if (user.role === 'employer')
       return 'Manage your personal recruiter details.';
-    if (user.role === 'admin')
-      return 'Manage your administrator profile details.';
+    if (user.role === 'admin' || user.role === 'superAdmin')
+      return `Manage your ${user.role === 'superAdmin' ? 'Super Admin' : 'Admin'} profile details.`;
     return 'Manage your account details.';
   };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 font-headline">{pageTitle()}</h1>
-        <p className="text-muted-foreground">{pageDescription()}</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 font-headline">
+            {pageTitle()}
+          </h1>
+          <p className="text-muted-foreground">{pageDescription()}</p>
+        </div>
+        {user.role === 'jobSeeker' && (
+          <Button onClick={handlePrintProfile} variant="outline">
+            <Download className="mr-2 h-4 w-4" /> Download PDF Profile
+          </Button>
+        )}
       </div>
       <Separator />
       {user && <UserProfileForm />}
-      {/* ResumeUploadForm is typically for job seekers. It's now integrated within UserProfileForm logic or can be added here if separated */}
-      {/* If ResumeUploadForm is separate and only for job seekers:
-        {user.role === 'jobSeeker' && (
-          <>
-            <Separator />
-            <ResumeUploadForm />
-          </>
-        )}
-      */}
+
+      {user.role === 'jobSeeker' && (
+        <>
+          <Separator />
+          <ResumeUploadForm />
+        </>
+      )}
+
+      {/* Hidden component for printing */}
+      {user.role === 'jobSeeker' && (
+        <div style={{ display: 'none' }}>
+          <PrintableProfileComponent ref={printableProfileRef} user={user} />
+        </div>
+      )}
     </div>
   );
 }

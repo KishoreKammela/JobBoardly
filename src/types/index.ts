@@ -1,6 +1,19 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'jobSeeker' | 'employer' | 'admin';
+export type UserRole = 'jobSeeker' | 'employer' | 'admin' | 'superAdmin';
+
+export interface ScreeningQuestion {
+  id: string;
+  question: string;
+  type: 'text' | 'yesNo';
+  isRequired: boolean;
+}
+
+export interface ApplicationAnswer {
+  questionId: string;
+  questionText: string; // Denormalized for easier display
+  answer: string;
+}
 
 // Define Filters interface globally
 export interface Filters {
@@ -8,6 +21,21 @@ export interface Filters {
   location: string;
   roleType: string; // 'all', 'Full-time', 'Part-time', 'Contract', 'Internship'
   isRemote: boolean;
+  recentActivity?: 'any' | '24h' | '7d' | '30d'; // For jobs: based on postedDate or updatedAt
+}
+
+export interface CandidateFilters {
+  searchTerm: string; // For skills, headline, name
+  location: string;
+  availability: string; // 'all', 'Immediate', '2 Weeks Notice', '1 Month Notice', 'Flexible'
+  jobSearchStatus?:
+    | 'all'
+    | 'activelyLooking'
+    | 'openToOpportunities'
+    | 'notLooking';
+  desiredSalaryMin?: number;
+  desiredSalaryMax?: number;
+  recentActivity?: 'any' | '24h' | '7d' | '30d'; // For candidates: based on updatedAt
 }
 
 export interface SavedSearch {
@@ -24,33 +52,37 @@ export interface Company {
   websiteUrl?: string;
   logoUrl?: string;
   bannerImageUrl?: string;
-  adminUids: string[]; // UIDs of users who are company admins for this company
-  recruiterUids: string[]; // UIDs of all recruiters (including admins) in the company
+  adminUids: string[];
+  recruiterUids: string[];
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  status: 'pending' | 'approved' | 'rejected'; // For moderation
-  moderationReason?: string; // Optional reason for rejection
+  status: 'pending' | 'approved' | 'rejected' | 'suspended'; // Added 'suspended'
+  moderationReason?: string;
+  // For admin dashboard display, not directly stored in Firestore on company doc usually
+  jobCount?: number;
+  applicationCount?: number;
 }
 
 export interface Job {
   id: string;
   title: string;
   company: string;
-  companyId: string; // Links to the Company document ID
+  companyId: string;
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   description: string;
-  postedDate: string | Timestamp; // Consider standardizing to string (ISO) or Date object after fetch for consistency
+  postedDate: string | Timestamp;
   isRemote: boolean;
   skills: string[];
   salaryMin?: number;
   salaryMax?: number;
-  companyLogoUrl?: string; // Can be sourced from Company.logoUrl
-  postedById: string; // UID of the employer who posted it
-  status: 'pending' | 'approved' | 'rejected'; // For moderation
-  moderationReason?: string; // Optional reason for rejection
+  companyLogoUrl?: string;
+  postedById: string;
+  status: 'pending' | 'approved' | 'rejected';
+  moderationReason?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
+  screeningQuestions?: ScreeningQuestion[];
 }
 
 export type ApplicationStatus =
@@ -60,7 +92,7 @@ export type ApplicationStatus =
   | 'Offer Made'
   | 'Hired'
   | 'Rejected By Company'
-  | 'Withdrawn by Applicant'; // Job seeker might withdraw
+  | 'Withdrawn by Applicant';
 
 export const EmployerManagedApplicationStatuses: ApplicationStatus[] = [
   'Applied',
@@ -72,19 +104,20 @@ export const EmployerManagedApplicationStatuses: ApplicationStatus[] = [
 ];
 
 export interface Application {
-  id: string; // Firestore document ID
+  id: string;
   jobId: string;
-  jobTitle: string; // Denormalized
-  applicantId: string; // Job Seeker UID
-  applicantName: string; // Denormalized
-  applicantAvatarUrl?: string; // Denormalized
-  applicantHeadline?: string; // Denormalized
+  jobTitle: string;
+  applicantId: string;
+  applicantName: string;
+  applicantAvatarUrl?: string;
+  applicantHeadline?: string;
   companyId: string;
-  postedById: string; // Employer UID who posted the job (owner of the job post)
+  postedById: string;
   status: ApplicationStatus;
   appliedAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  employerNotes?: string; // Notes by the employer about this application
+  employerNotes?: string;
+  answers?: ApplicationAnswer[];
 }
 
 export interface UserProfile {
@@ -95,22 +128,35 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
+  status?: 'active' | 'suspended'; // For user account status
+
+  // Theme and UI Preferences (migrated from UserSettings)
+  theme?: 'light' | 'dark' | 'system';
+  jobBoardDisplay?: 'list' | 'grid'; // If used for job seeker's preference on job list pages
+  itemsPerPage?: 10 | 20 | 50; // If job seeker can set this
+  jobAlerts?: {
+    newJobsMatchingProfile: boolean;
+    savedSearchAlerts: boolean;
+    applicationStatusUpdates: boolean;
+  };
+  // searchHistory is kept in localStorage as it's device-specific
 
   // Job Seeker specific fields
   headline?: string;
   skills?: string[];
-  experience?: string;
-  education?: string;
-  mobileNumber?: string; // Added mobile number field
+  experience?: string; // Markdown supported
+  education?: string; // Markdown supported
+  mobileNumber?: string;
   availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
   desiredSalary?: number; // Stored as number, displayed in INR
+  isProfileSearchable?: boolean; // For profile visibility control
   resumeUrl?: string;
   resumeFileName?: string;
-  parsedResumeText?: string;
+  parsedResumeText?: string; // Store the AI parsed summary
   appliedJobIds?: string[];
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
@@ -118,17 +164,16 @@ export interface UserProfile {
   // Employer specific fields
   companyId?: string;
   isCompanyAdmin?: boolean;
+
+  // For admin dashboard display, not directly stored usually
+  jobsAppliedCount?: number; // for job seekers
 }
 
+// This UserSettings is no longer primary for theme/display; those moved to UserProfile.
+// It can be kept for localStorage specific things like searchHistory if needed,
+// but for now, we will manage searchHistory directly in the settings component.
 export interface UserSettings {
-  jobBoardDisplay: 'list' | 'grid';
-  itemsPerPage: 10 | 20 | 50;
-  jobAlerts: {
-    newJobsMatchingProfile: boolean;
-    savedSearchAlerts: boolean;
-    applicationStatusUpdates: boolean;
-  };
-  searchHistory: string[];
+  searchHistory: string[]; // Example: still using localStorage for this
 }
 
 export interface ParsedResumeData {
@@ -136,11 +181,10 @@ export interface ParsedResumeData {
   email?: string;
   headline?: string;
   skills?: string[];
-  experience?: string;
+  experience?: string; // Markdown for structure
   education?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
-  // mobileNumber is not typically parsed directly from resume by AI, but could be.
 }
 
 export interface ParsedJobData {
@@ -151,4 +195,5 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
+  // companyName: string; // Not usually parsed, taken from employer context
 }

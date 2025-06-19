@@ -8,6 +8,10 @@ import { AuthProvider } from '@/contexts/AuthContext';
 export const metadata: Metadata = {
   title: 'JobBoardly - Find Your Next Opportunity',
   description: 'AI-Powered Job Portal Platform',
+  // themeColor: [ // For PWA, can be adjusted based on theme
+  //   { media: '(prefers-color-scheme: light)', color: 'white' },
+  //   { media: '(prefers-color-scheme: dark)', color: 'black' },
+  // ],
 };
 
 export default function RootLayout({
@@ -29,7 +33,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="font-body antialiased flex flex-col min-h-screen">
+      <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
           <Navbar />
           <main className="flex-grow container mx-auto px-4 py-8">
