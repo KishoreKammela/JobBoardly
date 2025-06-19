@@ -31,6 +31,7 @@ To empower employers to efficiently find and connect with qualified candidates b
 - **Company Status**: Current status (e.g., `Pending`, `Approved`, `Rejected`, `Suspended`, `Deleted`) is visible to the company admin.
 - **Recruiter List**: Company Admins can view a list of recruiters associated with their company (recruiter management itself is an admin task).
 - **Saving Changes**: Requires confirmation.
+- **Profile Preview (`/employer/profile/preview`)**: Company Admins can preview how their company's public profile page will appear to job seekers and other users.
 - _Note_: If the company status is 'suspended' or 'deleted', editing company profile details is disabled.
 
 ### 2.3. Job Posting & Management
@@ -46,7 +47,7 @@ To empower employers to efficiently find and connect with qualified candidates b
 - **View Posted Jobs (`/employer/posted-jobs`)**:
   - A dashboard listing all jobs posted by the employer's company.
   - Displays job title, status, and applicant count for each job.
-  - Quick links to edit a job or view its applicants. Actions may be disabled if the job or company is suspended/deleted.
+  - Quick links to edit a job or view its applicants. Actions may be disabled if the job or company is suspended/deleted, or if the job itself is suspended by an admin.
 - _Note_: Job posting and management are disabled if the company account is 'suspended' or 'deleted'.
 
 ### 2.4. Applicant Management
@@ -139,22 +140,36 @@ graph TD
     F -- Back to List --> D
 ```
 
+### Journey 3: Previewing Company Profile (Company Admin)
+
+```mermaid
+graph TD
+    CP_Start[Start: Company Admin wants to see public profile] --> CP_Login[Login as Employer]
+    CP_Login --> CP_Nav{Navigate via Account Menu or direct link}
+    CP_Nav --> CP_PreviewPage[/employer/profile/preview]
+    CP_PreviewPage --> CP_View[View Company Profile as Public Sees It]
+    CP_View --> CP_Option{Content OK?}
+    CP_Option -- No --> CP_Edit[Go to /profile to Edit Company Details]
+    CP_Option -- Yes --> CP_End[End Preview]
+```
+
 ## 4. Page Routes
 
-| Route                                | Description                                                                                                                                                                       | Access Level |
-| :----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
-| `/employer`                          | Landing page for employers.                                                                                                                                                       | Public       |
-| `/employer/register`                 | Employer and new company registration page.                                                                                                                                       | Public       |
-| `/employer/login`                    | Employer login page. If company is 'deleted', login may fail post-auth check.                                                                                                     | Public       |
-| `/profile`                           | Manage recruiter profile; if Company Admin, also manage Company Profile. Company profile editing restricted if company 'suspended'/'deleted'. Profile save requires confirmation. | Employer     |
-| `/employer/post-job`                 | Form to create/edit job. Disabled if company 'suspended'/'deleted'. Submitting/updating requires confirmation.                                                                    | Employer     |
-| `/employer/posted-jobs`              | Dashboard of posted jobs. Actions restricted if company 'suspended'/'deleted' or job 'suspended'.                                                                                 | Employer     |
-| `/employer/jobs/[jobId]/applicants`  | View/manage applicants. Disabled if company 'suspended'/'deleted' or job 'suspended'. Status updates require confirmation.                                                        | Employer     |
-| `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'.                                                                                                              | Employer     |
-| `/employer/candidates/[candidateId]` | View candidate profile.                                                                                                                                                           | Employer     |
-| `/employer/ai-candidate-match`       | AI candidate matcher. Disabled if company 'suspended'/'deleted'.                                                                                                                  | Employer     |
-| `/settings`                          | Manage settings. Most disabled if company 'suspended'/'deleted', except theme.                                                                                                    | Employer     |
-| `/auth/change-password`              | Page to change password. (Accessible if company suspended/deleted). Password change requires confirmation.                                                                        | Employer     |
+| Route                                | Description                                                                                                                                                                       | Access Level             |
+| :----------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------- |
+| `/employer`                          | Landing page for employers.                                                                                                                                                       | Public                   |
+| `/employer/register`                 | Employer and new company registration page.                                                                                                                                       | Public                   |
+| `/employer/login`                    | Employer login page. If company is 'deleted', feature access restricted post-auth.                                                                                                | Public                   |
+| `/profile`                           | Manage recruiter profile; if Company Admin, also manage Company Profile. Company profile editing restricted if company 'suspended'/'deleted'. Profile save requires confirmation. | Employer                 |
+| `/employer/profile/preview`          | (New) Company Admins can preview their public company profile.                                                                                                                    | Employer (Company Admin) |
+| `/employer/post-job`                 | Form to create/edit job. Disabled if company 'suspended'/'deleted'. Submitting/updating requires confirmation.                                                                    | Employer                 |
+| `/employer/posted-jobs`              | Dashboard of posted jobs. Actions restricted if company 'suspended'/'deleted' or job 'suspended'.                                                                                 | Employer                 |
+| `/employer/jobs/[jobId]/applicants`  | View/manage applicants. Disabled if company 'suspended'/'deleted' or job 'suspended'. Status updates require confirmation.                                                        | Employer                 |
+| `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'.                                                                                                              | Employer                 |
+| `/employer/candidates/[candidateId]` | View candidate profile.                                                                                                                                                           | Employer                 |
+| `/employer/ai-candidate-match`       | AI candidate matcher. Disabled if company 'suspended'/'deleted'.                                                                                                                  | Employer                 |
+| `/settings`                          | Manage settings. Most disabled if company 'suspended'/'deleted', except theme.                                                                                                    | Employer                 |
+| `/auth/change-password`              | Page to change password. (Accessible if company suspended/deleted). Password change requires confirmation.                                                                        | Employer                 |
 
 ## 5. Key "API" Interactions (Data Flows with Genkit & Firebase)
 
@@ -164,7 +179,7 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **AI-Powered Candidate Matching (`aiPoweredCandidateMatching`):** (As before, but UI access restricted if company suspended/deleted)
 - **Company & Job Data (Firebase Firestore):**
   - **Company Profile**: Updated in `companies` collection. Admin approval required for new/significant changes. Saving requires confirmation. Editing restricted if company status is 'suspended' or 'deleted'.
-  - **Job Postings**: Created/updated in `jobs` collection. Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended' or 'deleted'.
+  - **Job Postings**: Created/updated in `jobs` collection. Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended' or 'deleted' or if job itself is admin-suspended.
   - **Application Management**: Employers update `status` and `employerNotes` in `application` documents. Status updates require confirmation. Management restricted if company/job is suspended/deleted.
 
 ## 6. Future Updates (Potential Enhancements)
@@ -173,10 +188,10 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
   - Customizable application pipelines/stages.
   - Bulk actions on applicants (e.g., send templated emails).
   - Collaborative notes and ratings for applicants by multiple recruiters in the company.
-- **Employer Branding Tools**: Enhanced company profile pages.
-- **Analytics & Reporting**: Performance metrics for job postings.
+- **Employer Branding Tools**: Enhanced company profile pages with more customizable sections (e.g., "Life at [Company]", testimonials).
+- **Analytics & Reporting**: Performance metrics for job postings (views, application rates, source of applicants).
 - **Direct Messaging with Candidates**: Secure, in-platform communication.
-- **Interview Scheduling Integration**: Connect with calendar tools.
+- **Interview Scheduling Integration**: Connect with calendar tools to streamline interview scheduling.
 - **Team Management**: For Company Admins to invite and manage recruiter accounts (currently admin task).
 - **Clearer guidance for recruiters** whose company account is suspended or deleted.
 

@@ -34,6 +34,10 @@ import {
   Ban,
   CheckSquare,
   Trash2,
+  BarChart3,
+  Users,
+  FileText,
+  ClipboardList,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -99,6 +103,14 @@ const initialModalState: ModalState = {
   confirmVariant: 'default',
 };
 
+interface PlatformStats {
+  totalJobSeekers: number;
+  totalCompanies: number;
+  totalJobs: number;
+  approvedJobs: number;
+  totalApplications: number;
+}
+
 function getSortableValue<T>(
   item: T,
   key: keyof T | null
@@ -131,6 +143,9 @@ export default function AdminPage() {
   const [allJobSeekers, setAllJobSeekers] = useState<UserProfile[]>([]);
   const [allPlatformUsers, setAllPlatformUsers] = useState<UserProfile[]>([]);
   const [allJobs, setAllJobs] = useState<JobWithApplicantCount[]>([]);
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(
+    null
+  );
 
   const [companiesSearchTerm, setCompaniesSearchTerm] = useState('');
   const [jobSeekersSearchTerm, setJobSeekersSearchTerm] = useState('');
@@ -169,6 +184,7 @@ export default function AdminPage() {
   const [isAllCompaniesLoading, setIsAllCompaniesLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isAllJobsLoading, setIsAllJobsLoading] = useState(true);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
 
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
@@ -183,8 +199,38 @@ export default function AdminPage() {
     setIsAllCompaniesLoading(true);
     setIsUsersLoading(true);
     setIsAllJobsLoading(true);
+    setIsStatsLoading(true);
 
     try {
+      // Fetch Stats
+      const jobSeekersCount = (
+        await getCountFromServer(
+          query(collection(db, 'users'), where('role', '==', 'jobSeeker'))
+        )
+      ).data().count;
+      const companiesCount = (
+        await getCountFromServer(collection(db, 'companies'))
+      ).data().count;
+      const totalJobsCount = (
+        await getCountFromServer(collection(db, 'jobs'))
+      ).data().count;
+      const approvedJobsCount = (
+        await getCountFromServer(
+          query(collection(db, 'jobs'), where('status', '==', 'approved'))
+        )
+      ).data().count;
+      const applicationsCount = (
+        await getCountFromServer(collection(db, 'applications'))
+      ).data().count;
+      setPlatformStats({
+        totalJobSeekers: jobSeekersCount,
+        totalCompanies: companiesCount,
+        totalJobs: totalJobsCount,
+        approvedJobs: approvedJobsCount,
+        totalApplications: applicationsCount,
+      });
+      setIsStatsLoading(false);
+
       const pendingJobsQuery = query(
         collection(db, 'jobs'),
         where('status', '==', 'pending'),
@@ -340,6 +386,7 @@ export default function AdminPage() {
       setIsAllCompaniesLoading(false);
       setIsUsersLoading(false);
       setIsAllJobsLoading(false);
+      setIsStatsLoading(false);
     }
   }, [toast]);
 
@@ -423,11 +470,7 @@ export default function AdminPage() {
 
       await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
 
-      if (
-        newStatus === 'approved' ||
-        newStatus === 'rejected' ||
-        newStatus === 'suspended'
-      ) {
+      if (newStatus !== 'pending') {
         setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
       }
 
@@ -499,12 +542,7 @@ export default function AdminPage() {
             : c
         )
       );
-      if (
-        newStatus === 'approved' ||
-        newStatus === 'rejected' ||
-        newStatus === 'suspended' ||
-        newStatus === 'deleted'
-      ) {
+      if (newStatus !== 'pending') {
         setPendingCompanies((prev) => prev.filter((c) => c.id !== companyId));
       }
 
@@ -754,6 +792,69 @@ export default function AdminPage() {
         </div>
       </div>
       <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 /> Platform Analytics
+          </CardTitle>
+          <CardDescription>
+            Key metrics for JobBoardly at a glance.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isStatsLoading ? (
+            <div className="flex items-center py-6">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+              Loading platform statistics...
+            </div>
+          ) : platformStats ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
+              <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
+                <Users className="h-8 w-8 mx-auto text-primary mb-2" />
+                <p className="text-2xl font-bold">
+                  {platformStats.totalJobSeekers}
+                </p>
+                <p className="text-xs text-muted-foreground">Job Seekers</p>
+              </div>
+              <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
+                <Building className="h-8 w-8 mx-auto text-primary mb-2" />
+                <p className="text-2xl font-bold">
+                  {platformStats.totalCompanies}
+                </p>
+                <p className="text-xs text-muted-foreground">Companies</p>
+              </div>
+              <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
+                <FileText className="h-8 w-8 mx-auto text-primary mb-2" />
+                <p className="text-2xl font-bold">{platformStats.totalJobs}</p>
+                <p className="text-xs text-muted-foreground">Total Jobs</p>
+              </div>
+              <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
+                <CheckCircle2 className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                <p className="text-2xl font-bold">
+                  {platformStats.approvedJobs}
+                </p>
+                <p className="text-xs text-muted-foreground">Approved Jobs</p>
+              </div>
+              <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
+                <ClipboardList className="h-8 w-8 mx-auto text-primary mb-2" />
+                <p className="text-2xl font-bold">
+                  {platformStats.totalApplications}
+                </p>
+                <p className="text-xs text-muted-foreground">Applications</p>
+              </div>
+            </div>
+          ) : (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Statistics Unavailable</AlertTitle>
+              <AlertDescription>
+                Could not load platform statistics at this time.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card>

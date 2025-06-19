@@ -45,7 +45,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
-import { toast } from '@/hooks/use-toast'; // Import toast
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -266,10 +266,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               savedSearches: (rawData.savedSearches || []).map(
                 (s: Partial<SavedSearch>) => ({
                   ...s,
+                  id: s.id || uuidv4(), // Ensure ID for older saved searches
                   createdAt:
                     s.createdAt instanceof Timestamp
                       ? s.createdAt.toDate().toISOString()
-                      : s.createdAt,
+                      : s.createdAt || new Date().toISOString(), // Fallback for older entries
                 })
               ),
               experiences:
@@ -332,12 +333,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
             }
           } else {
-            // User document might not exist if it's a brand new social sign-in
-            // or if the initial setDoc for lastActive failed or hadn't completed.
-            // This path is less likely if setDoc({merge:true}) for lastActive is robust.
-            // If we reach here, it might imply userProfile was never created.
-            // For now, we will treat as logged out, though a more robust solution
-            // might re-trigger profile creation if fbUser is valid but no doc.
             setUser(null);
             setCompany(null);
           }
@@ -358,7 +353,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
@@ -660,7 +654,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const rawData = userDocSnap.data();
 
         if (rawData.status === 'deleted') {
-          await signOut(auth); // Sign out the Firebase Auth session
+          await signOut(auth);
           setUser(null);
           setFirebaseUser(null);
           setCompany(null);
@@ -671,7 +665,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             variant: 'destructive',
             duration: Infinity,
           });
-          throw new Error('Account is deleted.'); // Prevent further processing
+          throw new Error('Account is deleted.');
         }
 
         let dobString: string | undefined = undefined;
@@ -715,10 +709,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           savedSearches: (rawData.savedSearches || []).map(
             (s: Partial<SavedSearch>) => ({
               ...s,
+              id: s.id || uuidv4(),
               createdAt:
                 s.createdAt instanceof Timestamp
                   ? s.createdAt.toDate().toISOString()
-                  : s.createdAt,
+                  : s.createdAt || new Date().toISOString(),
             })
           ),
           experiences: (rawData.experiences || []).map(
@@ -1289,26 +1284,93 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const saveSearch = async (searchName: string, filters: Filters) => {
-    if (user && user.uid && user.role === 'jobSeeker') {
-      if (user.status === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description:
-            'Your account is currently suspended. You cannot save searches.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      const userDocRef = doc(db, 'users', user.uid);
-      const newSearch: SavedSearch = {
-        id: uuidv4(),
-        name: searchName,
-        filters,
-        createdAt: serverTimestamp() as Timestamp,
+    if (!user || !user.uid || user.role !== 'jobSeeker') {
+      toast({
+        title: 'Action Denied',
+        description: 'Only job seekers can save searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (user.status === 'suspended') {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot save searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const userDocRef = doc(db, 'users', user.uid);
+    const newSearch: SavedSearch = {
+      id: uuidv4(),
+      name: searchName,
+      filters,
+      createdAt: serverTimestamp() as Timestamp, // Firestore will convert this
+    };
+
+    try {
+      await updateDoc(userDocRef, {
+        savedSearches: arrayUnion({
+          ...newSearch,
+          createdAt: newSearch.createdAt, // For local state, keep it as Timestamp for now
+        }),
+        updatedAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
+      });
+      setUser((prevUser) => {
+        const updatedSearches = [
+          ...(prevUser?.savedSearches || []),
+          { ...newSearch, createdAt: new Date().toISOString() }, // Convert to string for local state consistency
+        ];
+        return {
+          ...prevUser,
+          savedSearches: updatedSearches,
+        } as UserProfile;
+      });
+    } catch (error: unknown) {
+      console.error('AuthContext: saveSearch error', error);
+      throw error;
+    }
+  };
+
+  const deleteSearch = async (searchId: string) => {
+    if (
+      !user ||
+      !user.uid ||
+      user.role !== 'jobSeeker' ||
+      !user.savedSearches
+    ) {
+      toast({
+        title: 'Action Denied',
+        description: 'Only job seekers can delete their saved searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (user.status === 'suspended') {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot delete searches.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const userDocRef = doc(db, 'users', user.uid);
+    const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
+
+    if (searchToDelete) {
+      // Prepare searchToDelete with Firestore Timestamp for arrayRemove if it's a Date string
+      const searchToDeleteForFirestore = {
+        ...searchToDelete,
+        createdAt: Timestamp.fromDate(
+          new Date(searchToDelete.createdAt as string)
+        ),
       };
       try {
         await updateDoc(userDocRef, {
-          savedSearches: arrayUnion(newSearch as Record<string, unknown>),
+          savedSearches: arrayRemove(searchToDeleteForFirestore),
           updatedAt: serverTimestamp(),
           lastActive: serverTimestamp(),
         });
@@ -1316,58 +1378,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           (prevUser) =>
             ({
               ...prevUser,
-              savedSearches: [...(prevUser?.savedSearches || []), newSearch],
+              savedSearches: (prevUser?.savedSearches || []).filter(
+                (s) => s.id !== searchId
+              ),
             }) as UserProfile
         );
       } catch (error: unknown) {
-        console.error('AuthContext: saveSearch error', error);
+        console.error('AuthContext: deleteSearch error', error);
         throw error;
       }
-    } else {
-      console.warn('User must be a logged-in job seeker to save a search.');
-    }
-  };
-
-  const deleteSearch = async (searchId: string) => {
-    if (user && user.uid && user.role === 'jobSeeker' && user.savedSearches) {
-      if (user.status === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description:
-            'Your account is currently suspended. You cannot delete searches.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      const userDocRef = doc(db, 'users', user.uid);
-      const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
-      if (searchToDelete) {
-        try {
-          await updateDoc(userDocRef, {
-            savedSearches: arrayRemove(
-              searchToDelete as Record<string, unknown>
-            ),
-            updatedAt: serverTimestamp(),
-            lastActive: serverTimestamp(),
-          });
-          setUser(
-            (prevUser) =>
-              ({
-                ...prevUser,
-                savedSearches: (prevUser?.savedSearches || []).filter(
-                  (s) => s.id !== searchId
-                ),
-              }) as UserProfile
-          );
-        } catch (error: unknown) {
-          console.error('AuthContext: deleteSearch error', error);
-          throw error;
-        }
-      }
-    } else {
-      console.warn(
-        'User must be a logged-in job seeker with searches to delete a search.'
-      );
     }
   };
 

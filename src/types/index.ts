@@ -206,7 +206,7 @@ export interface UserProfile {
 
   appliedJobIds?: string[];
   savedJobIds?: string[];
-  savedSearches?: SavedSearch[];
+  savedSearches?: SavedSearch[]; // Added for saved searches
 
   companyId?: string;
   isCompanyAdmin?: boolean;

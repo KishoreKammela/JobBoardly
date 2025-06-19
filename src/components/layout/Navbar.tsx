@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Ban,
   Bookmark,
+  BarChart3, // For Platform Analytics
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -153,6 +154,11 @@ const userAccountDropdownLinksConfig = {
       icon: <Building className="h-4 w-4" />,
     },
     {
+      href: '/employer/profile/preview',
+      label: 'Preview Company Profile',
+      icon: <Eye className="h-4 w-4" />,
+    },
+    {
       href: '/employer/ai-candidate-match',
       label: 'AI Candidate Matcher',
       icon: <Lightbulb className="h-4 w-4" />,
@@ -256,9 +262,7 @@ export function Navbar() {
       if (
         link.jobSeekerOnly &&
         isJobSeekerSuspended &&
-        link.href !== '/my-jobs' && // Allow viewing My Jobs even if suspended
-        link.href !== '/settings' && // Allow access to settings
-        link.href !== '/profile' // Allow access to profile viewing/basic edits
+        !['/my-jobs', '/settings', '/profile'].includes(link.href)
       )
         return false;
 
@@ -304,9 +308,7 @@ export function Navbar() {
               (link.employerOnly && isCompanyActionDisabled) ||
               (link.jobSeekerOnly &&
                 isJobSeekerSuspended &&
-                link.href !== '/my-jobs' &&
-                link.href !== '/settings' &&
-                link.href !== '/profile');
+                !['/my-jobs', '/settings', '/profile'].includes(link.href));
 
             const savedJobsCount =
               user?.role === 'jobSeeker' && link.href === '/my-jobs'
@@ -394,35 +396,36 @@ export function Navbar() {
                 <DropdownMenuSeparator />
 
                 {currentAccountDropdownLinks.map((item) => {
-                  const isEmployerLinkDisabled =
-                    user.role === 'employer' &&
-                    isCompanyActionDisabled &&
-                    (item.href.includes('/employer/ai-candidate-match') ||
-                      (item.href === '/profile' && user.isCompanyAdmin));
-
-                  const isJobSeekerLinkDisabled =
-                    user.role === 'jobSeeker' &&
-                    isJobSeekerSuspended &&
-                    (item.href === '/profile' || // Main profile editing restricted
-                      item.href === '/ai-match' ||
-                      item.href === '/profile/preview'); // Preview implies full profile content
-
-                  const isDisabled =
-                    isEmployerLinkDisabled || isJobSeekerLinkDisabled;
+                  let isLinkDisabled = false;
+                  if (user.role === 'employer') {
+                    isLinkDisabled =
+                      isCompanyActionDisabled &&
+                      (item.href.includes('/employer/ai-candidate-match') ||
+                        item.href.includes('/employer/profile/preview') ||
+                        (item.href === '/profile' &&
+                          user.isCompanyAdmin &&
+                          (company?.status === 'suspended' ||
+                            company?.status === 'deleted')));
+                  } else if (user.role === 'jobSeeker') {
+                    isLinkDisabled =
+                      isJobSeekerSuspended &&
+                      (item.href === '/ai-match' ||
+                        item.href === '/profile/preview');
+                  }
 
                   return (
                     <DropdownMenuItem
                       key={item.href}
                       asChild
-                      disabled={isDisabled}
+                      disabled={isLinkDisabled}
                     >
                       <Link
                         href={item.href}
                         className={`flex items-center gap-2 cursor-pointer w-full ${
-                          isDisabled ? 'pointer-events-none opacity-50' : ''
+                          isLinkDisabled ? 'pointer-events-none opacity-50' : ''
                         }`}
                         onClick={(e) => {
-                          if (isDisabled) e.preventDefault();
+                          if (isLinkDisabled) e.preventDefault();
                         }}
                       >
                         {item.icon}
@@ -444,9 +447,9 @@ export function Navbar() {
                       (link.employerOnly && isCompanyActionDisabled) ||
                       (link.jobSeekerOnly &&
                         isJobSeekerSuspended &&
-                        link.href !== '/my-jobs' && // Allow viewing My Jobs
-                        link.href !== '/settings' && // Allow settings
-                        link.href !== '/profile'); // Allow profile view/basic edits
+                        !['/my-jobs', '/settings', '/profile'].includes(
+                          link.href
+                        ));
 
                     const savedJobsCount =
                       user?.role === 'jobSeeker' && link.href === '/my-jobs'

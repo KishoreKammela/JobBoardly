@@ -114,6 +114,15 @@ export default function SettingsPage() {
   };
 
   const handleDeleteSearch = (searchId: string, searchName: string) => {
+    if (user?.status === 'suspended') {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'You cannot delete saved searches while your account is suspended.',
+        variant: 'destructive',
+      });
+      return;
+    }
     showConfirmationModal(
       `Delete Saved Search "${searchName}"?`,
       'Are you sure you want to delete this saved search? This action cannot be undone.',
@@ -124,12 +133,23 @@ export default function SettingsPage() {
   };
 
   const handleApplySavedSearch = (filters: Filters) => {
+    if (user?.status === 'suspended') {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'You cannot apply saved searches while your account is suspended.',
+        variant: 'destructive',
+      });
+      return;
+    }
     const queryParams = new URLSearchParams();
     if (filters.searchTerm) queryParams.set('q', filters.searchTerm);
     if (filters.location) queryParams.set('loc', filters.location);
     if (filters.roleType && filters.roleType !== 'all')
       queryParams.set('type', filters.roleType);
     if (filters.isRemote) queryParams.set('remote', 'true');
+    if (filters.recentActivity && filters.recentActivity !== 'any')
+      queryParams.set('activity', filters.recentActivity);
     router.push(`/jobs?${queryParams.toString()}`);
   };
 
@@ -179,6 +199,7 @@ export default function SettingsPage() {
                           onClick={() => handleApplySavedSearch(search.filters)}
                           className="font-medium text-primary hover:underline text-left"
                           title="Apply this search"
+                          disabled={user.status === 'suspended'}
                         >
                           {search.name}
                         </button>
@@ -188,7 +209,8 @@ export default function SettingsPage() {
                           {search.filters.roleType === 'all'
                             ? 'Any'
                             : search.filters.roleType}{' '}
-                          | Remote: {search.filters.isRemote ? 'Yes' : 'No'}
+                          | Remote: {search.filters.isRemote ? 'Yes' : 'No'}|
+                          Activity: {search.filters.recentActivity || 'Any'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Saved:{' '}
@@ -205,6 +227,7 @@ export default function SettingsPage() {
                         }
                         className="text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
                         aria-label={`Delete saved search ${search.name}`}
+                        disabled={user.status === 'suspended'}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

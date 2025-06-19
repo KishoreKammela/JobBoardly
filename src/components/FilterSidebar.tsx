@@ -105,6 +105,15 @@ export function FilterSidebar({
       });
       return;
     }
+    if (user.status === 'suspended') {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'You cannot save searches while your account is suspended.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSearchName(currentGlobalSearchTerm || 'My Job Search');
     setIsSaveSearchAlertOpen(true);
   };
@@ -238,6 +247,7 @@ export function FilterSidebar({
                 onClick={handleOpenSaveSearchDialog}
                 className="w-full"
                 aria-label="Save current search criteria"
+                disabled={user.status === 'suspended'}
               >
                 <Save className="mr-2 h-4 w-4" /> Save Current Search
               </Button>
