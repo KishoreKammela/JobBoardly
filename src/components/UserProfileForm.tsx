@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -27,15 +28,11 @@ import {
   User,
   Users,
   Info,
-  ShieldCheck /*, Phone*/,
-} from 'lucide-react'; // Removed Phone
-// import { useRouter } from 'next/navigation'; // Unused router
-import {
-  /*doc, getDoc, updateDoc,*/ collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore'; // Removed doc, getDoc, updateDoc
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -51,7 +48,6 @@ export function UserProfileForm() {
     loading: authLoading,
   } = useAuth();
   const { toast } = useToast();
-  // const router = useRouter(); // Unused router
 
   const initialUserFormData: Partial<UserProfile> = {
     name: '',
@@ -67,6 +63,7 @@ export function UserProfileForm() {
     preferredLocations: [],
     jobSearchStatus: 'activelyLooking',
     desiredSalary: undefined,
+    isProfileSearchable: true,
   };
 
   const initialCompanyFormData: Partial<Company> = {
@@ -105,6 +102,10 @@ export function UserProfileForm() {
         preferredLocations: user.preferredLocations || [],
         jobSearchStatus: user.jobSearchStatus || 'activelyLooking',
         desiredSalary: user.desiredSalary,
+        isProfileSearchable:
+          user.isProfileSearchable !== undefined
+            ? user.isProfileSearchable
+            : true,
       });
       setSkillsInput((user.skills || []).join(', '));
       setLocationsInput((user.preferredLocations || []).join(', '));
@@ -170,37 +171,12 @@ export function UserProfileForm() {
         }
       }
     } else {
-      // No user, reset to defaults.
-      // Keeping initialUserFormData and initialCompanyFormData separate from this logic to avoid them being in deps array
-      setUserFormData({
-        name: '',
-        avatarUrl: '',
-        headline: '',
-        skills: [],
-        experience: '',
-        education: '',
-        mobileNumber: '',
-        availability: 'Flexible',
-        portfolioUrl: '',
-        linkedinUrl: '',
-        preferredLocations: [],
-        jobSearchStatus: 'activelyLooking',
-        desiredSalary: undefined,
-      });
-      setCompanyFormData({
-        name: '',
-        description: '',
-        websiteUrl: '',
-        logoUrl: '',
-        bannerImageUrl: '',
-        status: 'pending',
-      });
+      setUserFormData(initialUserFormData);
+      setCompanyFormData(initialCompanyFormData);
       setSkillsInput('');
       setLocationsInput('');
       setCompanyRecruiters([]);
     }
-    // initialUserFormData and initialCompanyFormData are stable and don't need to be in deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, company, toast]);
 
   const handleUserChange = (
@@ -253,6 +229,10 @@ export function UserProfileForm() {
     setUserFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleSwitchChange = (name: keyof UserProfile, checked: boolean) => {
+    setUserFormData((prev) => ({ ...prev, [name]: checked }));
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -276,6 +256,7 @@ export function UserProfileForm() {
           preferredLocations: userFormData.preferredLocations,
           jobSearchStatus: userFormData.jobSearchStatus,
           desiredSalary: userFormData.desiredSalary,
+          isProfileSearchable: userFormData.isProfileSearchable,
         });
       }
       await updateUserProfile(userUpdatePayload);
@@ -288,6 +269,7 @@ export function UserProfileForm() {
           logoUrl: companyFormData.logoUrl,
           bannerImageUrl: companyFormData.bannerImageUrl,
         };
+        // Status update for company profiles is handled by Admin panel
         await updateCompanyProfile(user.companyId, companyUpdatePayload);
       }
 
@@ -542,6 +524,27 @@ export function UserProfileForm() {
                   </Select>
                 </div>
               </div>
+              <div className="flex items-center space-x-3 pt-2">
+                <Switch
+                  id="isProfileSearchable"
+                  checked={userFormData.isProfileSearchable}
+                  onCheckedChange={(checked) =>
+                    handleSwitchChange('isProfileSearchable', checked)
+                  }
+                  aria-label="Profile searchable toggle"
+                />
+                <Label
+                  htmlFor="isProfileSearchable"
+                  className="flex items-center gap-1.5 cursor-pointer"
+                >
+                  {userFormData.isProfileSearchable ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                  My profile is searchable by employers
+                </Label>
+              </div>
             </>
           )}
         </CardContent>
@@ -557,14 +560,16 @@ export function UserProfileForm() {
                 </CardTitle>
                 <CardDescription>
                   Manage your company&apos;s public information. Changes here
-                  affect your public company page.
+                  affect your public company page. Profile status changes are
+                  handled by site admins.
                 </CardDescription>
               </div>
               <Badge
                 variant={
                   companyFormData.status === 'approved'
                     ? 'default'
-                    : companyFormData.status === 'rejected'
+                    : companyFormData.status === 'rejected' ||
+                        companyFormData.status === 'suspended'
                       ? 'destructive'
                       : 'secondary'
                 }
@@ -574,7 +579,8 @@ export function UserProfileForm() {
                 {companyFormData.status?.toUpperCase()}
               </Badge>
             </div>
-            {companyFormData.status === 'rejected' &&
+            {(companyFormData.status === 'rejected' ||
+              companyFormData.status === 'suspended') &&
               company.moderationReason && (
                 <p className="text-sm text-destructive mt-1">
                   Admin Reason: {company.moderationReason}
@@ -642,7 +648,7 @@ export function UserProfileForm() {
             <Separator />
             <div>
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <Users /> Recruiters ({companyRecruiters.length} / 3)
+                <Users /> Recruiters ({companyRecruiters.length})
               </h3>
               {isFetchingRecruiters ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -687,9 +693,8 @@ export function UserProfileForm() {
               )}
               <p className="text-xs text-muted-foreground mt-2">
                 <Info className="inline h-3 w-3 mr-1" />
-                Currently, you can have up to 3 recruiters (including admins).
-                Full recruiter management features (inviting, removing) will be
-                available soon.
+                Recruiter management (inviting, removing) is handled by site
+                administrators.
               </p>
             </div>
           </CardContent>

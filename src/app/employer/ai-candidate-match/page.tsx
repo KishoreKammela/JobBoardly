@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, type ChangeEvent } from 'react'; // Removed FormEvent
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -11,12 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Loader2,
-  Sparkles,
-  AlertTriangle,
-  Users /*, UploadCloud, FileText*/,
-} from 'lucide-react'; // Removed UploadCloud, FileText
+import { Loader2, Sparkles, AlertTriangle, Users } from 'lucide-react';
 import {
   aiPoweredCandidateMatching,
   type AIPoweredCandidateMatchingInput,
@@ -51,12 +46,12 @@ export default function AiCandidateMatchPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [file, setFile] = useState<File | null>(null);
 
-  const [isLoading, setIsLoading] = useState(false); // For AI matching process
+  const [isLoading, setIsLoading] = useState(false);
   const [isParsingJD, setIsParsingJD] = useState(false);
   const [result, setResult] = useState<AIPoweredCandidateMatchingOutput | null>(
     null
   );
-  const [error, setError] = useState<string | null>(null); // For AI matching errors
+  const [error, setError] = useState<string | null>(null);
 
   const [allCandidates, setAllCandidates] = useState<UserProfile[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
@@ -76,7 +71,6 @@ export default function AiCandidateMatchPage() {
 
   useEffect(() => {
     if (user && user.role === 'employer') {
-      // Only fetch if user is an employer
       const fetchCandidates = async () => {
         setCandidatesLoading(true);
         setCandidatesError(null);
@@ -84,7 +78,8 @@ export default function AiCandidateMatchPage() {
           const usersCollectionRef = collection(db, 'users');
           const q = firestoreQuery(
             usersCollectionRef,
-            where('role', '==', 'jobSeeker')
+            where('role', '==', 'jobSeeker'),
+            where('isProfileSearchable', '==', true) // Only fetch searchable profiles
           );
           const querySnapshot = await getDocs(q);
           const candidatesData = querySnapshot.docs.map((docSnap) => {
@@ -117,25 +112,45 @@ export default function AiCandidateMatchPage() {
       };
       fetchCandidates();
     } else {
-      setCandidatesLoading(false); // Not an employer, no need to load
+      setCandidatesLoading(false);
     }
-  }, [user]); // Rerun if user changes
+  }, [user]);
 
   const formatCandidatesForAI = (candidates: UserProfile[]): string => {
     return candidates
       .map((c) => {
-        let profileString = `Candidate UID: ${c.uid}\nName: ${c.name}\nHeadline: ${c.headline || 'N/A'}\n`;
+        let profileString = `Candidate UID: ${c.uid}\n`;
+        profileString += `Name: ${c.name || 'N/A'}\n`;
+        if (c.email) profileString += `Email: ${c.email}\n`;
         if (c.mobileNumber) profileString += `Mobile: ${c.mobileNumber}\n`;
-        profileString += `Skills: ${(c.skills || []).join(', ') || 'N/A'}\nExperience Summary: ${c.experience ? c.experience.substring(0, 500) + '...' : 'N/A'}\n`;
-        if (c.preferredLocations && c.preferredLocations.length > 0)
+        if (c.headline) profileString += `Headline: ${c.headline}\n`;
+        if (c.skills && c.skills.length > 0) {
+          profileString += `Skills: ${c.skills.join(', ')}\n`;
+        }
+        if (c.experience) {
+          profileString += `Work Experience Summary:\n${c.experience}\n`;
+        }
+        if (c.education) {
+          profileString += `Education Summary:\n${c.education}\n`;
+        }
+        if (c.portfolioUrl) profileString += `Portfolio: ${c.portfolioUrl}\n`;
+        if (c.linkedinUrl) profileString += `LinkedIn: ${c.linkedinUrl}\n`;
+        if (c.preferredLocations && c.preferredLocations.length > 0) {
           profileString += `Preferred Locations: ${c.preferredLocations.join(', ')}\n`;
+        }
+        if (c.jobSearchStatus)
+          profileString += `Current Job Search Status: ${c.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
         if (c.availability)
-          profileString += `Availability: ${c.availability}\n`;
-        if (c.desiredSalary)
-          profileString += `Desired Salary (Annual INR): ${formatCurrencyINR(c.desiredSalary)} (raw: ${c.desiredSalary})\n`;
-        return profileString;
+          profileString += `Availability to Start: ${c.availability}\n`;
+        if (c.desiredSalary) {
+          profileString += `Desired Annual Salary (INR): ${formatCurrencyINR(c.desiredSalary)} (raw: ${c.desiredSalary})\n`;
+        }
+        if (c.parsedResumeText) {
+          profileString += `\n--- Additional Resume Summary (from parsed document) ---\n${c.parsedResumeText}\n`;
+        }
+        return profileString.trim();
       })
-      .join('\n---\n');
+      .join('\n\n---\n\n');
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -184,7 +199,7 @@ export default function AiCandidateMatchPage() {
             jdText += `Salary (INR): ${parsedData.salaryMin ? formatCurrencyINR(parsedData.salaryMin) : ''} - ${parsedData.salaryMax ? formatCurrencyINR(parsedData.salaryMax) : ''}\n`;
           }
           jdText += `Skills: ${(parsedData.skills || []).join(', ')}\n\n`;
-          jdText += `Description:\n${parsedData.description || 'Not specified'}`;
+          jdText += `Full Description (including responsibilities, qualifications, etc.):\n${parsedData.description || 'Not specified'}`;
           setJobDescription(jdText);
           toast({
             title: 'JD Parsed',
@@ -242,7 +257,7 @@ export default function AiCandidateMatchPage() {
       toast({
         title: 'No Candidates Available',
         description:
-          'Cannot perform matching as no candidates are available or there was an error loading them.',
+          'Cannot perform matching as no searchable candidates are available or there was an error loading them.',
         variant: 'destructive',
       });
       return;
@@ -274,7 +289,7 @@ export default function AiCandidateMatchPage() {
           toast({
             title: 'Match IDs found, but no candidate details',
             description:
-              "AI suggested candidate UIDs, but they don't correspond to known profiles.",
+              "AI suggested candidate UIDs, but they don't correspond to known searchable profiles.",
             variant: 'default',
           });
         }
@@ -294,7 +309,6 @@ export default function AiCandidateMatchPage() {
   };
 
   if (authLoading || (!user && !authLoading)) {
-    // Show loader if auth loading or if not logged in (will be redirected)
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -303,7 +317,6 @@ export default function AiCandidateMatchPage() {
   }
 
   if (user && user.role !== 'employer') {
-    // Logged in, but wrong role (will be redirected by useEffect, but good to have a message)
     return (
       <Card className="w-full max-w-3xl mx-auto shadow-xl">
         <CardHeader>
@@ -329,9 +342,9 @@ export default function AiCandidateMatchPage() {
           <Sparkles className="text-primary h-6 w-6" /> AI Candidate Matcher
         </CardTitle>
         <CardDescription>
-          Input or upload a job description. Our AI will scan our candidate
-          database to find the best matches for your role. Plain text (.txt)
-          files give the best results for JD parsing.
+          Input or upload a job description. Our AI will scan our database of
+          searchable candidate profiles to find the best matches for your role.
+          Plain text (.txt) files give the best results for JD parsing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -407,7 +420,7 @@ export default function AiCandidateMatchPage() {
             <Users className="mr-2 h-5 w-5" />
           )}
           {candidatesLoading
-            ? 'Loading Candidates...'
+            ? 'Loading Searchable Candidates...'
             : isParsingJD
               ? 'Parsing JD...'
               : 'Find Matching Candidates'}
@@ -455,9 +468,9 @@ export default function AiCandidateMatchPage() {
                   <Users className="h-4 w-4" />
                   <AlertDescription>
                     AI identified some potentially relevant candidate UIDs, but
-                    they could not be matched to current profiles. This might
-                    happen if profiles were recently removed or IDs are
-                    incorrect. See reasoning. Relevant UIDs:{' '}
+                    they could not be matched to current searchable profiles.
+                    This might happen if profiles were recently made private or
+                    IDs are incorrect. See reasoning. Relevant UIDs:{' '}
                     {result.relevantCandidateIDs.join(', ')}
                   </AlertDescription>
                 </Alert>
@@ -466,8 +479,9 @@ export default function AiCandidateMatchPage() {
                   <Users className="h-4 w-4" />
                   <AlertDescription>
                     No candidates were matched by the AI based on the provided
-                    job description and available profiles. Try refining the job
-                    description or check back later for new candidates.
+                    job description and available searchable profiles. Try
+                    refining the job description or check back later for new
+                    candidates.
                   </AlertDescription>
                 </Alert>
               )}

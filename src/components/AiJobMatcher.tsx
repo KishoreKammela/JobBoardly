@@ -30,7 +30,7 @@ import {
   Timestamp,
   orderBy,
   where,
-} from 'firebase/firestore'; // Added where
+} from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrencyINR } from '@/lib/utils';
 
@@ -50,27 +50,37 @@ export function AiJobMatcher() {
 
   useEffect(() => {
     if (user && user.role === 'jobSeeker') {
-      let profileText = `Name: ${user.name}\nEmail: ${user.email}\n`;
+      let profileText = `Job Seeker Profile:\n`;
+      profileText += `Name: ${user.name || 'N/A'}\n`;
+      profileText += `Email: ${user.email || 'N/A'}\n`;
       if (user.mobileNumber) profileText += `Mobile: ${user.mobileNumber}\n`;
       if (user.headline) profileText += `Headline: ${user.headline}\n`;
+
       if (user.skills && user.skills.length > 0) {
         profileText += `Skills: ${user.skills.join(', ')}\n`;
       }
       if (user.experience) {
-        profileText += `Experience:\n${user.experience}\n`;
+        profileText += `Work Experience Summary:\n${user.experience}\n`;
+      }
+      if (user.education) {
+        profileText += `Education Summary:\n${user.education}\n`;
       }
       if (user.portfolioUrl) profileText += `Portfolio: ${user.portfolioUrl}\n`;
       if (user.linkedinUrl) profileText += `LinkedIn: ${user.linkedinUrl}\n`;
+
       if (user.preferredLocations && user.preferredLocations.length > 0) {
         profileText += `Preferred Locations: ${user.preferredLocations.join(', ')}\n`;
       }
       if (user.jobSearchStatus)
-        profileText += `Job Search Status: ${user.jobSearchStatus}\n`;
-      if (user.desiredSalary)
-        profileText += `Desired Salary (Annual INR): ${formatCurrencyINR(user.desiredSalary)} (raw: ${user.desiredSalary})\n`;
+        profileText += `Current Job Search Status: ${user.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
+      if (user.availability)
+        profileText += `Availability to Start: ${user.availability}\n`;
+      if (user.desiredSalary) {
+        profileText += `Desired Annual Salary (INR): ${formatCurrencyINR(user.desiredSalary)} (raw: ${user.desiredSalary})\n`;
+      }
 
       if (user.parsedResumeText) {
-        profileText += `\n--- Resume Summary (additional context) ---\n${user.parsedResumeText}`;
+        profileText += `\n--- Additional Resume Summary (from parsed document) ---\n${user.parsedResumeText}`;
       }
       setJobSeekerProfile(profileText.trim());
     }
@@ -82,7 +92,6 @@ export function AiJobMatcher() {
       setJobsError(null);
       try {
         const jobsCollectionRef = collection(db, 'jobs');
-        // Only fetch approved jobs for matching
         const q = firestoreQuery(
           jobsCollectionRef,
           where('status', '==', 'approved'),
@@ -125,7 +134,7 @@ export function AiJobMatcher() {
     return jobs
       .map(
         (job) =>
-          `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}\nSkills: ${(job.skills || []).join(', ')}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nSalary: ${job.salaryMin ? `${formatCurrencyINR(job.salaryMin)}-` : ''}${job.salaryMax ? formatCurrencyINR(job.salaryMax) : 'N/A'}\n`
+          `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nDescription:\n${job.description}\nRequired Skills: ${(job.skills || []).join(', ')}\nSalary Range (Annual INR): ${job.salaryMin ? formatCurrencyINR(job.salaryMin) : 'N/A'} - ${job.salaryMax ? formatCurrencyINR(job.salaryMax) : 'N/A'}\n`
       )
       .join('\n---\n');
   };
@@ -143,7 +152,8 @@ export function AiJobMatcher() {
     if (!jobSeekerProfile.trim()) {
       toast({
         title: 'Missing Information',
-        description: 'Please ensure your profile information is available.',
+        description:
+          'Please ensure your profile information is available. Edit your profile if needed.',
         variant: 'destructive',
       });
       return;
@@ -172,7 +182,7 @@ export function AiJobMatcher() {
     setMatchedJobsDetails([]);
 
     try {
-      const jobPostingsString = formatJobsForAI(allJobs); // allJobs here are already filtered for 'approved' status
+      const jobPostingsString = formatJobsForAI(allJobs);
       const input: AIPoweredJobMatchingInput = {
         jobSeekerProfile,
         jobPostings: jobPostingsString,
@@ -238,28 +248,30 @@ export function AiJobMatcher() {
         <CardDescription>
           Your profile details (auto-filled if available) will be used by our AI
           to recommend relevant jobs from our entire database of approved
-          listings.
+          listings. Review and edit the summary below for this session if
+          needed.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
           <Label htmlFor="jobSeekerProfile" className="text-lg">
-            Your Profile Summary (Editable)
+            Your Profile Summary (Editable for this session)
           </Label>
           <Textarea
             id="jobSeekerProfile"
             value={jobSeekerProfile}
             onChange={(e) => setJobSeekerProfile(e.target.value)}
             placeholder="Your profile details will appear here. You can edit them if needed before matching."
-            rows={10}
+            rows={15}
             className="mt-1 bg-muted/20"
             aria-label="Job Seeker Profile Input"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            This summary is generated from your profile. Changes here are only
-            for this matching session. To permanently update,{' '}
+            This summary is generated from your full profile. Changes here are
+            temporary and only affect this matching session. To permanently
+            update your details,{' '}
             <Link href="/profile" className="underline text-primary">
-              edit your full profile here
+              edit your profile here
             </Link>
             .
           </p>

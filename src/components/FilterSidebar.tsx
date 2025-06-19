@@ -1,6 +1,14 @@
 'use client';
+'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Select,
   SelectContent,
@@ -11,12 +19,12 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, RotateCcw, Save } from 'lucide-react'; // Added Save
+import { Search, RotateCcw, Save } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import type { Filters } from '@/types'; // Import Filters from global types
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import type { Filters } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +34,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 } from '@/components/ui/alert-dialog';
 
 interface FilterSidebarProps {
@@ -37,22 +46,28 @@ export function FilterSidebar({
   onFilterChange,
   initialFilters,
 }: FilterSidebarProps) {
+export function FilterSidebar({
+  onFilterChange,
+  initialFilters,
+}: FilterSidebarProps) {
   const defaultFilters: Filters = {
     searchTerm: '',
     location: '',
     roleType: 'all',
     isRemote: false,
+    recentActivity: 'any',
     ...initialFilters,
   };
 
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [searchName, setSearchName] = useState(''); // For naming the saved search
+  const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user, saveSearch } = useAuth();
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    setFilters((prev) => ({
     setFilters((prev) => ({
       ...prev,
       [name]: value,
@@ -64,12 +79,17 @@ export function FilterSidebar({
     checked: boolean | 'indeterminate'
   ) => {
     setFilters((prev) => ({
+  const handleCheckboxChange = (
+    name: keyof Filters,
+    checked: boolean | 'indeterminate'
+  ) => {
+    setFilters((prev) => ({
       ...prev,
       [name]: checked === true,
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: keyof Filters, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [name]: value,
@@ -85,6 +105,7 @@ export function FilterSidebar({
     setFilters(defaultFilters);
     onFilterChange(defaultFilters);
   };
+  };
 
   const handleOpenSaveSearchDialog = () => {
     if (!user || user.role !== 'jobSeeker') {
@@ -95,7 +116,6 @@ export function FilterSidebar({
       });
       return;
     }
-    // Pre-fill search name if possible, e.g., from searchTerm
     setSearchName(filters.searchTerm || 'My Job Search');
     setIsSaveSearchAlertOpen(true);
   };
@@ -117,6 +137,7 @@ export function FilterSidebar({
           description: `"${searchName}" has been added to your saved searches.`,
         });
         setIsSaveSearchAlertOpen(false);
+        setSearchName('');
         setSearchName('');
       } catch (error) {
         toast({
@@ -174,11 +195,34 @@ export function FilterSidebar({
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label htmlFor="recentActivity">Recent Activity</Label>
+            <Select
+              name="recentActivity"
+              value={filters.recentActivity || 'any'}
+              onValueChange={(value) =>
+                handleSelectChange('recentActivity', value)
+              }
+            >
+              <SelectTrigger id="recentActivity">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any Time</SelectItem>
+                <SelectItem value="24h">Last 24 hours</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center space-x-2 pt-2">
             <Checkbox
               id="isRemote"
               name="isRemote"
               checked={filters.isRemote}
+              onCheckedChange={(checked) =>
+                handleCheckboxChange('isRemote', checked)
+              }
               onCheckedChange={(checked) =>
                 handleCheckboxChange('isRemote', checked)
               }
@@ -190,7 +234,15 @@ export function FilterSidebar({
           <div className="flex flex-col gap-2 pt-2">
             <div className="flex flex-wrap items-center gap-2">
               <Button type="submit" className="flex-1 min-w-[120px]">
+              <Button type="submit" className="flex-1 min-w-[120px]">
                 <Search className="mr-2 h-4 w-4" /> Apply Filters
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReset}
+                className="flex-1 min-w-[100px] sm:flex-grow-0 sm:w-auto"
+              >
               </Button>
               <Button
                 type="button"
@@ -200,8 +252,17 @@ export function FilterSidebar({
               >
                 <RotateCcw className="mr-2 h-4 w-4" /> Reset
               </Button>
+              </Button>
             </div>
             {user && user.role === 'jobSeeker' && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleOpenSaveSearchDialog}
+                className="w-full"
+              >
+                <Save className="mr-2 h-4 w-4" /> Save This Search
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -218,10 +279,16 @@ export function FilterSidebar({
         open={isSaveSearchAlertOpen}
         onOpenChange={setIsSaveSearchAlertOpen}
       >
+      <AlertDialog
+        open={isSaveSearchAlertOpen}
+        onOpenChange={setIsSaveSearchAlertOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Job Search</AlertDialogTitle>
             <AlertDialogDescription>
+              Enter a name for this search. You can manage your saved searches
+              in Settings.
               Enter a name for this search. You can manage your saved searches
               in Settings.
             </AlertDialogDescription>
@@ -238,6 +305,9 @@ export function FilterSidebar({
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSaveSearch}>
+              Save Search
+            </AlertDialogAction>
             <AlertDialogAction onClick={handleConfirmSaveSearch}>
               Save Search
             </AlertDialogAction>

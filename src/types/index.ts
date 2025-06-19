@@ -56,9 +56,8 @@ export interface Company {
   recruiterUids: string[];
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended'; // Added 'suspended'
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
   moderationReason?: string;
-  // For admin dashboard display, not directly stored in Firestore on company doc usually
   jobCount?: number;
   applicationCount?: number;
 }
@@ -112,7 +111,7 @@ export interface Application {
   applicantAvatarUrl?: string;
   applicantHeadline?: string;
   companyId: string;
-  postedById: string;
+  postedById: string; // uid of the employer who posted the job
   status: ApplicationStatus;
   appliedAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
@@ -128,18 +127,17 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
-  status?: 'active' | 'suspended'; // For user account status
+  status?: 'active' | 'suspended';
 
-  // Theme and UI Preferences (migrated from UserSettings)
+  // Theme and UI Preferences
   theme?: 'light' | 'dark' | 'system';
-  jobBoardDisplay?: 'list' | 'grid'; // If used for job seeker's preference on job list pages
-  itemsPerPage?: 10 | 20 | 50; // If job seeker can set this
+  jobBoardDisplay?: 'list' | 'grid';
+  itemsPerPage?: 10 | 20 | 50;
   jobAlerts?: {
     newJobsMatchingProfile: boolean;
     savedSearchAlerts: boolean;
     applicationStatusUpdates: boolean;
   };
-  // searchHistory is kept in localStorage as it's device-specific
 
   // Job Seeker specific fields
   headline?: string;
@@ -153,10 +151,10 @@ export interface UserProfile {
   preferredLocations?: string[];
   jobSearchStatus?: 'activelyLooking' | 'openToOpportunities' | 'notLooking';
   desiredSalary?: number; // Stored as number, displayed in INR
-  isProfileSearchable?: boolean; // For profile visibility control
+  isProfileSearchable?: boolean;
   resumeUrl?: string;
   resumeFileName?: string;
-  parsedResumeText?: string; // Store the AI parsed summary
+  parsedResumeText?: string;
   appliedJobIds?: string[];
   savedJobIds?: string[];
   savedSearches?: SavedSearch[];
@@ -165,15 +163,9 @@ export interface UserProfile {
   companyId?: string;
   isCompanyAdmin?: boolean;
 
-  // For admin dashboard display, not directly stored usually
+  // For admin dashboard display
   jobsAppliedCount?: number; // for job seekers
-}
-
-// This UserSettings is no longer primary for theme/display; those moved to UserProfile.
-// It can be kept for localStorage specific things like searchHistory if needed,
-// but for now, we will manage searchHistory directly in the settings component.
-export interface UserSettings {
-  searchHistory: string[]; // Example: still using localStorage for this
+  lastActive?: Timestamp | Date | string;
 }
 
 export interface ParsedResumeData {
@@ -195,5 +187,4 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
-  // companyName: string; // Not usually parsed, taken from employer context
 }
