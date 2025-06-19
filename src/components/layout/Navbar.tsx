@@ -21,6 +21,7 @@ import {
   KeyRound,
   Eye,
   AlertTriangle,
+  Ban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,14 +43,13 @@ interface NavLinkConfig {
   label: string;
   icon: JSX.Element;
   authRequired: boolean;
-  roles: UserRole[]; // Roles for which this link is primary/relevant
-  publicAccess?: boolean; // True if accessible without login
+  roles: UserRole[];
+  publicAccess?: boolean;
   employerOnly?: boolean;
   jobSeekerOnly?: boolean;
   adminOnly?: boolean;
 }
 
-// Defines links that can appear in the main horizontal navigation bar
 const mainNavLinksConfig: NavLinkConfig[] = [
   {
     href: '/jobs',
@@ -73,7 +73,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     icon: <Building className="h-4 w-4" />,
     authRequired: false,
     publicAccess: true,
-    roles: [], // Special handling: show if not logged in, or if jobSeeker
+    roles: [],
   },
   {
     href: '/my-jobs',
@@ -117,7 +117,6 @@ const mainNavLinksConfig: NavLinkConfig[] = [
   },
 ];
 
-// Defines links that primarily live in the user's account dropdown menu
 const userAccountDropdownLinksConfig = {
   jobSeeker: [
     {
@@ -242,17 +241,24 @@ export function Navbar() {
 
   const isCompanyActionDisabled =
     company && (company.status === 'suspended' || company.status === 'deleted');
+  const isJobSeekerSuspended =
+    user?.role === 'jobSeeker' && user.status === 'suspended';
 
   const getRenderedMainNavLinks = () => {
     if (loading) return [];
     return mainNavLinksConfig.filter((link) => {
       if (!user) {
-        // Logged-out user
         if (link.href === '/employer') return !isEmployerPage;
         return link.publicAccess && !link.authRequired;
       }
-      // Logged-in user
-      if (link.employerOnly && isCompanyActionDisabled) return false; // Hide employer links if company suspended/deleted
+      if (link.employerOnly && isCompanyActionDisabled) return false;
+      if (
+        link.jobSeekerOnly &&
+        isJobSeekerSuspended &&
+        link.href !== '/my-jobs'
+      )
+        return false;
+
       if (link.roles.includes(user.role)) return true;
       if (
         (user.role === 'admin' || user.role === 'superAdmin') &&
@@ -289,27 +295,30 @@ export function Navbar() {
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
 
-        {/* Desktop Main Navigation */}
         <nav className="hidden md:flex items-center gap-2 md:gap-3">
-          {renderedMainNavLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5 ${
-                link.employerOnly && isCompanyActionDisabled
-                  ? 'pointer-events-none opacity-50'
-                  : ''
-              }`}
-              aria-disabled={link.employerOnly && isCompanyActionDisabled}
-              onClick={(e) => {
-                if (link.employerOnly && isCompanyActionDisabled)
-                  e.preventDefault();
-              }}
-            >
-              {link.icon}
-              <span>{link.label}</span>
-            </Link>
-          ))}
+          {renderedMainNavLinks.map((link) => {
+            const isDisabledByStatus =
+              (link.employerOnly && isCompanyActionDisabled) ||
+              (link.jobSeekerOnly &&
+                isJobSeekerSuspended &&
+                link.href !== '/my-jobs');
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5 ${
+                  isDisabledByStatus ? 'pointer-events-none opacity-50' : ''
+                }`}
+                aria-disabled={isDisabledByStatus}
+                onClick={(e) => {
+                  if (isDisabledByStatus) e.preventDefault();
+                }}
+              >
+                {link.icon}
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -354,38 +363,47 @@ export function Navbar() {
                           Company {company.status}
                         </Badge>
                       )}
+                    {user.role === 'jobSeeker' &&
+                      user.status === 'suspended' && (
+                        <Badge variant="destructive" className="mt-1 text-xs">
+                          <Ban className="h-3 w-3 mr-1" />
+                          Account Suspended
+                        </Badge>
+                      )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
                 {currentAccountDropdownLinks.map((item) => {
-                  const isDisabled =
-                    (item.href.includes('/employer/ai-candidate-match') ||
-                      item.href.includes('/profile')) &&
-                    isCompanyActionDisabled &&
-                    item.href !== '/profile';
-                  const isProfileCompanyLinkDisabled =
-                    item.href === '/profile' &&
+                  const isEmployerLinkDisabled =
                     user.role === 'employer' &&
-                    isCompanyActionDisabled;
-                  // Allow access to /profile for personal details even if company is suspended/deleted
+                    isCompanyActionDisabled &&
+                    (item.href.includes('/employer/ai-candidate-match') ||
+                      (item.href === '/profile' && user.isCompanyAdmin)); // Allow personal profile access if not admin or profile not company related
+
+                  const isJobSeekerLinkDisabled =
+                    user.role === 'jobSeeker' &&
+                    isJobSeekerSuspended &&
+                    (item.href === '/profile' ||
+                      item.href === '/ai-match' ||
+                      item.href === '/profile/preview');
+
+                  const isDisabled =
+                    isEmployerLinkDisabled || isJobSeekerLinkDisabled;
 
                   return (
                     <DropdownMenuItem
                       key={item.href}
                       asChild
-                      disabled={isDisabled && !isProfileCompanyLinkDisabled}
+                      disabled={isDisabled}
                     >
                       <Link
                         href={item.href}
                         className={`flex items-center gap-2 cursor-pointer w-full ${
-                          isDisabled && !isProfileCompanyLinkDisabled
-                            ? 'pointer-events-none opacity-50'
-                            : ''
+                          isDisabled ? 'pointer-events-none opacity-50' : ''
                         }`}
                         onClick={(e) => {
-                          if (isDisabled && !isProfileCompanyLinkDisabled)
-                            e.preventDefault();
+                          if (isDisabled) e.preventDefault();
                         }}
                       >
                         {item.icon}
@@ -402,29 +420,35 @@ export function Navbar() {
                       Navigation
                     </DropdownMenuLabel>
                   )}
-                  {renderedMainNavLinks.map((link) => (
-                    <DropdownMenuItem
-                      key={`dd-main-${link.href}`}
-                      asChild
-                      disabled={link.employerOnly && isCompanyActionDisabled}
-                    >
-                      <Link
-                        href={link.href}
-                        className={`flex items-center gap-2 cursor-pointer w-full ${
-                          link.employerOnly && isCompanyActionDisabled
-                            ? 'pointer-events-none opacity-50'
-                            : ''
-                        }`}
-                        onClick={(e) => {
-                          if (link.employerOnly && isCompanyActionDisabled)
-                            e.preventDefault();
-                        }}
+                  {renderedMainNavLinks.map((link) => {
+                    const isDisabledByStatus =
+                      (link.employerOnly && isCompanyActionDisabled) ||
+                      (link.jobSeekerOnly &&
+                        isJobSeekerSuspended &&
+                        link.href !== '/my-jobs');
+                    return (
+                      <DropdownMenuItem
+                        key={`dd-main-${link.href}`}
+                        asChild
+                        disabled={isDisabledByStatus}
                       >
-                        {link.icon}
-                        {link.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
+                        <Link
+                          href={link.href}
+                          className={`flex items-center gap-2 cursor-pointer w-full ${
+                            isDisabledByStatus
+                              ? 'pointer-events-none opacity-50'
+                              : ''
+                          }`}
+                          onClick={(e) => {
+                            if (isDisabledByStatus) e.preventDefault();
+                          }}
+                        >
+                          {link.icon}
+                          {link.label}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </div>
 
                 <DropdownMenuSeparator />

@@ -94,7 +94,7 @@ export interface Company {
   recruiterUids: string[];
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended' | 'deleted'; // Added 'deleted'
+  status: 'pending' | 'approved' | 'rejected' | 'suspended' | 'deleted';
   moderationReason?: string;
   jobCount?: number;
   applicationCount?: number;
@@ -165,7 +165,7 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
-  status?: 'active' | 'suspended'; // User status, not company status
+  status?: 'active' | 'suspended' | 'deleted'; // User status, can include 'deleted'
   theme?: 'light' | 'dark' | 'system';
   jobBoardDisplay?: 'list' | 'grid';
   itemsPerPage?: 10 | 20 | 50;
@@ -214,7 +214,7 @@ export interface UserProfile {
   jobsAppliedCount?: number;
   lastActive?: Timestamp | Date | string;
 
-  desiredSalary?: number; // This seems like a job seeker specific field, ensuring it's optional
+  desiredSalary?: number;
 }
 
 export interface ParsedResumeData {

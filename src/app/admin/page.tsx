@@ -534,7 +534,7 @@ export default function AdminPage() {
 
   const handleUserStatusUpdate = async (
     userId: string,
-    newStatus: 'active' | 'suspended'
+    newStatus: 'active' | 'suspended' | 'deleted'
   ) => {
     if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return;
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
@@ -560,11 +560,13 @@ export default function AdminPage() {
     }
     if (
       user.role === 'admin' &&
-      (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
+      (targetUser.role === 'admin' || targetUser.role === 'superAdmin') &&
+      newStatus !== 'active' // Admins can activate other admins if they were somehow suspended
     ) {
       toast({
         title: 'Action Denied',
-        description: 'Admins cannot suspend other Admins or SuperAdmins.',
+        description:
+          'Admins cannot suspend or delete other Admins or SuperAdmins.',
         variant: 'destructive',
       });
       return;
@@ -1622,15 +1624,21 @@ export default function AdminPage() {
                               variant={
                                 u.status === 'active'
                                   ? 'secondary'
-                                  : 'destructive'
+                                  : u.status === 'deleted' ||
+                                      u.status === 'suspended'
+                                    ? 'destructive'
+                                    : 'default'
                               }
                               className={
                                 u.status === 'active'
                                   ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
+                                  : u.status === 'deleted' ||
+                                      u.status === 'suspended'
+                                    ? 'bg-red-100 text-red-800'
+                                    : ''
                               }
                             >
-                              {u.status?.toUpperCase() || 'ACTIVE'}
+                              {(u.status || 'ACTIVE').toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1666,42 +1674,74 @@ export default function AdminPage() {
                                 <Eye className="h-5 w-5" />
                               </Link>
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const newStatus =
-                                  u.status === 'active'
-                                    ? 'suspended'
-                                    : 'active';
-                                showConfirmationModal(
-                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
-                                  `Are you sure you want to ${newStatus} this user account?`,
-                                  async () =>
-                                    handleUserStatusUpdate(u.uid, newStatus),
-                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                                  newStatus === 'suspended'
-                                    ? 'destructive'
-                                    : 'default'
-                                );
-                              }}
-                              disabled={
-                                specificActionLoading === `user-${u.uid}` ||
-                                user?.uid === u.uid
-                              }
-                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
-                              className={
-                                u.status === 'active'
-                                  ? 'text-orange-600'
-                                  : 'text-blue-600'
-                              }
-                            >
-                              {u.status === 'active' ? (
-                                <Ban className="h-5 w-5" />
-                              ) : (
-                                <CheckSquare className="h-5 w-5" />
-                              )}
-                            </Button>
+                            {u.status !== 'deleted' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const newStatus =
+                                      u.status === 'active'
+                                        ? 'suspended'
+                                        : 'active';
+                                    showConfirmationModal(
+                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
+                                      `Are you sure you want to ${newStatus} this user account?`,
+                                      async () =>
+                                        handleUserStatusUpdate(
+                                          u.uid,
+                                          newStatus
+                                        ),
+                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                      newStatus === 'suspended'
+                                        ? 'destructive'
+                                        : 'default'
+                                    );
+                                  }}
+                                  disabled={
+                                    specificActionLoading === `user-${u.uid}` ||
+                                    user?.uid === u.uid
+                                  }
+                                  aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                  className={
+                                    u.status === 'active'
+                                      ? 'text-orange-600'
+                                      : 'text-blue-600'
+                                  }
+                                >
+                                  {u.status === 'active' ? (
+                                    <Ban className="h-5 w-5" />
+                                  ) : (
+                                    <CheckSquare className="h-5 w-5" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    showConfirmationModal(
+                                      `Delete User "${u.name || u.email}"?`,
+                                      'Are you sure you want to delete this user account? They will not be able to log in. This action cannot be easily undone.',
+                                      async () =>
+                                        handleUserStatusUpdate(
+                                          u.uid,
+                                          'deleted'
+                                        ),
+                                      'Delete User',
+                                      'destructive'
+                                    )
+                                  }
+                                  disabled={
+                                    specificActionLoading === `user-${u.uid}` ||
+                                    user?.uid === u.uid
+                                  }
+                                  aria-label={`Delete user ${u.name || 'user'}`}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </Button>
+                              </>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1897,7 +1937,7 @@ export default function AdminPage() {
                                   : 'bg-red-100 text-red-800'
                               }
                             >
-                              {u.status?.toUpperCase() || 'ACTIVE'}
+                              {(u.status || 'ACTIVE').toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>

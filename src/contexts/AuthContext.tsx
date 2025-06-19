@@ -45,6 +45,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
+import { toast } from '@/hooks/use-toast'; // Import toast
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -146,7 +147,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         try {
-          // Use setDoc with merge to create or update lastActive
           await setDoc(
             userDocRef,
             { lastActive: serverTimestamp() },
@@ -156,6 +156,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const rawData = userDocSnap.data();
+
+            if (rawData.status === 'deleted') {
+              await signOut(auth);
+              setUser(null);
+              setFirebaseUser(null);
+              setCompany(null);
+              setLoading(false);
+              toast({
+                title: 'Account Deactivated',
+                description:
+                  'Your account has been deactivated. Please contact support for assistance.',
+                variant: 'destructive',
+                duration: Infinity,
+              });
+              return;
+            }
 
             let dobString: string | undefined = undefined;
             if (rawData.dateOfBirth) {
@@ -316,9 +332,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
             }
           } else {
-            // This case might occur if createUserProfileInFirestore hasn't completed yet for a new user
-            // setDoc with merge:true for lastActive should have created a minimal doc,
-            // but if not, we log and set user to null to avoid partial states.
             console.warn(
               `User document for ${fbUser.uid} not found after attempting to set lastActive.`
             );
@@ -642,6 +655,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       } else {
         const rawData = userDocSnap.data();
+
+        if (rawData.status === 'deleted') {
+          await signOut(auth); // Sign out the Firebase Auth session
+          setUser(null);
+          setFirebaseUser(null);
+          setCompany(null);
+          toast({
+            title: 'Account Deactivated',
+            description:
+              'This account has been deactivated. Please contact support.',
+            variant: 'destructive',
+            duration: Infinity,
+          });
+          throw new Error('Account is deleted.'); // Prevent further processing
+        }
+
         let dobString: string | undefined = undefined;
         if (rawData.dateOfBirth) {
           if (
@@ -993,7 +1022,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     payloadForFirestore.updatedAt = serverTimestamp();
     payloadForFirestore.lastActive = serverTimestamp();
 
-    // Only update if there are actual changes besides timestamps
     const actualChanges = Object.keys(payloadForFirestore).filter(
       (k) => k !== 'updatedAt' && k !== 'lastActive'
     );
@@ -1019,7 +1047,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     } else if (user) {
-      // If no actual profile changes, just update timestamps
       try {
         await updateDoc(userDocRef, {
           updatedAt: serverTimestamp(),
@@ -1093,6 +1120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyForJob = async (job: Job) => {
     if (user && user.uid && user.role === 'jobSeeker') {
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot apply for jobs.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const currentAppliedJobIds = user.appliedJobIds || [];
       if (!currentAppliedJobIds.includes(job.id)) {
         const applicationRef = doc(collection(db, 'applications'));
@@ -1154,7 +1190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (employerNotes !== undefined) {
       updates.employerNotes = employerNotes;
     } else {
-      updates.employerNotes = null; // Explicitly set to null if undefined
+      updates.employerNotes = null;
     }
 
     try {
@@ -1174,6 +1210,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveJob = async (jobId: string) => {
     if (user && user.uid && user.role === 'jobSeeker') {
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot save jobs.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const userDocRef = doc(db, 'users', user.uid);
       try {
         await updateDoc(userDocRef, {
@@ -1199,6 +1244,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const unsaveJob = async (jobId: string) => {
     if (user && user.uid && user.role === 'jobSeeker') {
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot unsave jobs.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const userDocRef = doc(db, 'users', user.uid);
       try {
         await updateDoc(userDocRef, {
@@ -1233,6 +1287,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveSearch = async (searchName: string, filters: Filters) => {
     if (user && user.uid && user.role === 'jobSeeker') {
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot save searches.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const userDocRef = doc(db, 'users', user.uid);
       const newSearch: SavedSearch = {
         id: uuidv4(),
@@ -1264,6 +1327,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteSearch = async (searchId: string) => {
     if (user && user.uid && user.role === 'jobSeeker' && user.savedSearches) {
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot delete searches.',
+          variant: 'destructive',
+        });
+        return;
+      }
       const userDocRef = doc(db, 'users', user.uid);
       const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
       if (searchToDelete) {

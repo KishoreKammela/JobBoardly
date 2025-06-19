@@ -11,9 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
-  /*CardDescription,*/ CardHeader,
-  /*CardTitle,*/ CardFooter,
-} from '@/components/ui/card'; // Removed CardDescription, CardTitle
+  CardHeader,
+  CardFooter,
+} from '@/components/ui/card';
 import Image from 'next/image';
 import {
   MapPin,
@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Share2,
   CalendarDays,
+  AlertTriangle,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -51,6 +52,9 @@ export default function JobDetailPage() {
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const isJobSeekerSuspended =
+    user?.role === 'jobSeeker' && user.status === 'suspended';
+
   useEffect(() => {
     if (jobId) {
       const fetchJob = async () => {
@@ -61,6 +65,16 @@ export default function JobDetailPage() {
           const jobDocSnap = await getDoc(jobDocRef);
           if (jobDocSnap.exists()) {
             const data = jobDocSnap.data();
+            if (
+              data.status === 'suspended' &&
+              user?.role !== 'admin' &&
+              user?.role !== 'superAdmin'
+            ) {
+              setError('This job is currently unavailable.');
+              setJob(null);
+              setIsLoading(false);
+              return;
+            }
             const jobData = {
               id: jobDocSnap.id,
               ...data,
@@ -102,8 +116,17 @@ export default function JobDetailPage() {
 
   const handleApply = async () => {
     if (!job) return;
+    if (isJobSeekerSuspended) {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot apply for jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (user && user.role === 'jobSeeker') {
-      await applyForJob(job); // Pass full job object
+      await applyForJob(job);
       setApplied(true);
       toast({
         title: 'Applied!',
@@ -126,6 +149,15 @@ export default function JobDetailPage() {
 
   const handleSaveToggle = async () => {
     if (!job) return;
+    if (isJobSeekerSuspended) {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot save jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!user || user.role !== 'jobSeeker') {
       toast({
         title: 'Login Required',
@@ -184,7 +216,9 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div className="container mx-auto py-10 text-center">
-        <p className="text-xl text-muted-foreground">Job not found.</p>
+        <p className="text-xl text-muted-foreground">
+          Job not found or is currently unavailable.
+        </p>
       </div>
     );
   }
@@ -203,6 +237,16 @@ export default function JobDetailPage() {
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
+      {isJobSeekerSuspended && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Account Suspended</AlertTitle>
+          <AlertDescription>
+            Your account is currently suspended. Applying for and saving jobs is
+            disabled.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card className="shadow-xl">
         <CardHeader className="bg-muted/30 p-6 rounded-t-lg">
           <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -314,7 +358,12 @@ export default function JobDetailPage() {
                     <CheckCircle className="mr-2 h-5 w-5" /> Applied
                   </Button>
                 ) : (
-                  <Button size="lg" onClick={handleApply} className="w-full">
+                  <Button
+                    size="lg"
+                    onClick={handleApply}
+                    className="w-full"
+                    disabled={isJobSeekerSuspended}
+                  >
                     Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                   </Button>
                 ))}
@@ -329,6 +378,7 @@ export default function JobDetailPage() {
                   size="lg"
                   onClick={handleSaveToggle}
                   className="w-full"
+                  disabled={isJobSeekerSuspended}
                 >
                   <Bookmark
                     className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`}

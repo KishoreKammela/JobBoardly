@@ -30,6 +30,8 @@ export default function ProfilePage() {
     if (!user) {
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
+    // If user status is 'deleted', AuthContext should handle logout.
+    // This page will only render if user is not 'deleted'.
   }, [user, loading, router, pathname]);
 
   if (loading || !user) {
@@ -53,8 +55,12 @@ export default function ProfilePage() {
 
   const pageDescription = () => {
     if (!user) return 'Please log in to view your profile.';
-    if (user.role === 'jobSeeker')
+    if (user.role === 'jobSeeker') {
+      if (user.status === 'suspended') {
+        return 'Your account is suspended. Some profile editing features are disabled.';
+      }
       return 'View and manage your account details and professional information. Upload your resume first for AI parsing to help pre-fill sections.';
+    }
     if (user.role === 'employer' && user.isCompanyAdmin)
       return "Edit your company's public details and your personal recruiter information.";
     if (user.role === 'employer')
@@ -64,7 +70,20 @@ export default function ProfilePage() {
     return 'Manage your account details.';
   };
 
-  const renderEmployerAccountStatusAlert = () => {
+  const renderAccountStatusAlert = () => {
+    if (user.status === 'suspended') {
+      const suspendMessage =
+        user.role === 'jobSeeker'
+          ? 'Your account is currently suspended by an administrator. You can still view your profile and access some settings, but actions like applying for jobs or full profile editing are disabled. Please contact support for assistance.'
+          : 'Your account is currently suspended. Please contact platform administrators.';
+      return (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-5 w-5" />
+          <AlertTitle>Account Suspended</AlertTitle>
+          <AlertDescription>{suspendMessage}</AlertDescription>
+        </Alert>
+      );
+    }
     if (
       user.role === 'employer' &&
       company &&
@@ -101,7 +120,7 @@ export default function ProfilePage() {
           </h1>
           <p className="text-muted-foreground">{pageDescription()}</p>
         </div>
-        {user.role === 'jobSeeker' && (
+        {user.role === 'jobSeeker' && user.status !== 'suspended' && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button
               onClick={handlePrintProfile}
@@ -121,7 +140,7 @@ export default function ProfilePage() {
       </div>
       <Separator />
 
-      {renderEmployerAccountStatusAlert()}
+      {renderAccountStatusAlert()}
 
       {user.role === 'jobSeeker' && (
         <>

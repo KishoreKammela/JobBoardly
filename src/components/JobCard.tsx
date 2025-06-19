@@ -56,6 +56,8 @@ export function JobCard({
   const [saved, setSaved] = useState(
     isSavedProp !== undefined ? isSavedProp : false
   );
+  const isJobSeekerSuspended =
+    user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
     if (user && user.role === 'jobSeeker') {
@@ -69,6 +71,15 @@ export function JobCard({
   }, [user, job.id, hasAppliedForJob, isJobSaved, isApplied, isSavedProp]);
 
   const handleSaveToggle = async () => {
+    if (isJobSeekerSuspended) {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot save jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!user || user.role !== 'jobSeeker') {
       toast({
         title: 'Login Required',
@@ -95,6 +106,15 @@ export function JobCard({
   };
 
   const handleApply = async () => {
+    if (isJobSeekerSuspended) {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot apply for jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!user || user.role !== 'jobSeeker') {
       toast({
         title: 'Login Required',
@@ -112,7 +132,7 @@ export function JobCard({
       return;
     }
 
-    await applyForJob(job); // Pass the full job object
+    await applyForJob(job);
     setApplied(true);
     toast({
       title: 'Applied!',
@@ -212,6 +232,7 @@ export function JobCard({
               onClick={handleSaveToggle}
               aria-pressed={saved}
               aria-label={saved ? 'Unsave job' : 'Save job'}
+              disabled={isJobSeekerSuspended}
             >
               <Bookmark
                 className={`h-4 w-4 ${saved ? 'fill-primary text-primary' : ''}`}
@@ -231,6 +252,7 @@ export function JobCard({
                 size="sm"
                 onClick={handleApply}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={isJobSeekerSuspended}
               >
                 Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
               </Button>
