@@ -114,7 +114,7 @@ interface PlatformStats {
 function getSortableValue<T>(
   item: T,
   key: keyof T | null
-): string | number | null | boolean {
+): string | number | null | boolean | undefined {
   if (!key) return null;
   const value = item[key as keyof T];
   if (value instanceof Timestamp) {
@@ -123,7 +123,7 @@ function getSortableValue<T>(
   if (typeof value === 'string') {
     return value.toLowerCase();
   }
-  return value as string | number | null | boolean;
+  return value as string | number | null | boolean | undefined;
 }
 
 export default function AdminPage() {
@@ -599,7 +599,7 @@ export default function AdminPage() {
     if (
       user.role === 'admin' &&
       (targetUser.role === 'admin' || targetUser.role === 'superAdmin') &&
-      newStatus !== 'active' // Admins can activate other admins if they were somehow suspended
+      newStatus !== 'active'
     ) {
       toast({
         title: 'Action Denied',
@@ -1249,7 +1249,8 @@ export default function AdminPage() {
                               >
                                 <Ban className="h-5 w-5" />
                               </Button>
-                            ) : c.status === 'suspended' ? (
+                            ) : c.status === 'suspended' ||
+                              c.status === 'rejected' ? ( // Added rejected here for activation
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1258,7 +1259,10 @@ export default function AdminPage() {
                                     `Activate Company "${c.name}"?`,
                                     `Are you sure you want to reactivate ${c.name}? This will restore full access for its recruiters.`,
                                     async () =>
-                                      handleCompanyStatusUpdate(c.id, 'active'),
+                                      handleCompanyStatusUpdate(
+                                        c.id,
+                                        'active' // Or 'approved' if logic dictates from rejected to approved directly
+                                      ),
                                     'Activate Company'
                                   )
                                 }
@@ -2081,13 +2085,12 @@ export default function AdminPage() {
                               }}
                               disabled={
                                 specificActionLoading === `user-${u.uid}` ||
-                                user?.uid === u.uid ||
+                                user?.uid === u.uid || // Cannot act on self
                                 (user?.role === 'admin' &&
-                                  u.role === 'superAdmin') ||
+                                  u.role === 'superAdmin') || // Admin cannot act on SuperAdmin
                                 (user?.role === 'admin' &&
                                   u.role === 'admin' &&
-                                  u.uid !== user.uid &&
-                                  user.role !== 'superAdmin')
+                                  u.uid !== user.uid) // Admin cannot act on other Admins
                               }
                               aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                               className={
