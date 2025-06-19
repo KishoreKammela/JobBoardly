@@ -9,13 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,7 +27,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 } from '@/components/ui/alert-dialog';
 
 interface FilterSidebarProps {
@@ -67,11 +59,6 @@ export function FilterSidebar({
   }, [filters, onFilterChange]);
 
 
-  const handleCheckboxChange = (
-    name: keyof Omit<Filters, 'searchTerm'>,
-    checked: boolean | 'indeterminate'
-  ) => {
-    setFilters((prev) => ({
   const handleCheckboxChange = (
     name: keyof Omit<Filters, 'searchTerm'>,
     checked: boolean | 'indeterminate'
@@ -141,7 +128,6 @@ export function FilterSidebar({
           description: `"${searchName}" has been added to your saved searches.`,
         });
         setIsSaveSearchAlertOpen(false);
-        setSearchName('');
         setSearchName('');
       } catch (error) {
         toast({
@@ -254,23 +240,10 @@ export function FilterSidebar({
               >
                 <Save className="mr-2 h-4 w-4" /> Save Current Search
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleOpenSaveSearchDialog}
-                className="w-full"
-                aria-label="Save current search criteria"
-              >
-                <Save className="mr-2 h-4 w-4" /> Save Current Search
-              </Button>
             )}
           </div>
         </form>
       </CardContent>
-      <AlertDialog
-        open={isSaveSearchAlertOpen}
-        onOpenChange={setIsSaveSearchAlertOpen}
-      >
       <AlertDialog
         open={isSaveSearchAlertOpen}
         onOpenChange={setIsSaveSearchAlertOpen}
@@ -295,9 +268,6 @@ export function FilterSidebar({
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSaveSearch}>
-              Save Search
-            </AlertDialogAction>
             <AlertDialogAction onClick={handleConfirmSaveSearch}>
               Save Search
             </AlertDialogAction>

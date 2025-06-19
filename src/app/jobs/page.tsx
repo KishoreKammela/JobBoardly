@@ -25,7 +25,7 @@ import {
 } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Input } from '@/components/ui/input'; // Added Input
+import { Input } from '@/components/ui/input';
 
 const JOBS_PER_PAGE = 9;
 
@@ -67,7 +67,6 @@ export default function JobsPage() {
         );
         const querySnapshot = await getDocs(q);
         const jobsData = querySnapshot.docs.map((doc) => {
-        const jobsData = querySnapshot.docs.map((doc) => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -89,8 +88,6 @@ export default function JobsPage() {
         setAllJobs(jobsData);
         setFilteredJobs(jobsData);
       } catch (e) {
-        console.error('Error fetching jobs:', e);
-        setError('Failed to load jobs. Please try again later.');
         console.error('Error fetching jobs:', e);
         setError('Failed to load jobs. Please try again later.');
       } finally {
@@ -171,9 +168,6 @@ export default function JobsPage() {
     <Card
       className={`shadow-sm flex flex-col ${viewMode === 'list' ? '' : 'h-full'}`}
     >
-    <Card
-      className={`shadow-sm flex flex-col ${viewMode === 'list' ? '' : 'h-full'}`}
-    >
       <CardHeader className="pb-3">
         <div className="flex items-start gap-4">
           <Skeleton className="h-12 w-12 rounded-md" />
@@ -197,8 +191,6 @@ export default function JobsPage() {
         <div className="flex justify-between items-center w-full">
           <Skeleton className="h-4 w-24 rounded" />
           <Skeleton className="h-8 w-20 rounded-md" />
-          <Skeleton className="h-4 w-24 rounded" />
-          <Skeleton className="h-8 w-20 rounded-md" />
         </div>
       </CardFooter>
     </Card>
@@ -210,7 +202,7 @@ export default function JobsPage() {
         <FilterSidebar
           onFilterChange={setSidebarFilters}
           initialFilters={sidebarFilters}
-          currentGlobalSearchTerm={globalSearchTerm} // Pass global search term for "Save Search"
+          currentGlobalSearchTerm={globalSearchTerm}
         />
       </aside>
       <main className="w-full md:w-3/4 lg:w-4/5">
@@ -262,11 +254,6 @@ export default function JobsPage() {
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
         )}
 
         {(isLoading && allJobs.length === 0) || isFiltering ? (
@@ -285,19 +272,11 @@ export default function JobsPage() {
               className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
             >
               {paginatedJobs.map((job) => (
-            <div
-              className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
-            >
-              {paginatedJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
             </div>
             {totalPages > 1 && (
               <div className="mt-8 flex justify-center items-center gap-2">
-                <Button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
                 <Button
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(1, prev - 1))
@@ -314,10 +293,6 @@ export default function JobsPage() {
                 >
                   Page {currentPage} of {totalPages}
                 </span>
-                <Button
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
                 <Button
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1))
