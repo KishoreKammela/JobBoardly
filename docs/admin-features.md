@@ -10,7 +10,7 @@ Administrators (and Super Admins) are responsible for overseeing the platform's 
 
 ### 2.1. Admin Dashboard
 
-The central hub for all administrative tasks, accessible after logging in via the Admin Login page. The dashboard presents a tabbed interface for organized management.
+The central hub for all administrative tasks, accessible after logging in via the Admin Login page. The dashboard presents a tabbed interface for organized management. All critical actions (status changes, deletions) are protected by confirmation modals to prevent accidental changes.
 
 - **Quick Moderation Cards (Dashboard Overview):**
 
@@ -19,34 +19,40 @@ The central hub for all administrative tasks, accessible after logging in via th
 
 - **Companies Management Tab:**
 
-  - **View**: Table displays Company Name, Website, Status (e.g., `Pending`, `Approved`, `Rejected`, `Suspended`), Jobs Posted count, Applications Received count, and Creation Date.
-  - **Actions (Icon-based)**:
+  - **View**: Table displays Company Name, Website, Status (e.g., `Pending`, `Approved`, `Rejected`, `Suspended`, `Deleted`), Jobs Posted count, Applications Received count, and Creation Date.
+  - **Actions (Icon-based, with confirmation modals)**:
     - `👁️ View Company Profile`: Opens the public company profile page in a new tab.
-    - `✅ Approve`: Changes company status to 'Approved'.
-    - `❌ Reject`: Changes company status to 'Rejected'.
-    - `🚫 Suspend / ✅ Activate`: Toggles company status between 'Suspended' and 'Active' (or 'Approved' if previously pending/rejected). Suspending a company also suspends its associated recruiters.
+    - `✅ Approve`: Changes company status to 'Approved'. (For 'Pending' companies)
+    - `❌ Reject`: Changes company status to 'Rejected'. (For 'Pending' companies)
+    - `🚫 Suspend`: Changes company status to 'Suspended'. Recruiters from suspended companies can log in but have limited access (cannot post/edit jobs, edit company profile; can edit personal details). (For 'Approved' or 'Active' companies)
+    - `✅ Activate`: Changes company status to 'Active' (if previously suspended) or 'Approved' (if previously rejected/pending). Restores full access for recruiters.
+    - `🗑️ Delete (Soft)`: Changes company status to 'Deleted'. Recruiters from deleted companies will effectively be locked out of employer features after login. Data is retained.
   - **Functionality**: Includes search by name/website, sorting by columns, and pagination.
 
 - **All Jobs Management Tab:**
 
   - **View**: Table shows Job Title, Company Name, Status (e.g., `pending`, `approved`, `rejected`, `suspended`), Applicant Count, Creation Date, and Last Updated Date.
-  - **Actions (Icon-based)**:
+  - **Actions (Icon-based, with confirmation modals)**:
     - `👁️ View Public Job Page`: Opens the public job details page.
-    - `✏️ Edit Job`: Redirects to the employer's job editing interface for that specific job.
-    - `🚫 Suspend / ✅ Activate`: Toggles job status between 'Suspended' and 'Approved'.
+    - `🚫 Suspend`: Changes job status to 'Suspended'. Suspended jobs are not visible to job seekers, and recruiters cannot manage applicants or edit the job. (For 'Approved' jobs)
+    - `✅ Activate`: Changes job status to 'Approved'. (For 'Suspended' or 'Rejected' jobs)
+    - `✅ Approve`: Changes job status to 'Approved'. (For 'Pending' jobs)
+    - `❌ Reject`: Changes job status to 'Rejected'. (For 'Pending' jobs)
   - **Functionality**: Includes search by title/company, sorting by columns, and pagination.
 
 - **Job Seekers Management Tab:**
 
-  - **View**: Table lists Job Seeker Name, Email, Status (e.g., `active`, `suspended`), Profile Searchable (Yes/No), Jobs Applied count, Last Active date, and Joined Date.
-  - **Actions (Icon-based)**:
-    - `👁️ Preview Job Seeker Profile`: Opens the candidate's profile preview page (as an employer would see it).
-    - `🚫 Suspend / ✅ Activate`: Toggles job seeker account status.
+  - **View**: Table lists Job Seeker Name, Email, Status (e.g., `active`, `suspended`, `deleted`), Profile Searchable (Yes/No), Jobs Applied count, Last Active date, and Joined Date.
+  - **Actions (Icon-based, with confirmation modals)**:
+    - `👁️ View Profile`: Opens the candidate's profile preview page (as an employer/admin would see it).
+    - `🚫 Suspend`: Changes job seeker account status to 'Suspended'. Suspended users can log in but have limited functionality (cannot apply for jobs, edit main profile sections; can view jobs, change password, some settings).
+    - `✅ Activate`: Changes job seeker account status to 'Active'.
+    - `🗑️ Delete (Soft)`: Changes job seeker account status to 'Deleted'. Deleted users cannot log in (Firebase Auth login succeeds, but app context immediately logs them out). Data is retained.
   - **Functionality**: Includes search by name/email, sorting by columns, and pagination.
 
 - **Platform Users Management Tab (Admins/SuperAdmins):**
   - **View**: Table displays Name, Email, Role (Admin/SuperAdmin), Status, Last Active date, and Joined Date.
-  - **Actions (Icon-based)**:
+  - **Actions (Icon-based, with confirmation modals)**:
     - `🚫 Suspend / ✅ Activate`: Toggles Admin/SuperAdmin account status.
     - _Restriction_: SuperAdmins can manage other Admins and SuperAdmins. Regular Admins cannot manage other platform users. Users cannot suspend/activate themselves.
   - **Functionality**: Includes search by name/email, sorting by columns, and pagination.
@@ -64,7 +70,6 @@ The central hub for all administrative tasks, accessible after logging in via th
 ## 3. User Journey Map (Admin)
 
 ```mermaid
-
 graph TD
     A[Start: Admin Needs to Manage Platform] --> B{Authenticated?}
     B -- No --> C[Navigate to /auth/admin/login]
@@ -75,27 +80,35 @@ graph TD
     E -- No --> G[Error/Redirect to General Login]
     F --> H{Select Task}
     H -- Moderate Pending Jobs --> I[Use Quick Moderation Card for Jobs]
-    I --> J[Approve/Reject Job]
+    I --> J[Confirm Action: Approve/Reject Job]
     J --> F
     H -- Moderate Pending Companies --> K[Use Quick Moderation Card for Companies]
-    K --> L[Approve/Reject Company]
+    K --> L[Confirm Action: Approve/Reject Company]
     L --> F
     H -- Manage Companies --> M[Navigate to 'Companies' Tab]
     M --> N[Search/Sort/View Companies]
-    N --> O[Perform Action: View, Approve, Reject, Suspend/Activate]
-    O --> M
+    N --> O[Perform Action: View, Approve, Reject, Suspend/Activate, Delete]
+    O --> O_Confirm[Confirmation Modal]
+    O_Confirm -- Yes --> M
+    O_Confirm -- No --> N
     H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab]
     P --> Q[Search/Sort/View Jobs]
-    Q --> R[Perform Action: View, Edit, Suspend/Activate]
-    R --> P
+    Q --> R[Perform Action: View, Suspend/Activate, Approve/Reject]
+    R --> R_Confirm[Confirmation Modal]
+    R_Confirm -- Yes --> P
+    R_Confirm -- No --> Q
     H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab]
     S --> T[Search/Sort/View Job Seekers]
-    T --> U[Perform Action: Preview Profile, Suspend/Activate]
-    U --> S
+    T --> U[Perform Action: View Profile, Suspend/Activate, Delete]
+    U --> U_Confirm[Confirmation Modal]
+    U_Confirm -- Yes --> S
+    U_Confirm -- No --> T
     H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab]
     V --> W[Search/Sort/View Platform Users]
     W --> X[Perform Action: Suspend/Activate if SuperAdmin]
-    X --> V
+    X --> X_Confirm[Confirmation Modal]
+    X_Confirm -- Yes --> V
+    X_Confirm -- No --> W
     F --> Y[Logout]
 ```
 
@@ -108,7 +121,7 @@ graph TD
 
 ## 5. Key "API" Interactions (Data Flows)
 
-Admins interact primarily with the Firebase Firestore database to manage platform data. There are no traditional REST APIs for admin actions; operations are direct database manipulations triggered by UI events.
+Admins interact primarily with the Firebase Firestore database to manage platform data. There are no traditional REST APIs for admin actions; operations are direct database manipulations triggered by UI events (with confirmation).
 
 - **Fetching Data for Tables (e.g., Companies, Jobs, Users):**
 
@@ -116,9 +129,9 @@ Admins interact primarily with the Firebase Firestore database to manage platfor
   - **Interaction**: Queries Firestore collections (`companies`, `jobs`, `users`) with appropriate filters, ordering, and pagination.
   - **Data**: Retrieves arrays of Company, Job, or UserProfile objects.
 
-- **Updating Status (e.g., Approve/Reject/Suspend Company/Job/User):**
+- **Updating Status (e.g., Approve/Reject/Suspend/Delete Company/Job/User):**
 
-  - **Action**: Admin clicks an action icon (Approve, Reject, Suspend, Activate).
+  - **Action**: Admin clicks an action icon, confirms in modal.
   - **Input Data**: ID of the entity (company, job, user), the new status string, and optionally a moderation reason.
   - **Interaction**: Updates the specific document in Firestore (e.g., in the `companies` collection, sets the `status` field to 'approved' and `updatedAt` to server timestamp).
   - **Output/Effect**: Document status is changed in the database, UI updates to reflect the change.
