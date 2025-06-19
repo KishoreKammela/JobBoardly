@@ -4,8 +4,11 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { JobSeekerActionsProvider } from '@/contexts/JobSeekerActionsContext';
+import { EmployerActionsProvider } from '@/contexts/EmployerActionsContext';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+
 export const metadata: Metadata = {
   title: 'JobBoardly - Find Your Next Opportunity',
   description: 'AI-Powered Job Portal Platform',
@@ -36,12 +39,16 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
-          <Navbar />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            {children}
-          </main>
-          <Footer />
-          <Toaster />
+          <JobSeekerActionsProvider>
+            <EmployerActionsProvider>
+              <Navbar />
+              <main className="flex-grow container mx-auto px-4 py-8">
+                {children}
+              </main>
+              <Footer />
+              <Toaster />
+            </EmployerActionsProvider>
+          </JobSeekerActionsProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

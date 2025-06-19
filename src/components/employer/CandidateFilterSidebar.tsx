@@ -15,6 +15,7 @@ import type React from 'react';
 import { useState, useEffect } from 'react';
 import type { CandidateFilters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -54,7 +55,8 @@ export function CandidateFilterSidebar({
   );
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
-  const { user, company, saveCandidateSearch } = useAuth();
+  const { user, company } = useAuth();
+  const { saveCandidateSearch } = useEmployerActions();
   const { toast } = useToast();
 
   useEffect(() => {

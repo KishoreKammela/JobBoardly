@@ -2,6 +2,8 @@
 import { SettingsForm } from '@/components/SettingsForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -46,8 +48,10 @@ const defaultModalState: ModalState = {
 };
 
 export default function SettingsPage() {
-  const { user, loading, deleteSearch, deleteCandidateSearch, company } =
-    useAuth();
+  const { user, loading, company } = useAuth();
+  const { deleteSearch: deleteJobSearch } = useJobSeekerActions();
+  const { deleteCandidateSearch } = useEmployerActions();
+
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -100,7 +104,7 @@ export default function SettingsPage() {
   const performDeleteJobSearch = async (searchId: string) => {
     if (!user || user.role !== 'jobSeeker') return;
     try {
-      await deleteSearch(searchId);
+      await deleteJobSearch(searchId);
       toast({
         title: 'Job Search Deleted',
         description: 'The saved job search has been removed.',

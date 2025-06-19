@@ -5,6 +5,7 @@ import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Job } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,14 +41,9 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const {
-    user,
-    applyForJob,
-    hasAppliedForJob,
-    saveJob,
-    unsaveJob,
-    isJobSaved,
-  } = useAuth();
+  const { user } = useAuth();
+  const { applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } =
+    useJobSeekerActions();
   const { toast } = useToast();
   const [applied, setApplied] = useState(false);
   const [saved, setSaved] = useState(false);

@@ -23,6 +23,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import type { Timestamp } from 'firebase/firestore';
@@ -41,14 +42,9 @@ export function JobCard({
   isSavedProp,
 }: JobCardProps) {
   const { toast } = useToast();
-  const {
-    user,
-    applyForJob,
-    hasAppliedForJob,
-    saveJob,
-    unsaveJob,
-    isJobSaved,
-  } = useAuth();
+  const { user } = useAuth();
+  const { applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } =
+    useJobSeekerActions();
 
   const [applied, setApplied] = useState(
     isApplied !== undefined ? isApplied : false

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext';
 import type { Job, Application, ApplicationStatus } from '@/types';
 import { EmployerManagedApplicationStatuses } from '@/types';
 import {
@@ -79,7 +80,8 @@ const defaultModalState: ModalState = {
 };
 
 export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
-  const { user, updateApplicationStatus } = useAuth();
+  const { user } = useAuth();
+  const { updateApplicationStatus } = useEmployerActions();
   const { toast } = useToast();
   const [job, setJob] = useState<Job | null | undefined>(undefined);
   const [allApplications, setAllApplications] = useState<Application[]>([]);

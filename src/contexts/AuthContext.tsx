@@ -3,16 +3,9 @@ import type {
   UserProfile,
   UserRole,
   Company,
-  Filters,
-  SavedSearch,
-  Application,
-  ApplicationStatus,
-  Job,
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
-  CandidateFilters,
-  SavedCandidateSearch,
 } from '@/types';
 import React, {
   createContext,
@@ -41,8 +34,6 @@ import {
   updateDoc,
   serverTimestamp,
   collection,
-  arrayUnion,
-  arrayRemove,
   Timestamp,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,11 +46,6 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   logout: () => Promise<void>;
-  applyForJob: (job: Job) => Promise<void>;
-  hasAppliedForJob: (jobId: string) => boolean;
-  saveJob: (jobId: string) => Promise<void>;
-  unsaveJob: (jobId: string) => Promise<void>;
-  isJobSaved: (jobId: string) => boolean;
   registerUser: (
     email: string,
     pass: string,
@@ -78,18 +64,6 @@ interface AuthContextType {
     role: UserRole,
     companyName?: string
   ) => Promise<FirebaseUser>;
-  saveSearch: (searchName: string, filters: Filters) => Promise<void>;
-  deleteSearch: (searchId: string) => Promise<void>;
-  saveCandidateSearch: (
-    searchName: string,
-    filters: CandidateFilters
-  ) => Promise<void>;
-  deleteCandidateSearch: (searchId: string) => Promise<void>;
-  updateApplicationStatus: (
-    applicationId: string,
-    newStatus: ApplicationStatus,
-    employerNotes?: string
-  ) => Promise<void>;
   changeUserPassword: (
     currentPassword: string,
     newPassword: string
@@ -270,19 +244,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 rawData.lastActive instanceof Timestamp
                   ? rawData.lastActive.toDate().toISOString()
                   : rawData.lastActive,
-              savedSearches: (rawData.savedSearches || []).map(
-                (s: Partial<SavedSearch>) => ({
-                  ...s,
-                  id: s.id || uuidv4(),
-                  createdAt:
-                    s.createdAt instanceof Timestamp
-                      ? s.createdAt.toDate().toISOString()
-                      : s.createdAt || new Date().toISOString(),
-                })
-              ),
+              savedSearches: (rawData.savedSearches || []).map((s: any) => ({
+                ...s,
+                id: s.id || uuidv4(),
+                createdAt:
+                  s.createdAt instanceof Timestamp
+                    ? s.createdAt.toDate().toISOString()
+                    : s.createdAt || new Date().toISOString(),
+              })),
               savedCandidateSearches: (
                 rawData.savedCandidateSearches || []
-              ).map((s: Partial<SavedCandidateSearch>) => ({
+              ).map((s: any) => ({
                 ...s,
                 id: s.id || uuidv4(),
                 createdAt:
@@ -731,18 +703,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             rawData.lastActive instanceof Timestamp
               ? rawData.lastActive.toDate().toISOString()
               : rawData.lastActive,
-          savedSearches: (rawData.savedSearches || []).map(
-            (s: Partial<SavedSearch>) => ({
-              ...s,
-              id: s.id || uuidv4(),
-              createdAt:
-                s.createdAt instanceof Timestamp
-                  ? s.createdAt.toDate().toISOString()
-                  : s.createdAt || new Date().toISOString(),
-            })
-          ),
+          savedSearches: (rawData.savedSearches || []).map((s: any) => ({
+            ...s,
+            id: s.id || uuidv4(),
+            createdAt:
+              s.createdAt instanceof Timestamp
+                ? s.createdAt.toDate().toISOString()
+                : s.createdAt || new Date().toISOString(),
+          })),
           savedCandidateSearches: (rawData.savedCandidateSearches || []).map(
-            (s: Partial<SavedCandidateSearch>) => ({
+            (s: any) => ({
               ...s,
               id: s.id || uuidv4(),
               createdAt:
@@ -1155,391 +1125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const applyForJob = async (job: Job) => {
-    if (user && user.uid && user.role === 'jobSeeker') {
-      if (user.status === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description:
-            'Your account is currently suspended. You cannot apply for jobs.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      const currentAppliedJobIds = user.appliedJobIds || [];
-      if (!currentAppliedJobIds.includes(job.id)) {
-        const applicationRef = doc(collection(db, 'applications'));
-        const newApplication: Omit<Application, 'id'> = {
-          jobId: job.id,
-          jobTitle: job.title,
-          applicantId: user.uid,
-          applicantName: user.name,
-          applicantAvatarUrl: user.avatarUrl || '',
-          applicantHeadline: user.headline || '',
-          companyId: job.companyId,
-          postedById: job.postedById,
-          status: 'Applied',
-          appliedAt: serverTimestamp() as Timestamp,
-          updatedAt: serverTimestamp() as Timestamp,
-        };
-
-        const userDocRef = doc(db, 'users', user.uid);
-        try {
-          await setDoc(
-            applicationRef,
-            newApplication as Record<string, unknown>
-          );
-          await updateDoc(userDocRef, {
-            appliedJobIds: arrayUnion(job.id),
-            updatedAt: serverTimestamp(),
-            lastActive: serverTimestamp(),
-          });
-          setUser(
-            (prevUser) =>
-              ({
-                ...prevUser,
-                appliedJobIds: [...(prevUser?.appliedJobIds || []), job.id],
-              }) as UserProfile
-          );
-        } catch (error: unknown) {
-          console.error('AuthContext: applyForJob error', error);
-          throw error;
-        }
-      }
-    } else {
-      console.warn('User must be a logged-in job seeker to apply for a job.');
-    }
-  };
-
-  const updateApplicationStatus = async (
-    applicationId: string,
-    newStatus: ApplicationStatus,
-    employerNotes?: string
-  ) => {
-    if (!user || user.role !== 'employer') {
-      throw new Error('Only employers can update application status.');
-    }
-    const applicationDocRef = doc(db, 'applications', applicationId);
-    const updates: { [key: string]: unknown } = {
-      status: newStatus,
-      updatedAt: serverTimestamp(),
-    };
-    if (employerNotes !== undefined) {
-      updates.employerNotes = employerNotes;
-    } else {
-      updates.employerNotes = null;
-    }
-
-    try {
-      await updateDoc(applicationDocRef, updates);
-    } catch (error: unknown) {
-      console.error('AuthContext: updateApplicationStatus error', error);
-      throw error;
-    }
-  };
-
-  const hasAppliedForJob = (jobId: string): boolean => {
-    if (user && user.role === 'jobSeeker' && user.appliedJobIds) {
-      return user.appliedJobIds.includes(jobId);
-    }
-    return false;
-  };
-
-  const saveJob = async (jobId: string) => {
-    if (user && user.uid && user.role === 'jobSeeker') {
-      if (user.status === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description:
-            'Your account is currently suspended. You cannot save jobs.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      const userDocRef = doc(db, 'users', user.uid);
-      try {
-        await updateDoc(userDocRef, {
-          savedJobIds: arrayUnion(jobId),
-          updatedAt: serverTimestamp(),
-          lastActive: serverTimestamp(),
-        });
-        setUser(
-          (prevUser) =>
-            ({
-              ...prevUser,
-              savedJobIds: [...(prevUser?.savedJobIds || []), jobId],
-            }) as UserProfile
-        );
-      } catch (error: unknown) {
-        console.error('AuthContext: saveJob error', error);
-        throw error;
-      }
-    } else {
-      console.warn('User must be a logged-in job seeker to save a job.');
-    }
-  };
-
-  const unsaveJob = async (jobId: string) => {
-    if (user && user.uid && user.role === 'jobSeeker') {
-      if (user.status === 'suspended') {
-        toast({
-          title: 'Account Suspended',
-          description:
-            'Your account is currently suspended. You cannot unsave jobs.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      const userDocRef = doc(db, 'users', user.uid);
-      try {
-        await updateDoc(userDocRef, {
-          savedJobIds: arrayRemove(jobId),
-          updatedAt: serverTimestamp(),
-          lastActive: serverTimestamp(),
-        });
-        setUser(
-          (prevUser) =>
-            ({
-              ...prevUser,
-              savedJobIds: (prevUser?.savedJobIds || []).filter(
-                (id) => id !== jobId
-              ),
-            }) as UserProfile
-        );
-      } catch (error: unknown) {
-        console.error('AuthContext: unsaveJob error', error);
-        throw error;
-      }
-    } else {
-      console.warn('User must be a logged-in job seeker to unsave a job.');
-    }
-  };
-
-  const isJobSaved = (jobId: string): boolean => {
-    if (user && user.role === 'jobSeeker' && user.savedJobIds) {
-      return user.savedJobIds.includes(jobId);
-    }
-    return false;
-  };
-
-  const saveSearch = async (searchName: string, filters: Filters) => {
-    if (!user || !user.uid || user.role !== 'jobSeeker') {
-      toast({
-        title: 'Action Denied',
-        description: 'Only job seekers can save searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (user.status === 'suspended') {
-      toast({
-        title: 'Account Suspended',
-        description:
-          'Your account is currently suspended. You cannot save searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const newSearchObject: SavedSearch = {
-      id: uuidv4(),
-      name: searchName,
-      filters,
-      createdAt: new Date(), // Use client-generated Date
-    };
-
-    try {
-      await updateDoc(userDocRef, {
-        savedSearches: arrayUnion(newSearchObject),
-        updatedAt: serverTimestamp(),
-        lastActive: serverTimestamp(),
-      });
-      setUser((prevUser) => {
-        const updatedLocalSearches = [
-          ...(prevUser?.savedSearches || []),
-          {
-            ...newSearchObject,
-            createdAt: (newSearchObject.createdAt as Date).toISOString(),
-          },
-        ];
-        return {
-          ...prevUser,
-          savedSearches: updatedLocalSearches,
-        } as UserProfile;
-      });
-    } catch (error: unknown) {
-      console.error('AuthContext: saveSearch error', error);
-      throw error;
-    }
-  };
-
-  const deleteSearch = async (searchId: string) => {
-    if (
-      !user ||
-      !user.uid ||
-      user.role !== 'jobSeeker' ||
-      !user.savedSearches
-    ) {
-      toast({
-        title: 'Action Denied',
-        description: 'Only job seekers can delete their saved searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (user.status === 'suspended') {
-      toast({
-        title: 'Account Suspended',
-        description:
-          'Your account is currently suspended. You cannot delete searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const searchToDelete = user.savedSearches.find((s) => s.id === searchId);
-
-    if (searchToDelete) {
-      const searchToDeleteForFirestore = {
-        ...searchToDelete,
-        createdAt: Timestamp.fromDate(
-          new Date(searchToDelete.createdAt as string)
-        ),
-      };
-      try {
-        await updateDoc(userDocRef, {
-          savedSearches: arrayRemove(searchToDeleteForFirestore),
-          updatedAt: serverTimestamp(),
-          lastActive: serverTimestamp(),
-        });
-        setUser(
-          (prevUser) =>
-            ({
-              ...prevUser,
-              savedSearches: (prevUser?.savedSearches || []).filter(
-                (s) => s.id !== searchId
-              ),
-            }) as UserProfile
-        );
-      } catch (error: unknown) {
-        console.error('AuthContext: deleteSearch error', error);
-        throw error;
-      }
-    }
-  };
-
-  const saveCandidateSearch = async (
-    searchName: string,
-    filters: CandidateFilters
-  ) => {
-    if (!user || !user.uid || user.role !== 'employer') {
-      toast({
-        title: 'Action Denied',
-        description: 'Only employers can save candidate searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (company?.status === 'suspended' || company?.status === 'deleted') {
-      toast({
-        title: 'Company Account Restricted',
-        description:
-          'Cannot save searches as your company account is currently restricted.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const newSearchObject: SavedCandidateSearch = {
-      id: uuidv4(),
-      name: searchName,
-      filters,
-      createdAt: new Date(), // Use client-generated Date
-    };
-
-    try {
-      await updateDoc(userDocRef, {
-        savedCandidateSearches: arrayUnion(newSearchObject),
-        updatedAt: serverTimestamp(),
-        lastActive: serverTimestamp(),
-      });
-      setUser((prevUser) => {
-        const updatedLocalSearches = [
-          ...(prevUser?.savedCandidateSearches || []),
-          {
-            ...newSearchObject,
-            createdAt: (newSearchObject.createdAt as Date).toISOString(),
-          },
-        ];
-        return {
-          ...prevUser,
-          savedCandidateSearches: updatedLocalSearches,
-        } as UserProfile;
-      });
-    } catch (error: unknown) {
-      console.error('AuthContext: saveCandidateSearch error', error);
-      throw error;
-    }
-  };
-
-  const deleteCandidateSearch = async (searchId: string) => {
-    if (
-      !user ||
-      !user.uid ||
-      user.role !== 'employer' ||
-      !user.savedCandidateSearches
-    ) {
-      toast({
-        title: 'Action Denied',
-        description:
-          'Only employers can delete their saved candidate searches.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (company?.status === 'suspended' || company?.status === 'deleted') {
-      toast({
-        title: 'Company Account Restricted',
-        description:
-          'Cannot delete searches as your company account is currently restricted.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const userDocRef = doc(db, 'users', user.uid);
-    const searchToDelete = user.savedCandidateSearches.find(
-      (s) => s.id === searchId
-    );
-
-    if (searchToDelete) {
-      const searchToDeleteForFirestore = {
-        ...searchToDelete,
-        createdAt: Timestamp.fromDate(
-          new Date(searchToDelete.createdAt as string)
-        ),
-      };
-      try {
-        await updateDoc(userDocRef, {
-          savedCandidateSearches: arrayRemove(searchToDeleteForFirestore),
-          updatedAt: serverTimestamp(),
-          lastActive: serverTimestamp(),
-        });
-        setUser(
-          (prevUser) =>
-            ({
-              ...prevUser,
-              savedCandidateSearches: (
-                prevUser?.savedCandidateSearches || []
-              ).filter((s) => s.id !== searchId),
-            }) as UserProfile
-        );
-      } catch (error: unknown) {
-        console.error('AuthContext: deleteCandidateSearch error', error);
-        throw error;
-      }
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -1548,21 +1133,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         loading,
         logout,
-        applyForJob,
-        hasAppliedForJob,
-        saveJob,
-        unsaveJob,
-        isJobSaved,
         registerUser,
         loginUser,
         updateUserProfile,
         updateCompanyProfile,
         signInWithSocial,
-        saveSearch,
-        deleteSearch,
-        saveCandidateSearch,
-        deleteCandidateSearch,
-        updateApplicationStatus,
         changeUserPassword,
       }}
     >

@@ -15,6 +15,7 @@ import { Filter, RotateCcw, Save } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import type { Filters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -51,7 +52,8 @@ export function FilterSidebar({
   );
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
-  const { user, saveSearch } = useAuth();
+  const { user } = useAuth();
+  const { saveSearch } = useJobSeekerActions();
   const { toast } = useToast();
 
   useEffect(() => {
