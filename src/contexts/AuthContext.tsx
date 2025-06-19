@@ -1302,30 +1302,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     const userDocRef = doc(db, 'users', user.uid);
-    const newSearch: SavedSearch = {
+    const newSearchObject: SavedSearch = {
       id: uuidv4(),
       name: searchName,
       filters,
-      createdAt: serverTimestamp() as Timestamp, // Firestore will convert this
+      createdAt: new Date(), // Use client-side Date object
     };
 
     try {
+      // Pass the newSearchObject directly to arrayUnion.
+      // Firestore will convert newSearchObject.createdAt (Date) to a Timestamp.
       await updateDoc(userDocRef, {
-        savedSearches: arrayUnion({
-          ...newSearch,
-          createdAt: newSearch.createdAt, // For local state, keep it as Timestamp for now
-        }),
+        savedSearches: arrayUnion(newSearchObject),
         updatedAt: serverTimestamp(),
         lastActive: serverTimestamp(),
       });
+
+      // For local state, convert createdAt to ISO string
       setUser((prevUser) => {
-        const updatedSearches = [
+        const updatedLocalSearches = [
           ...(prevUser?.savedSearches || []),
-          { ...newSearch, createdAt: new Date().toISOString() }, // Convert to string for local state consistency
+          {
+            ...newSearchObject,
+            createdAt: (newSearchObject.createdAt as Date).toISOString(),
+          },
         ];
         return {
           ...prevUser,
-          savedSearches: updatedSearches,
+          savedSearches: updatedLocalSearches,
         } as UserProfile;
       });
     } catch (error: unknown) {
