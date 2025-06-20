@@ -10,18 +10,18 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 ### 2.1. Notification Types
 
-- **Real-time In-App Notifications**: Instant alerts within the platform
-- **Email Notifications**: Structured email communications
-- **Push Notifications**: Mobile/desktop browser notifications (future)
-- **SMS Alerts**: Critical updates via text (future premium feature)
-- **Digest Notifications**: Summarized periodic updates
+- **Real-time In-App Notifications**: Instant alerts within the platform (Initial UI implemented)
+- **Email Notifications**: Structured email communications (Future)
+- **Push Notifications**: Mobile/desktop browser notifications (Future)
+- **SMS Alerts**: Critical updates via text (Future premium feature)
+- **Digest Notifications**: Summarized periodic updates (Future)
 
 ### 2.2. User Preference Controls
 
-- **Granular Settings**: Users can control each notification type individually (via `/settings` page).
-- **Frequency Controls**: Options for real-time, daily, weekly, or monthly updates for certain notification types.
-- **Channel Preferences**: Ability to choose preferred channels (in-app, email) for different notification categories.
-- **Smart Defaults**: Intelligent initial settings based on user role and typical activity patterns.
+- **Granular Settings**: Users can control each notification type individually (Future - via `/settings` page)
+- **Frequency Controls**: Options for real-time, daily, weekly, or monthly updates for certain notification types (Future)
+- **Channel Preferences**: Ability to choose preferred channels (in-app, email) for different notification categories (Future)
+- **Smart Defaults**: Intelligent initial settings based on user role and typical activity patterns (Future)
 
 ## 3. Job Seeker Notification System
 
@@ -42,6 +42,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Prominent banner/alert with action steps or information.
 - **Email**: Immediate security/informational alert with relevant details and next steps.
 - **Content**: Clear explanation of the change, any implications, and resolution paths if applicable.
+  _Backend triggers required for these notifications._
 
 #### 3.1.2. Profile Completion & Optimization
 
@@ -57,6 +58,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Progress indicators (e.g., profile strength meter) and contextual suggestions.
 - **Email**: Optional weekly/bi-weekly profile optimization tips digest.
 - **Content**: Personalized recommendations for profile enhancement based on JobBoardly best practices and AI insights.
+  _Backend triggers required for these notifications._
 
 #### 3.1.3. Resume & AI Features (Current & Future)
 
@@ -73,6 +75,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Status updates, possibly with a preview or direct link to results.
 - **Email**: Confirmation of processing completion with a link to view results or next steps.
 - **Content**: Summary of AI insights (e.g., "Your AI-generated summary is ready!") and recommendations.
+  _Backend triggers required for these notifications._
 
 ### 3.2. Job Discovery & Search
 
@@ -89,6 +92,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Real-time (or near real-time) notification count update, leading to a list of new matching jobs.
 - **Email**: Daily or weekly digest of new matching jobs (user configurable).
 - **Content**: Key job details, possibly a match score, and a direct link to apply or view.
+  _Backend triggers (e.g., new job matches saved search criteria) required._
 
 #### 3.2.2. Saved Search Activity & Suggestions
 
@@ -103,6 +107,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Contextual suggestions or indicators on the saved searches management page.
 - **Email**: Optional periodic (e.g., monthly) digest with insights related to saved searches.
 - **Content**: Curated job recommendations, AI insights for search improvement.
+  _Backend triggers required._
 
 #### 3.2.3. AI Job Matching (Current Feature & Future Enhancements)
 
@@ -119,6 +124,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Immediate display of results after running the matcher. _Future_: Subtle indicators for new proactive matches.
 - **Email**: _Future_: Optional weekly AI insights report or summary of new high-match jobs.
 - **Content**: Match reasoning, direct links to jobs. _Future_: Profile improvement tips based on matching.
+  _Current AI matcher provides immediate results. Notification for proactive matches would require backend triggers._
 
 ### 3.3. Application Management
 
@@ -134,9 +140,10 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 **Notifications:**
 
-- **In-App**: Updates in the "My Jobs" section, potentially a notification feed.
-- **Email**: Immediate (or batched, user-configurable) alerts for significant status changes.
+- **In-App**: Updates in the "My Jobs" section, potentially a notification feed (basic UI implemented).
+- **Email**: Immediate (or batched, user-configurable) alerts for significant status changes (Future).
 - **Content**: Clear indication of the new status and any recommended next actions (e.g., "Employer has reviewed your application").
+  _Backend triggers (e.g., when an employer updates an application status) are required._
 
 #### 3.3.2. Application Reminders & Nudges
 
@@ -151,6 +158,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Gentle reminders, possibly with quick action links.
 - **Email**: Deadline alerts, application tips.
 - **Content**: Personalized advice and prompts to complete actions.
+  _Backend triggers required._
 
 #### 3.3.3. Interview & Offer Management (Future Features)
 
@@ -167,6 +175,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Calendar integration prompts, preparation tips.
 - **Email**: Interview confirmations, offer summaries.
 - **Content**: Interview guides, negotiation advice.
+  _Backend triggers required._
 
 ### 3.4. Career Development (Future Features)
 
@@ -184,6 +193,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Skill badges, progress tracking visuals.
 - **Email**: Optional monthly skill development digest.
 - **Content**: Personalized learning paths and links to resources.
+  _Backend AI analysis and triggers required._
 
 #### 3.4.2. Market Insights
 
@@ -199,6 +209,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Contextual insight cards or a dedicated insights section.
 - **Email**: Optional quarterly market reports tailored to the user.
 - **Content**: Data-driven career guidance and strategic advice.
+  _Backend AI analysis and triggers required._
 
 ## 4. Employer Notification System
 
@@ -216,9 +227,10 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 **Notifications:**
 
-- **In-App**: Updates on the employer dashboard or profile page, admin-specific alerts.
-- **Email**: Immediate status updates to company admin(s).
+- **In-App**: Updates on the employer dashboard or profile page, admin-specific alerts (basic UI implemented for receiving).
+- **Email**: Immediate status updates to company admin(s) (Future).
 - **Content**: Clear explanation of status, next steps, or resolution guidance.
+  _Backend triggers (e.g., admin changes company status) required._
 
 #### 4.1.2. Team Management (Future - when full team features exist)
 
@@ -234,6 +246,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Team activity feed or admin section.
 - **Email**: Optional weekly team performance/activity digest for company admins.
 - **Content**: Information about team changes, collaboration insights.
+  _Backend triggers required._
 
 ### 4.2. Job Posting & Management
 
@@ -249,9 +262,10 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 **Notifications:**
 
-- **In-App**: Updates on the "My Posted Jobs" dashboard.
-- **Email**: Immediate job status updates (especially for approval/rejection).
+- **In-App**: Updates on the "My Posted Jobs" dashboard (basic UI implemented for receiving).
+- **Email**: Immediate job status updates (especially for approval/rejection) (Future).
 - **Content**: Clear status, admin feedback (if any), link to job. _Future_: Performance insights and optimization tips.
+  _Backend triggers (e.g., admin changes job status) required._
 
 #### 4.2.2. Job Performance Insights (Future AI Features)
 
@@ -267,6 +281,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Performance insight cards on the job management page.
 - **Email**: Optional weekly job performance reports with AI suggestions.
 - **Content**: Data-driven optimization recommendations.
+  _Backend AI analysis and triggers required._
 
 ### 4.3. Candidate & Application Management
 
@@ -281,9 +296,10 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 **Notifications:**
 
-- **In-App**: Counter updates on "My Posted Jobs", applicant list updates.
-- **Email**: Configurable frequency (e.g., immediate for first few, then daily digest) for new application alerts. _Future_: Immediate alerts for high-priority candidates.
+- **In-App**: Counter updates on "My Posted Jobs", applicant list updates (basic UI implemented for receiving).
+- **Email**: Configurable frequency (e.g., immediate for first few, then daily digest) for new application alerts (Future). _Future_: Immediate alerts for high-priority candidates.
 - **Content**: Candidate name, headline, link to profile/application. _Future_: AI-generated candidate highlights.
+  _Backend triggers (e.g., new application document created in Firestore) required._
 
 #### 4.3.2. Application Management Reminders & Nudges
 
@@ -299,6 +315,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Task/reminder list on employer dashboard.
 - **Email**: Optional daily digest of pending application management tasks.
 - **Content**: Prioritized action items and direct links.
+  _Backend triggers required._
 
 #### 4.3.3. Candidate Sourcing (Future AI Features)
 
@@ -315,6 +332,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 - **In-App**: Candidate recommendation cards or updates in a "Suggested Candidates" section.
 - **Email**: Optional weekly talent pipeline updates or new match alerts.
 - **Content**: Curated candidate profiles with match reasoning or relevance score.
+  _Backend AI analysis and triggers required._
 
 ### 4.4. AI-Powered Features (Future)
 
@@ -336,6 +354,7 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **In-App**: Analytics dashboard updates, new report indicators.
 - **Email**: Links to new monthly/quarterly performance reports.
 - **Content**: Key strategic insights and actionable improvement plans.
+  _Backend AI analysis and triggers required._
 
 ## 5. Admin/Platform Staff Notification System
 
@@ -352,9 +371,10 @@ _(Triggers and notifications largely covered in 4.3.3)_
 
 **Notifications:**
 
-- **In-App**: Updates on the Admin Dashboard (quick moderation cards, counts on tabs).
-- **Email**: Optional daily/hourly moderation summaries for relevant admin roles (Moderators, Admins).
+- **In-App**: Updates on the Admin Dashboard (quick moderation cards, counts on tabs) (basic UI implemented for receiving).
+- **Email**: Optional daily/hourly moderation summaries for relevant admin roles (Moderators, Admins) (Future).
 - **Content**: Links to moderation queues, priority indicators, quality metrics.
+  _Backend triggers (e.g., new job/company with 'pending' status) required._
 
 #### 5.1.2. Platform Health & System Alerts (Primarily for SuperAdmins, System Monitors)
 
@@ -370,6 +390,7 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **In-App**: System status updates on a dedicated admin dashboard section.
 - **Email**: Critical system alerts (especially for performance/security issues).
 - **Content**: Relevant health metrics, error logs (summaries), recommended actions or investigation paths.
+  _Backend triggers required._
 
 ### 5.2. User Management & Platform Oversight
 
@@ -388,6 +409,7 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **In-App**: Alerts in relevant admin dashboard sections (e.g., user management, compliance queue).
 - **Email**: Daily/weekly user activity reports or urgent escalation alerts.
 - **Content**: Details of the issue, risk assessments, recommended actions.
+  _Backend triggers required._
 
 #### 5.2.2. Platform Analytics & Insights (for Admins, SuperAdmins, Data Analysts)
 
@@ -403,6 +425,7 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **In-App**: Analytics dashboard updates, new report indicators.
 - **Email**: Optional weekly/monthly platform performance reports.
 - **Content**: Strategic insights, data visualizations, growth opportunities.
+  _Backend triggers required._
 
 ## 6. Smart Notification Features (Future - Advanced Implementation)
 
@@ -487,25 +510,34 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **Mentorship Opportunities**: Notifications about new mentor/mentee matches.
 - **Industry Events**: Recommendations for relevant local or virtual industry events.
 
-## 9. Implementation Strategy (High-Level)
+## 9. Implementation Strategy
 
-### 9.1. Phase 1: Core Notifications (Essential Foundation)
+### 9.1. Phase 1: Core Notifications (Client-Side Foundation Implemented)
 
-- **Focus**: Critical transactional alerts and basic job/application-related notifications.
-- **Job Seeker**: Account status, application submitted, application status changed by employer, new jobs matching saved searches (basic email digest).
-- **Employer**: Company status changes, new application received (basic email alert), job status changes by admin.
-- **Admin**: Content moderation queue alerts (new job/company pending).
-- **Technical**: Basic email template system (no admin UI yet, hardcoded or simple config), foundational in-app notification placeholder (e.g., a bell icon, no full feed yet), backend triggers for these core events. User preference settings for basic email on/off.
+- **Status: Partially Implemented (Client-Side UI & Basic Read/Fetch Logic)**
+- **Implemented Client-Side:**
+  - UI for notification bell in Navbar.
+  - Popover/Dropdown to display recent notifications.
+  - Fetching notifications for the logged-in user.
+  - Marking notifications as read (individually and all).
+  - `Notification` type defined.
+- **Remaining for True Phase 1 Completion (Requires Backend):**
+  - **Backend Triggers:** Implement Firebase Functions (or similar server-side logic) to create `Notification` documents in Firestore when key events occur. Examples:
+    - **Job Seeker:** Application status changed by employer.
+    - **Employer:** New application received, job approved/rejected by admin.
+    - **Admin:** New job/company pending approval.
+  - Basic email template system and sending for critical alerts (e.g., account status changes, application submission confirmation) - this is a significant step in itself.
+  - User preference settings in `/settings` to toggle basic notification categories (e.g., Application Updates On/Off).
 
-### 9.2. Phase 2: Enhanced Features & Personalization
+### 9.2. Phase 2: Enhanced Features & Personalization (Future)
 
 - **Focus**: Improving user experience with more control and smarter delivery.
-- **Job Seeker**: Granular notification settings in `/settings`, improved digest emails, AI job match notifications (if AI matcher is enhanced).
+- **Job Seeker**: Granular notification settings in `/settings`, improved digest emails, AI job match notifications.
 - **Employer**: More detailed new applicant alerts, reminders for pending applications, saved candidate search alerts.
 - **Admin**: More detailed moderation alerts, basic platform health summaries.
-- **Technical**: Robust user preference storage and retrieval, first iteration of intelligent grouping (e.g., daily digests), basic in-app notification UI (list view), foundational AI for notification timing (simple heuristics). Admin UI for basic feature toggles for major notification categories.
+- **Technical**: Robust user preference storage and retrieval, first iteration of intelligent grouping (e.g., daily digests), foundational AI for notification timing (simple heuristics). Admin UI for basic feature toggles for major notification categories.
 
-### 9.3. Phase 3: Advanced Intelligence & Automation
+### 9.3. Phase 3: Advanced Intelligence & Automation (Future)
 
 - **Focus**: Deep AI integration, proactive assistance, and comprehensive automation.
 - **Job Seeker**: AI Career Concierge notifications, predictive alerts.

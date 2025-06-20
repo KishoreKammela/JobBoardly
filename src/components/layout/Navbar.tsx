@@ -37,6 +37,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { NotificationBell } from './NotificationBell'; // Added
 
 interface NavLinkConfig {
   href: string;
@@ -446,159 +447,166 @@ export function Navbar() {
           {loading ? (
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative h-9 w-9 rounded-full"
-                  aria-label="User account menu"
-                >
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage
-                      src={
-                        user.avatarUrl ||
-                        `https://placehold.co/40x40.png?text=${getAvatarFallback()}`
-                      }
-                      alt={user.name || 'User'}
-                      data-ai-hint="user avatar"
-                    />
-                    <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-64" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {user.name}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user.email} ({getRoleDisplayName(user.role)})
-                    </p>
-                    {user.role === 'employer' &&
-                      company &&
-                      (company.status === 'suspended' ||
-                        company.status === 'deleted') && (
-                        <Badge variant="destructive" className="mt-1 text-xs">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Company {company.status}
-                        </Badge>
-                      )}
-                    {user.role === 'jobSeeker' &&
-                      user.status === 'suspended' && (
-                        <Badge variant="destructive" className="mt-1 text-xs">
-                          <Ban className="h-3 w-3 mr-1" />
-                          Account Suspended
-                        </Badge>
-                      )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+            <>
+              <NotificationBell />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full"
+                    aria-label="User account menu"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage
+                        src={
+                          user.avatarUrl ||
+                          `https://placehold.co/40x40.png?text=${getAvatarFallback()}`
+                        }
+                        alt={user.name || 'User'}
+                        data-ai-hint="user avatar"
+                      />
+                      <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {user.name}
+                      </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email} ({getRoleDisplayName(user.role)})
+                      </p>
+                      {user.role === 'employer' &&
+                        company &&
+                        (company.status === 'suspended' ||
+                          company.status === 'deleted') && (
+                          <Badge variant="destructive" className="mt-1 text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Company {company.status}
+                          </Badge>
+                        )}
+                      {user.role === 'jobSeeker' &&
+                        user.status === 'suspended' && (
+                          <Badge variant="destructive" className="mt-1 text-xs">
+                            <Ban className="h-3 w-3 mr-1" />
+                            Account Suspended
+                          </Badge>
+                        )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
 
-                {currentAccountDropdownLinks.map((item) => {
-                  let isLinkDisabled = false;
-                  if (user.role === 'employer') {
-                    isLinkDisabled =
-                      isCompanyActionDisabled &&
-                      (item.href.includes('/employer/ai-candidate-match') ||
-                        item.href.includes('/employer/profile/preview') ||
-                        (item.href === '/profile' &&
-                          user.isCompanyAdmin &&
-                          (company?.status === 'suspended' ||
-                            company?.status === 'deleted')));
-                  } else if (user.role === 'jobSeeker') {
-                    isLinkDisabled =
-                      isJobSeekerSuspended &&
-                      (item.href === '/ai-match' ||
-                        item.href === '/profile/preview');
-                  }
-
-                  return (
-                    <DropdownMenuItem
-                      key={item.href}
-                      asChild
-                      disabled={isLinkDisabled}
-                    >
-                      <Link
-                        href={item.href}
-                        className={`flex items-center gap-2 cursor-pointer w-full ${
-                          isLinkDisabled ? 'pointer-events-none opacity-50' : ''
-                        }`}
-                        onClick={(e) => {
-                          if (isLinkDisabled) e.preventDefault();
-                        }}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-
-                <div className="md:hidden">
-                  {renderedMainNavLinks.length > 0 && <DropdownMenuSeparator />}
-                  {renderedMainNavLinks.length > 0 && (
-                    <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
-                      Navigation
-                    </DropdownMenuLabel>
-                  )}
-                  {renderedMainNavLinks.map((link) => {
-                    const isDisabledByStatus =
-                      (link.employerOnly && isCompanyActionDisabled) ||
-                      (link.jobSeekerOnly &&
+                  {currentAccountDropdownLinks.map((item) => {
+                    let isLinkDisabled = false;
+                    if (user.role === 'employer') {
+                      isLinkDisabled =
+                        isCompanyActionDisabled &&
+                        (item.href.includes('/employer/ai-candidate-match') ||
+                          item.href.includes('/employer/profile/preview') ||
+                          (item.href === '/profile' &&
+                            user.isCompanyAdmin &&
+                            (company?.status === 'suspended' ||
+                              company?.status === 'deleted')));
+                    } else if (user.role === 'jobSeeker') {
+                      isLinkDisabled =
                         isJobSeekerSuspended &&
-                        !['/my-jobs', '/settings', '/profile'].includes(
-                          link.href
-                        ));
-
-                    const savedJobsCount =
-                      user?.role === 'jobSeeker' && link.href === '/my-jobs'
-                        ? user.savedJobIds?.length || 0
-                        : 0;
+                        (item.href === '/ai-match' ||
+                          item.href === '/profile/preview');
+                    }
 
                     return (
                       <DropdownMenuItem
-                        key={`dd-main-${link.href}`}
+                        key={item.href}
                         asChild
-                        disabled={isDisabledByStatus}
+                        disabled={isLinkDisabled}
                       >
                         <Link
-                          href={link.href}
+                          href={item.href}
                           className={`flex items-center gap-2 cursor-pointer w-full ${
-                            isDisabledByStatus
+                            isLinkDisabled
                               ? 'pointer-events-none opacity-50'
                               : ''
                           }`}
                           onClick={(e) => {
-                            if (isDisabledByStatus) e.preventDefault();
+                            if (isLinkDisabled) e.preventDefault();
                           }}
                         >
-                          {link.icon}
-                          <span>{link.label}</span>
-                          {savedJobsCount > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="h-5 px-1.5 text-xs ml-auto"
-                            >
-                              {savedJobsCount}
-                            </Badge>
-                          )}
+                          {item.icon}
+                          {item.label}
                         </Link>
                       </DropdownMenuItem>
                     );
                   })}
-                </div>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 w-full"
-                >
-                  <LogIn className="h-4 w-4 rotate-180" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <div className="md:hidden">
+                    {renderedMainNavLinks.length > 0 && (
+                      <DropdownMenuSeparator />
+                    )}
+                    {renderedMainNavLinks.length > 0 && (
+                      <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
+                        Navigation
+                      </DropdownMenuLabel>
+                    )}
+                    {renderedMainNavLinks.map((link) => {
+                      const isDisabledByStatus =
+                        (link.employerOnly && isCompanyActionDisabled) ||
+                        (link.jobSeekerOnly &&
+                          isJobSeekerSuspended &&
+                          !['/my-jobs', '/settings', '/profile'].includes(
+                            link.href
+                          ));
+
+                      const savedJobsCount =
+                        user?.role === 'jobSeeker' && link.href === '/my-jobs'
+                          ? user.savedJobIds?.length || 0
+                          : 0;
+
+                      return (
+                        <DropdownMenuItem
+                          key={`dd-main-${link.href}`}
+                          asChild
+                          disabled={isDisabledByStatus}
+                        >
+                          <Link
+                            href={link.href}
+                            className={`flex items-center gap-2 cursor-pointer w-full ${
+                              isDisabledByStatus
+                                ? 'pointer-events-none opacity-50'
+                                : ''
+                            }`}
+                            onClick={(e) => {
+                              if (isDisabledByStatus) e.preventDefault();
+                            }}
+                          >
+                            {link.icon}
+                            <span>{link.label}</span>
+                            {savedJobsCount > 0 && (
+                              <Badge
+                                variant="secondary"
+                                className="h-5 px-1.5 text-xs ml-auto"
+                              >
+                                {savedJobsCount}
+                              </Badge>
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </div>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 flex items-center gap-2 w-full"
+                  >
+                    <LogIn className="h-4 w-4 rotate-180" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           ) : (
             <>
               <div className="hidden md:flex items-center gap-2">

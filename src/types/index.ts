@@ -181,6 +181,27 @@ export interface Application {
   answers?: ApplicationAnswer[];
 }
 
+export type NotificationType =
+  | 'NEW_APPLICATION' // For Employer
+  | 'APPLICATION_STATUS_UPDATE' // For Job Seeker
+  | 'JOB_APPROVED' // For Employer
+  | 'JOB_REJECTED' // For Employer
+  | 'COMPANY_APPROVED' // For Employer (Company Admin)
+  | 'COMPANY_REJECTED' // For Employer (Company Admin)
+  | 'ADMIN_CONTENT_PENDING' // For Admin/Moderator
+  | 'GENERIC_INFO'; // For general platform announcements or messages
+
+export interface Notification {
+  id: string;
+  userId: string; // Recipient's UID
+  title: string;
+  message: string;
+  type: NotificationType;
+  link?: string; // Optional link to navigate to on click
+  isRead: boolean;
+  createdAt: Timestamp | Date | string;
+}
+
 export interface UserProfile {
   uid: string;
   role: UserRole;

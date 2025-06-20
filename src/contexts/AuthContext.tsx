@@ -6,6 +6,7 @@ import type {
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
+  Notification, // Added Notification type
 } from '@/types';
 import React, {
   createContext,
@@ -13,6 +14,7 @@ import React, {
   useState,
   type ReactNode,
   useEffect,
+  useCallback, // Added useCallback
 } from 'react';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -35,6 +37,12 @@ import {
   serverTimestamp,
   collection,
   Timestamp,
+  query, // Added query
+  where, // Added where
+  orderBy, // Added orderBy
+  limit, // Added limit
+  writeBatch, // Added writeBatch
+  getDocs, // Added getDocs
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
@@ -45,6 +53,11 @@ interface AuthContextType {
   company: Company | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
+  notifications: Notification[]; // Added
+  unreadNotificationCount: number; // Added
+  fetchNotifications: () => Promise<void>; // Added
+  markNotificationAsRead: (notificationId: string) => Promise<void>; // Added
+  markAllNotificationsAsRead: () => Promise<void>; // Added
   logout: () => Promise<void>;
   registerUser: (
     email: string,
@@ -110,6 +123,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [company, setCompany] = useState<Company | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    if (firebaseUser) {
+      try {
+        const notificationsRef = collection(db, 'notifications');
+        const q = query(
+          notificationsRef,
+          where('userId', '==', firebaseUser.uid),
+          orderBy('createdAt', 'desc'),
+          limit(20) // Fetch recent 20 notifications for display
+        );
+        const snapshot = await getDocs(q);
+        const fetchedNotifications = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt:
+              data.createdAt instanceof Timestamp
+                ? data.createdAt.toDate().toISOString()
+                : data.createdAt,
+          } as Notification;
+        });
+        setNotifications(fetchedNotifications);
+        setUnreadNotificationCount(
+          fetchedNotifications.filter((n) => !n.isRead).length
+        );
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        // Do not toast here to avoid spamming on every fetch attempt
+      }
+    } else {
+      setNotifications([]);
+      setUnreadNotificationCount(0);
+    }
+  }, [firebaseUser]);
 
   useEffect(() => {
     if (!auth) {
@@ -120,6 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setFirebaseUser(null);
       setCompany(null);
+      setNotifications([]);
+      setUnreadNotificationCount(0);
       return;
     }
 
@@ -143,6 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(null);
               setFirebaseUser(null);
               setCompany(null);
+              setNotifications([]);
+              setUnreadNotificationCount(0);
               setLoading(false);
               toast({
                 title: 'Account Deactivated',
@@ -290,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   : rawData.totalMonthsExperience,
             } as UserProfile;
             setUser(profileData);
+            await fetchNotifications(); // Fetch notifications after user is set
 
             if (profileData.theme) {
               applyTheme(profileData.theme);
@@ -336,6 +392,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             setUser(null);
             setCompany(null);
+            setNotifications([]);
+            setUnreadNotificationCount(0);
           }
         } catch (error: unknown) {
           console.error(
@@ -344,17 +402,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           );
           setUser(null);
           setCompany(null);
+          setNotifications([]);
+          setUnreadNotificationCount(0);
         }
       } else {
         setUser(null);
         setCompany(null);
+        setNotifications([]);
+        setUnreadNotificationCount(0);
         applyTheme('system');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [fetchNotifications]); // Added fetchNotifications dependency
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -483,7 +545,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ].includes(role)
     ) {
       // Admin-like roles specific fields (if any)
-      // For now, they'll have basic profile + role.
     }
 
     const finalProfileDataForFirestore: Record<string, unknown> = {};
@@ -615,6 +676,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } as UserProfile;
 
       setUser(fullProfile);
+      await fetchNotifications(); // Fetch notifications for new user
 
       if (fullProfile.theme) {
         applyTheme(fullProfile.theme);
@@ -670,6 +732,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+    // User profile and notifications will be fetched by onAuthStateChanged
     return userCredential.user;
   };
 
@@ -719,6 +782,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setFirebaseUser(null);
           setCompany(null);
+          setNotifications([]);
+          setUnreadNotificationCount(0);
           toast({
             title: 'Account Deactivated',
             description:
@@ -973,6 +1038,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         }
+        await fetchNotifications(); // Fetch notifications after user profile is loaded/updated
       }
       return fbUser;
     } catch (error: unknown) {
@@ -993,6 +1059,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setFirebaseUser(null);
       setCompany(null);
+      setNotifications([]);
+      setUnreadNotificationCount(0);
       applyTheme('system');
     } catch (error: unknown) {
       console.error('AuthContext: logout error', error);
@@ -1198,6 +1266,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const markNotificationAsRead = useCallback(
+    async (notificationId: string) => {
+      if (!firebaseUser) return;
+      const notificationRef = doc(db, 'notifications', notificationId);
+      try {
+        await updateDoc(notificationRef, { isRead: true });
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notificationId ? { ...n, isRead: true } : n
+          )
+        );
+        setUnreadNotificationCount((prev) => Math.max(0, prev - 1));
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+        toast({
+          title: 'Error',
+          description: 'Could not update notification status.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [firebaseUser]
+  );
+
+  const markAllNotificationsAsRead = useCallback(async () => {
+    if (!firebaseUser) return;
+    const unreadNotifications = notifications.filter((n) => !n.isRead);
+    if (unreadNotifications.length === 0) return;
+
+    const batch = writeBatch(db);
+    unreadNotifications.forEach((n) => {
+      const notificationRef = doc(db, 'notifications', n.id);
+      batch.update(notificationRef, { isRead: true });
+    });
+
+    try {
+      await batch.commit();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadNotificationCount(0);
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not update all notification statuses.',
+        variant: 'destructive',
+      });
+    }
+  }, [firebaseUser, notifications]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -1205,6 +1322,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         company,
         firebaseUser,
         loading,
+        notifications,
+        unreadNotificationCount,
+        fetchNotifications,
+        markNotificationAsRead,
+        markAllNotificationsAsRead,
         logout,
         registerUser,
         loginUser,
