@@ -107,7 +107,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
-      <head />
+      {/* Removed explicit <head /> tag. Next.js handles this. */}
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
           <JobSeekerActionsProvider>
