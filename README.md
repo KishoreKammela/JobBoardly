@@ -26,6 +26,28 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
   - **Staged Files Linting**: [lint-staged](https://github.com/okonet/lint-staged) - For running linters only on changed files.
   - **Code Quality Analysis**: [SonarQube](https://www.sonarqube.org/) (via `sonarqube-scanner`) - For continuous inspection of code quality.
 
+## Style Guidelines
+
+The visual identity of JobBoardly is designed to be modern, clear, and innovative.
+
+- **Colors (Theme defined in `src/app/globals.css` using HSL CSS variables):**
+  - **Light Mode:**
+    - **Primary Color**: Deep Sky Blue (`hsl(211 100% 50%)`) - Inspired by clarity and innovation in career tech.
+    - **Background Color**: Light Gray (`hsl(210 17% 98%)`) - Provides a clean and modern backdrop.
+    - **Accent Color**: Teal (`hsl(162 72% 46%)`) - Offers a vibrant contrast to highlight key interactive elements.
+  - **Dark Mode:**
+    - **Primary Color**: Deep Sky Blue (`hsl(211 100% 50%)`) - Retained for vibrancy.
+    - **Background Color**: Dark Blue-Gray (`hsl(220 14% 10%)`) - A deep, professional background.
+    - **Accent Color**: Teal (`hsl(162 72% 46%)`) - Retained for vibrant contrast.
+- **Typography:**
+  - **Body and Headline Font**: 'Inter' (variable `--font-inter`) - A grotesque-style sans-serif with a modern and neutral aesthetic, suitable for both headlines and body text. Implemented using `next/font`.
+- **Icons:**
+  - Utilizes `lucide-react` for clean, modern icons representing job categories, locations, actions, and other attributes.
+- **Layout:**
+  - Employs a grid-based layout for organizing job listings and other content, ensuring responsiveness across devices (primarily using Tailwind CSS utility classes).
+- **Animations & Transitions:**
+  - Uses subtle animations, like smooth transitions and loading indicators (e.g., ShadCN UI component animations, Tailwind CSS transitions), to enhance user experience without being distracting.
+
 ## Core Features Overview
 
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
@@ -49,7 +71,7 @@ A high-level overview of the project's directory structure:
 
 ```
 /
-├── public/                     # Static assets
+├── public/                     # Static assets (includes robots.txt)
 ├── src/
 │   ├── ai/                     # Genkit AI flows and configuration
 │   ├── app/                    # Next.js App Router
@@ -72,8 +94,12 @@ A high-level overview of the project's directory structure:
 │   │   ├── layout.tsx          # Root layout
 │   │   └── page.tsx            # Home page
 │   ├── components/             # Reusable UI components
+│   │   ├── admin/              # Admin-specific sub-components
 │   │   ├── employer/
+│   │   ├── job/
+│   │   ├── company/
 │   │   ├── layout/
+│   │   ├── profile/            # Profile form sub-components
 │   │   └── ui/                 # ShadCN UI components
 │   ├── contexts/               # React Context providers (AuthContext, JobSeekerActionsContext, EmployerActionsContext)
 │   ├── hooks/                  # Custom React hooks (useAuth, useDebounce, useToast, useIsMobile)
