@@ -21,14 +21,14 @@ export interface ScreeningQuestion {
   id: string;
   questionText: string;
   type: ScreeningQuestionType;
-  options?: string[]; // For multipleChoice and checkboxGroup
+  options?: string[];
   isRequired: boolean;
 }
 
 export interface ApplicationAnswer {
   questionId: string;
-  questionText: string; // Store question text for easier display
-  answer: string | boolean | string[]; // string for text, boolean for yesNo, string[] for checkboxGroup/multipleChoice
+  questionText: string;
+  answer: string | boolean | string[];
 }
 
 export interface Filters {
@@ -82,8 +82,8 @@ export interface ExperienceEntry {
   id: string;
   companyName: string;
   jobRole: string;
-  startDate?: string | undefined; // YYYY-MM-DD
-  endDate?: string | undefined; // YYYY-MM-DD
+  startDate?: string | undefined;
+  endDate?: string | undefined;
   currentlyWorking: boolean;
   description?: string;
   annualCTC?: number;
@@ -118,7 +118,13 @@ export interface Company {
   recruiterUids: string[];
   createdAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
-  status: 'pending' | 'approved' | 'rejected' | 'suspended' | 'deleted';
+  status:
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'suspended'
+    | 'deleted'
+    | 'active';
   moderationReason?: string;
   jobCount?: number;
   applicationCount?: number;
@@ -173,7 +179,7 @@ export interface Application {
   applicantAvatarUrl?: string;
   applicantHeadline?: string;
   companyId: string;
-  postedById: string; // UID of the employer who posted the job
+  postedById: string;
   status: ApplicationStatus;
   appliedAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
@@ -182,22 +188,22 @@ export interface Application {
 }
 
 export type NotificationType =
-  | 'NEW_APPLICATION' // For Employer
-  | 'APPLICATION_STATUS_UPDATE' // For Job Seeker
-  | 'JOB_APPROVED' // For Employer
-  | 'JOB_REJECTED' // For Employer
-  | 'COMPANY_APPROVED' // For Employer (Company Admin)
-  | 'COMPANY_REJECTED' // For Employer (Company Admin)
-  | 'ADMIN_CONTENT_PENDING' // For Admin/Moderator
-  | 'GENERIC_INFO'; // For general platform announcements or messages
+  | 'NEW_APPLICATION'
+  | 'APPLICATION_STATUS_UPDATE'
+  | 'JOB_APPROVED'
+  | 'JOB_REJECTED'
+  | 'COMPANY_APPROVED'
+  | 'COMPANY_REJECTED'
+  | 'ADMIN_CONTENT_PENDING'
+  | 'GENERIC_INFO';
 
 export interface Notification {
   id: string;
-  userId: string; // Recipient's UID
+  userId: string;
   title: string;
   message: string;
   type: NotificationType;
-  link?: string; // Optional link to navigate to on click
+  link?: string;
   isRead: boolean;
   createdAt: Timestamp | Date | string;
 }
@@ -210,7 +216,7 @@ export interface UserProfile {
   avatarUrl?: string;
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
-  status?: 'active' | 'suspended' | 'deleted'; // User status, can include 'deleted'
+  status?: 'active' | 'suspended' | 'deleted';
   theme?: 'light' | 'dark' | 'system';
   jobBoardDisplay?: 'list' | 'grid';
   itemsPerPage?: 10 | 20 | 50;
@@ -225,7 +231,7 @@ export interface UserProfile {
   parsedResumeText?: string;
 
   gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
-  dateOfBirth?: string; // YYYY-MM-DD
+  dateOfBirth?: string;
   currentCTCValue?: number;
   currentCTCConfidential?: boolean;
   expectedCTCValue?: number;
@@ -249,32 +255,29 @@ export interface UserProfile {
   resumeUrl?: string;
   resumeFileName?: string;
 
-  appliedJobIds?: string[]; // IDs of jobs the user has applied to
-  savedJobIds?: string[]; // IDs of jobs the user has saved
+  appliedJobIds?: string[];
+  savedJobIds?: string[];
   savedSearches?: SavedSearch[];
 
-  savedCandidateSearches?: SavedCandidateSearch[]; // For employers
+  savedCandidateSearches?: SavedCandidateSearch[];
 
-  companyId?: string; // For employers
-  isCompanyAdmin?: boolean; // For employers
+  companyId?: string;
+  isCompanyAdmin?: boolean;
+  companyRecruiters?: UserProfile[];
 
-  // For Admin Dashboard display
-  jobsAppliedCount?: number; // Denormalized for JobSeeker table
+  jobsAppliedCount?: number;
   lastActive?: Timestamp | Date | string;
-
-  // Denormalized, primarily for employer search for candidates
-  desiredSalary?: number; // Used to store expectedCTCValue if set, for filtering.
+  desiredSalary?: number;
 }
 
-// For AI Parsing outputs - more flexible before strict Job/UserProfile mapping
 export interface ParsedResumeData {
   name?: string;
   email?: string;
   mobileNumber?: string;
   headline?: string;
   skills?: string[];
-  experience?: string; // Detailed text summary
-  education?: string; // Detailed text summary
+  experience?: string;
+  education?: string;
   portfolioUrl?: string;
   linkedinUrl?: string;
   totalYearsExperience?: number;
@@ -288,11 +291,21 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
-  // companyName?: string; // Potentially extractable
+}
+
+export interface UserSettings {
+  jobBoardDisplay: 'list' | 'grid';
+  itemsPerPage: 10 | 20 | 50;
+  jobAlerts: {
+    newJobsMatchingProfile: boolean;
+    savedSearchAlerts: boolean;
+    applicationStatusUpdates: boolean;
+  };
+  searchHistory: string[];
 }
 
 export interface LegalDocument {
-  id: string; // e.g., 'privacyPolicy', 'termsOfService'
-  content: string; // Markdown content
+  id: string;
+  content: string;
   lastUpdated: Timestamp | Date | string;
 }

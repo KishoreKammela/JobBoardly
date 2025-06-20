@@ -28,7 +28,6 @@ const PrintableProfileComponent = React.forwardRef<
 >(({ user }, ref) => {
   if (!user) {
     return (
-      // Note: Removed inline styles, relying on classes for print CSS
       <div ref={ref} className="printable-profile-content-wrapper">
         <p>No user data provided for printing.</p>
       </div>
@@ -59,10 +58,6 @@ const PrintableProfileComponent = React.forwardRef<
       (edu) =>
         edu.description && edu.description.length > MAX_EDUCATION_DESC_LENGTH
     );
-
-  // For print styling, ensure you have corresponding CSS rules
-  // in your globals.css under a @media print query.
-  // e.g., @media print { .printable-profile-h1 { font-size: 18pt !important; } /* ... */ }
 
   return (
     <div ref={ref} className="printable-profile-content-wrapper">

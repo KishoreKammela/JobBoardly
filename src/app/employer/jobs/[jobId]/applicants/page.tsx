@@ -33,7 +33,6 @@ export default function JobApplicantsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Title and Separator might be part of JobApplicantsDisplay or handled there based on job status */}
       <JobApplicantsDisplay jobId={jobId} />
     </div>
   );

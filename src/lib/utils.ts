@@ -14,15 +14,12 @@ export function formatCurrencyINR(amount: number | undefined | null): string {
   let formattedAmount: string;
 
   if (absAmount >= 10000000) {
-    // Crores (1 Cr = 100 Lakhs)
     const crores = numAmount / 10000000;
     formattedAmount = parseFloat(crores.toFixed(2)).toString() + ' Cr';
   } else if (absAmount >= 100000) {
-    // Lakhs
     const lakhs = numAmount / 100000;
     formattedAmount = parseFloat(lakhs.toFixed(2)).toString() + 'L';
   } else if (absAmount >= 1000) {
-    // Thousands
     const thousands = numAmount / 1000;
     formattedAmount = parseFloat(thousands.toFixed(1)).toString() + 'k';
   } else {
@@ -43,27 +40,22 @@ export function checkPasswordStrength(password: string): PasswordStrength {
     {
       text: 'At least 8 characters',
       met: password.length >= 8,
-      // regex: /.{8,}/, // unused
     },
     {
       text: 'At least one uppercase letter',
       met: /[A-Z]/.test(password),
-      // regex: /[A-Z]/, // unused
     },
     {
       text: 'At least one lowercase letter',
       met: /[a-z]/.test(password),
-      // regex: /[a-z]/, // unused
     },
     {
       text: 'At least one number',
       met: /[0-9]/.test(password),
-      // regex: /[0-9]/, // unused
     },
     {
       text: 'At least one special character (e.g., !@#$%^&*)',
       met: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      // regex: /[!@#$%^&*(),.?":{}|<>]/, // unused
     },
   ];
 

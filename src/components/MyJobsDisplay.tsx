@@ -122,7 +122,7 @@ export function MyJobsDisplay() {
     };
 
     fetchJobsData();
-  }, [user, userApplications]); // Depend on userApplications to refetch if they change
+  }, [user, userApplications]);
 
   useEffect(() => {
     if (!user || !allFetchedJobsDetails.size) {
@@ -191,7 +191,6 @@ export function MyJobsDisplay() {
         title: 'Application Withdrawn',
         description: `Your application for ${jobToWithdraw.title} has been withdrawn.`,
       });
-      // userApplications in context will update, triggering re-filter
     } catch (err) {
       toast({
         title: 'Error',

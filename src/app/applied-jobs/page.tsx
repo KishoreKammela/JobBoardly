@@ -1,7 +1,4 @@
 'use client';
-// This file is deprecated and its functionality is covered by src/app/my-jobs/page.tsx
-// It is recommended to delete this file.
-// For safety, if accessed, it will redirect.
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -10,7 +7,7 @@ export default function DeprecatedAppliedJobsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/my-jobs'); // Redirect to the new consolidated page
+    router.replace('/my-jobs');
   }, [router]);
 
   return (

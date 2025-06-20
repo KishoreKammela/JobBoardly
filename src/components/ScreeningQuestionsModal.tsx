@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea'; // Check if needed for text type, input might be enough
+import { Textarea } from '@/components/ui/textarea';
 import type { ScreeningQuestion, ApplicationAnswer } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -38,12 +38,11 @@ export function ScreeningQuestionsModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Initialize answers state when questions change or modal opens
     if (isOpen) {
       const initialAnswers: Record<string, string | boolean | string[]> = {};
       questions.forEach((q) => {
         if (q.type === 'yesNo') {
-          initialAnswers[q.id] = ''; // Unanswered
+          initialAnswers[q.id] = '';
         } else if (q.type === 'checkboxGroup' || q.type === 'multipleChoice') {
           initialAnswers[q.id] = [];
         } else {
@@ -86,11 +85,9 @@ export function ScreeningQuestionsModal({
           typeof answer !== 'boolean' &&
           answer === ''
         ) {
-          // Check for initial empty string too
           newErrors[q.id] = 'Please select Yes or No.';
           isValid = false;
         }
-        // TODO: Add validation for multipleChoice and checkboxGroup when implemented
       }
     });
     setErrors(newErrors);
@@ -111,11 +108,10 @@ export function ScreeningQuestionsModal({
           ? false
           : q.type === 'checkboxGroup' || q.type === 'multipleChoice'
             ? []
-            : ''), // Ensure a default if somehow missing
+            : ''),
     }));
     await onSubmit(formattedAnswers);
     setIsSubmitting(false);
-    // onClose will be called by the parent component after successful submission in handleApply
   };
 
   if (!isOpen) return null;
@@ -172,7 +168,6 @@ export function ScreeningQuestionsModal({
                   </div>
                 </RadioGroup>
               )}
-              {/* TODO: Implement UI for multipleChoice and checkboxGroup types */}
               {(question.type === 'multipleChoice' ||
                 question.type === 'checkboxGroup') && (
                 <div className="text-sm text-muted-foreground p-2 border rounded-md">

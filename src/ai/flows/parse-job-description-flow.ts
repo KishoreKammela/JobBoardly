@@ -22,7 +22,6 @@ export type ParseJobDescriptionInput = z.infer<
   typeof ParseJobDescriptionInputSchema
 >;
 
-// Define Zod schema based on ParsedJobData from types.ts
 const ParseJobDescriptionOutputSchema = z
   .object({
     title: z.string().optional().describe('The job title.'),
@@ -48,7 +47,6 @@ const ParseJobDescriptionOutputSchema = z
       .describe('The type of employment (e.g., Full-time, Contract).'),
     salaryMin: z.number().optional().describe('Minimum salary, if specified.'),
     salaryMax: z.number().optional().describe('Maximum salary, if specified.'),
-    // companyName: z.string().optional().describe('The name of the company hiring (if discernible and not already known).'),
   })
   .describe(
     'Structured information extracted from the job description document.'
@@ -101,14 +99,14 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
     let mimeType = header.match(/:(.*?);/)?.[1];
 
     if (mimeType) {
-      mimeType = mimeType.trim(); // Trim whitespace from extracted MIME type
+      mimeType = mimeType.trim();
     }
 
     const unsupportedMediaMimeTypes = [
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-      'application/msword', // .doc
-      'application/pdf', // .pdf
-      'application/vnd.oasis.opendocument.text', // .odt
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'application/pdf',
+      'application/vnd.oasis.opendocument.text',
     ];
 
     if (mimeType && unsupportedMediaMimeTypes.includes(mimeType)) {

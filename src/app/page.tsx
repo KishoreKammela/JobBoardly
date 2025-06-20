@@ -7,13 +7,13 @@ import {
   Users,
   Briefcase,
   FileText,
-  User, // Added User for an icon in a list
-  FilePlus, // Added FilePlus for an icon in a list
-  Brain, // Added Brain for an icon in a list
+  User,
+  FilePlus,
+  Brain,
 } from 'lucide-react';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { Badge } from '@/components/ui/badge'; // Added missing import
+import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = {
   title: 'JobBoardly - AI-Powered Job Search & Hiring Platform',

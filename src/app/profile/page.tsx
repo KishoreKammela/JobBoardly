@@ -30,8 +30,6 @@ export default function ProfilePage() {
     if (!user) {
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-    // If user status is 'deleted', AuthContext should handle logout.
-    // This page will only render if user is not 'deleted'.
   }, [user, loading, router, pathname]);
 
   if (loading || !user) {

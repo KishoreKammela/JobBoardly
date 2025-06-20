@@ -86,7 +86,7 @@ const defaultModalState: ModalState = {
 };
 
 export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { updateApplicationStatus } = useEmployerActions();
   const { toast } = useToast();
   const [job, setJob] = useState<Job | null | undefined>(undefined);
@@ -114,6 +114,18 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
 
       if (!user || user.role !== 'employer' || !user.uid) {
         setError('You must be logged in as an employer to view applicants.');
+        setIsLoading(false);
+        setJob(null);
+        return;
+      }
+
+      if (
+        company &&
+        (company.status === 'suspended' || company.status === 'deleted')
+      ) {
+        setError(
+          `Your company account is ${company.status}. Applicant management is disabled.`
+        );
         setIsLoading(false);
         setJob(null);
         return;
@@ -200,7 +212,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
       }
     };
     fetchJobAndApplicants();
-  }, [jobId, user]);
+  }, [jobId, user, company]);
 
   useEffect(() => {
     if (statusFilter === 'All') {
@@ -373,7 +385,6 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
   }
 
   if (!job) {
-    // This case means useEffect hasn't set the job yet, or it's still in initial 'undefined' state
     return (
       <div className="flex justify-center items-center py-10">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -381,6 +392,11 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
       </div>
     );
   }
+
+  const isManagementDisabled =
+    job.status === 'suspended' ||
+    company?.status === 'suspended' ||
+    company?.status === 'deleted';
 
   return (
     <>
@@ -392,19 +408,22 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
         <p className="text-sm text-muted-foreground mb-3">
           Company: {job.company} - Location: {job.location}
         </p>
-        {job.status === 'suspended' && (
+        {isManagementDisabled && (
           <Alert variant="destructive" className="mb-6">
             <Ban className="h-4 w-4" />
-            <AlertTitle>Job Suspended</AlertTitle>
+            <AlertTitle>Applicant Management Disabled</AlertTitle>
             <AlertDescription>
-              This job is currently suspended by an administrator. Applicant
-              management is disabled.
+              This job or your company account is currently{' '}
+              {job.status === 'suspended'
+                ? 'suspended by an admin'
+                : `in '${company?.status}' status`}
+              . Applicant management actions are disabled.
             </AlertDescription>
           </Alert>
         )}
       </div>
       <Separator className="my-6" />
-      {job.status !== 'suspended' && (
+      {!isManagementDisabled && (
         <div>
           <div className="mb-6 p-4 border rounded-md bg-muted/30">
             <Label className="text-md font-semibold flex items-center gap-2 mb-3">

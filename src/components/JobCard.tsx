@@ -32,9 +32,9 @@ import type { Timestamp } from 'firebase/firestore';
 
 interface JobCardProps {
   job: Job;
-  applicationStatus?: ApplicationStatus | null; // Explicitly pass status
+  applicationStatus?: ApplicationStatus | null;
   isSavedProp?: boolean;
-  onWithdraw?: (jobId: string) => void; // Callback for withdraw action
+  onWithdraw?: (jobId: string) => void;
 }
 
 export function JobCard({
@@ -59,7 +59,6 @@ export function JobCard({
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
-    // Sync saved state if isSavedProp is not initially provided or user changes
     if (isSavedProp === undefined && user && user.role === 'jobSeeker') {
       setSaved(checkIsJobSavedContext(job.id));
     } else if (isSavedProp !== undefined) {
@@ -269,7 +268,6 @@ export function JobCard({
             )}
           </div>
         )}
-        {/* For logged-out users, show Apply Now button linking to job detail page */}
         {!user && (
           <Button
             size="sm"

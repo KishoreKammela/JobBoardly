@@ -26,7 +26,7 @@ import {
   query as firestoreQuery,
   where,
   getDocs,
-  updateDoc, // Added missing import
+  updateDoc,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/hooks/use-toast';
@@ -42,7 +42,7 @@ interface JobSeekerActionsContextType {
   isJobSaved: (jobId: string) => boolean;
   saveSearch: (searchName: string, filters: Filters) => Promise<void>;
   deleteSearch: (searchId: string) => Promise<void>;
-  userApplications: Map<string, Application>; // Map<jobId, Application>
+  userApplications: Map<string, Application>;
 }
 
 const JobSeekerActionsContext = createContext<
@@ -62,7 +62,7 @@ export function JobSeekerActionsProvider({
 
   useEffect(() => {
     const fetchUserApplications = async () => {
-      if (user && user.role === 'jobSeeker' && user.uid) {
+      if (user && user.role === 'jobSeeker' && user.uid && db) {
         setIsAppsLoading(true);
         try {
           const appsQuery = firestoreQuery(
@@ -81,7 +81,6 @@ export function JobSeekerActionsProvider({
           setUserApplications(appsMap);
         } catch (error) {
           console.error('Failed to fetch user applications:', error);
-          // Optionally show a toast or handle error
         } finally {
           setIsAppsLoading(false);
         }
@@ -95,13 +94,15 @@ export function JobSeekerActionsProvider({
 
   const applyForJob = useCallback(
     async (job: Job, answers?: ApplicationAnswer[]) => {
-      if (!user || !user.uid || user.role !== 'jobSeeker') {
+      if (!user || !user.uid || user.role !== 'jobSeeker' || !db) {
         toast({
           title: 'Login Required',
           description: 'Please log in as a job seeker to apply.',
           variant: 'destructive',
         });
-        throw new Error('User not logged in as job seeker.');
+        throw new Error(
+          'User not logged in as job seeker or DB not available.'
+        );
       }
       if (user.status === 'suspended') {
         toast({
@@ -113,7 +114,6 @@ export function JobSeekerActionsProvider({
         throw new Error('Account suspended.');
       }
 
-      // Check if an application already exists for this job by this user
       const existingApplication = userApplications.get(job.id);
       if (existingApplication) {
         toast({
@@ -148,20 +148,19 @@ export function JobSeekerActionsProvider({
         const fullNewApplication: Application = {
           id: applicationRef.id,
           ...newApplicationData,
-          appliedAt: new Date().toISOString(), // Approximate client time for immediate UI update
+          appliedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
         setUserApplications((prev) =>
           new Map(prev).set(job.id, fullNewApplication)
         );
 
-        // Also update appliedJobIds in user profile (optional, as applications collection is source of truth)
         await updateUserProfile({
           appliedJobIds: arrayUnion(job.id) as unknown as string[],
         });
       } catch (error: unknown) {
         console.error('JobSeekerActionsContext: applyForJob error', error);
-        throw error; // Re-throw for the component to handle
+        throw error;
       }
     },
     [user, updateUserProfile, userApplications]
@@ -169,7 +168,7 @@ export function JobSeekerActionsProvider({
 
   const getApplicationStatus = useCallback(
     (jobId: string): string | null => {
-      if (isAppsLoading) return 'Loading...'; // Or some other indicator
+      if (isAppsLoading) return 'Loading...';
       return userApplications.get(jobId)?.status || null;
     },
     [userApplications, isAppsLoading]
@@ -177,7 +176,7 @@ export function JobSeekerActionsProvider({
 
   const hasAppliedForJob = useCallback(
     (jobId: string): boolean => {
-      if (isAppsLoading) return false; // Or handle loading state appropriately
+      if (isAppsLoading) return false;
       return userApplications.has(jobId);
     },
     [userApplications, isAppsLoading]
@@ -185,13 +184,14 @@ export function JobSeekerActionsProvider({
 
   const withdrawApplication = useCallback(
     async (jobIdToWithdraw: string) => {
-      if (!user || user.role !== 'jobSeeker' || !user.uid) {
+      if (!user || user.role !== 'jobSeeker' || !user.uid || !db) {
         toast({
           title: 'Error',
-          description: 'You must be logged in as a job seeker.',
+          description:
+            'You must be logged in as a job seeker, or DB is not available.',
           variant: 'destructive',
         });
-        throw new Error('Not logged in as job seeker');
+        throw new Error('Not logged in as job seeker or DB not available');
       }
       if (user.status === 'suspended') {
         toast({
@@ -231,7 +231,6 @@ export function JobSeekerActionsProvider({
           status: 'Withdrawn by Applicant',
           updatedAt: serverTimestamp(),
         });
-        // Update local state
         const updatedApp = {
           ...application,
           status: 'Withdrawn by Applicant',
@@ -274,7 +273,6 @@ export function JobSeekerActionsProvider({
           throw error;
         }
       } else {
-        console.warn('User must be a logged-in job seeker to save a job.');
         toast({
           title: 'Login Required',
           description: 'Please log in as a job seeker to save jobs.',
@@ -306,7 +304,6 @@ export function JobSeekerActionsProvider({
           throw error;
         }
       } else {
-        console.warn('User must be a logged-in job seeker to unsave a job.');
         toast({
           title: 'Login Required',
           description: 'Please log in as a job seeker to unsave jobs.',

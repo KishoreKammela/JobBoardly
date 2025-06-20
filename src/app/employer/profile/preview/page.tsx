@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Company, UserProfile } from '@/types';
+import type { Company, UserProfile, Job } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -38,7 +38,6 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
-import type { Job } from '@/types'; // Assuming Job type is in types
 import { useRouter } from 'next/navigation';
 
 export default function CompanyProfilePreviewPage() {
@@ -73,7 +72,6 @@ export default function CompanyProfilePreviewPage() {
         if (authCompany && authCompany.id === companyId) {
           companyToDisplay = authCompany;
         } else {
-          // Fallback if authCompany is not yet populated or mismatch
           const companyDocRef = doc(db, 'companies', companyId);
           const companyDocSnap = await getDoc(companyDocRef);
           if (companyDocSnap.exists()) {
@@ -100,7 +98,6 @@ export default function CompanyProfilePreviewPage() {
         }
         setCompanyDetails(companyToDisplay);
 
-        // Fetch Recruiters (if any)
         if (
           companyToDisplay.recruiterUids &&
           companyToDisplay.recruiterUids.length > 0
@@ -133,7 +130,6 @@ export default function CompanyProfilePreviewPage() {
           setRecruiters(fetchedRecruiters);
         }
 
-        // Fetch Approved Jobs for this company
         const jobsQuery = query(
           collection(db, 'jobs'),
           where('companyId', '==', companyId),
@@ -213,7 +209,7 @@ export default function CompanyProfilePreviewPage() {
     );
   }
 
-  const company = companyDetails; // Alias for convenience
+  const company = companyDetails;
 
   return (
     <div className="container mx-auto py-8">

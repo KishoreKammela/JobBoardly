@@ -13,12 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import {
   MapPin,
   Briefcase,
-  /*ExternalLink,*/ Mail,
+  Mail,
   Link as LinkIcon,
   CalendarDays,
   DollarSign,
   Phone,
-} from 'lucide-react'; // Removed ExternalLink
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
@@ -39,7 +39,7 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
           <Avatar className="h-16 w-16 border-2 border-primary/20">
             <AvatarImage
               src={candidate.avatarUrl || `https://placehold.co/100x100.png`}
-              alt={candidate.name}
+              alt={candidate.name || 'Candidate'}
               data-ai-hint="candidate avatar"
             />
             <AvatarFallback>{getAvatarFallback()}</AvatarFallback>
@@ -77,20 +77,20 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
             {candidate.mobileNumber}
           </p>
         )}
-        {candidate.desiredSalary !== undefined && (
+        {candidate.expectedCTCValue !== undefined && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <DollarSign className="h-4 w-4 text-primary/80" /> Desired Salary:{' '}
-            {formatCurrencyINR(candidate.desiredSalary)}
+            <DollarSign className="h-4 w-4 text-primary/80" /> Expected CTC:{' '}
+            {formatCurrencyINR(candidate.expectedCTCValue)}
+            {candidate.expectedCTCNegotiable ? ' (Negotiable)' : ''}
           </p>
         )}
-        {candidate.experience && (
+        {candidate.parsedResumeText && (
           <div className="mt-2">
             <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-1">
               Summary
             </h4>
             <p className="text-sm text-foreground/90 line-clamp-3">
-              {candidate.experience.split('\\n')[0] ||
-                candidate.experience.substring(0, 150)}
+              {candidate.parsedResumeText}
             </p>
           </div>
         )}

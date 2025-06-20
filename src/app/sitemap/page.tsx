@@ -14,10 +14,7 @@ import {
   Building,
   Users,
   FileText,
-  KeyRound,
   ShieldCheck,
-  Lock,
-  FileSignature,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -80,10 +77,7 @@ const sitemapLinks = [
   {
     category: 'Platform Staff',
     icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-    links: [
-      { href: '/auth/admin/login', label: 'Admin Login' },
-      // Add '/admin' if you want it listed, though it requires login
-    ],
+    links: [{ href: '/auth/admin/login', label: 'Admin Login' }],
   },
   {
     category: 'User Account',

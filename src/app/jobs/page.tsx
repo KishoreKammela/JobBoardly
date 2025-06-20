@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { JobCard } from '@/components/JobCard';
 import { FilterSidebar } from '@/components/FilterSidebar';
@@ -93,7 +93,7 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData); // Initialize with all jobs
+        setFilteredJobs(jobsData);
       } catch (e: unknown) {
         console.error('Error fetching jobs:', e);
         setError(

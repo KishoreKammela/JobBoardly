@@ -6,7 +6,7 @@ import type {
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
-  Notification, // Added Notification type
+  Notification,
 } from '@/types';
 import React, {
   createContext,
@@ -14,7 +14,7 @@ import React, {
   useState,
   type ReactNode,
   useEffect,
-  useCallback, // Added useCallback
+  useCallback,
 } from 'react';
 import { auth, db } from '@/lib/firebase';
 import {
@@ -37,12 +37,12 @@ import {
   serverTimestamp,
   collection,
   Timestamp,
-  query, // Added query
-  where, // Added where
-  orderBy, // Added orderBy
-  limit, // Added limit
-  writeBatch, // Added writeBatch
-  getDocs, // Added getDocs
+  query,
+  where,
+  orderBy,
+  limit,
+  writeBatch,
+  getDocs,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
@@ -53,11 +53,11 @@ interface AuthContextType {
   company: Company | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
-  notifications: Notification[]; // Added
-  unreadNotificationCount: number; // Added
-  fetchNotifications: () => Promise<void>; // Added
-  markNotificationAsRead: (notificationId: string) => Promise<void>; // Added
-  markAllNotificationsAsRead: () => Promise<void>; // Added
+  notifications: Notification[];
+  unreadNotificationCount: number;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
   logout: () => Promise<void>;
   registerUser: (
     email: string,
@@ -127,14 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
-    if (firebaseUser) {
+    if (firebaseUser && db) {
       try {
         const notificationsRef = collection(db, 'notifications');
         const q = query(
           notificationsRef,
           where('userId', '==', firebaseUser.uid),
           orderBy('createdAt', 'desc'),
-          limit(20) // Fetch recent 20 notifications for display
+          limit(20)
         );
         const snapshot = await getDocs(q);
         const fetchedNotifications = snapshot.docs.map((docSnap) => {
@@ -154,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       } catch (error) {
         console.error('Error fetching notifications:', error);
-        // Do not toast here to avoid spamming on every fetch attempt
       }
     } else {
       setNotifications([]);
@@ -163,9 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [firebaseUser]);
 
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !db) {
       console.warn(
-        'AuthContext: Firebase auth instance is not available. Firebase might not be configured correctly (e.g., missing environment variables). Skipping auth state listener.'
+        'AuthContext: Firebase auth or db instance is not available. Skipping auth state listener.'
       );
       setLoading(false);
       setUser(null);
@@ -345,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   : rawData.totalMonthsExperience,
             } as UserProfile;
             setUser(profileData);
-            await fetchNotifications(); // Fetch notifications after user is set
+            await fetchNotifications();
 
             if (profileData.theme) {
               applyTheme(profileData.theme);
@@ -353,13 +352,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (
               (profileData.role === 'employer' ||
-                profileData.role === 'admin' ||
-                profileData.role === 'moderator' ||
-                profileData.role === 'superAdmin' ||
-                profileData.role === 'supportAgent' ||
-                profileData.role === 'dataAnalyst' ||
-                profileData.role === 'complianceOfficer' ||
-                profileData.role === 'systemMonitor') &&
+                ADMIN_LIKE_ROLES.includes(profileData.role)) &&
               profileData.companyId
             ) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
@@ -416,7 +409,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [fetchNotifications]); // Added fetchNotifications dependency
+  }, [fetchNotifications]);
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -449,6 +442,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyNameForNewCompany?: string,
     existingCompanyId?: string
   ): Promise<UserProfile> => {
+    if (!db) throw new Error("Firestore 'db' instance is not available.");
     const userDocRef = doc(db, 'users', fbUser.uid);
     let userCompanyId = existingCompanyId;
     let userIsCompanyAdmin = false;
@@ -472,18 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let defaultName = 'New User';
     if (role === 'employer') defaultName = 'Recruiter';
-    else if (
-      [
-        'admin',
-        'superAdmin',
-        'moderator',
-        'supportAgent',
-        'dataAnalyst',
-        'complianceOfficer',
-        'systemMonitor',
-      ].includes(role)
-    )
-      defaultName = 'Platform Staff';
+    else if (ADMIN_LIKE_ROLES.includes(role)) defaultName = 'Platform Staff';
 
     const userProfileData: Partial<UserProfile> = {
       uid: fbUser.uid,
@@ -533,18 +516,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.jobSearchStatus = 'activelyLooking';
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
-    } else if (
-      [
-        'admin',
-        'superAdmin',
-        'moderator',
-        'supportAgent',
-        'dataAnalyst',
-        'complianceOfficer',
-        'systemMonitor',
-      ].includes(role)
-    ) {
-      // Admin-like roles specific fields (if any)
     }
 
     const finalProfileDataForFirestore: Record<string, unknown> = {};
@@ -579,16 +550,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           finalProfileDataForFirestore[key] = null;
         }
         if (
-          (role === 'employer' ||
-            [
-              'admin',
-              'superAdmin',
-              'moderator',
-              'supportAgent',
-              'dataAnalyst',
-              'complianceOfficer',
-              'systemMonitor',
-            ].includes(role)) &&
+          (role === 'employer' || ADMIN_LIKE_ROLES.includes(role)) &&
           typedKey === 'avatarUrl'
         ) {
           finalProfileDataForFirestore[key] = null;
@@ -676,7 +638,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } as UserProfile;
 
       setUser(fullProfile);
-      await fetchNotifications(); // Fetch notifications for new user
+      await fetchNotifications();
 
       if (fullProfile.theme) {
         applyTheme(fullProfile.theme);
@@ -732,7 +694,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    // User profile and notifications will be fetched by onAuthStateChanged
     return userCredential.user;
   };
 
@@ -741,9 +702,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole,
     companyName?: string
   ): Promise<FirebaseUser> => {
-    if (!auth) {
+    if (!auth || !db) {
       throw new Error(
-        'Firebase Authentication is not configured. Please check your environment variables.'
+        'Firebase Authentication or Firestore is not configured. Please check your environment variables.'
       );
     }
     try {
@@ -755,17 +716,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!userDocSnap.exists()) {
         let defaultName = 'New User';
         if (role === 'employer') defaultName = 'Recruiter';
-        else if (
-          [
-            'admin',
-            'superAdmin',
-            'moderator',
-            'supportAgent',
-            'dataAnalyst',
-            'complianceOfficer',
-            'systemMonitor',
-          ].includes(role)
-        )
+        else if (ADMIN_LIKE_ROLES.includes(role))
           defaultName = 'Platform Staff';
 
         await createUserProfileInFirestore(
@@ -1004,15 +955,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (existingProfile.theme) applyTheme(existingProfile.theme);
           if (
             (existingProfile.role === 'employer' ||
-              [
-                'admin',
-                'moderator',
-                'superAdmin',
-                'supportAgent',
-                'dataAnalyst',
-                'complianceOfficer',
-                'systemMonitor',
-              ].includes(existingProfile.role)) &&
+              ADMIN_LIKE_ROLES.includes(existingProfile.role)) &&
             existingProfile.companyId
           ) {
             const companyDocRef = doc(
@@ -1038,7 +981,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         }
-        await fetchNotifications(); // Fetch notifications after user profile is loaded/updated
+        await fetchNotifications();
       }
       return fbUser;
     } catch (error: unknown) {
@@ -1048,14 +991,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    if (!auth || !db) {
+      console.warn('Firebase auth or db not available for logout.');
+      setUser(null);
+      setFirebaseUser(null);
+      setCompany(null);
+      setNotifications([]);
+      setUnreadNotificationCount(0);
+      applyTheme('system');
+      return;
+    }
     try {
       if (user && user.uid) {
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, { lastActive: serverTimestamp() });
       }
-      if (auth) {
-        await signOut(auth);
-      }
+      await signOut(auth);
       setUser(null);
       setFirebaseUser(null);
       setCompany(null);
@@ -1094,9 +1045,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserProfile = async (updatedData: Partial<UserProfile>) => {
-    if (!user || !user.uid) {
-      console.error('AuthContext: User not logged in to update profile.');
-      throw new Error('User not logged in to update profile.');
+    if (!user || !user.uid || !db) {
+      console.error(
+        'AuthContext: User not logged in or db not available to update profile.'
+      );
+      throw new Error(
+        'User not logged in or db not available to update profile.'
+      );
     }
 
     const userDocRef = doc(db, 'users', user.uid);
@@ -1219,6 +1174,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyId: string,
     updatedData: Partial<Company>
   ) => {
+    if (!db) {
+      console.error(
+        'AuthContext: Firestore db instance not available for company update.'
+      );
+      throw new Error('Firestore db instance not available.');
+    }
     if (
       !user ||
       user.role !== 'employer' ||
@@ -1268,7 +1229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const markNotificationAsRead = useCallback(
     async (notificationId: string) => {
-      if (!firebaseUser) return;
+      if (!firebaseUser || !db) return;
       const notificationRef = doc(db, 'notifications', notificationId);
       try {
         await updateDoc(notificationRef, { isRead: true });
@@ -1291,7 +1252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const markAllNotificationsAsRead = useCallback(async () => {
-    if (!firebaseUser) return;
+    if (!firebaseUser || !db) return;
     const unreadNotifications = notifications.filter((n) => !n.isRead);
     if (unreadNotifications.length === 0) return;
 

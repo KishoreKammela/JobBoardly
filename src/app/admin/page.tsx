@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -24,27 +23,13 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
-  CheckCircle2,
-  XCircle,
-  Briefcase,
-  Building,
-  Eye,
-  ChevronsUpDown,
-  ExternalLink,
-  Ban,
-  CheckSquare,
-  Trash2,
   BarChart3,
-  Users,
-  FileText,
-  ClipboardList,
   Gavel,
-  Save,
+  Cpu,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import {
@@ -68,29 +53,15 @@ import type {
   UserRole,
   LegalDocument,
 } from '@/types';
-import Link from 'next/link';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useDebounce } from '@/hooks/use-debounce';
+
 import { useToast } from '@/hooks/use-toast';
-
-const ITEMS_PER_PAGE = 10;
-
-type SortDirection = 'asc' | 'desc';
-
-interface SortConfig<T> {
-  key: keyof T | null;
-  direction: SortDirection;
-}
+import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
+import AdminCompaniesTable from '@/components/admin/AdminCompaniesTable';
+import AdminJobsTable from '@/components/admin/AdminJobsTable';
+import AdminJobSeekersTable from '@/components/admin/AdminJobSeekersTable';
+import AdminPlatformUsersTable from '@/components/admin/AdminPlatformUsersTable';
+import AdminLegalEditor from '@/components/admin/AdminLegalEditor';
+import AdminAiFeatures from '@/components/admin/AdminAiFeatures';
 
 interface JobWithApplicantCount extends Job {
   applicantCount: number;
@@ -132,21 +103,6 @@ const ADMIN_LIKE_ROLES: UserRole[] = [
   'systemMonitor',
 ];
 
-function getSortableValue<T>(
-  item: T,
-  key: keyof T | null
-): string | number | null | boolean | undefined {
-  if (!key) return null;
-  const value = item[key as keyof T];
-  if (value instanceof Timestamp) {
-    return value.toMillis();
-  }
-  if (typeof value === 'string') {
-    return value.toLowerCase();
-  }
-  return value as string | number | null | boolean | undefined;
-}
-
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -155,7 +111,6 @@ export default function AdminPage() {
 
   const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
   const [pendingCompanies, setPendingCompanies] = useState<Company[]>([]);
-
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [allJobSeekers, setAllJobSeekers] = useState<UserProfile[]>([]);
   const [allPlatformUsers, setAllPlatformUsers] = useState<UserProfile[]>([]);
@@ -163,37 +118,6 @@ export default function AdminPage() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(
     null
   );
-
-  const [companiesSearchTerm, setCompaniesSearchTerm] = useState('');
-  const [jobSeekersSearchTerm, setJobSeekersSearchTerm] = useState('');
-  const [platformUsersSearchTerm, setPlatformUsersSearchTerm] = useState('');
-  const [jobsSearchTerm, setJobsSearchTerm] = useState('');
-
-  const debouncedCompaniesSearchTerm = useDebounce(companiesSearchTerm, 300);
-  const debouncedJobSeekersSearchTerm = useDebounce(jobSeekersSearchTerm, 300);
-  const debouncedPlatformUsersSearchTerm = useDebounce(
-    platformUsersSearchTerm,
-    300
-  );
-  const debouncedJobsSearchTerm = useDebounce(jobsSearchTerm, 300);
-
-  const [companiesCurrentPage, setCompaniesCurrentPage] = useState(1);
-  const [jobSeekersCurrentPage, setJobSeekersCurrentPage] = useState(1);
-  const [platformUsersCurrentPage, setPlatformUsersCurrentPage] = useState(1);
-  const [jobsCurrentPage, setJobsCurrentPage] = useState(1);
-
-  const [companiesSortConfig, setCompaniesSortConfig] = useState<
-    SortConfig<Company>
-  >({ key: 'createdAt', direction: 'desc' });
-  const [jobSeekersSortConfig, setJobSeekersSortConfig] = useState<
-    SortConfig<UserProfile>
-  >({ key: 'createdAt', direction: 'desc' });
-  const [platformUsersSortConfig, setPlatformUsersSortConfig] = useState<
-    SortConfig<UserProfile>
-  >({ key: 'createdAt', direction: 'desc' });
-  const [jobsSortConfig, setJobsSortConfig] = useState<
-    SortConfig<JobWithApplicantCount>
-  >({ key: 'createdAt', direction: 'desc' });
 
   const [isPendingJobsLoading, setIsPendingJobsLoading] = useState(true);
   const [isPendingCompaniesLoading, setIsPendingCompaniesLoading] =
@@ -249,47 +173,6 @@ export default function AdminPage() {
       });
     }
   }, [user?.role, toast]);
-
-  useEffect(() => {
-    if (user?.role === 'superAdmin') {
-      fetchLegalContent();
-    }
-  }, [user?.role, fetchLegalContent]);
-
-  const handleSaveLegalDocument = async (
-    docId: 'privacyPolicy' | 'termsOfService',
-    content: string
-  ) => {
-    if (user?.role !== 'superAdmin') {
-      toast({
-        title: 'Permission Denied',
-        description: 'Only Super Admins can update legal documents.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsSavingLegal(docId);
-    try {
-      const legalDocRef = doc(db, 'legalContent', docId);
-      await setDoc(legalDocRef, {
-        content: content,
-        lastUpdated: serverTimestamp(),
-      });
-      toast({
-        title: 'Success',
-        description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
-      });
-    } catch (error) {
-      console.error(`Error saving ${docId}:`, error);
-      toast({
-        title: 'Error Saving Document',
-        description: `Could not save ${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'}.`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSavingLegal(null);
-    }
-  };
 
   const fetchData = useCallback(async () => {
     setIsPendingJobsLoading(true);
@@ -393,7 +276,6 @@ export default function AdminPage() {
           );
           const appCountSnap = await getCountFromServer(appCountQuery);
           company.applicationCount = appCountSnap.data().count;
-
           return company;
         })
       );
@@ -807,117 +689,40 @@ export default function AdminPage() {
     }
   };
 
-  const requestSort = <T,>(
-    key: keyof T,
-    config: SortConfig<T>,
-    setConfig: React.Dispatch<React.SetStateAction<SortConfig<T>>>
+  const handleSaveLegalDocument = async (
+    docId: 'privacyPolicy' | 'termsOfService',
+    content: string
   ) => {
-    let direction: SortDirection = 'asc';
-    if (config.key === key && config.direction === 'asc') {
-      direction = 'desc';
+    if (user?.role !== 'superAdmin') {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only Super Admins can update legal documents.',
+        variant: 'destructive',
+      });
+      return;
     }
-    setConfig({ key, direction });
+    setIsSavingLegal(docId);
+    try {
+      const legalDocRef = doc(db, 'legalContent', docId);
+      await setDoc(legalDocRef, {
+        content: content,
+        lastUpdated: serverTimestamp(),
+      });
+      toast({
+        title: 'Success',
+        description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
+      });
+    } catch (error) {
+      console.error(`Error saving ${docId}:`, error);
+      toast({
+        title: 'Error Saving Document',
+        description: `Could not save ${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'}.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingLegal(null);
+    }
   };
-
-  const useSortedItems = <T,>(
-    items: T[],
-    config: SortConfig<T>,
-    searchTerm: string,
-    searchKeys: (keyof T)[]
-  ) => {
-    return useMemo(() => {
-      let sortableItems = [...items];
-      if (searchTerm) {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        sortableItems = sortableItems.filter((item) =>
-          searchKeys.some((key) => {
-            const value = item[key];
-            return (
-              typeof value === 'string' &&
-              value.toLowerCase().includes(lowerSearchTerm)
-            );
-          })
-        );
-      }
-      if (config.key !== null) {
-        sortableItems.sort((a, b) => {
-          const valA = getSortableValue(a, config.key);
-          const valB = getSortableValue(b, config.key);
-          if (valA === null || valA === undefined) return 1;
-          if (valB === null || valB === undefined) return -1;
-          if (valA < valB) return config.direction === 'asc' ? -1 : 1;
-          if (valA > valB) return config.direction === 'asc' ? 1 : -1;
-          return 0;
-        });
-      }
-      return sortableItems;
-    }, [items, config, searchTerm, searchKeys]);
-  };
-
-  const sortedCompanies = useSortedItems(
-    allCompanies,
-    companiesSortConfig,
-    debouncedCompaniesSearchTerm,
-    ['name', 'websiteUrl']
-  );
-  const sortedJobSeekers = useSortedItems(
-    allJobSeekers,
-    jobSeekersSortConfig,
-    debouncedJobSeekersSearchTerm,
-    ['name', 'email']
-  );
-  const sortedPlatformUsers = useSortedItems(
-    allPlatformUsers,
-    platformUsersSortConfig,
-    debouncedPlatformUsersSearchTerm,
-    ['name', 'email']
-  );
-  const sortedJobs = useSortedItems(
-    allJobs,
-    jobsSortConfig,
-    debouncedJobsSearchTerm,
-    ['title', 'company']
-  );
-
-  const usePaginatedItems = <T,>(items: T[], currentPage: number) => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  };
-
-  const paginatedCompanies = usePaginatedItems(
-    sortedCompanies,
-    companiesCurrentPage
-  );
-  const paginatedJobSeekers = usePaginatedItems(
-    sortedJobSeekers,
-    jobSeekersCurrentPage
-  );
-  const paginatedPlatformUsers = usePaginatedItems(
-    sortedPlatformUsers,
-    platformUsersCurrentPage
-  );
-  const paginatedJobs = usePaginatedItems(sortedJobs, jobsCurrentPage);
-
-  const totalCompaniesPages = Math.ceil(
-    sortedCompanies.length / ITEMS_PER_PAGE
-  );
-  const totalJobSeekersPages = Math.ceil(
-    sortedJobSeekers.length / ITEMS_PER_PAGE
-  );
-  const totalPlatformUsersPages = Math.ceil(
-    sortedPlatformUsers.length / ITEMS_PER_PAGE
-  );
-  const totalJobsPages = Math.ceil(sortedJobs.length / ITEMS_PER_PAGE);
-
-  const renderSortIcon = <T,>(key: keyof T, config: SortConfig<T>) => {
-    if (config.key !== key)
-      return <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />;
-    return config.direction === 'asc' ? '🔼' : '🔽';
-  };
-
-  const canPerformActions =
-    user?.role === 'admin' || user?.role === 'superAdmin';
-  const canModerateContent = canPerformActions || user?.role === 'moderator';
 
   if (loading || (!user && !loading)) {
     return (
@@ -974,6 +779,10 @@ export default function AdminPage() {
     }
   };
 
+  const canPerformUserActions =
+    user?.role === 'admin' || user?.role === 'superAdmin';
+  const canModerateContent =
+    canPerformUserActions || user?.role === 'moderator';
   const showQuickModeration = canModerateContent;
   const showPlatformUsersTab =
     user?.role === 'admin' ||
@@ -994,6 +803,11 @@ export default function AdminPage() {
       value: 'legalContent',
       label: 'Legal Content',
       condition: showLegalContentTab,
+    },
+    {
+      value: 'aiFeatures',
+      label: 'AI Features',
+      condition: user?.role === 'superAdmin',
     },
   ];
 
@@ -1017,1536 +831,104 @@ export default function AdminPage() {
       </div>
       <Separator />
 
-      {user?.role !== 'supportAgent' &&
-        user?.role !== 'complianceOfficer' &&
-        user?.role !== 'systemMonitor' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 /> Platform Analytics
-              </CardTitle>
-              <CardDescription>
-                Key metrics for JobBoardly at a glance.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isStatsLoading ? (
-                <div className="flex items-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                  Loading platform statistics...
-                </div>
-              ) : platformStats ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
-                  <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
-                    <Users className="h-8 w-8 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold">
-                      {platformStats.totalJobSeekers}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Job Seekers</p>
-                  </div>
-                  <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
-                    <Building className="h-8 w-8 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold">
-                      {platformStats.totalCompanies}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Companies</p>
-                  </div>
-                  <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
-                    <FileText className="h-8 w-8 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold">
-                      {platformStats.totalJobs}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Total Jobs</p>
-                  </div>
-                  <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
-                    <CheckCircle2 className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                    <p className="text-2xl font-bold">
-                      {platformStats.approvedJobs}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Approved Jobs
-                    </p>
-                  </div>
-                  <div className="p-4 border rounded-lg shadow-sm bg-muted/30">
-                    <ClipboardList className="h-8 w-8 mx-auto text-primary mb-2" />
-                    <p className="text-2xl font-bold">
-                      {platformStats.totalApplications}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Applications
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Statistics Unavailable</AlertTitle>
-                  <AlertDescription>
-                    Could not load platform statistics at this time.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      {showQuickModeration && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase /> Pending Job Approvals ({pendingJobs.length})
-              </CardTitle>
-              <CardDescription>
-                Review and approve or reject newly posted jobs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isPendingJobsLoading ? (
-                <div className="flex items-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
-                  Loading...
-                </div>
-              ) : pendingJobs.length === 0 ? (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>No Pending Jobs</AlertTitle>
-                  <AlertDescription>
-                    No job postings awaiting approval.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                  {pendingJobs.map((job) => (
-                    <Card key={job.id} className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <Link
-                          href={`/jobs/${job.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline"
-                        >
-                          <CardTitle className="text-md">{job.title}</CardTitle>
-                        </Link>
-                        <CardDescription className="text-xs">
-                          Company: {job.company} | Posted:{' '}
-                          {new Date(
-                            job.createdAt as string
-                          ).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardFooter className="flex justify-end gap-2 pt-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            showConfirmationModal(
-                              `Reject Job "${job.title}"?`,
-                              'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
-                              async () =>
-                                handleJobStatusUpdate(job.id, 'rejected'),
-                              'Reject Job',
-                              'destructive'
-                            )
-                          }
-                          disabled={
-                            specificActionLoading === `job-${job.id}` ||
-                            !canModerateContent
-                          }
-                          aria-label={`Reject job ${job.title}`}
-                          className="text-destructive"
-                        >
-                          <XCircle className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            showConfirmationModal(
-                              `Approve Job "${job.title}"?`,
-                              'Are you sure you want to approve this job posting? It will become publicly visible.',
-                              async () =>
-                                handleJobStatusUpdate(job.id, 'approved'),
-                              'Approve Job'
-                            )
-                          }
-                          disabled={
-                            specificActionLoading === `job-${job.id}` ||
-                            !canModerateContent
-                          }
-                          aria-label={`Approve job ${job.title}`}
-                          className="text-green-600"
-                        >
-                          <CheckCircle2 className="h-5 w-5" />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building /> Pending Company Approvals (
-                {pendingCompanies.length})
-              </CardTitle>
-              <CardDescription>
-                Review and approve or reject new company profiles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isPendingCompaniesLoading ? (
-                <div className="flex items-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />{' '}
-                  Loading...
-                </div>
-              ) : pendingCompanies.length === 0 ? (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>No Pending Companies</AlertTitle>
-                  <AlertDescription>
-                    No new company profiles awaiting approval.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                  {pendingCompanies.map((c) => (
-                    <Card key={c.id} className="shadow-sm">
-                      <CardHeader className="pb-2">
-                        <Link
-                          href={`/companies/${c.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline"
-                        >
-                          <CardTitle className="text-md">{c.name}</CardTitle>
-                        </Link>
-                        <CardDescription className="text-xs">
-                          Registered:{' '}
-                          {new Date(c.createdAt as string).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardFooter className="flex justify-end gap-2 pt-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            showConfirmationModal(
-                              `Reject Company "${c.name}"?`,
-                              'Are you sure you want to reject this company profile? It will not be publicly visible.',
-                              async () =>
-                                handleCompanyStatusUpdate(c.id, 'rejected'),
-                              'Reject Company',
-                              'destructive'
-                            )
-                          }
-                          disabled={
-                            specificActionLoading === `company-${c.id}` ||
-                            !canModerateContent
-                          }
-                          aria-label={`Reject company ${c.name}`}
-                          className="text-destructive"
-                        >
-                          <XCircle className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            showConfirmationModal(
-                              `Approve Company "${c.name}"?`,
-                              'Are you sure you want to approve this company profile? It will become publicly visible and operational.',
-                              async () =>
-                                handleCompanyStatusUpdate(c.id, 'approved'),
-                              'Approve Company'
-                            )
-                          }
-                          disabled={
-                            specificActionLoading === `company-${c.id}` ||
-                            !canModerateContent
-                          }
-                          aria-label={`Approve company ${c.name}`}
-                          className="text-green-600"
-                        >
-                          <CheckCircle2 className="h-5 w-5" />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <AdminDashboardOverview
+        platformStats={platformStats}
+        isStatsLoading={isStatsLoading}
+        pendingJobs={pendingJobs}
+        isPendingJobsLoading={isPendingJobsLoading}
+        pendingCompanies={pendingCompanies}
+        isPendingCompaniesLoading={isPendingCompaniesLoading}
+        canModerateContent={canModerateContent}
+        specificActionLoading={specificActionLoading}
+        handleJobStatusUpdate={handleJobStatusUpdate}
+        handleCompanyStatusUpdate={handleCompanyStatusUpdate}
+        showConfirmationModal={showConfirmationModal}
+        showQuickModeration={showQuickModeration}
+        canViewAnalytics={
+          user?.role !== 'supportAgent' &&
+          user?.role !== 'complianceOfficer' &&
+          user?.role !== 'systemMonitor'
+        }
+      />
 
       <Tabs defaultValue="companies" className="w-full">
-        <TabsList className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
           {visibleTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.value === 'legalContent' && (
+                <Gavel className="mr-2 h-4 w-4" />
+              )}
+              {tab.value === 'aiFeatures' && <Cpu className="mr-2 h-4 w-4" />}
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
 
         <TabsContent value="companies">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage Companies ({sortedCompanies.length})</CardTitle>
-              <Input
-                placeholder="Search companies by name or website..."
-                value={companiesSearchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setCompaniesSearchTerm(e.target.value)
-                }
-                className="max-w-sm mt-2"
-                aria-label="Search companies"
-              />
-            </CardHeader>
-            <CardContent>
-              {isAllCompaniesLoading ? (
-                <div className="flex justify-center items-center py-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                  Loading companies...
-                </div>
-              ) : paginatedCompanies.length === 0 ? (
-                <p className="text-muted-foreground">No companies found.</p>
-              ) : (
-                <>
-                  <Table>
-                    <TableCaption>A list of all companies.</TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'name',
-                              companiesSortConfig,
-                              setCompaniesSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by company name"
-                        >
-                          Name {renderSortIcon('name', companiesSortConfig)}
-                        </TableHead>
-                        <TableHead>Website</TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'status',
-                              companiesSortConfig,
-                              setCompaniesSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by company status"
-                        >
-                          Status {renderSortIcon('status', companiesSortConfig)}
-                        </TableHead>
-                        <TableHead>Jobs Posted</TableHead>
-                        <TableHead>Apps Received</TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'createdAt',
-                              companiesSortConfig,
-                              setCompaniesSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by company creation date"
-                        >
-                          Created At{' '}
-                          {renderSortIcon('createdAt', companiesSortConfig)}
-                        </TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedCompanies.map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell className="font-medium">
-                            {c.name}
-                          </TableCell>
-                          <TableCell>
-                            <a
-                              href={
-                                c.websiteUrl?.startsWith('http')
-                                  ? c.websiteUrl
-                                  : `https://${c.websiteUrl}`
-                              }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline flex items-center gap-1"
-                            >
-                              {c.websiteUrl || 'N/A'}{' '}
-                              {c.websiteUrl && (
-                                <ExternalLink className="h-3 w-3" />
-                              )}
-                            </a>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                c.status === 'approved' || c.status === 'active'
-                                  ? 'default'
-                                  : c.status === 'rejected' ||
-                                      c.status === 'suspended' ||
-                                      c.status === 'deleted'
-                                    ? 'destructive'
-                                    : 'secondary'
-                              }
-                            >
-                              {c.status.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{c.jobCount ?? 'N/A'}</TableCell>
-                          <TableCell>{c.applicationCount ?? 'N/A'}</TableCell>
-                          <TableCell>
-                            {c.createdAt
-                              ? new Date(
-                                  c.createdAt as string
-                                ).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              aria-label={`View company ${c.name}`}
-                            >
-                              <Link href={`/companies/${c.id}`} target="_blank">
-                                <Eye className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                            {canModerateContent && c.status === 'pending' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Approve Company "${c.name}"?`,
-                                      `Are you sure you want to approve ${c.name}? The company will become active.`,
-                                      async () =>
-                                        handleCompanyStatusUpdate(
-                                          c.id,
-                                          'approved'
-                                        ),
-                                      'Approve Company'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `company-${c.id}`
-                                  }
-                                  aria-label={`Approve company ${c.name}`}
-                                  className="text-green-600"
-                                >
-                                  <CheckCircle2 className="h-5 w-5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Reject Company "${c.name}"?`,
-                                      `Are you sure you want to reject ${c.name}?`,
-                                      async () =>
-                                        handleCompanyStatusUpdate(
-                                          c.id,
-                                          'rejected'
-                                        ),
-                                      'Reject Company',
-                                      'destructive'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `company-${c.id}`
-                                  }
-                                  aria-label={`Reject company ${c.name}`}
-                                  className="text-destructive"
-                                >
-                                  <XCircle className="h-5 w-5" />
-                                </Button>
-                              </>
-                            )}
-                            {canModerateContent &&
-                              (c.status === 'approved' ||
-                                c.status === 'active') && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Suspend Company "${c.name}"?`,
-                                      `Are you sure you want to suspend ${c.name}? Recruiters from this company will have limited access.`,
-                                      async () =>
-                                        handleCompanyStatusUpdate(
-                                          c.id,
-                                          'suspended'
-                                        ),
-                                      'Suspend Company',
-                                      'destructive'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `company-${c.id}`
-                                  }
-                                  aria-label={`Suspend company ${c.name}`}
-                                  className="text-orange-600"
-                                >
-                                  <Ban className="h-5 w-5" />
-                                </Button>
-                              )}
-                            {canModerateContent &&
-                              (c.status === 'suspended' ||
-                                c.status === 'rejected') && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Activate Company "${c.name}"?`,
-                                      `Are you sure you want to reactivate ${c.name}? This will restore full access for its recruiters.`,
-                                      async () =>
-                                        handleCompanyStatusUpdate(
-                                          c.id,
-                                          'active'
-                                        ),
-                                      'Activate Company'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `company-${c.id}`
-                                  }
-                                  aria-label={`Activate company ${c.name}`}
-                                  className="text-blue-600"
-                                >
-                                  <CheckSquare className="h-5 w-5" />
-                                </Button>
-                              )}
-                            {canModerateContent && c.status !== 'deleted' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() =>
-                                  showConfirmationModal(
-                                    `Delete Company "${c.name}"?`,
-                                    `Are you sure you want to delete ${c.name}? This is a soft delete. Recruiters will lose access. This action cannot be easily undone.`,
-                                    async () =>
-                                      handleCompanyStatusUpdate(
-                                        c.id,
-                                        'deleted'
-                                      ),
-                                    'Delete Company',
-                                    'destructive'
-                                  )
-                                }
-                                disabled={
-                                  specificActionLoading === `company-${c.id}`
-                                }
-                                aria-label={`Delete company ${c.name}`}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {totalCompaniesPages > 1 && (
-                    <div className="mt-4 flex justify-center items-center gap-2">
-                      <Button
-                        onClick={() =>
-                          setCompaniesCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={companiesCurrentPage === 1}
-                        variant="outline"
-                        aria-label="Previous page of companies"
-                      >
-                        Previous
-                      </Button>
-                      <span>
-                        Page {companiesCurrentPage} of {totalCompaniesPages}
-                      </span>
-                      <Button
-                        onClick={() =>
-                          setCompaniesCurrentPage((p) =>
-                            Math.min(totalCompaniesPages, p + 1)
-                          )
-                        }
-                        disabled={companiesCurrentPage === totalCompaniesPages}
-                        variant="outline"
-                        aria-label="Next page of companies"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <AdminCompaniesTable
+            companies={allCompanies}
+            isLoading={isAllCompaniesLoading}
+            currentUserRole={user?.role}
+            showConfirmationModal={showConfirmationModal}
+            handleCompanyStatusUpdate={handleCompanyStatusUpdate}
+            specificActionLoading={specificActionLoading}
+            canModerateContent={canModerateContent}
+          />
         </TabsContent>
 
         <TabsContent value="allJobs">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manage All Jobs ({sortedJobs.length})</CardTitle>
-              <CardDescription>
-                Manage job status (approve, reject, suspend, activate). Job
-                content editing is handled by employers.
-              </CardDescription>
-              <Input
-                placeholder="Search jobs by title or company..."
-                value={jobsSearchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setJobsSearchTerm(e.target.value)
-                }
-                className="max-w-sm mt-2"
-                aria-label="Search all jobs"
-              />
-            </CardHeader>
-            <CardContent>
-              {isAllJobsLoading ? (
-                <div className="flex justify-center items-center py-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                  Loading jobs...
-                </div>
-              ) : paginatedJobs.length === 0 ? (
-                <p className="text-muted-foreground">No jobs found.</p>
-              ) : (
-                <>
-                  <Table>
-                    <TableCaption>A list of all jobs.</TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'title',
-                              jobsSortConfig,
-                              setJobsSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job title"
-                        >
-                          Job Title {renderSortIcon('title', jobsSortConfig)}
-                        </TableHead>
-                        <TableHead>Company</TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'status',
-                              jobsSortConfig,
-                              setJobsSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job status"
-                        >
-                          Status {renderSortIcon('status', jobsSortConfig)}
-                        </TableHead>
-                        <TableHead>Applicants</TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'createdAt',
-                              jobsSortConfig,
-                              setJobsSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job creation date"
-                        >
-                          Created At{' '}
-                          {renderSortIcon('createdAt', jobsSortConfig)}
-                        </TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'updatedAt',
-                              jobsSortConfig,
-                              setJobsSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job update date"
-                        >
-                          Updated At{' '}
-                          {renderSortIcon('updatedAt', jobsSortConfig)}
-                        </TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedJobs.map((job) => (
-                        <TableRow key={job.id}>
-                          <TableCell className="font-medium">
-                            {job.title}
-                          </TableCell>
-                          <TableCell>{job.company}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                job.status === 'approved'
-                                  ? 'default'
-                                  : job.status === 'pending'
-                                    ? 'secondary'
-                                    : 'destructive'
-                              }
-                            >
-                              {job.status.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{job.applicantCount}</TableCell>
-                          <TableCell>
-                            {job.createdAt
-                              ? new Date(
-                                  job.createdAt as string
-                                ).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {job.updatedAt
-                              ? new Date(
-                                  job.updatedAt as string
-                                ).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              asChild
-                              aria-label={`View job ${job.title}`}
-                            >
-                              <Link href={`/jobs/${job.id}`} target="_blank">
-                                <Eye className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                            {canModerateContent &&
-                              job.status === 'approved' && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Suspend Job "${job.title}"?`,
-                                      `Are you sure you want to suspend this job? It will be hidden from public view and recruiters won't be able to manage it or its applicants.`,
-                                      async () =>
-                                        handleJobStatusUpdate(
-                                          job.id,
-                                          'suspended'
-                                        ),
-                                      'Suspend Job',
-                                      'destructive'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `job-${job.id}` ||
-                                    user?.role === 'moderator' ||
-                                    user?.role === 'supportAgent' ||
-                                    user?.role === 'dataAnalyst'
-                                  }
-                                  aria-label={`Suspend job ${job.title}`}
-                                  className="text-orange-600"
-                                >
-                                  <Ban className="h-5 w-5" />
-                                </Button>
-                              )}
-                            {canModerateContent &&
-                              (job.status === 'suspended' ||
-                                job.status === 'rejected') && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Activate Job "${job.title}"?`,
-                                      `Are you sure you want to activate this job? It will become approved and publicly visible.`,
-                                      async () =>
-                                        handleJobStatusUpdate(
-                                          job.id,
-                                          'approved'
-                                        ),
-                                      'Activate Job'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `job-${job.id}` ||
-                                    user?.role === 'supportAgent' ||
-                                    user?.role === 'dataAnalyst'
-                                  }
-                                  aria-label={`Activate job ${job.title}`}
-                                  className="text-blue-600"
-                                >
-                                  <CheckSquare className="h-5 w-5" />
-                                </Button>
-                              )}
-                            {canModerateContent && job.status === 'pending' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Approve Job "${job.title}"?`,
-                                      `Are you sure you want to approve this job posting? It will become publicly visible.`,
-                                      async () =>
-                                        handleJobStatusUpdate(
-                                          job.id,
-                                          'approved'
-                                        ),
-                                      'Approve Job'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `job-${job.id}` ||
-                                    user?.role === 'supportAgent' ||
-                                    user?.role === 'dataAnalyst'
-                                  }
-                                  aria-label={`Approve job ${job.title}`}
-                                  className="text-green-600"
-                                >
-                                  <CheckCircle2 className="h-5 w-5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Reject Job "${job.title}"?`,
-                                      'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
-                                      async () =>
-                                        handleJobStatusUpdate(
-                                          job.id,
-                                          'rejected'
-                                        ),
-                                      'Reject Job',
-                                      'destructive'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `job-${job.id}` ||
-                                    user?.role === 'supportAgent' ||
-                                    user?.role === 'dataAnalyst'
-                                  }
-                                  aria-label={`Reject job ${job.title}`}
-                                  className="text-destructive"
-                                >
-                                  <XCircle className="h-5 w-5" />
-                                </Button>
-                              </>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {totalJobsPages > 1 && (
-                    <div className="mt-4 flex justify-center items-center gap-2">
-                      <Button
-                        onClick={() =>
-                          setJobsCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={jobsCurrentPage === 1}
-                        variant="outline"
-                        aria-label="Previous page of jobs"
-                      >
-                        Previous
-                      </Button>
-                      <span>
-                        Page {jobsCurrentPage} of {totalJobsPages}
-                      </span>
-                      <Button
-                        onClick={() =>
-                          setJobsCurrentPage((p) =>
-                            Math.min(totalJobsPages, p + 1)
-                          )
-                        }
-                        disabled={jobsCurrentPage === totalJobsPages}
-                        variant="outline"
-                        aria-label="Next page of jobs"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <AdminJobsTable
+            jobs={allJobs}
+            isLoading={isAllJobsLoading}
+            currentUserRole={user?.role}
+            showConfirmationModal={showConfirmationModal}
+            handleJobStatusUpdate={handleJobStatusUpdate}
+            specificActionLoading={specificActionLoading}
+            canModerateContent={canModerateContent}
+          />
         </TabsContent>
 
         <TabsContent value="jobSeekers">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Manage Job Seekers ({sortedJobSeekers.length})
-              </CardTitle>
-              <Input
-                placeholder="Search job seekers by name or email..."
-                value={jobSeekersSearchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setJobSeekersSearchTerm(e.target.value)
-                }
-                className="max-w-sm mt-2"
-                aria-label="Search job seekers"
-              />
-            </CardHeader>
-            <CardContent>
-              {isUsersLoading ? (
-                <div className="flex justify-center items-center py-6">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                  Loading job seekers...
-                </div>
-              ) : paginatedJobSeekers.length === 0 ? (
-                <p className="text-muted-foreground">No job seekers found.</p>
-              ) : (
-                <>
-                  <Table>
-                    <TableCaption>A list of all job seeker users.</TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'name',
-                              jobSeekersSortConfig,
-                              setJobSeekersSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job seeker name"
-                        >
-                          Name {renderSortIcon('name', jobSeekersSortConfig)}
-                        </TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'email',
-                              jobSeekersSortConfig,
-                              setJobSeekersSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job seeker email"
-                        >
-                          Email {renderSortIcon('email', jobSeekersSortConfig)}
-                        </TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'status',
-                              jobSeekersSortConfig,
-                              setJobSeekersSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job seeker status"
-                        >
-                          Status{' '}
-                          {renderSortIcon('status', jobSeekersSortConfig)}
-                        </TableHead>
-                        <TableHead>Profile Searchable</TableHead>
-                        <TableHead>Jobs Applied</TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'lastActive',
-                              jobSeekersSortConfig,
-                              setJobSeekersSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job seeker last active date"
-                        >
-                          Last Active{' '}
-                          {renderSortIcon('lastActive', jobSeekersSortConfig)}
-                        </TableHead>
-                        <TableHead
-                          onClick={() =>
-                            requestSort(
-                              'createdAt',
-                              jobSeekersSortConfig,
-                              setJobSeekersSortConfig
-                            )
-                          }
-                          className="cursor-pointer"
-                          aria-label="Sort by job seeker joined date"
-                        >
-                          Joined{' '}
-                          {renderSortIcon('createdAt', jobSeekersSortConfig)}
-                        </TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedJobSeekers.map((u) => {
-                        const isUserEffectivelyActive =
-                          u.status === 'active' || u.status === undefined;
-                        const canManageThisJobSeeker =
-                          user?.role === 'admin' || user?.role === 'superAdmin';
-                        return (
-                          <TableRow key={u.uid}>
-                            <TableCell className="font-medium">
-                              {u.name || 'N/A'}
-                            </TableCell>
-                            <TableCell>{u.email}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  isUserEffectivelyActive
-                                    ? 'default'
-                                    : u.status === 'deleted' ||
-                                        u.status === 'suspended'
-                                      ? 'destructive'
-                                      : 'secondary'
-                                }
-                                className={
-                                  isUserEffectivelyActive
-                                    ? 'bg-green-100 text-green-800'
-                                    : u.status === 'deleted' ||
-                                        u.status === 'suspended'
-                                      ? 'bg-red-100 text-red-800'
-                                      : ''
-                                }
-                              >
-                                {(u.status || 'ACTIVE').toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {u.isProfileSearchable ? (
-                                <CheckCircle2 className="text-green-500 h-5 w-5" />
-                              ) : (
-                                <XCircle className="text-red-500 h-5 w-5" />
-                              )}
-                            </TableCell>
-                            <TableCell>{u.jobsAppliedCount ?? 'N/A'}</TableCell>
-                            <TableCell>
-                              {u.lastActive
-                                ? new Date(
-                                    u.lastActive as string
-                                  ).toLocaleString()
-                                : 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              {u.createdAt
-                                ? new Date(
-                                    u.createdAt as string
-                                  ).toLocaleDateString()
-                                : 'N/A'}
-                            </TableCell>
-                            <TableCell className="text-right space-x-1">
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link
-                                  href={`/employer/candidates/${u.uid}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  aria-label={`View profile of ${u.name || 'user'}`}
-                                >
-                                  <Eye className="h-5 w-5" />
-                                </Link>
-                              </Button>
-                              {u.status !== 'deleted' && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      const newStatus = isUserEffectivelyActive
-                                        ? 'suspended'
-                                        : 'active';
-                                      showConfirmationModal(
-                                        `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
-                                        `Are you sure you want to ${newStatus} this user account?`,
-                                        async () =>
-                                          handleUserStatusUpdate(
-                                            u.uid,
-                                            newStatus
-                                          ),
-                                        `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                                        newStatus === 'suspended'
-                                          ? 'destructive'
-                                          : 'default'
-                                      );
-                                    }}
-                                    disabled={
-                                      specificActionLoading ===
-                                        `user-${u.uid}` ||
-                                      !canManageThisJobSeeker
-                                    }
-                                    aria-label={`${isUserEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
-                                    className={
-                                      isUserEffectivelyActive
-                                        ? 'text-orange-600'
-                                        : 'text-blue-600'
-                                    }
-                                  >
-                                    {isUserEffectivelyActive ? (
-                                      <Ban className="h-5 w-5" />
-                                    ) : (
-                                      <CheckSquare className="h-5 w-5" />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      showConfirmationModal(
-                                        `Delete User "${u.name || u.email}"?`,
-                                        'Are you sure you want to delete this user account? They will not be able to log in. This action cannot be easily undone.',
-                                        async () =>
-                                          handleUserStatusUpdate(
-                                            u.uid,
-                                            'deleted'
-                                          ),
-                                        'Delete User',
-                                        'destructive'
-                                      )
-                                    }
-                                    disabled={
-                                      specificActionLoading ===
-                                        `user-${u.uid}` ||
-                                      !canManageThisJobSeeker
-                                    }
-                                    aria-label={`Delete user ${u.name || 'user'}`}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-5 w-5" />
-                                  </Button>
-                                </>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                  {totalJobSeekersPages > 1 && (
-                    <div className="mt-4 flex justify-center items-center gap-2">
-                      <Button
-                        onClick={() =>
-                          setJobSeekersCurrentPage((p) => Math.max(1, p - 1))
-                        }
-                        disabled={jobSeekersCurrentPage === 1}
-                        variant="outline"
-                        aria-label="Previous page of job seekers"
-                      >
-                        Previous
-                      </Button>
-                      <span>
-                        Page {jobSeekersCurrentPage} of {totalJobSeekersPages}
-                      </span>
-                      <Button
-                        onClick={() =>
-                          setJobSeekersCurrentPage((p) =>
-                            Math.min(totalJobSeekersPages, p + 1)
-                          )
-                        }
-                        disabled={
-                          jobSeekersCurrentPage === totalJobSeekersPages
-                        }
-                        variant="outline"
-                        aria-label="Next page of job seekers"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <AdminJobSeekersTable
+            jobSeekers={allJobSeekers}
+            isLoading={isUsersLoading}
+            showConfirmationModal={showConfirmationModal}
+            handleUserStatusUpdate={handleUserStatusUpdate}
+            specificActionLoading={specificActionLoading}
+            canPerformUserActions={canPerformUserActions}
+          />
         </TabsContent>
 
         {showPlatformUsersTab && (
           <TabsContent value="platformUsers">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  Manage Platform Users ({sortedPlatformUsers.length})
-                </CardTitle>
-                <Input
-                  placeholder="Search platform users by name or email..."
-                  value={platformUsersSearchTerm}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setPlatformUsersSearchTerm(e.target.value)
-                  }
-                  className="max-w-sm mt-2"
-                  aria-label="Search platform users"
-                />
-              </CardHeader>
-              <CardContent>
-                {isUsersLoading ? (
-                  <div className="flex justify-center items-center py-6">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />{' '}
-                    Loading platform users...
-                  </div>
-                ) : paginatedPlatformUsers.length === 0 ? (
-                  <p className="text-muted-foreground">
-                    No platform users (Admins/Moderators etc.) found.
-                  </p>
-                ) : (
-                  <>
-                    <Table>
-                      <TableCaption>
-                        A list of platform administrators, moderators, and other
-                        staff roles.
-                      </TableCaption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'name',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user name"
-                          >
-                            Name{' '}
-                            {renderSortIcon('name', platformUsersSortConfig)}
-                          </TableHead>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'email',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user email"
-                          >
-                            Email{' '}
-                            {renderSortIcon('email', platformUsersSortConfig)}
-                          </TableHead>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'role',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user role"
-                          >
-                            Role{' '}
-                            {renderSortIcon('role', platformUsersSortConfig)}
-                          </TableHead>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'status',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user status"
-                          >
-                            Status{' '}
-                            {renderSortIcon('status', platformUsersSortConfig)}
-                          </TableHead>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'lastActive',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user last active date"
-                          >
-                            Last Active{' '}
-                            {renderSortIcon(
-                              'lastActive',
-                              platformUsersSortConfig
-                            )}
-                          </TableHead>
-                          <TableHead
-                            onClick={() =>
-                              requestSort(
-                                'createdAt',
-                                platformUsersSortConfig,
-                                setPlatformUsersSortConfig
-                              )
-                            }
-                            className="cursor-pointer"
-                            aria-label="Sort by platform user joined date"
-                          >
-                            Joined{' '}
-                            {renderSortIcon(
-                              'createdAt',
-                              platformUsersSortConfig
-                            )}
-                          </TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedPlatformUsers.map((u) => {
-                          const canLoggedInUserManageTarget = () => {
-                            if (!user) return false;
-                            if (user.uid === u.uid) return false;
-
-                            if (user.role === 'superAdmin') return true;
-                            if (user.role === 'admin') {
-                              return !['admin', 'superAdmin'].includes(u.role);
-                            }
-                            return false;
-                          };
-                          const isActionDisabled =
-                            specificActionLoading === `user-${u.uid}` ||
-                            !canLoggedInUserManageTarget();
-                          const platformUserIsEffectivelyActive =
-                            u.status === 'active' || u.status === undefined;
-
-                          return (
-                            <TableRow key={u.uid}>
-                              <TableCell className="font-medium">
-                                {u.name || 'N/A'}
-                              </TableCell>
-                              <TableCell>{u.email}</TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={getRoleBadgeVariant(u.role)}
-                                  className={
-                                    u.role === 'moderator'
-                                      ? 'border-primary/50 text-primary/90'
-                                      : u.role === 'supportAgent'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : u.role === 'dataAnalyst'
-                                          ? 'border-purple-500 text-purple-600'
-                                          : ''
-                                  }
-                                >
-                                  {getRoleDisplayName(u.role)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    platformUserIsEffectivelyActive
-                                      ? 'secondary'
-                                      : 'destructive'
-                                  }
-                                  className={
-                                    platformUserIsEffectivelyActive
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-red-100 text-red-800'
-                                  }
-                                >
-                                  {(u.status || 'ACTIVE').toUpperCase()}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {u.lastActive
-                                  ? new Date(
-                                      u.lastActive as string
-                                    ).toLocaleString()
-                                  : 'N/A'}
-                              </TableCell>
-                              <TableCell>
-                                {u.createdAt
-                                  ? new Date(
-                                      u.createdAt as string
-                                    ).toLocaleDateString()
-                                  : 'N/A'}
-                              </TableCell>
-                              <TableCell className="text-right space-x-1">
-                                <Button variant="ghost" size="icon" asChild>
-                                  <Link
-                                    href={`/employer/candidates/${u.uid}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label={`View profile of ${u.name || 'platform user'}`}
-                                  >
-                                    <Eye className="h-5 w-5" />
-                                  </Link>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    const newStatus =
-                                      platformUserIsEffectivelyActive
-                                        ? 'suspended'
-                                        : 'active';
-                                    showConfirmationModal(
-                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} Platform User "${u.name || u.email}"?`,
-                                      `Are you sure you want to ${newStatus} this platform user account?`,
-                                      async () =>
-                                        handleUserStatusUpdate(
-                                          u.uid,
-                                          newStatus
-                                        ),
-                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                                      newStatus === 'suspended'
-                                        ? 'destructive'
-                                        : 'default'
-                                    );
-                                  }}
-                                  disabled={isActionDisabled}
-                                  aria-label={`${platformUserIsEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
-                                  className={
-                                    platformUserIsEffectivelyActive
-                                      ? 'text-orange-600'
-                                      : 'text-blue-600'
-                                  }
-                                >
-                                  {platformUserIsEffectivelyActive ? (
-                                    <Ban className="h-5 w-5" />
-                                  ) : (
-                                    <CheckSquare className="h-5 w-5" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                    {totalPlatformUsersPages > 1 && (
-                      <div className="mt-4 flex justify-center items-center gap-2">
-                        <Button
-                          onClick={() =>
-                            setPlatformUsersCurrentPage((p) =>
-                              Math.max(1, p - 1)
-                            )
-                          }
-                          disabled={platformUsersCurrentPage === 1}
-                          variant="outline"
-                          aria-label="Previous page of platform users"
-                        >
-                          Previous
-                        </Button>
-                        <span>
-                          Page {platformUsersCurrentPage} of{' '}
-                          {totalPlatformUsersPages}
-                        </span>
-                        <Button
-                          onClick={() =>
-                            setPlatformUsersCurrentPage((p) =>
-                              Math.min(totalPlatformUsersPages, p + 1)
-                            )
-                          }
-                          disabled={
-                            platformUsersCurrentPage === totalPlatformUsersPages
-                          }
-                          variant="outline"
-                          aria-label="Next page of platform users"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
+            <AdminPlatformUsersTable
+              platformUsers={allPlatformUsers}
+              isLoading={isUsersLoading}
+              currentUser={user}
+              showConfirmationModal={showConfirmationModal}
+              handleUserStatusUpdate={handleUserStatusUpdate}
+              specificActionLoading={specificActionLoading}
+              getRoleDisplayName={getRoleDisplayName}
+              getRoleBadgeVariant={getRoleBadgeVariant}
+            />
           </TabsContent>
         )}
         {showLegalContentTab && (
           <TabsContent value="legalContent">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gavel /> Manage Legal Content
-                </CardTitle>
-                <CardDescription>
-                  Edit the Privacy Policy and Terms of Service. Changes are live
-                  immediately.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-3 p-4 border rounded-md">
-                  <h3 className="text-lg font-semibold">Privacy Policy</h3>
-                  {!isLegalContentLoaded.privacy ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading Privacy Policy...
-                    </div>
-                  ) : (
-                    <Textarea
-                      value={privacyPolicyContent}
-                      onChange={(e) => setPrivacyPolicyContent(e.target.value)}
-                      rows={15}
-                      className="font-mono text-sm"
-                      placeholder="Enter Privacy Policy content in Markdown..."
-                    />
-                  )}
-                  <Button
-                    onClick={() =>
-                      handleSaveLegalDocument(
-                        'privacyPolicy',
-                        privacyPolicyContent
-                      )
-                    }
-                    disabled={
-                      isSavingLegal === 'privacy' ||
-                      !isLegalContentLoaded.privacy
-                    }
-                  >
-                    {isSavingLegal === 'privacy' ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save Privacy Policy
-                  </Button>
-                </div>
-
-                <div className="space-y-3 p-4 border rounded-md">
-                  <h3 className="text-lg font-semibold">Terms of Service</h3>
-                  {!isLegalContentLoaded.terms ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading Terms of Service...
-                    </div>
-                  ) : (
-                    <Textarea
-                      value={termsOfServiceContent}
-                      onChange={(e) => setTermsOfServiceContent(e.target.value)}
-                      rows={15}
-                      className="font-mono text-sm"
-                      placeholder="Enter Terms of Service content in Markdown..."
-                    />
-                  )}
-                  <Button
-                    onClick={() =>
-                      handleSaveLegalDocument(
-                        'termsOfService',
-                        termsOfServiceContent
-                      )
-                    }
-                    disabled={
-                      isSavingLegal === 'terms' || !isLegalContentLoaded.terms
-                    }
-                  >
-                    {isSavingLegal === 'terms' ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save Terms of Service
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <AdminLegalEditor
+              privacyPolicyContent={privacyPolicyContent}
+              termsOfServiceContent={termsOfServiceContent}
+              onPrivacyPolicyChange={setPrivacyPolicyContent}
+              onTermsOfServiceChange={setTermsOfServiceContent}
+              onSaveLegalDocument={handleSaveLegalDocument}
+              isContentLoaded={isLegalContentLoaded}
+              isSaving={isSavingLegal}
+            />
+          </TabsContent>
+        )}
+        {user?.role === 'superAdmin' && (
+          <TabsContent value="aiFeatures">
+            <AdminAiFeatures />
           </TabsContent>
         )}
       </Tabs>

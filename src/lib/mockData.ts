@@ -59,7 +59,7 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/janedoe',
     preferredLocations: ['San Francisco, CA', 'Remote'],
     jobSearchStatus: 'activelyLooking',
-    desiredSalary: 1400000, // INR
+    desiredSalary: 1400000,
     resumeUrl: '#',
     resumeFileName: 'JaneDoe_Resume.pdf',
     parsedResumeText:
@@ -102,7 +102,7 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/johnsmithux',
     preferredLocations: ['New York, NY', 'Remote'],
     jobSearchStatus: 'openToOpportunities',
-    desiredSalary: 1200000, // INR
+    desiredSalary: 1200000,
     appliedJobIds: [],
     savedJobIds: ['1', '3'],
     createdAt: Timestamp.now(),
@@ -138,7 +138,7 @@ export const mockJobSeekerProfiles: UserProfile[] = [
     linkedinUrl: 'https://linkedin.com/in/alicebrowndata',
     preferredLocations: ['Boston, MA', 'Remote'],
     jobSearchStatus: 'activelyLooking',
-    desiredSalary: 1600000, // INR
+    desiredSalary: 1600000,
     appliedJobIds: ['5'],
     savedJobIds: [],
     createdAt: Timestamp.now(),

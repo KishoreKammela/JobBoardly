@@ -57,7 +57,6 @@ export function NotificationItem({
         if (!notification.isRead) {
           onMarkAsRead(notification.id);
         }
-        // Navigation will be handled by Link component if present
       }}
     >
       <div className="flex-shrink-0 pt-0.5">

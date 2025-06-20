@@ -31,6 +31,12 @@ export const metadata: Metadata = {
 };
 
 async function getLegalDocument(docId: string): Promise<LegalDocument | null> {
+  if (!db) {
+    console.warn(
+      `Firestore 'db' instance not available. Cannot fetch legal document: ${docId}`
+    );
+    return null;
+  }
   try {
     const docRef = doc(db, 'legalContent', docId);
     const docSnap = await getDoc(docRef);
@@ -95,9 +101,6 @@ export default async function PrivacyPolicyPage() {
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Render markdown content. For basic display, pre-wrap is used. 
-              Consider using a library like react-markdown for richer rendering. */}
           <div
             className="prose prose-sm sm:prose-base max-w-none whitespace-pre-wrap"
             style={{ fontFamily: 'Inter, sans-serif' }}

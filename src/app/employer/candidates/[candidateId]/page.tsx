@@ -51,7 +51,7 @@ import { Button } from '@/components/ui/button';
 export default function CandidateDetailPage() {
   const params = useParams();
   const candidateId = params.candidateId as string;
-  const { user: currentUser, company, loading: authLoading } = useAuth(); // Added company
+  const { user: currentUser, company, loading: authLoading } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
 
@@ -79,14 +79,15 @@ export default function CandidateDetailPage() {
       currentUser.role !== 'employer' &&
       currentUser.role !== 'admin' &&
       currentUser.role !== 'superAdmin' &&
-      currentUser.role !== 'moderator'
+      currentUser.role !== 'moderator' &&
+      currentUser.role !== 'supportAgent' &&
+      currentUser.role !== 'dataAnalyst'
     ) {
       setError('Access Denied. This page is for employers and platform staff.');
       setIsLoading(false);
       return;
     }
 
-    // Prevent employer from viewing if their company account is restricted
     if (
       currentUser.role === 'employer' &&
       company &&
@@ -107,7 +108,9 @@ export default function CandidateDetailPage() {
       (currentUser.role === 'employer' ||
         currentUser.role === 'admin' ||
         currentUser.role === 'superAdmin' ||
-        currentUser.role === 'moderator')
+        currentUser.role === 'moderator' ||
+        currentUser.role === 'supportAgent' ||
+        currentUser.role === 'dataAnalyst')
     ) {
       const fetchCandidate = async () => {
         setIsLoading(true);
@@ -135,12 +138,12 @@ export default function CandidateDetailPage() {
           } else if (
             currentUser.role === 'admin' ||
             currentUser.role === 'superAdmin' ||
-            currentUser.role === 'moderator'
+            currentUser.role === 'moderator' ||
+            currentUser.role === 'supportAgent' ||
+            currentUser.role === 'dataAnalyst'
           ) {
-            // Platform staff can view any user profile type via this page.
             allowProfileLoad = true;
           } else {
-            // This case should ideally not be reached if the initial useEffect guard works.
             setError(
               'You do not have permission to view this type of profile.'
             );
@@ -161,11 +164,7 @@ export default function CandidateDetailPage() {
                 isValid(data.dateOfBirth)
               ) {
                 dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
-              } else {
-                dobString = undefined;
               }
-            } else {
-              dobString = undefined;
             }
 
             setCandidate({
@@ -194,8 +193,6 @@ export default function CandidateDetailPage() {
                 data.totalMonthsExperience === undefined
                   ? undefined
                   : data.totalMonthsExperience,
-              // Ensure job-seeker specific fields default if not present,
-              // or other fields specific to platform users
               skills: data.skills || [],
               experiences: data.experiences || [],
               educations: data.educations || [],
@@ -222,18 +219,19 @@ export default function CandidateDetailPage() {
       };
       fetchCandidate();
     } else if (
-      currentUser && // Check currentUser to prevent running if not yet set
+      currentUser &&
       !(
         currentUser.role === 'employer' ||
         currentUser.role === 'admin' ||
         currentUser.role === 'superAdmin' ||
-        currentUser.role === 'moderator'
+        currentUser.role === 'moderator' ||
+        currentUser.role === 'supportAgent' ||
+        currentUser.role === 'dataAnalyst'
       )
     ) {
-      // Handled by initial useEffect, this is a safeguard
       setIsLoading(false);
     }
-  }, [candidateId, currentUser, company]); // Removed currentPathname as it's used in the other effect
+  }, [candidateId, currentUser, company]);
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
@@ -551,7 +549,9 @@ export default function CandidateDetailPage() {
           {!isJobSeekerProfile &&
             (currentUser.role === 'admin' ||
               currentUser.role === 'superAdmin' ||
-              currentUser.role === 'moderator') && (
+              currentUser.role === 'moderator' ||
+              currentUser.role === 'supportAgent' ||
+              currentUser.role === 'dataAnalyst') && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Platform User Profile</AlertTitle>
@@ -792,7 +792,6 @@ export default function CandidateDetailPage() {
           </p>
         </CardFooter>
       </Card>
-      {/* Hidden component for printing */}
       {isJobSeekerProfile && (
         <div style={{ display: 'none' }}>
           <PrintableProfileComponent

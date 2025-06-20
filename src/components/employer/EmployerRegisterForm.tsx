@@ -130,7 +130,7 @@ export function EmployerRegisterForm() {
       else return;
 
       await signInWithSocial(authProvider, 'employer', companyName);
-      handleRegisterSuccess(); // Re-use this as the description inside might need to be dynamic based on social name
+      handleRegisterSuccess();
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);

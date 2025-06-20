@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardFooter,
 } from '@/components/ui/card';
-// Removed Button import, will use native button
 import {
   Briefcase,
   GraduationCap,
@@ -46,9 +45,9 @@ import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import React from 'react';
 import { format, isValid, parse } from 'date-fns';
-import { cn } from '@/lib/utils'; // Added cn import
-import { buttonVariants } from '@/components/ui/button'; // Added buttonVariants import
-import { Button } from '@/components/ui/button'; // Keep this for the "Edit My Profile" button
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 export default function ProfilePreviewPage() {
   const { user: currentUser, loading: authLoading } = useAuth();

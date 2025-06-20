@@ -72,14 +72,12 @@ export default function FindCandidatesPage() {
   }, [user, loading, router, pathname]);
 
   useEffect(() => {
-    // This effect will update the combined filters whenever debounced search term or sidebar filters change
     setActiveCombinedFilters({
       searchTerm: debouncedGlobalSearchTerm,
       ...sidebarFilters,
     });
   }, [debouncedGlobalSearchTerm, sidebarFilters]);
 
-  // Effect to update individual filter states if query params change (e.g., browser back/forward)
   useEffect(() => {
     setGlobalSearchTerm(searchParams.get('q') || '');
     setSidebarFilters({
@@ -141,29 +139,10 @@ export default function FindCandidatesPage() {
     newFilters: Omit<CandidateFilters, 'searchTerm'>
   ) => {
     setSidebarFilters(newFilters);
-    // Construct new query params based on newFilters and currentGlobalSearchTerm
-    const queryParams = new URLSearchParams();
-    if (globalSearchTerm) queryParams.set('q', globalSearchTerm);
-    if (newFilters.location) queryParams.set('loc', newFilters.location);
-    if (newFilters.availability && newFilters.availability !== 'all')
-      queryParams.set('avail', newFilters.availability);
-    if (newFilters.jobSearchStatus && newFilters.jobSearchStatus !== 'all')
-      queryParams.set('status', newFilters.jobSearchStatus);
-    if (newFilters.desiredSalaryMin !== undefined)
-      queryParams.set('minSal', newFilters.desiredSalaryMin.toString());
-    if (newFilters.desiredSalaryMax !== undefined)
-      queryParams.set('maxSal', newFilters.desiredSalaryMax.toString());
-    if (newFilters.recentActivity && newFilters.recentActivity !== 'any')
-      queryParams.set('activity', newFilters.recentActivity);
-    if (newFilters.minExperienceYears !== undefined)
-      queryParams.set('minExp', newFilters.minExperienceYears.toString());
-
-    // router.push(`${pathname}?${queryParams.toString()}`, { scroll: false }); // Optional: update URL without full reload
   };
 
   const handleGlobalSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGlobalSearchTerm(e.target.value);
-    // Optionally update URL here as well if desired
   };
 
   return (
@@ -171,7 +150,7 @@ export default function FindCandidatesPage() {
       <aside className="w-full md:w-1/4 lg:w-1/5">
         <CandidateFilterSidebar
           onFilterChange={handleSidebarFilterChange}
-          initialFilters={sidebarFilters} // Pass the state driven by URL params
+          initialFilters={sidebarFilters}
           currentGlobalSearchTerm={globalSearchTerm}
         />
       </aside>

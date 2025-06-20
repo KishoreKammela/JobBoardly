@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     siteName: 'JobBoardly',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`, // Replace with your actual OG image URL
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`,
         width: 1200,
         height: 630,
         alt: 'JobBoardly Logo and Tagline',
@@ -54,7 +54,6 @@ export const metadata: Metadata = {
     title: 'JobBoardly - AI-Powered Job Portal',
     description:
       'AI-driven job matching and talent acquisition. Find jobs or post openings on JobBoardly.',
-    // images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/twitter-image.png`], // Replace with your actual Twitter image URL
   },
   robots: {
     index: true,
@@ -71,13 +70,12 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' }, // Corresponds to --background HSL(210 17% 98%)
-    { media: '(prefers-color-scheme: dark)', color: '#1A202C' }, // Corresponds to --background HSL(220 14% 10%) for dark mode
+    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
+    { media: '(prefers-color-scheme: dark)', color: '#1A202C' },
   ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  // userScalable: false, // Consider if you want to disable pinch-to-zoom
 };
 
 export default function RootLayout({

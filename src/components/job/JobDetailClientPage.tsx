@@ -1,4 +1,3 @@
-// src/components/job/JobDetailClientPage.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
@@ -58,14 +57,11 @@ const ADMIN_LIKE_ROLES = [
   'systemMonitor',
 ];
 
-// Props now directly accept jobId
 type Props = {
-  jobId?: string; // Make it optional to handle initial undefined state if necessary
+  jobId?: string;
 };
 
-export default function JobDetailClientPage({ jobId }: Props) {
-  const jobIdFromProps = jobId; // Use the direct prop
-
+export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   const [jobData, setJobData] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +93,11 @@ export default function JobDetailClientPage({ jobId }: Props) {
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
+    if (jobIdFromProps) {
+      setError(null);
+      setAccessDeniedReason(null);
+    }
+
     if (!jobIdFromProps) {
       setError('No job ID provided. Please ensure the URL is correct.');
       setIsLoading(false);
@@ -105,8 +106,6 @@ export default function JobDetailClientPage({ jobId }: Props) {
       return;
     }
 
-    setError(null);
-    setAccessDeniedReason(null);
     setIsLoading(true);
     setJobData(null);
 
@@ -137,6 +136,7 @@ export default function JobDetailClientPage({ jobId }: Props) {
             data.updatedAt instanceof Timestamp
               ? data.updatedAt.toDate().toISOString()
               : (data.updatedAt as string),
+          screeningQuestions: data.screeningQuestions || [],
         };
 
         let canView = false;
@@ -384,7 +384,6 @@ export default function JobDetailClientPage({ jobId }: Props) {
   };
 
   if (!jobIdFromProps && !isLoading) {
-    // Check jobIdFromProps before useEffect runs
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
@@ -432,8 +431,6 @@ export default function JobDetailClientPage({ jobId }: Props) {
   }
 
   if (!jobData) {
-    // This case handles if fetchJobDetails completed but found no job or set jobData to null
-    // It should ideally be covered by the error state or accessDeniedReason state.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">

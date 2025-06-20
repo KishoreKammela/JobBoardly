@@ -139,8 +139,6 @@ const resumeParserFlow = ai.defineFlow(
         `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration. ` +
           `Consider extracting text content from such documents before sending for AI analysis if results are poor.`
       );
-      // The model might still attempt to parse text from these, so we don't return an error here prematurely.
-      // The prompt guides the AI to summarize errors if it encounters them during processing.
     }
     try {
       const { output } = await resumeParserPrompt(input);
@@ -150,19 +148,17 @@ const resumeParserFlow = ai.defineFlow(
           'Resume parsing returned no output from AI, returning structure with error message.'
         );
         return {
-          skills: [], // Default empty array
+          skills: [],
           errorMessage:
             'AI model did not return any output. Parsing failed. Please try a different file or ensure it is not corrupted.',
         };
       }
-      // The output might contain an error message in the 'experience' field if the *prompt itself* detected a file issue.
-      // The 'errorMessage' field here is for errors calling the prompt.
       return output;
     } catch (e: unknown) {
       const error = e as Error;
       console.error('CRITICAL ERROR in resumeParserFlow call:', error);
       return {
-        skills: [], // Default empty array
+        skills: [],
         errorMessage: `Server-side error during resume parsing: ${error.message}. Please check server logs. This could be due to API key issues, API access, or other server problems.`,
       };
     }

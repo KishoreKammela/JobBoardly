@@ -13,7 +13,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { NotificationItem } from './NotificationItem';
 import { ScrollArea } from '../ui/scroll-area';
-import Link from 'next/link'; // For future "View All"
 
 export function NotificationBell() {
   const {
@@ -22,13 +21,12 @@ export function NotificationBell() {
     fetchNotifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-    user, // Access user to trigger fetchNotifications on user change
+    user,
   } = useAuth();
 
   useEffect(() => {
     if (user) {
-      fetchNotifications(); // Fetch initially and on user change
-      // Consider setting up a Firestore listener for real-time updates if needed later
+      fetchNotifications();
     }
   }, [user, fetchNotifications]);
 
@@ -58,7 +56,7 @@ export function NotificationBell() {
               variant="ghost"
               size="sm"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent closing dropdown
+                e.stopPropagation();
                 markAllNotificationsAsRead();
               }}
               className="text-xs h-auto py-0.5 px-1.5"
@@ -87,17 +85,6 @@ export function NotificationBell() {
             ))}
           </ScrollArea>
         )}
-        {/* Placeholder for "View All Notifications" link for future implementation */}
-        {/* {notifications.length > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="justify-center">
-              <Link href="/notifications" className="text-sm text-primary hover:underline">
-                View All Notifications
-              </Link>
-            </DropdownMenuItem>
-          </>
-        )} */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

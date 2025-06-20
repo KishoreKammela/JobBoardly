@@ -35,7 +35,6 @@ export function EmployerLoginForm() {
 
   const handleLoginSuccess = () => {
     toast({ title: 'Login Successful', description: `Welcome back!` });
-    // Redirection is handled by useEffect in parent page /employer/login/page.tsx
   };
 
   const handleSubmit = async (e: FormEvent) => {

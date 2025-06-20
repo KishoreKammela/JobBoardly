@@ -483,7 +483,7 @@ export function PostJobForm() {
     }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleFormSubmitWithConfirmation = async (e: FormEvent) => {
     e.preventDefault();
     const modalTitle = editingJobId
       ? 'Confirm Job Update'
@@ -653,7 +653,10 @@ export function PostJobForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={handleFormSubmitWithConfirmation}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="title">Job Title</Label>
@@ -794,7 +797,6 @@ export function PostJobForm() {
               />
             </div>
 
-            {/* Screening Questions Section */}
             <div className="space-y-4 p-4 border rounded-md bg-muted/20">
               <h3 className="text-lg font-semibold">
                 Screening Questions (Optional)
@@ -836,9 +838,6 @@ export function PostJobForm() {
                           <SelectContent>
                             <SelectItem value="text">Text Input</SelectItem>
                             <SelectItem value="yesNo">Yes/No</SelectItem>
-                            {/* TODO: Add UI for options for these types */}
-                            {/* <SelectItem value="multipleChoice">Multiple Choice</SelectItem> */}
-                            {/* <SelectItem value="checkboxGroup">Checkbox Group</SelectItem> */}
                           </SelectContent>
                         </Select>
                       </div>
@@ -857,32 +856,6 @@ export function PostJobForm() {
                         <Label htmlFor={`sq-required-${q.id}`}>Required</Label>
                       </div>
                     </div>
-                    {/* Placeholder for options input if type is multipleChoice or checkboxGroup */}
-                    {(q.type === 'multipleChoice' ||
-                      q.type === 'checkboxGroup') && (
-                      <div className="mt-2">
-                        <Label htmlFor={`sq-options-${q.id}`}>
-                          Options (comma-separated)
-                        </Label>
-                        <Input
-                          id={`sq-options-${q.id}`}
-                          value={(q.options || []).join(', ')}
-                          onChange={(e) =>
-                            handleScreeningQuestionChange(
-                              index,
-                              'options',
-                              e.target.value.split(',').map((opt) => opt.trim())
-                            )
-                          }
-                          placeholder="e.g., Option 1, Option 2, Option 3"
-                          disabled // TODO: Enable when MC/Checkbox UI is fully implemented
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Multiple Choice/Checkbox options UI is not yet fully
-                          implemented.
-                        </p>
-                      </div>
-                    )}
                     <Button
                       type="button"
                       variant="ghost"

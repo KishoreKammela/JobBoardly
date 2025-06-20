@@ -3,7 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   GithubAuthProvider,
-  OAuthProvider, // For Microsoft
+  OAuthProvider,
   type Auth,
 } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
@@ -45,23 +45,13 @@ if (missingKeys.length > 0) {
   storageInstance = getStorage(app);
 }
 
-// Export instances or throw error if not initialized
-// This allows other files to import these services directly,
-// but they might be undefined if initialization failed.
-// Consider adding checks in consuming files or a global "isFirebaseInitialized" flag.
-
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
 const microsoftProvider = new OAuthProvider('microsoft.com');
 
-// It's safer to export potentially undefined services and let consuming code handle it,
-// or export a function that returns the instance (or throws if not initialized).
-// For simplicity with existing code, we export them directly.
-// Consumers should be aware these might be undefined if Firebase fails to init.
-
 export {
   app,
-  authInstance as auth, // Rename to avoid conflict with auth in other files if they re-export
+  authInstance as auth,
   dbInstance as db,
   storageInstance as storage,
   googleProvider,

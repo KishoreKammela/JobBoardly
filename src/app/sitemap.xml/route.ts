@@ -7,11 +7,11 @@ import {
   Timestamp,
   limit,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase'; // Adjust path as needed
-import type { Job, Company } from '@/types'; // Adjust path as needed
+import { db } from '@/lib/firebase';
+import type { Job, Company } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
-const MAX_ITEMS_PER_TYPE = 1000; // Limit to avoid overly large sitemaps
+const MAX_ITEMS_PER_TYPE = 1000;
 
 function generateSiteMap(
   staticPages: {
@@ -92,39 +92,42 @@ export async function GET() {
     { url: '/auth/register', priority: '0.5', changeFrequency: 'monthly' },
     { url: '/employer/login', priority: '0.5', changeFrequency: 'monthly' },
     { url: '/employer/register', priority: '0.5', changeFrequency: 'monthly' },
-    { url: '/auth/admin/login', priority: '0.1', changeFrequency: 'yearly' }, // Low priority for admin login
+    { url: '/auth/admin/login', priority: '0.1', changeFrequency: 'yearly' },
   ];
 
   let approvedJobs: Job[] = [];
   let approvedCompanies: Company[] = [];
 
   try {
-    // Fetch approved jobs
-    const jobsQuery = query(
-      collection(db, 'jobs'),
-      where('status', '==', 'approved'),
-      orderBy('updatedAt', 'desc'), // Order by most recently updated
-      limit(MAX_ITEMS_PER_TYPE)
-    );
-    const jobsSnapshot = await getDocs(jobsQuery);
-    approvedJobs = jobsSnapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Job
-    );
+    if (!db) {
+      console.warn(
+        "Sitemap Generation: Firestore 'db' instance is not available. Skipping dynamic content."
+      );
+    } else {
+      const jobsQuery = query(
+        collection(db, 'jobs'),
+        where('status', '==', 'approved'),
+        orderBy('updatedAt', 'desc'),
+        limit(MAX_ITEMS_PER_TYPE)
+      );
+      const jobsSnapshot = await getDocs(jobsQuery);
+      approvedJobs = jobsSnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Job
+      );
 
-    // Fetch approved companies
-    const companiesQuery = query(
-      collection(db, 'companies'),
-      where('status', '==', 'approved'),
-      orderBy('updatedAt', 'desc'), // Order by most recently updated
-      limit(MAX_ITEMS_PER_TYPE)
-    );
-    const companiesSnapshot = await getDocs(companiesQuery);
-    approvedCompanies = companiesSnapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() }) as Company
-    );
+      const companiesQuery = query(
+        collection(db, 'companies'),
+        where('status', '==', 'approved'),
+        orderBy('updatedAt', 'desc'),
+        limit(MAX_ITEMS_PER_TYPE)
+      );
+      const companiesSnapshot = await getDocs(companiesQuery);
+      approvedCompanies = companiesSnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Company
+      );
+    }
   } catch (error) {
     console.error('Error fetching data for sitemap:', error);
-    // Fallback to sitemap with only static pages in case of DB error
   }
 
   const sitemap = generateSiteMap(staticPages, approvedJobs, approvedCompanies);

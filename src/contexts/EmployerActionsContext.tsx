@@ -75,7 +75,7 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
           recentActivity: filters.recentActivity ?? null,
           minExperienceYears: filters.minExperienceYears ?? null,
         },
-        createdAt: new Date(), // Firestore will convert this to a Timestamp
+        createdAt: new Date(),
       };
 
       try {
@@ -129,10 +129,9 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
           ...searchToDelete,
           createdAt:
             searchToDelete.createdAt instanceof Date
-              ? searchToDelete.createdAt // Already a Date object
-              : new Date(searchToDelete.createdAt as string), // Convert string/Timestamp to Date
+              ? searchToDelete.createdAt
+              : new Date(searchToDelete.createdAt as string),
           filters: {
-            // Ensure nulls are preserved if they were stored as such
             searchTerm: searchToDelete.filters.searchTerm,
             location: searchToDelete.filters.location,
             availability: searchToDelete.filters.availability,
@@ -168,8 +167,19 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
       newStatus: ApplicationStatus,
       employerNotes?: string
     ) => {
-      if (!user || user.role !== 'employer') {
-        throw new Error('Only employers can update application status.');
+      if (!user || user.role !== 'employer' || !db) {
+        throw new Error(
+          'Only employers can update application status / DB not available.'
+        );
+      }
+      if (company?.status === 'suspended' || company?.status === 'deleted') {
+        toast({
+          title: 'Company Account Restricted',
+          description:
+            'Cannot update application status as your company account is currently restricted.',
+          variant: 'destructive',
+        });
+        throw new Error('Company account restricted.');
       }
       const applicationDocRef = doc(db, 'applications', applicationId);
       const updates: { [key: string]: unknown } = {
@@ -192,7 +202,7 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [user]
+    [user, company]
   );
 
   return (

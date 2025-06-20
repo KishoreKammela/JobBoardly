@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Save } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { Filters } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
@@ -39,22 +39,26 @@ export function FilterSidebar({
   initialFilters,
   currentGlobalSearchTerm = '',
 }: FilterSidebarProps) {
-  const defaultSidebarFilters: Omit<Filters, 'searchTerm'> = {
-    location: '',
-    roleType: 'all',
-    isRemote: false,
-    recentActivity: 'any',
-    ...initialFilters,
-  };
-
-  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>(
-    defaultSidebarFilters
-  );
+  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>({
+    location: initialFilters?.location || '',
+    roleType: initialFilters?.roleType || 'all',
+    isRemote: initialFilters?.isRemote || false,
+    recentActivity: initialFilters?.recentActivity || 'any',
+  });
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user } = useAuth();
   const { saveSearch } = useJobSeekerActions();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setFilters({
+      location: initialFilters?.location || '',
+      roleType: initialFilters?.roleType || 'all',
+      isRemote: initialFilters?.isRemote || false,
+      recentActivity: initialFilters?.recentActivity || 'any',
+    });
+  }, [initialFilters]);
 
   useEffect(() => {
     onFilterChange(filters);
@@ -88,14 +92,14 @@ export function FilterSidebar({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // onFilterChange(filters); // This is now handled by useEffect
-  };
-
   const handleReset = () => {
-    setFilters(defaultSidebarFilters);
-    // onFilterChange(defaultSidebarFilters); // This is now handled by useEffect
+    const resetFilters: Omit<Filters, 'searchTerm'> = {
+      location: '',
+      roleType: 'all',
+      isRemote: false,
+      recentActivity: 'any',
+    };
+    setFilters(resetFilters);
   };
 
   const handleOpenSaveSearchDialog = () => {
@@ -160,7 +164,7 @@ export function FilterSidebar({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
           <div>
             <Label htmlFor="location">Location</Label>
             <Input

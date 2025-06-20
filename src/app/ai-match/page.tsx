@@ -22,7 +22,7 @@ export default function AiMatchPage() {
     }
   }, [user, loading, router, pathname]);
 
-  if (loading || (!user && !auth.currentUser)) {
+  if (loading || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
