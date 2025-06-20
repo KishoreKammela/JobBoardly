@@ -30,15 +30,15 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
-
-// Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
-// For a page like this which is client-rendered, the root layout.tsx's metadata or a specific server wrapper would set the primary metadata.
-// We can add dynamic title updates via useEffect if needed.
+import { useAuth } from '@/contexts/AuthContext'; // Added
+import { useIsMobile } from '@/hooks/use-mobile'; // Added
 
 const JOBS_PER_PAGE = 9;
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
+  const { user } = useAuth(); // Added
+  const isMobile = useIsMobile(); // Added
 
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
@@ -46,7 +46,7 @@ export default function JobsPage() {
   const [isFiltering, setIsFiltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Initial fallback
 
   const [globalSearchTerm, setGlobalSearchTerm] = useState(
     searchParams.get('q') || ''
@@ -67,6 +67,19 @@ export default function JobsPage() {
   useEffect(() => {
     document.title = 'Find Jobs - Search & Apply | JobBoardly';
   }, []);
+
+  // Effect to set initial view mode based on user preference or device size
+  useEffect(() => {
+    const userPreference = user?.jobBoardDisplay;
+    if (userPreference) {
+      setViewMode(userPreference);
+    } else {
+      // Only set device-based default if isMobile is determined (not undefined)
+      if (isMobile !== undefined) {
+        setViewMode(isMobile ? 'list' : 'grid');
+      }
+    }
+  }, [user?.jobBoardDisplay, isMobile]);
 
   useEffect(() => {
     const fetchJobs = async () => {

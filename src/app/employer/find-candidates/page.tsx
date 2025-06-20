@@ -20,14 +20,16 @@ import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { useIsMobile } from '@/hooks/use-mobile'; // Added
 
 export default function FindCandidatesPage() {
   const { user, company, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile(); // Added
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Initial fallback
 
   const [globalSearchTerm, setGlobalSearchTerm] = useState(
     searchParams.get('q') || ''
@@ -61,6 +63,19 @@ export default function FindCandidatesPage() {
       searchTerm: debouncedGlobalSearchTerm,
       ...sidebarFilters,
     });
+
+  // Effect to set initial view mode based on user preference or device size
+  useEffect(() => {
+    const userPreference = user?.jobBoardDisplay; // Assuming employers might also have this setting
+    if (userPreference) {
+      setViewMode(userPreference);
+    } else {
+      // Only set device-based default if isMobile is determined (not undefined)
+      if (isMobile !== undefined) {
+        setViewMode(isMobile ? 'list' : 'grid');
+      }
+    }
+  }, [user?.jobBoardDisplay, isMobile]);
 
   useEffect(() => {
     if (loading) return;
