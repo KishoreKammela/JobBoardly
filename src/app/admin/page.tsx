@@ -564,7 +564,6 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended' | 'deleted'
   ) => {
-    // Initial permission check for the logged-in admin
     if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
       toast({
         title: 'Permission Denied',
@@ -574,17 +573,31 @@ export default function AdminPage() {
       return;
     }
 
-    // Prevent admin from changing their own status
-    if (user.uid === userId) {
+    const isTargetListedAsJobSeeker = allJobSeekers.some(
+      (js) => js.uid === userId
+    );
+
+    if (user.uid === userId && !isTargetListedAsJobSeeker) {
       toast({
         title: 'Action Denied',
-        description: 'You cannot change your own status.',
+        description:
+          'You cannot change your own status as a platform user. This action targets your admin account.',
         variant: 'destructive',
       });
       return;
     }
+    if (user.uid === userId && isTargetListedAsJobSeeker) {
+      toast({
+        title: 'Caution: Self-Action',
+        description:
+          'You are attempting to modify your own job seeker record. Proceed with caution.',
+        variant: 'default',
+        duration: 5000,
+      });
+      // Allow to proceed for job seeker self-modification by admin for now,
+      // but this specific "You cannot change your own status" toast should not appear for this case.
+    }
 
-    // Find the target user details from local state
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
       (u) => u.uid === userId
     );
@@ -598,17 +611,10 @@ export default function AdminPage() {
       return;
     }
 
-    // Specific permission check for regular admins modifying other admins/superAdmins
-    const isTargetDefinitelyJobSeeker = allJobSeekers.some(
-      (js) => js.uid === userId
-    );
-
     if (user.role === 'admin') {
-      // If the current user is a regular admin
-      // And the target is NOT a job seeker (i.e., they are a platform user)
-      // And the target's role IS admin or superAdmin
       if (
-        !isTargetDefinitelyJobSeeker &&
+        !isTargetListedAsJobSeeker &&
+        targetUser.uid !== user.uid && // Ensure we are not re-checking self if it's a platform user action
         (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
       ) {
         toast({
@@ -621,7 +627,6 @@ export default function AdminPage() {
       }
     }
 
-    // If all checks pass, proceed with the update
     setSpecificActionLoading(`user-${userId}`);
     try {
       const userDocRef = doc(db, 'users', userId);
@@ -631,7 +636,7 @@ export default function AdminPage() {
       });
 
       const updatedTime = new Date().toISOString();
-      if (targetUser.role === 'jobSeeker') {
+      if (targetUser.role === 'jobSeeker' || isTargetListedAsJobSeeker) {
         setAllJobSeekers((prev) =>
           prev.map((u) =>
             u.uid === userId
