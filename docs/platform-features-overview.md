@@ -25,19 +25,19 @@ These features are foundational to the JobBoardly experience.
 
 ### 2.1. Account Management
 
-- **Registration & Login**: Secure account creation and login via email/password or social providers (Google, GitHub, Microsoft). Password strength indicators during registration.
+- **Registration & Login**: Secure account creation and login via email/password or social providers.
 - **Change Password**: Ability to change account password securely.
 - **Account Status**: Awareness of account status (`active`, `suspended`). Suspended accounts have limited functionality. Deleted accounts cannot log in.
 
 ### 2.2. Profile Management (`/profile`)
 
-- **Comprehensive Profile Creation**: Sections for personal info, professional headline, AI-assisted professional summary, skills, detailed work experience (with company, role, duration, description, CTC), education (with level, degree, institute, batch, specialization, course type, description, most relevant flag), languages (with proficiency), total experience, compensation (current & expected CTC), and links (portfolio, LinkedIn).
+- **Comprehensive Profile Creation**: Sections for personal info, professional headline, AI-assisted professional summary, skills, detailed work experience, education, languages, total experience, compensation (current & expected CTC), links (portfolio, LinkedIn), and job preferences (including `noticePeriod`).
 - **Resume Management**:
   - Upload resume (PDF, DOCX, TXT) or paste resume text.
   - **AI Resume Parsing**: Genkit flow (`parseResumeFlow`) analyzes the resume to extract key information and pre-fill profile sections.
   - View/Download/Remove stored resume file.
 - **AI Professional Summary Generator**:
-  - Job seekers can input a target role/company, and the AI (`generateProfileSummaryFlow`) generates a tailored summary based on their profile data.
+  - Job seekers can input a target role/company, and the AI (`generateProfileSummaryFlow`) generates a tailored summary.
   - Option to copy the generated summary to their main profile.
 - **Profile Visibility**: Control whether their profile is searchable by employers.
 - **Downloadable PDF Profile**: Generate and download a PDF version of their profile.
@@ -47,32 +47,28 @@ These features are foundational to the JobBoardly experience.
 
 - **Job Search & Filtering (`/jobs`)**:
   - Browse and search approved job postings.
-  - Filters for keywords, location, role type, remote option, and recent activity.
+  - Filters for keywords, location, role type, remote option, recent activity, salary range, experience level, and min experience years.
   - View modes: Grid or List.
-- **Save Job Search**: Save current search criteria (keywords + filters) with a custom name. Managed in `/settings`.
+- **Save Job Search**: Save current search criteria. Managed in `/settings`.
 - **Job Detail Page (`/jobs/[jobId]`)**:
-  - View full job details (description, responsibilities, qualifications, skills, salary, company info).
-  - Share job posting link.
-  - Screening questions are not visible to public job seekers on this page (unless it's a preview by an Admin/owning Employer).
+  - View full job details, now including distinct sections for `responsibilities` and `requirements`, plus benefits, industry, experience level, and a prominent company info header.
 - **Company Profile Page (`/companies/[companyId]`)**: View company details and their open positions.
 
 ### 2.4. Application Management
 
 - **Apply for Jobs**:
   - Apply directly for 'approved' jobs.
-  - If a job has screening questions, a modal appears to answer them (text, yes/no currently supported). Answers are submitted with the application.
+  - If a job has screening questions, a modal appears to answer them (text, yes/no supported).
 - **Re-application Prevention**: Cannot re-apply for a job once an application is submitted, withdrawn, or rejected.
 - **Withdraw Application**: Withdraw an active application (status 'Applied') via the "My Jobs" page or job detail page.
-- **Save Jobs**: Bookmark 'approved' jobs.
+- **Save Jobs**: Bookmark 'approved' jobs. This is disabled if an application for the job already exists.
 - **My Jobs Page (`/my-jobs`)**:
   - Dashboard to view and manage Saved Jobs and Applied Jobs.
   - Filter jobs by status (All, Applied, Saved, Withdrawn).
-  - View application status (e.g., Applied, Reviewed, Withdrawn by Applicant, Rejected By Company).
 
 ### 2.5. AI-Powered Job Matching (`/ai-match`)
 
-- Job seekers can input/review their profile summary.
-- The AI (`aiPoweredJobMatchingFlow`) matches their comprehensive profile against all available 'approved' job postings.
+- AI (`aiPoweredJobMatchingFlow`) matches their comprehensive profile (including `noticePeriod` and other detailed preferences) against all available 'approved' job postings.
 - Provides a list of relevant job IDs and detailed reasoning for the matches.
 
 ### 2.6. User Settings (`/settings`)
@@ -87,37 +83,28 @@ These features are foundational to the JobBoardly experience.
 
 ### 3.1. Account & Company Management
 
-- **Registration & Login**: Secure account creation (associating with a new or existing company) and login. Company name is required for new company registration with social sign-up.
+- **Registration & Login**: Secure account creation (associating with a new or existing company) and login.
 - **Company Profile**: New company profiles are set to 'pending' and require admin approval.
 - **Change Password**: Ability to change account password.
-- **Account & Company Status**: Aware of personal account status and associated company status (`pending`, `approved`, `rejected`, `suspended`, `deleted`). Suspended/deleted company status limits functionality.
 
 ### 3.2. Company Profile Management (`/profile` - for Company Admins)
 
 - **Manage Company Details**: Update company name, description (Markdown), website, logo, banner URL.
-- **Admin Approval**: Significant updates to company profiles may require re-approval.
-- **View Recruiters**: View list of recruiters associated with the company.
 - **Profile Preview (`/employer/profile/preview`)**: Preview the public company page.
-- _Note: Editing disabled if company is suspended/deleted._
 
 ### 3.3. Job Posting & Management
 
 - **Create/Edit Job Postings (`/employer/post-job`)**:
-  - Form for job details: title, location, type, remote status, salary, skills.
-  - **AI Job Description Parsing**: Upload a document (PDF, DOCX, TXT), and AI (`parseJobDescriptionFlow`) attempts to pre-fill fields.
-  - **Screening Questions**: Add custom screening questions (text, yes/no) to job postings, mark as required.
+  - Form for comprehensive job details, including `responsibilities`, `requirements`, `benefits` (string), salary range with a `payTransparency` toggle, `industry`, `department`, `experienceLevel`, and an `applicationDeadline` picker.
+  - **AI Job Description Parsing**: Upload a document, and AI (`parseJobDescriptionFlow`) attempts to pre-fill these fields.
+  - **Screening Questions**: Add custom screening questions (text, yes/no) to job postings.
 - **Job Status**: New jobs are 'pending' approval. Edits resubmit job as 'pending'.
-- **View Posted Jobs (`/employer/posted-jobs`)**:
-  - Dashboard of all jobs posted by the company.
-  - Displays job title, status, applicant count.
-  - Links to edit job or view applicants.
-  - **Preview Jobs**: Employers can preview their jobs in any status (pending, rejected, suspended) via a link which navigates to `/jobs/[jobId]`, where they will see full details including screening questions.
+- **View Posted Jobs (`/employer/posted-jobs`)**: Dashboard of all jobs posted by the company.
 
 ### 3.4. Applicant Management
 
 - **View Applicants (`/employer/jobs/[jobId]/applicants`)**:
   - List of candidates who applied for a specific job.
-  - View applicant name, headline, application date.
   - **View Screening Question Answers**: Answers provided by applicants are displayed.
   - Filter applicants by status.
 - **Application Status Management**: Update application status (e.g., `Reviewed`, `Interviewing`, `Hired`).
@@ -128,56 +115,29 @@ These features are foundational to the JobBoardly experience.
 
 - **Candidate Search & Filtering (`/employer/find-candidates`)**:
   - Search 'searchable' job seeker profiles.
-  - Keyword search with basic boolean logic (AND, OR, NOT, "phrases").
-  - Filters: location, availability, job search status, salary, recent activity, experience.
-  - View modes: Grid or List.
-- **Save Candidate Search**: Save current search criteria with a custom name. Managed in `/settings`.
+  - Keyword search with boolean logic.
+  - Filters: location, `noticePeriod`, job search status, salary, recent activity, experience.
+- **Save Candidate Search**: Save current search criteria.
 - **AI-Powered Candidate Matching (`/employer/ai-candidate-match`)**:
-  - Input/upload a job description.
-  - AI (`aiPoweredCandidateMatchingFlow`) matches it against searchable candidate profiles.
-  - Provides relevant candidate UIDs and match reasoning.
+  - AI (`aiPoweredCandidateMatchingFlow`) matches a detailed job description against searchable candidate profiles.
 
 ### 3.6. User Settings (`/settings`)
 
 - **Theme Customization**: Light, Dark, or System.
-- **Notification Preferences**: Basic UI for toggling notification categories (backend triggers pending).
+- **Notification Preferences**: Basic UI.
 - **Manage Saved Candidate Searches**: View, apply, or delete saved candidate searches.
 
 ## 4. Platform Staff / Admin Features (`/admin`)
 
-### 4.1. Admin Dashboard Overview
-
-- **Platform Analytics**: Key metrics (total job seekers, companies, jobs, applications). (Not visible to Support Agents).
-- **Quick Moderation Cards**: For pending job and company approvals. (Usable by SuperAdmin, Admin, Moderator).
-
-### 4.2. Content & User Management (Tab-Based)
-
-- **Companies Management**:
-  - View all companies with details.
-  - Actions: View profile, Approve, Reject, Suspend, Activate, Delete (Soft). (Actions vary by role; restricted for Support Agents/Data Analysts).
-  - Search, sort, pagination.
-- **All Jobs Management**:
-  - View all jobs with details (including screening questions if applicable for preview).
-  - Actions: View public job page (admins see full details), Suspend (Admin+), Activate, Approve, Reject. (Actions vary by role; restricted for Support Agents/Data Analysts).
-  - Search, sort, pagination.
-- **Job Seekers Management**:
-  - View all job seeker profiles.
-  - Actions: View profile, Suspend, Activate, Delete (Soft). (Admin/SuperAdmin only).
-  - Search, sort, pagination.
-- **Platform Users Management**: (Visible to SuperAdmin, Admin, Data Analyst; actions vary)
-  - View all platform staff accounts.
-  - Actions: View profile. Suspend/Activate other staff (permission-based; SuperAdmins manage all, Admins manage Moderators/Support/Data Analysts).
-  - Search, sort, pagination.
-- **Legal Content Management**: (SuperAdmins only)
-  - Edit Privacy Policy and Terms of Service using a Markdown editor.
-  - Content stored in Firestore and dynamically displayed on public pages.
-- **AI Feature Management (Placeholder)**: Placeholder tab for future AI feature toggles (SuperAdmins only).
-
-### 4.3. Access Control
-
-- **Protected Route**: `/admin` accessible only to defined admin-like roles.
-- **Dedicated Login**: `/auth/admin/login` for platform staff.
-- **Role-Based Permissions**: Features and actions within the admin panel are restricted based on the logged-in staff member's role.
+- **Dashboard Overview**: Key platform analytics and quick moderation cards.
+- **Content & User Management (Tab-Based)**:
+  - **Companies Management**: Approve, reject, suspend, activate, and delete companies.
+  - **All Jobs Management**: View all jobs, including screening questions on preview. Suspend, activate, approve, reject jobs.
+  - **Job Seekers Management**: Suspend, activate, delete job seeker accounts.
+  - **Platform Users Management**: Manage admin/moderator accounts with role-based permissions.
+  - **Legal Content Management**: (SuperAdmins only) Edit Privacy Policy and Terms of Service.
+  - **AI Feature Management (Placeholder)**: Placeholder for future AI feature toggles.
+- **Access Control**: Protected `/admin` route with a dedicated login at `/auth/admin/login`.
 
 ---
 

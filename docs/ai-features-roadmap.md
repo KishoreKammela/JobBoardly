@@ -91,7 +91,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 #### **Smart Job Description Optimizer (AI Parsing Implemented)**
 
-- **AI Job Description Parsing (Implemented)**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields for job posting.
+- **AI Job Description Parsing (Implemented)**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill form fields including `title`, `responsibilities`, `requirements`, `skills`, `salary`, `industry`, `experienceLevel`, and more.
 - **Bias Detection & Removal (Future)**: Identify and suggest alternatives for biased language
 - **Performance Predictor (Future)**: Predict job posting performance before publishing
 - **Optimal Requirements Generator (Future)**: Suggest must-have vs nice-to-have requirements based on market data
@@ -142,8 +142,8 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ### **AI-Powered Matching Engine (Implemented for Job Seekers & Employers)**
 
-- **Job Matching for Job Seekers (Implemented)**: Matches job seeker profile against available job postings.
-- **Candidate Matching for Employers (Implemented)**: Matches job description against searchable candidate profiles.
+- **Job Matching for Job Seekers (Implemented)**: Matches job seeker profile (including skills, experience, and `noticePeriod`) against available job postings (including `responsibilities`, `requirements`, `industry`, `experienceLevel`, etc.).
+- **Candidate Matching for Employers (Implemented)**: Matches a detailed job description (including all new fields) against searchable candidate profiles.
 - **Behavioral Matching (Future)**: Match based on work style, career motivations, and cultural preferences
 - **Success Pattern Recognition (Future)**: Learn from successful hires to improve future matching
 - **Dynamic Matching (Future)**: Continuously refine matches based on user feedback and outcomes
@@ -176,10 +176,10 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ### **Implemented / In Progress (Foundational AI)**
 
-- **Resume Parsing (Implemented)**: Genkit flow to extract data from resumes.
-- **Job Description Parsing (Implemented)**: Genkit flow for employers to parse JDs.
-- **AI-Powered Job Matching (Implemented)**: Genkit flow for job seekers.
-- **AI-Powered Candidate Matching (Implemented)**: Genkit flow for employers.
+- **Resume Parsing (Implemented)**: Genkit flow to extract data from resumes, including `noticePeriod`.
+- **Job Description Parsing (Implemented)**: Genkit flow for employers to parse JDs, now extracting richer details like `responsibilities`, `requirements`, `industry`, and `experienceLevel`.
+- **AI-Powered Job Matching (Implemented)**: Genkit flow for job seekers, enhanced with richer job data.
+- **AI-Powered Candidate Matching (Implemented)**: Genkit flow for employers, enhanced with richer job data.
 - **Dynamic Summary Generator (Initial Version Implemented for Profile Page)**: AI generates professional summaries for job seekers. Full user control and admin toggle pending.
 
 ### **Phase 1 (Future - Months 1-6 post foundational): Enhance Core AI & User Experience**
@@ -207,7 +207,6 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 - Video Interview Analysis.
 - Voice-based Interactions for AI assistants.
-- Advanced Behavioral DNA Matching.
 - Predictive Hiring Success Models.
 - AI Career Path Advisor (full version).
 

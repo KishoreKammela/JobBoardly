@@ -37,7 +37,12 @@ To empower employers to efficiently find and connect with qualified candidates b
 ### 2.3. Job Posting & Management
 
 - **Create & Edit Job Postings (`/employer/post-job`)**:
-  - Intuitive form to input job details: Title, Location, Type (Full-time, Part-time, etc.), Remote status, Salary range (Min/Max INR), Skills.
+  - Intuitive form to input job details including:
+    - **Core Info**: Title, Location, Type (Full-time, Part-time, etc.), Remote status.
+    - **Detailed Info**: Industry, Department/Functional Area, Role/Designation, Experience Level, Min/Max Years of Experience, Education Qualification.
+    - **Responsibilities & Requirements**: Separate, detailed text areas for what the candidate will do and what they need to have.
+    - **Compensation**: Salary range (Min/Max INR) and a `Pay Transparency` checkbox to control visibility.
+    - **Benefits**: A text area to describe company perks.
   - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields. _Note: Plain text (.txt) is recommended for best parsing results with the current AI model._
   - **Screening Questions**: Add custom screening questions (text input, yes/no supported) to job postings. These questions are presented to job seekers during the application process. Employers can mark questions as required.
   - Submitting new jobs or updating existing ones requires confirmation.
@@ -65,7 +70,7 @@ To empower employers to efficiently find and connect with qualified candidates b
   - _Note_: Disabled if the company account is 'suspended' or 'deleted', or if the specific job is 'suspended'.
 - **Dynamic Candidate Detail Pages (`/employer/candidates/[candidateId]`)**:
   - View comprehensive profiles of job seekers who have applied or are found via search.
-  - Includes their skills, experience, education, languages, preferences, and resume summary.
+  - Includes their skills, experience, education, languages, preferences (including `noticePeriod`), and resume summary.
   - Download a PDF version of the candidate's profile (if they've enabled it and their profile is viewable).
 
 ### 2.5. Candidate Sourcing
@@ -76,7 +81,7 @@ To empower employers to efficiently find and connect with qualified candidates b
     - Keyword search supporting basic **boolean logic** (AND, OR, NOT, "exact phrases").
   - **Filters**:
     - Preferred Location.
-    - Availability (e.g., Immediate, 2 Weeks Notice).
+    - `Notice Period`.
     - Job Search Status (e.g., Actively Looking, Open to Opportunities).
     - Desired Salary Range (Min/Max INR).
     - Recent Profile Activity (e.g., profile updated in the last 7 days).
@@ -172,14 +177,12 @@ graph TD
 
 Employers use Genkit flows for AI-assisted tasks and interact with Firebase Firestore for data storage and management. Critical write operations (job posts, applicant status, profile updates, saving/deleting searches) are preceded by confirmation modals.
 
-- **Job Description Parsing (`parseJobDescriptionFlow`):** (As before)
-- **AI-Powered Candidate Matching (`aiPoweredCandidateMatching`):** (As before, UI access restricted if company suspended/deleted)
+- **Job Description Parsing (`parseJobDescriptionFlow`):** Parses uploaded job description documents to extract `title`, `responsibilities`, `requirements`, and other detailed fields.
+- **AI-Powered Candidate Matching (`aiPoweredCandidateMatching`):** Matches a detailed job description (including all new fields) against the candidate database.
 - **Company & Job Data (Firebase Firestore):**
   - **Company Profile**: Updated in `companies` collection. Admin approval required for new/significant changes. Saving requires confirmation. Editing restricted if company status is 'suspended' or 'deleted'.
-  - **Job Postings**: Created/updated in `jobs` collection, now includes `screeningQuestions` (array of ScreeningQuestion objects). Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended'/'deleted' or if job itself is admin-suspended.
-  - **Application Management**: Employers update `status` and `employerNotes` in `application` documents (which now includes `answers` from job seekers). Status updates require confirmation. Management restricted if company/job is suspended/deleted.
-- **Saving a Candidate Search:** (As before)
-- **Deleting a Saved Candidate Search:** (As before)
+  - **Job Postings**: Created/updated in `jobs` collection, now includes detailed fields like `responsibilities`, `requirements`, `benefits` (string), `industry`, `experienceLevel`, and `screeningQuestions`. Submitting/updating requires confirmation.
+  - **Application Management**: Employers update `status` and `employerNotes` in `application` documents (which now includes `answers` from job seekers). Status updates require confirmation.
 
 ## 6. Future Updates (Potential Enhancements)
 
