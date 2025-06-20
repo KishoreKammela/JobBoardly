@@ -20,16 +20,17 @@ import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
-import { useIsMobile } from '@/hooks/use-mobile'; // Added
+import { useIsMobile } from '@/hooks/use-mobile';
+import type { NoticePeriod } from '@/types';
 
 export default function FindCandidatesPage() {
   const { user, company, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isMobile = useIsMobile(); // Added
+  const isMobile = useIsMobile();
 
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Initial fallback
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const [globalSearchTerm, setGlobalSearchTerm] = useState(
     searchParams.get('q') || ''
@@ -40,7 +41,7 @@ export default function FindCandidatesPage() {
     Omit<CandidateFilters, 'searchTerm'>
   >({
     location: searchParams.get('loc') || '',
-    availability: searchParams.get('avail') || 'all',
+    noticePeriod: (searchParams.get('notice') as NoticePeriod) || 'all',
     jobSearchStatus:
       (searchParams.get('status') as CandidateFilters['jobSearchStatus']) ||
       'all',
@@ -64,13 +65,11 @@ export default function FindCandidatesPage() {
       ...sidebarFilters,
     });
 
-  // Effect to set initial view mode based on user preference or device size
   useEffect(() => {
-    const userPreference = user?.jobBoardDisplay; // Assuming employers might also have this setting
+    const userPreference = user?.jobBoardDisplay;
     if (userPreference) {
       setViewMode(userPreference);
     } else {
-      // Only set device-based default if isMobile is determined (not undefined)
       if (isMobile !== undefined) {
         setViewMode(isMobile ? 'list' : 'grid');
       }
@@ -97,7 +96,7 @@ export default function FindCandidatesPage() {
     setGlobalSearchTerm(searchParams.get('q') || '');
     setSidebarFilters({
       location: searchParams.get('loc') || '',
-      availability: searchParams.get('avail') || 'all',
+      noticePeriod: (searchParams.get('notice') as NoticePeriod) || 'all',
       jobSearchStatus:
         (searchParams.get('status') as CandidateFilters['jobSearchStatus']) ||
         'all',

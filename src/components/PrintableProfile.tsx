@@ -301,9 +301,9 @@ const PrintableProfileComponent = React.forwardRef<
                 {user.preferredLocations.join(', ')}
               </p>
             )}
-            {user.availability && (
+            {user.noticePeriod && (
               <p className="printable-profile-detail-item">
-                <strong>Availability:</strong> {user.availability}
+                <strong>Notice Period:</strong> {user.noticePeriod}
               </p>
             )}
             {user.jobSearchStatus && (
@@ -317,7 +317,7 @@ const PrintableProfileComponent = React.forwardRef<
             {(!user.preferredLocations ||
               user.preferredLocations.length === 0) &&
               !user.jobSearchStatus &&
-              !user.availability && (
+              !user.noticePeriod && (
                 <p className="printable-profile-detail-item">Not specified.</p>
               )}
           </div>

@@ -178,13 +178,13 @@ export function CandidateSearchResults({
       }
 
       if (
-        currentFilters.availability &&
-        currentFilters.availability !== 'all'
+        currentFilters.noticePeriod &&
+        currentFilters.noticePeriod !== 'all'
       ) {
         tempFiltered = tempFiltered.filter(
           (candidate) =>
-            candidate.availability?.toLowerCase() ===
-            currentFilters.availability.toLowerCase()
+            candidate.noticePeriod?.toLowerCase() ===
+            currentFilters.noticePeriod?.toLowerCase()
         );
       }
 

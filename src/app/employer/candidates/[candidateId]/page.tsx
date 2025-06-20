@@ -87,7 +87,7 @@ export default function CandidateDetailPage() {
     }
     if (
       currentUser.role !== 'employer' &&
-      !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole) // Explicitly cast as UserRole if confident it fits
+      !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole)
     ) {
       toast({
         title: 'Access Denied',
@@ -115,7 +115,6 @@ export default function CandidateDetailPage() {
       router.replace('/employer/posted-jobs');
       return;
     }
-    // If initial checks pass, proceed to fetch candidate (handled in next useEffect)
   }, [currentUser, company, authLoading, router, currentPathname, toast]);
 
   useEffect(() => {
@@ -125,16 +124,7 @@ export default function CandidateDetailPage() {
       (currentUser.role !== 'employer' &&
         !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole))
     ) {
-      // If current user is not an employer or admin, or no candidateId, don't fetch.
-      // This check is partly redundant due to the first useEffect but good for safety.
-      if (
-        currentUser &&
-        currentUser.role !== 'employer' &&
-        !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole)
-      ) {
-        // This specific condition should have been caught by the first useEffect.
-        // If it reaches here, it's an edge case or logic error.
-      } else if (!candidateId) {
+      if (!candidateId) {
         setError('No candidate ID specified.');
         setIsLoading(false);
       }
@@ -259,7 +249,7 @@ export default function CandidateDetailPage() {
     if (candidateId && currentUser) {
       fetchCandidate();
     }
-  }, [candidateId, currentUser, toast, router]); // Removed company from deps as it's handled in first useEffect
+  }, [candidateId, currentUser, toast, router]);
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
@@ -283,8 +273,6 @@ export default function CandidateDetailPage() {
   }
 
   if (!candidate) {
-    // This state should ideally be hit less often due to redirects.
-    // It would now mean the profile genuinely doesn't exist or a non-access error occurred.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
@@ -733,19 +721,19 @@ export default function CandidateDetailPage() {
                         .replace(/^./, (str) => str.toUpperCase())}
                     </p>
                   )}
-                  {candidate.availability && (
+                  {candidate.noticePeriod && (
                     <p>
                       <strong className="text-foreground/80">
-                        Availability:
+                        Notice Period:
                       </strong>{' '}
-                      {candidate.availability}
+                      {candidate.noticePeriod}
                     </p>
                   )}
                 </div>
                 {(!candidate.preferredLocations ||
                   candidate.preferredLocations.length === 0) &&
                   !candidate.jobSearchStatus &&
-                  !candidate.availability && (
+                  !candidate.noticePeriod && (
                     <p className="text-sm text-muted-foreground">
                       Job preferences not specified.
                     </p>

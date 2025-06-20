@@ -15,13 +15,15 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const AIPoweredCandidateMatchingInputSchema = z.object({
-  jobDescription: z.string().describe(
-    'A detailed job description, including title, responsibilities, requirements, preferred skills, location, job type, salary range (if available, in INR) and pay transparency, benefits (string), industry, department/functional area, role/designation, experience level (e.g., Entry-Level, Mid-Level), min/max years of experience, education qualification, and application deadline (YYYY-MM-DD).' // Updated description, responsibilities, requirements, benefits
-  ),
+  jobDescription: z
+    .string()
+    .describe(
+      'A detailed job description, including title, responsibilities, requirements, preferred skills, location, job type, salary range (if available, in INR) and pay transparency, benefits (string), industry, department/functional area, role/designation, experience level (e.g., Entry-Level, Mid-Level), min/max years of experience, education qualification, and application deadline (YYYY-MM-DD).'
+    ),
   candidateProfiles: z
     .string()
     .describe(
-      'A list/collection of candidate profiles (only those marked as searchable by the job seeker). Each profile should include: Candidate UID, Name, Email (optional), Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list with proficiency and read/write/speak abilities, e.g., "English (Advanced, RWS), Spanish (Intermediate, R)"), Total Years of Professional Experience (e.g., "5 years, 6 months"), detailed Work Experience (each entry with: Company Name, Job Role, Duration, Description, Annual CTC), detailed Education (each entry with: Level, Degree, Institute, Batch, Specialization, Course Type, Description), Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking), Availability to Start (e.g., Immediate), Current Annual CTC in INR (e.g., "₹16LPA (Confidential)"), Expected Annual CTC in INR (e.g., "₹20LPA (Negotiable)"), Gender, Date of Birth, Home State, Home City, and any additional summary from their parsed resume document.'
+      'A list/collection of candidate profiles (only those marked as searchable by the job seeker). Each profile should include: Candidate UID, Name, Email (optional), Mobile (optional), Headline, Skills (comma-separated list), Languages (comma-separated list with proficiency and read/write/speak abilities, e.g., "English (Advanced, RWS), Spanish (Intermediate, R)"), Total Years of Professional Experience (e.g., "5 years, 6 months"), detailed Work Experience (each entry with: Company Name, Job Role, Duration, Description, Annual CTC), detailed Education (each entry with: Level, Degree, Institute, Batch, Specialization, Course Type, Description), Portfolio URL (optional), LinkedIn URL (optional), Preferred Locations (comma-separated list), Current Job Search Status (e.g., Actively Looking), Notice Period (e.g., "Immediately Available", "1 Month"), Current Annual CTC in INR (e.g., "₹16LPA (Confidential)"), Expected Annual CTC in INR (e.g., "₹20LPA (Negotiable)"), Gender, Date of Birth, Home State, Home City, and any additional summary from their parsed resume document.'
     ),
 });
 
@@ -35,9 +37,11 @@ const AIPoweredCandidateMatchingOutputSchema = z.object({
     .describe(
       'An array of candidate UIDs that are most relevant to the job description, ordered by relevance (most relevant first).'
     ),
-  reasoning: z.string().describe(
-    'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, total experience, detailed work experience (roles, responsibilities, CTCs), detailed education (specializations, course types), languages (proficiency), salary expectations (current and expected CTC vs job range if pay transparency is enabled), preferences (location, availability, job search status), personal details (gender, DOB, home location), and resume summary align with the job description (including its responsibilities, requirements, industry, department, required experience level, years of experience, and education qualification). Mention any potential misalignments if significant but outweighed by other factors.' // Updated job details
-  ),
+  reasoning: z
+    .string()
+    .describe(
+      'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, total experience, detailed work experience (roles, responsibilities, CTCs), detailed education (specializations, course types), languages (proficiency), salary expectations (current and expected CTC vs job range if pay transparency is enabled), preferences (location, notice period, job search status), personal details (gender, DOB, home location), and resume summary align with the job description (including its responsibilities, requirements, industry, department, required experience level, years of experience, and education qualification). Mention any potential misalignments if significant but outweighed by other factors.'
+    ),
 });
 
 export type AIPoweredCandidateMatchingOutput = z.infer<
@@ -70,7 +74,7 @@ Based on the provided information:
     - Total Years of Professional Experience (e.g., "5 years, 6 months")
     - Detailed Work Experience (roles, responsibilities, duration, specific achievements, and annual CTC for each role)
     - Detailed Education (level, degree, institute, specialization, course type, graduation year)
-    - Stated Preferences (preferred locations, expected salary in INR, job search status, current CTC, availability to start)
+    - Stated Preferences (preferred locations, expected salary in INR, job search status, current CTC, notice period)
     - Personal Details (gender, date of birth, home state/city, if they might influence location or cultural fit, though be cautious with biases)
     - Any summary from their resume document.
 3.  Identify the candidate UIDs that are the MOST relevant matches for the job description.
@@ -79,7 +83,7 @@ Based on the provided information:
 6.  Ensure your output is a correctly formatted JSON object matching the defined output schema.
 
 Prioritize candidates whose skills and experience (including total years and specific experience level) closely align with the core responsibilities and requirements of the job description.
-Consider factors like years of experience, specific technical skills, language proficiency, cultural fit (if discernible), alignment of preferences (salary, location), industry match, and education.
+Consider factors like years of experience, specific technical skills, language proficiency, cultural fit (if discernible), alignment of preferences (salary, location, notice period), industry match, and education.
 If no candidates are a strong match, return an empty 'relevantCandidateIDs' array and explain why in the 'reasoning' field.
 `,
 });

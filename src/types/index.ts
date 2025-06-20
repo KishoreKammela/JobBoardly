@@ -41,10 +41,21 @@ export interface Filters {
   experienceLevel?: JobExperienceLevel | 'all';
 }
 
+export type NoticePeriod =
+  | 'Immediately Available'
+  | '1 Month'
+  | '2 Months'
+  | '3 Months'
+  | '4 Months'
+  | '5 Months'
+  | '6 Months'
+  | 'More than 6 Months'
+  | 'Flexible';
+
 export interface CandidateFilters {
   searchTerm: string;
   location: string;
-  availability: string;
+  noticePeriod?: NoticePeriod | 'all';
   jobSearchStatus?:
     | 'all'
     | 'activelyLooking'
@@ -147,8 +158,8 @@ export interface Job {
   companyId: string;
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
-  responsibilities?: string; // Changed from description
-  requirements?: string; // Added
+  responsibilities?: string;
+  requirements?: string;
   postedDate: string | Timestamp;
   isRemote: boolean;
   skills: string[];
@@ -163,15 +174,15 @@ export interface Job {
   screeningQuestions?: ScreeningQuestion[];
 
   payTransparency?: boolean;
-  benefits?: string; // Changed from string[] to string
+  benefits?: string;
   industry: string;
-  department: string; // Functional Area / Department
+  department: string;
   roleDesignation?: string;
   experienceLevel: JobExperienceLevel;
   minExperienceYears?: number;
   maxExperienceYears?: number;
   educationQualification?: string;
-  applicationDeadline?: string | Timestamp; // Store as ISO string or Firestore Timestamp
+  applicationDeadline?: string | Timestamp;
 }
 
 export type ApplicationStatus =
@@ -268,7 +279,7 @@ export interface UserProfile {
   languages?: LanguageEntry[];
 
   mobileNumber?: string;
-  availability?: 'Immediate' | '2 Weeks Notice' | '1 Month Notice' | 'Flexible';
+  noticePeriod?: NoticePeriod;
   portfolioUrl?: string;
   linkedinUrl?: string;
   preferredLocations?: string[];
@@ -307,15 +318,15 @@ export interface ParsedResumeData {
 
 export interface ParsedJobData {
   title?: string;
-  responsibilities?: string; // Changed
-  requirements?: string; // Added
+  responsibilities?: string;
+  requirements?: string;
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
   payTransparency?: boolean;
-  benefits?: string; // Changed
+  benefits?: string;
   industry?: string;
   department?: string;
   roleDesignation?: string;

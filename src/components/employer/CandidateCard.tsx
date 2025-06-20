@@ -65,10 +65,10 @@ export function CandidateCard({ candidate }: CandidateCardProps) {
               {candidate.preferredLocations.join(', ')}
             </p>
           )}
-        {candidate.availability && (
+        {candidate.noticePeriod && (
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <CalendarDays className="h-4 w-4 text-primary/80" /> Availability:{' '}
-            {candidate.availability}
+            <CalendarDays className="h-4 w-4 text-primary/80" /> Notice Period:{' '}
+            {candidate.noticePeriod}
           </p>
         )}
         {candidate.mobileNumber && (

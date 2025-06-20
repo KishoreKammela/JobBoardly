@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import type { UserProfile } from '@/types';
+import type { UserProfile, NoticePeriod } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,18 @@ interface JobSeekerPreferencesSectionProps {
   onSwitchChange: (name: keyof UserProfile, checked: boolean) => void;
   isDisabled: boolean;
 }
+
+const noticePeriodOptions: NoticePeriod[] = [
+  'Immediately Available',
+  '1 Month',
+  '2 Months',
+  '3 Months',
+  '4 Months',
+  '5 Months',
+  '6 Months',
+  'More than 6 Months',
+  'Flexible',
+];
 
 export function JobSeekerPreferencesSection({
   userFormData,
@@ -114,20 +126,23 @@ export function JobSeekerPreferencesSection({
               </Select>
             </div>
             <div>
-              <Label htmlFor="availability">Availability</Label>
+              <Label htmlFor="noticePeriod">Notice Period</Label>
               <Select
-                value={userFormData.availability || 'Flexible'}
-                onValueChange={(value) => onSelectChange('availability', value)}
+                value={userFormData.noticePeriod || 'Flexible'}
+                onValueChange={(value) =>
+                  onSelectChange('noticePeriod', value as NoticePeriod)
+                }
                 disabled={isDisabled}
               >
-                <SelectTrigger id="availability" disabled={isDisabled}>
-                  <SelectValue placeholder="Select availability" />
+                <SelectTrigger id="noticePeriod" disabled={isDisabled}>
+                  <SelectValue placeholder="Select notice period" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Immediate">Immediate</SelectItem>
-                  <SelectItem value="2 Weeks Notice">2 Weeks Notice</SelectItem>
-                  <SelectItem value="1 Month Notice">1 Month Notice</SelectItem>
-                  <SelectItem value="Flexible">Flexible</SelectItem>
+                  {noticePeriodOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

@@ -43,6 +43,7 @@ import { Input } from '@/components/ui/input';
 import { useRouter, usePathname } from 'next/navigation';
 import { formatCurrencyINR } from '@/lib/utils';
 import Link from 'next/link';
+import { format, isValid, parse } from 'date-fns';
 
 const formatExperiencesForAICandidate = (
   experiences?: ExperienceEntry[]
@@ -206,8 +207,8 @@ export default function AiCandidateMatchPage() {
         }
         if (c.jobSearchStatus)
           profileString += `Current Job Search Status: ${c.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
-        if (c.availability)
-          profileString += `Availability to Start: ${c.availability}\n`;
+        if (c.noticePeriod)
+          profileString += `Notice Period: ${c.noticePeriod}\n`;
 
         if (c.parsedResumeText) {
           profileString += `\n--- Additional Resume Summary (from parsed document) ---\n${c.parsedResumeText}\n`;
@@ -243,17 +244,17 @@ export default function AiCandidateMatchPage() {
           await parseJobDescriptionFlow({ jobDescriptionDataUri: dataUri });
 
         if (
-          parsedData.description &&
-          parsedData.description.startsWith('Parsing Error:')
+          parsedData.responsibilities &&
+          parsedData.responsibilities.startsWith('Parsing Error:')
         ) {
           toast({
             title: 'JD Parsing Issue',
-            description: parsedData.description,
+            description: parsedData.responsibilities,
             variant: 'destructive',
             duration: 9000,
           });
           setJobDescription(
-            `Error during parsing: ${parsedData.description}\n\nTitle: ${parsedData.title || ''}\nSkills: ${(parsedData.skills || []).join(', ')}`
+            `Error during parsing: ${parsedData.responsibilities}\n\nTitle: ${parsedData.title || ''}\nSkills: ${(parsedData.skills || []).join(', ')}`
           );
         } else {
           let jdText = `Job Title: ${parsedData.title || 'Not specified'}\n`;
@@ -262,8 +263,39 @@ export default function AiCandidateMatchPage() {
           if (parsedData.salaryMin || parsedData.salaryMax) {
             jdText += `Salary (Annual INR): ${parsedData.salaryMin ? formatCurrencyINR(parsedData.salaryMin) : 'N/A'} - ${parsedData.salaryMax ? formatCurrencyINR(parsedData.salaryMax) : 'N/A'}\n`;
           }
+          jdText += `Pay Transparency: ${parsedData.payTransparency ?? true}\n`;
+          if (parsedData.benefits)
+            jdText += `Benefits: ${parsedData.benefits}\n`;
+          jdText += `Industry: ${parsedData.industry || 'Not specified'}\n`;
+          jdText += `Department: ${parsedData.department || 'Not specified'}\n`;
+          if (parsedData.roleDesignation)
+            jdText += `Role/Designation: ${parsedData.roleDesignation}\n`;
+          jdText += `Experience Level: ${parsedData.experienceLevel || 'Not specified'}\n`;
+          if (parsedData.minExperienceYears !== undefined)
+            jdText += `Min Experience Years: ${parsedData.minExperienceYears}\n`;
+          if (parsedData.maxExperienceYears !== undefined)
+            jdText += `Max Experience Years: ${parsedData.maxExperienceYears}\n`;
+          if (parsedData.educationQualification)
+            jdText += `Education Qualification: ${parsedData.educationQualification}\n`;
+          if (parsedData.applicationDeadline) {
+            const deadlineDate =
+              typeof parsedData.applicationDeadline === 'string' &&
+              isValid(
+                parse(parsedData.applicationDeadline, 'yyyy-MM-dd', new Date())
+              )
+                ? parse(
+                    parsedData.applicationDeadline,
+                    'yyyy-MM-dd',
+                    new Date()
+                  )
+                : null;
+            if (deadlineDate)
+              jdText += `Application Deadline: ${format(deadlineDate, 'yyyy-MM-dd')}\n`;
+          }
           jdText += `Skills: ${(parsedData.skills || []).join(', ')}\n\n`;
-          jdText += `Full Description (including responsibilities, qualifications, etc.):\n${parsedData.description || 'Not specified'}`;
+          jdText += `Responsibilities:\n${parsedData.responsibilities || 'Not specified'}\n\n`;
+          jdText += `Requirements:\n${parsedData.requirements || 'Not specified'}`;
+
           setJobDescription(jdText);
           toast({
             title: 'JD Parsed',
@@ -487,7 +519,7 @@ export default function AiCandidateMatchPage() {
             id="jobDescription"
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the full job description here, or upload a file above and click 'Parse File'."
+            placeholder="Paste the full job description here, or upload a file above and click 'Parse File'. Include details like title, responsibilities, skills, location, salary, industry, experience level etc."
             rows={15}
             className="mt-1 bg-muted/20"
             aria-label="Job Description Input"

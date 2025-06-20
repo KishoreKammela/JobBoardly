@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Briefcase, Save } from 'lucide-react';
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import type { CandidateFilters } from '@/types';
+import type { CandidateFilters, NoticePeriod } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployerActions } from '@/contexts/EmployerActionsContext';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,19 @@ interface CandidateFilterSidebarProps {
   currentGlobalSearchTerm?: string;
 }
 
+const noticePeriodOptions: (NoticePeriod | 'all')[] = [
+  'all',
+  'Immediately Available',
+  '1 Month',
+  '2 Months',
+  '3 Months',
+  '4 Months',
+  '5 Months',
+  '6 Months',
+  'More than 6 Months',
+  'Flexible',
+];
+
 export function CandidateFilterSidebar({
   onFilterChange,
   initialFilters,
@@ -41,7 +54,7 @@ export function CandidateFilterSidebar({
 }: CandidateFilterSidebarProps) {
   const defaultSidebarFilters: Omit<CandidateFilters, 'searchTerm'> = {
     location: '',
-    availability: 'all',
+    noticePeriod: 'all',
     jobSearchStatus: 'all',
     desiredSalaryMin: undefined,
     desiredSalaryMax: undefined,
@@ -196,26 +209,26 @@ export function CandidateFilterSidebar({
             />
           </div>
           <div>
-            <Label htmlFor="availability">Availability</Label>
+            <Label htmlFor="noticePeriod">Notice Period</Label>
             <Select
-              name="availability"
-              value={filters.availability}
+              name="noticePeriod"
+              value={filters.noticePeriod}
               onValueChange={(value) =>
-                handleSelectChange('availability', value)
+                handleSelectChange('noticePeriod', value)
               }
             >
               <SelectTrigger
-                id="availability"
-                aria-label="Filter by candidate availability"
+                id="noticePeriod"
+                aria-label="Filter by candidate notice period"
               >
-                <SelectValue placeholder="Select availability" />
+                <SelectValue placeholder="Select notice period" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Availabilities</SelectItem>
-                <SelectItem value="Immediate">Immediate</SelectItem>
-                <SelectItem value="2 Weeks Notice">2 Weeks Notice</SelectItem>
-                <SelectItem value="1 Month Notice">1 Month Notice</SelectItem>
-                <SelectItem value="Flexible">Flexible</SelectItem>
+                {noticePeriodOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === 'all' ? 'All Notice Periods' : option}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -564,7 +564,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.homeCity = '';
       userProfileData.parsedResumeText = '';
       userProfileData.isProfileSearchable = true;
-      userProfileData.availability = 'Flexible';
+      userProfileData.noticePeriod = 'Flexible';
       userProfileData.jobSearchStatus = 'activelyLooking';
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
@@ -1145,9 +1145,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'resumeUrl',
       'resumeFileName',
       'companyId',
+      'noticePeriod',
     ];
 
-    // Prepare payload for Firestore (handles FieldValues like arrayUnion/Remove)
     (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
       const value = updatedData[key];
       const isArrayField = [
@@ -1163,7 +1163,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ].includes(key);
 
       if (isArrayField && !Array.isArray(value) && value !== undefined) {
-        // This is likely a Firestore FieldValue (arrayUnion/Remove)
         payloadForFirestore[key] = value;
       } else if (value === undefined && nullableFields.includes(key)) {
         payloadForFirestore[key] = null;
@@ -1178,7 +1177,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await updateDoc(userDocRef, payloadForFirestore);
 
-      // Update local user state carefully
       setUser((prevUser) => {
         if (!prevUser) return null;
         const newUser = { ...prevUser };
@@ -1202,9 +1200,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (Array.isArray(value)) {
                 (newUser[key] as UserProfile[typeof key]) = value;
               }
-              // If 'value' is a FieldValue, don't assign it directly to newUser[key].
-              // The local state for arrays will reflect changes after the next full fetch,
-              // or if the calling context manages its own optimistic update based on FieldValue.
             } else if (value !== undefined) {
               (newUser[key] as UserProfile[typeof key]) = value;
             } else if (value === undefined && nullableFields.includes(key)) {
@@ -1306,7 +1301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [firebaseUser]
+    [firebaseUser, notifications]
   );
 
   const markAllNotificationsAsRead = useCallback(async () => {

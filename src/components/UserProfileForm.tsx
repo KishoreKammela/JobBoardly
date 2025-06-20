@@ -72,7 +72,7 @@ const initialUserFormData: Partial<UserProfile> = {
   educations: [createEmptyEducation()],
   languages: [createEmptyLanguage()],
   mobileNumber: '',
-  availability: 'Flexible',
+  noticePeriod: 'Flexible',
   portfolioUrl: '',
   linkedinUrl: '',
   preferredLocations: [],
@@ -184,7 +184,7 @@ export function UserProfileForm() {
               }))
             : [createEmptyLanguage()],
         mobileNumber: user.mobileNumber || '',
-        availability: user.availability || 'Flexible',
+        noticePeriod: user.noticePeriod || 'Flexible',
         portfolioUrl: user.portfolioUrl || '',
         linkedinUrl: user.linkedinUrl || '',
         preferredLocations: user.preferredLocations || [],
@@ -283,7 +283,6 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
       ? NonNullable<UserProfile[K]>[number]
       : never,
@@ -330,7 +329,6 @@ export function UserProfileForm() {
       } else {
         processedValueFinal = value as T[keyof T];
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (itemToUpdate as any)[field] = processedValueFinal;
       newArray[index] = itemToUpdate;
       return { ...prev, [arrayName]: newArray };
@@ -342,7 +340,6 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
       ? NonNullable<UserProfile[K]>[number]
       : never,
@@ -361,7 +358,6 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
       ? NonNullable<UserProfile[K]>[number]
       : never,
@@ -454,7 +450,7 @@ export function UserProfileForm() {
           educations: finalEducations,
           languages: finalLanguages,
           mobileNumber: userFormData.mobileNumber || '',
-          availability: userFormData.availability || 'Flexible',
+          noticePeriod: userFormData.noticePeriod || 'Flexible',
           portfolioUrl: userFormData.portfolioUrl || '',
           linkedinUrl: userFormData.linkedinUrl || '',
           preferredLocations: userFormData.preferredLocations || [],
@@ -558,7 +554,7 @@ export function UserProfileForm() {
           />
           <JobSeekerProfessionalSummarySection
             userFormData={userFormData}
-            onUserChange={handleUserChange}
+            onUserChange={onUserChange}
             onSkillsChange={(skills) =>
               setUserFormData((prev) => ({ ...prev, skills }))
             }
@@ -601,13 +597,13 @@ export function UserProfileForm() {
           />
           <JobSeekerCompensationSection
             userFormData={userFormData}
-            onUserChange={handleUserChange}
+            onUserChange={onUserChange}
             onSwitchChange={handleUserSwitchChange}
             isDisabled={isDisabledByStatus}
           />
           <JobSeekerPreferencesSection
             userFormData={userFormData}
-            onUserChange={handleUserChange}
+            onUserChange={onUserChange}
             onLocationsChange={(locations) =>
               setUserFormData((prev) => ({
                 ...prev,

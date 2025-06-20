@@ -132,8 +132,8 @@ export function AiJobMatcher() {
       }
       if (user.jobSearchStatus)
         profileText += `Current Job Search Status: ${user.jobSearchStatus.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}\n`;
-      if (user.availability)
-        profileText += `Availability to Start: ${user.availability}\n`;
+      if (user.noticePeriod)
+        profileText += `Notice Period: ${user.noticePeriod}\n`;
 
       if (user.parsedResumeText) {
         profileText += `\n--- Additional Resume Summary (from parsed document) ---\n${user.parsedResumeText}`;
@@ -175,7 +175,7 @@ export function AiJobMatcher() {
               data.applicationDeadline instanceof Timestamp
                 ? data.applicationDeadline.toDate().toISOString().split('T')[0]
                 : (data.applicationDeadline as string | undefined),
-            benefits: data.benefits || [],
+            benefits: data.benefits || '',
           } as Job;
         });
         setAllJobs(jobsData);
@@ -195,12 +195,12 @@ export function AiJobMatcher() {
     return jobs
       .map((job) => {
         let jobString = `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\n`;
-        jobString += `Description:\n${job.description}\n`;
+        jobString += `Responsibilities:\n${job.responsibilities || 'N/A'}\n`;
+        jobString += `Requirements:\n${job.requirements || 'N/A'}\n`;
         jobString += `Required Skills: ${(job.skills || []).join(', ')}\n`;
         jobString += `Salary Range (Annual INR): ${job.salaryMin ? formatCurrencyINR(job.salaryMin) : 'N/A'} - ${job.salaryMax ? formatCurrencyINR(job.salaryMax) : 'N/A'}\n`;
         jobString += `Pay Transparency: ${job.payTransparency ?? true}\n`;
-        if (job.benefits && job.benefits.length > 0)
-          jobString += `Benefits: ${job.benefits.join(', ')}\n`;
+        if (job.benefits) jobString += `Benefits: ${job.benefits}\n`;
         jobString += `Industry: ${job.industry}\n`;
         jobString += `Department: ${job.department}\n`;
         if (job.roleDesignation)
