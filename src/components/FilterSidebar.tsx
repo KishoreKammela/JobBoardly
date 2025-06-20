@@ -56,6 +56,9 @@ export function FilterSidebar({
     recentActivity: initialFilters?.recentActivity || 'any',
     industry: initialFilters?.industry || '',
     experienceLevel: initialFilters?.experienceLevel || 'all',
+    salaryMin: initialFilters?.salaryMin,
+    salaryMax: initialFilters?.salaryMax,
+    minExperienceYears: initialFilters?.minExperienceYears,
   });
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
@@ -64,39 +67,18 @@ export function FilterSidebar({
   const { toast } = useToast();
 
   useEffect(() => {
-    const newLocation = initialFilters?.location || '';
-    const newRoleType = initialFilters?.roleType || 'all';
-    const newIsRemote = initialFilters?.isRemote || false;
-    const newRecentActivity = initialFilters?.recentActivity || 'any';
-    const newIndustry = initialFilters?.industry || '';
-    const newExperienceLevel = initialFilters?.experienceLevel || 'all';
-
-    if (
-      newLocation !== filters.location ||
-      newRoleType !== filters.roleType ||
-      newIsRemote !== filters.isRemote ||
-      newRecentActivity !== filters.recentActivity ||
-      newIndustry !== filters.industry ||
-      newExperienceLevel !== filters.experienceLevel
-    ) {
-      setFilters({
-        location: newLocation,
-        roleType: newRoleType,
-        isRemote: newIsRemote,
-        recentActivity: newRecentActivity,
-        industry: newIndustry,
-        experienceLevel: newExperienceLevel,
-      });
-    }
-  }, [
-    initialFilters,
-    filters.location,
-    filters.roleType,
-    filters.isRemote,
-    filters.recentActivity,
-    filters.industry,
-    filters.experienceLevel,
-  ]);
+    setFilters({
+      location: initialFilters?.location || '',
+      roleType: initialFilters?.roleType || 'all',
+      isRemote: initialFilters?.isRemote || false,
+      recentActivity: initialFilters?.recentActivity || 'any',
+      industry: initialFilters?.industry || '',
+      experienceLevel: initialFilters?.experienceLevel || 'all',
+      salaryMin: initialFilters?.salaryMin,
+      salaryMax: initialFilters?.salaryMax,
+      minExperienceYears: initialFilters?.minExperienceYears,
+    });
+  }, [initialFilters]);
 
   useEffect(() => {
     onFilterChange(filters);
@@ -126,20 +108,29 @@ export function FilterSidebar({
     const { name, value } = e.target;
     setFilters((prev) => ({
       ...prev,
-      [name]: value,
+      [name]:
+        name === 'salaryMin' ||
+        name === 'salaryMax' ||
+        name === 'minExperienceYears'
+          ? value === ''
+            ? undefined
+            : parseFloat(value)
+          : value,
     }));
   };
 
   const handleReset = () => {
-    const resetFiltersData: Omit<Filters, 'searchTerm'> = {
+    setFilters({
       location: '',
       roleType: 'all',
       isRemote: false,
       recentActivity: 'any',
       industry: '',
       experienceLevel: 'all',
-    };
-    setFilters(resetFiltersData);
+      salaryMin: undefined,
+      salaryMax: undefined,
+      minExperienceYears: undefined,
+    });
   };
 
   const handleOpenSaveSearchDialog = () => {
@@ -211,7 +202,7 @@ export function FilterSidebar({
               id="industry"
               name="industry"
               placeholder="e.g., Technology, Healthcare"
-              value={filters.industry}
+              value={filters.industry || ''}
               onChange={handleInputChange}
               aria-label="Industry filter for jobs"
             />
@@ -249,16 +240,59 @@ export function FilterSidebar({
               id="location"
               name="location"
               placeholder="City, state, or zip code"
-              value={filters.location}
+              value={filters.location || ''}
               onChange={handleInputChange}
               aria-label="Location filter for jobs"
             />
           </div>
           <div>
+            <Label htmlFor="minExperienceYears">Min. Experience (Years)</Label>
+            <Input
+              id="minExperienceYears"
+              name="minExperienceYears"
+              type="number"
+              placeholder="e.g., 2"
+              value={
+                filters.minExperienceYears === undefined
+                  ? ''
+                  : filters.minExperienceYears
+              }
+              onChange={handleInputChange}
+              min="0"
+              aria-label="Minimum years of experience filter"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="salaryMin">Min. Salary (INR)</Label>
+              <Input
+                id="salaryMin"
+                name="salaryMin"
+                type="number"
+                placeholder="e.g., 500000"
+                value={filters.salaryMin === undefined ? '' : filters.salaryMin}
+                onChange={handleInputChange}
+                aria-label="Minimum salary filter"
+              />
+            </div>
+            <div>
+              <Label htmlFor="salaryMax">Max. Salary (INR)</Label>
+              <Input
+                id="salaryMax"
+                name="salaryMax"
+                type="number"
+                placeholder="e.g., 1500000"
+                value={filters.salaryMax === undefined ? '' : filters.salaryMax}
+                onChange={handleInputChange}
+                aria-label="Maximum salary filter"
+              />
+            </div>
+          </div>
+          <div>
             <Label htmlFor="roleType">Role Type</Label>
             <Select
               name="roleType"
-              value={filters.roleType}
+              value={filters.roleType || 'all'}
               onValueChange={(value) => handleSelectChange('roleType', value)}
             >
               <SelectTrigger id="roleType" aria-label="Filter by role type">

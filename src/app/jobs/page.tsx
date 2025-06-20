@@ -64,6 +64,15 @@ export default function JobsPage() {
     industry: searchParams.get('industry') || '',
     experienceLevel:
       (searchParams.get('expLevel') as Filters['experienceLevel']) || 'all',
+    salaryMin: searchParams.has('minSal')
+      ? Number(searchParams.get('minSal'))
+      : undefined,
+    salaryMax: searchParams.has('maxSal')
+      ? Number(searchParams.get('maxSal'))
+      : undefined,
+    minExperienceYears: searchParams.has('minExp')
+      ? Number(searchParams.get('minExp'))
+      : undefined,
   });
   const debouncedSidebarFilters = useDebounce(sidebarFilters, 500);
 
@@ -156,7 +165,7 @@ export default function JobsPage() {
             .toLowerCase()
             .includes(currentGlobalTerm)) ||
         (job.benefits &&
-          typeof job.benefits === 'string' && // Check if benefits is a string
+          typeof job.benefits === 'string' &&
           job.benefits.toLowerCase().includes(currentGlobalTerm));
 
       const locationMatch =
@@ -203,6 +212,39 @@ export default function JobsPage() {
         recentActivityMatch = jobDate >= cutoffDate;
       }
 
+      const minExpMatch =
+        debouncedSidebarFilters.minExperienceYears === undefined ||
+        debouncedSidebarFilters.minExperienceYears === null ||
+        (job.minExperienceYears !== null &&
+          job.minExperienceYears !== undefined &&
+          job.minExperienceYears >= debouncedSidebarFilters.minExperienceYears);
+
+      const salaryMinMatch =
+        debouncedSidebarFilters.salaryMin === undefined ||
+        debouncedSidebarFilters.salaryMin === null ||
+        (job.payTransparency !== false &&
+          job.salaryMax !== null &&
+          job.salaryMax !== undefined &&
+          job.salaryMax >= debouncedSidebarFilters.salaryMin);
+
+      const salaryMaxMatch =
+        debouncedSidebarFilters.salaryMax === undefined ||
+        debouncedSidebarFilters.salaryMax === null ||
+        (job.payTransparency !== false &&
+          job.salaryMin !== null &&
+          job.salaryMin !== undefined &&
+          job.salaryMin <= debouncedSidebarFilters.salaryMax);
+
+      const salaryFilterApplied =
+        debouncedSidebarFilters.salaryMin !== undefined ||
+        debouncedSidebarFilters.salaryMax !== undefined;
+
+      const hasSalaryInfo =
+        job.payTransparency !== false &&
+        (job.salaryMin !== undefined || job.salaryMax !== undefined);
+
+      const salaryMatch = !salaryFilterApplied || hasSalaryInfo;
+
       return (
         searchTermMatch &&
         locationMatch &&
@@ -210,7 +252,11 @@ export default function JobsPage() {
         remoteMatch &&
         recentActivityMatch &&
         industryMatch &&
-        experienceLevelMatch
+        experienceLevelMatch &&
+        minExpMatch &&
+        salaryMatch &&
+        salaryMinMatch &&
+        salaryMaxMatch
       );
     });
     setFilteredJobs(newFilteredJobs);

@@ -155,6 +155,18 @@ export default function SettingsPage() {
     if (filters.isRemote) queryParams.set('remote', 'true');
     if (filters.recentActivity && filters.recentActivity !== 'any')
       queryParams.set('activity', filters.recentActivity);
+    if (filters.industry) queryParams.set('industry', filters.industry);
+    if (filters.experienceLevel && filters.experienceLevel !== 'all')
+      queryParams.set('expLevel', filters.experienceLevel);
+    if (filters.salaryMin !== undefined && filters.salaryMin !== null)
+      queryParams.set('minSal', filters.salaryMin.toString());
+    if (filters.salaryMax !== undefined && filters.salaryMax !== null)
+      queryParams.set('maxSal', filters.salaryMax.toString());
+    if (
+      filters.minExperienceYears !== undefined &&
+      filters.minExperienceYears !== null
+    )
+      queryParams.set('minExp', filters.minExperienceYears.toString());
     router.push(`/jobs?${queryParams.toString()}`);
   };
 
@@ -210,8 +222,8 @@ export default function SettingsPage() {
     const queryParams = new URLSearchParams();
     if (filters.searchTerm) queryParams.set('q', filters.searchTerm);
     if (filters.location) queryParams.set('loc', filters.location);
-    if (filters.availability && filters.availability !== 'all')
-      queryParams.set('avail', filters.availability);
+    if (filters.noticePeriod && filters.noticePeriod !== 'all')
+      queryParams.set('notice', filters.noticePeriod);
     if (filters.jobSearchStatus && filters.jobSearchStatus !== 'all')
       queryParams.set('status', filters.jobSearchStatus);
 
@@ -375,11 +387,11 @@ export default function SettingsPage() {
                         </button>
                         <p className="text-xs text-muted-foreground">
                           Keywords: {search.filters.searchTerm || 'Any'} |
-                          Location: {search.filters.location || 'Any'} |
-                          Availability:{' '}
-                          {search.filters.availability === 'all'
+                          Location: {search.filters.location || 'Any'} | Notice
+                          Period:{' '}
+                          {search.filters.noticePeriod === 'all'
                             ? 'Any'
-                            : search.filters.availability}{' '}
+                            : search.filters.noticePeriod}{' '}
                           | Min Exp:{' '}
                           {search.filters.minExperienceYears ?? 'Any'}
                         </p>

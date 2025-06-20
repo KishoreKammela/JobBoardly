@@ -156,7 +156,7 @@ export function JobSeekerActionsProvider({
         );
 
         await updateUserProfile({
-          appliedJobIds: arrayUnion(job.id) as any, // Let AuthContext handle FieldValue
+          appliedJobIds: arrayUnion(job.id) as any,
         });
       } catch (e: unknown) {
         console.error('JobSeekerActionsContext: applyForJob error', e);
@@ -266,15 +266,8 @@ export function JobSeekerActionsProvider({
         }
         try {
           await updateUserProfile({
-            savedJobIds: arrayUnion(jobId) as any, // Let AuthContext handle FieldValue
+            savedJobIds: arrayUnion(jobId) as any,
           });
-          // Optimistically update local state if AuthContext doesn't do it immediately for arrays
-          if (user.savedJobIds && !user.savedJobIds.includes(jobId)) {
-            // This direct setUser call should be avoided if possible, rely on AuthContext
-            // For now, we assume AuthContext's user state will eventually reflect this.
-            // A more robust solution might involve a callback or event from AuthContext
-            // or AuthContext explicitly handling arrayUnion/Remove for its local state.
-          }
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: saveJob error', error);
           throw error;
@@ -304,9 +297,8 @@ export function JobSeekerActionsProvider({
         }
         try {
           await updateUserProfile({
-            savedJobIds: arrayRemove(jobId) as any, // Let AuthContext handle FieldValue
+            savedJobIds: arrayRemove(jobId) as any,
           });
-          // Optimistic update similar to saveJob if needed
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: unsaveJob error', error);
           throw error;
@@ -364,12 +356,17 @@ export function JobSeekerActionsProvider({
           roleType: filters.roleType,
           isRemote: filters.isRemote,
           recentActivity: filters.recentActivity ?? null,
+          industry: filters.industry ?? null,
+          experienceLevel: filters.experienceLevel ?? null,
+          salaryMin: filters.salaryMin ?? null,
+          salaryMax: filters.salaryMax ?? null,
+          minExperienceYears: filters.minExperienceYears ?? null,
         },
         createdAt: new Date(),
       };
       try {
         await updateUserProfile({
-          savedSearches: arrayUnion(newSearchObject) as any, // Let AuthContext handle FieldValue
+          savedSearches: arrayUnion(newSearchObject) as any,
         });
       } catch (error: unknown) {
         console.error('JobSeekerActionsContext: saveSearch error', error);
@@ -413,13 +410,22 @@ export function JobSeekerActionsProvider({
                 ? searchToDelete.createdAt
                 : new Date(searchToDelete.createdAt as string),
             filters: {
-              ...searchToDelete.filters,
+              searchTerm: searchToDelete.filters.searchTerm,
+              location: searchToDelete.filters.location,
+              roleType: searchToDelete.filters.roleType,
+              isRemote: searchToDelete.filters.isRemote,
               recentActivity: searchToDelete.filters.recentActivity ?? null,
+              industry: searchToDelete.filters.industry ?? null,
+              experienceLevel: searchToDelete.filters.experienceLevel ?? null,
+              salaryMin: searchToDelete.filters.salaryMin ?? null,
+              salaryMax: searchToDelete.filters.salaryMax ?? null,
+              minExperienceYears:
+                searchToDelete.filters.minExperienceYears ?? null,
             },
           };
 
           await updateUserProfile({
-            savedSearches: arrayRemove(searchToDeleteForFirestore) as any, // Let AuthContext handle FieldValue
+            savedSearches: arrayRemove(searchToDeleteForFirestore) as any,
           });
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: deleteSearch error', error);

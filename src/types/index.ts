@@ -39,6 +39,9 @@ export interface Filters {
   recentActivity?: 'any' | '24h' | '7d' | '30d' | null;
   industry?: string;
   experienceLevel?: JobExperienceLevel | 'all';
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  minExperienceYears?: number | null;
 }
 
 export type NoticePeriod =
@@ -172,7 +175,6 @@ export interface Job {
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
   screeningQuestions?: ScreeningQuestion[];
-
   payTransparency?: boolean;
   benefits?: string;
   industry: string;
