@@ -202,32 +202,28 @@ export default function AdminPage() {
     setIsStatsLoading(true);
 
     try {
-      // Fetch Stats
-      const jobSeekersCount = (
-        await getCountFromServer(
-          query(collection(db, 'users'), where('role', '==', 'jobSeeker'))
-        )
-      ).data().count;
-      const companiesCount = (
-        await getCountFromServer(collection(db, 'companies'))
-      ).data().count;
-      const totalJobsCount = (
-        await getCountFromServer(collection(db, 'jobs'))
-      ).data().count;
-      const approvedJobsCount = (
-        await getCountFromServer(
-          query(collection(db, 'jobs'), where('status', '==', 'approved'))
-        )
-      ).data().count;
-      const applicationsCount = (
-        await getCountFromServer(collection(db, 'applications'))
-      ).data().count;
+      const jobSeekersCountSnap = await getCountFromServer(
+        query(collection(db, 'users'), where('role', '==', 'jobSeeker'))
+      );
+      const companiesCountSnap = await getCountFromServer(
+        collection(db, 'companies')
+      );
+      const totalJobsCountSnap = await getCountFromServer(
+        collection(db, 'jobs')
+      );
+      const approvedJobsCountSnap = await getCountFromServer(
+        query(collection(db, 'jobs'), where('status', '==', 'approved'))
+      );
+      const applicationsCountSnap = await getCountFromServer(
+        collection(db, 'applications')
+      );
+
       setPlatformStats({
-        totalJobSeekers: jobSeekersCount,
-        totalCompanies: companiesCount,
-        totalJobs: totalJobsCount,
-        approvedJobs: approvedJobsCount,
-        totalApplications: applicationsCount,
+        totalJobSeekers: jobSeekersCountSnap.data().count,
+        totalCompanies: companiesCountSnap.data().count,
+        totalJobs: totalJobsCountSnap.data().count,
+        approvedJobs: approvedJobsCountSnap.data().count,
+        totalApplications: applicationsCountSnap.data().count,
       });
       setIsStatsLoading(false);
 
@@ -285,22 +281,21 @@ export default function AdminPage() {
               ?.toDate()
               .toISOString(),
           } as Company;
-          company.jobCount = (
-            await getCountFromServer(
-              query(
-                collection(db, 'jobs'),
-                where('companyId', '==', company.id)
-              )
-            )
-          ).data().count;
-          company.applicationCount = (
-            await getCountFromServer(
-              query(
-                collection(db, 'applications'),
-                where('companyId', '==', company.id)
-              )
-            )
-          ).data().count;
+
+          const jobCountQuery = query(
+            collection(db, 'jobs'),
+            where('companyId', '==', company.id)
+          );
+          const jobCountSnap = await getCountFromServer(jobCountQuery);
+          company.jobCount = jobCountSnap.data().count;
+
+          const appCountQuery = query(
+            collection(db, 'applications'),
+            where('companyId', '==', company.id)
+          );
+          const appCountSnap = await getCountFromServer(appCountQuery);
+          company.applicationCount = appCountSnap.data().count;
+
           return company;
         })
       );
@@ -356,17 +351,14 @@ export default function AdminPage() {
             id: jobDoc.id,
             ...jobDoc.data(),
           } as Job;
-          const applicantCount = (
-            await getCountFromServer(
-              query(
-                collection(db, 'applications'),
-                where('jobId', '==', job.id)
-              )
-            )
-          ).data().count;
+          const appCountQuery = query(
+            collection(db, 'applications'),
+            where('jobId', '==', job.id)
+          );
+          const applicantCountSnap = await getCountFromServer(appCountQuery);
           return {
             ...job,
-            applicantCount,
+            applicantCount: applicantCountSnap.data().count,
             createdAt: (job.createdAt as Timestamp)?.toDate().toISOString(),
             updatedAt: (job.updatedAt as Timestamp)?.toDate().toISOString(),
           } as JobWithApplicantCount;
@@ -598,21 +590,12 @@ export default function AdminPage() {
     }
     if (
       user.role === 'admin' &&
-      (targetUser.role === 'admin' || targetUser.role === 'superAdmin') &&
-      newStatus !== 'active'
+      (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
     ) {
       toast({
         title: 'Action Denied',
         description:
-          'Admins cannot suspend or delete other Admins or SuperAdmins.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (targetUser.role === 'superAdmin' && user.role !== 'superAdmin') {
-      toast({
-        title: 'Action Denied',
-        description: 'Only SuperAdmins can manage other SuperAdmins.',
+          'Admins cannot suspend or delete other Admins or SuperAdmins. This can only be done by a SuperAdmin.',
         variant: 'destructive',
       });
       return;
@@ -1250,7 +1233,7 @@ export default function AdminPage() {
                                 <Ban className="h-5 w-5" />
                               </Button>
                             ) : c.status === 'suspended' ||
-                              c.status === 'rejected' ? ( // Added rejected here for activation
+                              c.status === 'rejected' ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1259,10 +1242,7 @@ export default function AdminPage() {
                                     `Activate Company "${c.name}"?`,
                                     `Are you sure you want to reactivate ${c.name}? This will restore full access for its recruiters.`,
                                     async () =>
-                                      handleCompanyStatusUpdate(
-                                        c.id,
-                                        'active' // Or 'approved' if logic dictates from rejected to approved directly
-                                      ),
+                                      handleCompanyStatusUpdate(c.id, 'active'),
                                     'Activate Company'
                                   )
                                 }
@@ -1808,8 +1788,7 @@ export default function AdminPage() {
                                     );
                                   }}
                                   disabled={
-                                    specificActionLoading === `user-${u.uid}` ||
-                                    user?.uid === u.uid
+                                    specificActionLoading === `user-${u.uid}`
                                   }
                                   aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                                   className={
@@ -1841,8 +1820,7 @@ export default function AdminPage() {
                                     )
                                   }
                                   disabled={
-                                    specificActionLoading === `user-${u.uid}` ||
-                                    user?.uid === u.uid
+                                    specificActionLoading === `user-${u.uid}`
                                   }
                                   aria-label={`Delete user ${u.name || 'user'}`}
                                   className="text-destructive"
@@ -2085,12 +2063,10 @@ export default function AdminPage() {
                               }}
                               disabled={
                                 specificActionLoading === `user-${u.uid}` ||
-                                user?.uid === u.uid || // Cannot act on self
+                                user?.uid === u.uid ||
                                 (user?.role === 'admin' &&
-                                  u.role === 'superAdmin') || // Admin cannot act on SuperAdmin
-                                (user?.role === 'admin' &&
-                                  u.role === 'admin' &&
-                                  u.uid !== user.uid) // Admin cannot act on other Admins
+                                  (u.role === 'admin' ||
+                                    u.role === 'superAdmin'))
                               }
                               aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                               className={
