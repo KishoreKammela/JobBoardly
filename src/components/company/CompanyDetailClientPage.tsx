@@ -40,11 +40,11 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type Props = {
-  params: { companyId: string };
+  routeParams?: { companyId?: string }; // Renamed from 'params' and made optional
 };
 
-export default function CompanyDetailClientPage({ params }: Props) {
-  const companyIdFromProps = params?.companyId;
+export default function CompanyDetailClientPage({ routeParams }: Props) {
+  const companyId = routeParams?.companyId;
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -56,7 +56,7 @@ export default function CompanyDetailClientPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!companyIdFromProps) {
+    if (!companyId) {
       setError('No Company ID provided. Please ensure the URL is correct.');
       setIsCompanyDataLoading(false);
       setCompany(null);
@@ -65,20 +65,17 @@ export default function CompanyDetailClientPage({ params }: Props) {
       return;
     }
 
-    // If companyIdFromProps is valid, clear any previous error.
-    setError(null);
+    setError(null); // Clear previous errors if ID is now present
+    setIsCompanyDataLoading(true);
+    setCompany(null); // Reset before fetching
+    setRecruiters([]);
+    setJobs([]);
+    setAreRecruitersLoading(true);
+    setAreJobsLoading(true);
 
     const fetchCompanyCoreDetails = async () => {
-      setIsCompanyDataLoading(true);
-      // setError(null); // Already cleared above
-      setCompany(null);
-      setRecruiters([]);
-      setJobs([]);
-      setAreRecruitersLoading(true);
-      setAreJobsLoading(true);
-
       try {
-        const companyDocRef = doc(db, 'companies', companyIdFromProps);
+        const companyDocRef = doc(db, 'companies', companyId);
         const companyDocSnap = await getDoc(companyDocRef);
 
         if (!companyDocSnap.exists()) {
@@ -122,7 +119,7 @@ export default function CompanyDetailClientPage({ params }: Props) {
     };
 
     fetchCompanyCoreDetails();
-  }, [companyIdFromProps]);
+  }, [companyId]);
 
   useEffect(() => {
     if (
@@ -135,9 +132,8 @@ export default function CompanyDetailClientPage({ params }: Props) {
       setAreRecruitersLoading(false);
       return;
     }
-
+    setAreRecruitersLoading(true);
     const fetchRecruitersForCompany = async () => {
-      setAreRecruitersLoading(true);
       try {
         const recruitersQueryLimit = 30;
         const fetchedRecruiters: UserProfile[] = [];
@@ -179,9 +175,8 @@ export default function CompanyDetailClientPage({ params }: Props) {
       setAreJobsLoading(false);
       return;
     }
-
+    setAreJobsLoading(true);
     const fetchJobsForCompany = async () => {
-      setAreJobsLoading(true);
       try {
         const jobsQuery = firestoreQuery(
           collection(db, 'jobs'),
@@ -221,6 +216,24 @@ export default function CompanyDetailClientPage({ params }: Props) {
     fetchJobsForCompany();
   }, [company]);
 
+  if (!companyId && !isCompanyDataLoading) {
+    // Handle cases where companyId prop itself is missing before useEffect runs
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>Error Loading Profile</AlertTitle>
+          <AlertDescription>
+            No Company ID provided. Please ensure the URL is correct.
+            <Button variant="link" asChild className="mt-2 block">
+              <Link href="/companies">Browse other companies</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (isCompanyDataLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
@@ -248,7 +261,7 @@ export default function CompanyDetailClientPage({ params }: Props) {
   }
 
   if (!company) {
-    // This case implies companyIdFromProps was valid, but fetch failed or company not approved/found
+    // This case means companyId was valid, but fetch failed or company not approved/found
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">

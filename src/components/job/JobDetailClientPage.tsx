@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 type Props = {
-  params: { jobId: string };
+  routeParams?: { jobId?: string }; // Renamed from 'params' and made optional for safety
 };
 
 const ADMIN_LIKE_ROLES = [
@@ -62,10 +62,10 @@ const ADMIN_LIKE_ROLES = [
   'systemMonitor',
 ];
 
-export default function JobDetailClientPage({ params }: Props) {
-  const jobIdFromProps = params?.jobId;
+export default function JobDetailClientPage({ routeParams }: Props) {
+  const jobId = routeParams?.jobId;
 
-  const [job, setJob] = useState<Job | null>(null);
+  const [jobData, setJobData] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
@@ -96,35 +96,31 @@ export default function JobDetailClientPage({ params }: Props) {
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
-    if (!jobIdFromProps) {
+    if (!jobId) {
       setError('No job ID provided. Please ensure the URL is correct.');
       setIsLoading(false);
-      setJob(null);
+      setJobData(null);
       setAccessDeniedReason(null);
       return;
     }
 
-    // If we reach here, jobIdFromProps is valid. Clear any previous error.
     setError(null);
     setAccessDeniedReason(null);
+    setIsLoading(true); // Set loading true before starting fetch
 
-    const fetchJobData = async () => {
-      setIsLoading(true);
-      // Error and accessDeniedReason are cleared above if jobIdFromProps is valid
-      // Or set above if jobIdFromProps is invalid
-      setJob(null); // Reset job data before fetching new
-
+    const fetchJobDetails = async () => {
       try {
-        const jobDocRef = doc(db, 'jobs', jobIdFromProps);
+        const jobDocRef = doc(db, 'jobs', jobId);
         const jobDocSnap = await getDoc(jobDocRef);
 
         if (!jobDocSnap.exists()) {
           setError('Job not found.');
-          return;
+          setJobData(null); // Explicitly set jobData to null
+          return; // Exit early
         }
 
         const data = jobDocSnap.data() as Omit<Job, 'id'>;
-        const jobData: Job = {
+        const fetchedJobData: Job = {
           id: jobDocSnap.id,
           ...data,
           postedDate:
@@ -142,63 +138,61 @@ export default function JobDetailClientPage({ params }: Props) {
         };
 
         let canView = false;
-        if (jobData.status === 'approved') {
+        if (fetchedJobData.status === 'approved') {
           canView = true;
         } else if (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) {
           canView = true;
         } else if (
           user?.role === 'employer' &&
-          user.companyId === jobData.companyId
+          user.companyId === fetchedJobData.companyId
         ) {
           canView = true;
         }
 
         if (!canView) {
-          if (jobData.status === 'pending') {
+          if (fetchedJobData.status === 'pending') {
             setAccessDeniedReason(
               'This job is pending review and not yet publicly available.'
             );
-          } else if (jobData.status === 'rejected') {
+          } else if (fetchedJobData.status === 'rejected') {
             setAccessDeniedReason(
               'This job posting is not available (rejected).'
             );
-          } else if (jobData.status === 'suspended') {
+          } else if (fetchedJobData.status === 'suspended') {
             setAccessDeniedReason('This job is currently suspended.');
           } else {
             setAccessDeniedReason(
               'You do not have permission to view this job posting.'
             );
           }
-          return;
+          setJobData(null); // Explicitly set jobData to null
+        } else {
+          setJobData(fetchedJobData);
         }
-        setJob(jobData);
       } catch (e: unknown) {
         console.error('Error fetching job details:', e);
-        let message = 'Failed to load job details. Please try again.';
-        if (e instanceof Error) {
-          message = `Failed to load job details: ${e.message}`;
-        }
-        setError(message);
+        setError(
+          `Failed to load job details: ${(e as Error).message || 'Unknown error'}`
+        );
+        setJobData(null); // Explicitly set jobData to null on error
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchJobData();
-  }, [jobIdFromProps, user?.role, user?.companyId]);
+    fetchJobDetails();
+  }, [jobId, user?.role, user?.companyId]); // Removed user object, kept role & companyId as they affect permissions
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (job && user && user.role === 'jobSeeker') {
-      setApplicationStatus(getApplicationStatus(job.id));
-      setSaved(isJobSaved(job.id));
-    } else if (!user && job) {
+    if (authLoading || !jobData || !user || user.role !== 'jobSeeker') {
       setApplicationStatus(null);
       setSaved(false);
+      return;
     }
+    setApplicationStatus(getApplicationStatus(jobData.id));
+    setSaved(isJobSaved(jobData.id));
   }, [
-    job,
+    jobData,
     user,
     authLoading,
     getApplicationStatus,
@@ -207,7 +201,7 @@ export default function JobDetailClientPage({ params }: Props) {
   ]);
 
   const handleApply = async (answers?: ApplicationAnswer[]) => {
-    if (!job) return;
+    if (!jobData) return;
     if (isJobSeekerSuspended) {
       toast({
         title: 'Account Suspended',
@@ -217,7 +211,7 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    if (job.status !== 'approved') {
+    if (jobData.status !== 'approved') {
       toast({
         title: 'Cannot Apply',
         description:
@@ -228,11 +222,11 @@ export default function JobDetailClientPage({ params }: Props) {
     }
     if (user && user.role === 'jobSeeker') {
       try {
-        await applyForJob(job, answers);
+        await applyForJob(jobData, answers);
         setShowScreeningModal(false);
         toast({
           title: 'Applied!',
-          description: `You've applied for ${job.title} at ${job.company}.`,
+          description: `You've applied for ${jobData.title} at ${jobData.company}.`,
         });
       } catch (e: any) {
         if (e.message !== 'Already applied or application process started.') {
@@ -260,7 +254,7 @@ export default function JobDetailClientPage({ params }: Props) {
   };
 
   const handleInitiateApply = () => {
-    if (!job) return;
+    if (!jobData) return;
     if (!user) {
       toast({
         title: 'Login Required',
@@ -278,7 +272,7 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    if (job.status !== 'approved') {
+    if (jobData.status !== 'approved') {
       toast({
         title: 'Cannot Apply',
         description:
@@ -287,7 +281,7 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    const currentAppStatus = getApplicationStatus(job.id);
+    const currentAppStatus = getApplicationStatus(jobData.id);
     if (currentAppStatus && currentAppStatus !== 'Applied') {
       toast({
         title: 'Application Status',
@@ -306,7 +300,7 @@ export default function JobDetailClientPage({ params }: Props) {
       return;
     }
 
-    if (job.screeningQuestions && job.screeningQuestions.length > 0) {
+    if (jobData.screeningQuestions && jobData.screeningQuestions.length > 0) {
       setShowScreeningModal(true);
     } else {
       handleApply();
@@ -314,13 +308,13 @@ export default function JobDetailClientPage({ params }: Props) {
   };
 
   const handleWithdrawApplication = async () => {
-    if (!job || !user || applicationStatus !== 'Applied') return;
+    if (!jobData || !user || applicationStatus !== 'Applied') return;
     setIsWithdrawing(true);
     try {
-      await withdrawApplication(job.id);
+      await withdrawApplication(jobData.id);
       toast({
         title: 'Application Withdrawn',
-        description: `Your application for ${job.title} has been withdrawn.`,
+        description: `Your application for ${jobData.title} has been withdrawn.`,
       });
     } catch (err) {
       toast({
@@ -335,7 +329,7 @@ export default function JobDetailClientPage({ params }: Props) {
   };
 
   const handleSaveToggle = async () => {
-    if (!job) return;
+    if (!jobData) return;
     if (isJobSeekerSuspended) {
       toast({
         title: 'Account Suspended',
@@ -345,7 +339,7 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    if (job.status !== 'approved') {
+    if (jobData.status !== 'approved') {
       toast({
         title: 'Cannot Save',
         description: 'This job is not currently approved and cannot be saved.',
@@ -362,24 +356,24 @@ export default function JobDetailClientPage({ params }: Props) {
       return;
     }
     if (saved) {
-      await unsaveJob(job.id);
+      await unsaveJob(jobData.id);
       setSaved(false);
       toast({
         title: 'Job Unsaved',
-        description: `${job.title} removed from your saved jobs.`,
+        description: `${jobData.title} removed from your saved jobs.`,
       });
     } else {
-      await saveJob(job.id);
+      await saveJob(jobData.id);
       setSaved(true);
       toast({
         title: 'Job Saved!',
-        description: `${job.title} added to your saved jobs.`,
+        description: `${jobData.title} added to your saved jobs.`,
       });
     }
   };
 
   const handleShare = () => {
-    if (!job) return;
+    if (!jobData) return;
     navigator.clipboard.writeText(window.location.href);
     toast({
       title: 'Link Copied!',
@@ -420,26 +414,28 @@ export default function JobDetailClientPage({ params }: Props) {
     );
   }
 
-  if (!job) {
+  if (!jobData) {
+    // This case should be covered by error or accessDeniedReason if ID was initially missing
+    // or fetch failed. If reached, it's an unexpected state.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
-          Job not found or is currently unavailable.
+          Job details are unavailable. Please try refreshing the page.
         </p>
       </div>
     );
   }
 
   const companyLogo =
-    job.companyLogoUrl ||
-    `https://placehold.co/100x100.png?text=${job.company?.substring(0, 2).toUpperCase() || 'C'}`;
+    jobData.companyLogoUrl ||
+    `https://placehold.co/100x100.png?text=${jobData.company?.substring(0, 2).toUpperCase() || 'C'}`;
   const salaryDisplay =
-    job.salaryMin && job.salaryMax
-      ? `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.`
-      : job.salaryMin
-        ? `${formatCurrencyINR(job.salaryMin)} p.a.`
-        : job.salaryMax
-          ? `${formatCurrencyINR(job.salaryMax)} p.a.`
+    jobData.salaryMin && jobData.salaryMax
+      ? `${formatCurrencyINR(jobData.salaryMin)} - ${formatCurrencyINR(jobData.salaryMax)} p.a.`
+      : jobData.salaryMin
+        ? `${formatCurrencyINR(jobData.salaryMin)} p.a.`
+        : jobData.salaryMax
+          ? `${formatCurrencyINR(jobData.salaryMax)} p.a.`
           : 'Not Disclosed';
 
   const showAppliedBadge =
@@ -447,11 +443,11 @@ export default function JobDetailClientPage({ params }: Props) {
     applicationStatus !== 'Applied' &&
     applicationStatus !== 'Withdrawn by Applicant';
   const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
-  const canShowApplyActions = job.status === 'approved';
+  const canShowApplyActions = jobData.status === 'approved';
 
   const isPrivilegedViewer =
     (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) ||
-    (user?.role === 'employer' && user.companyId === job.companyId);
+    (user?.role === 'employer' && user.companyId === jobData.companyId);
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -470,7 +466,7 @@ export default function JobDetailClientPage({ params }: Props) {
           <div className="flex flex-col sm:flex-row items-start gap-6">
             <Image
               src={companyLogo}
-              alt={`${job.company} company logo`}
+              alt={`${jobData.company} company logo`}
               width={100}
               height={100}
               className="rounded-lg border-2 border-primary/20 object-contain p-1 bg-background"
@@ -478,25 +474,25 @@ export default function JobDetailClientPage({ params }: Props) {
             />
             <div className="flex-1">
               <h1 className="text-3xl font-bold font-headline text-primary mb-1">
-                {job.title}
+                {jobData.title}
               </h1>
               <div className="flex items-center gap-2 text-lg text-foreground mb-1">
                 <Building className="h-5 w-5 text-muted-foreground" />
-                {job.companyId ? (
+                {jobData.companyId ? (
                   <Link
-                    href={`/companies/${job.companyId}`}
+                    href={`/companies/${jobData.companyId}`}
                     className="hover:underline"
                   >
-                    {job.company}
+                    {jobData.company}
                   </Link>
                 ) : (
-                  <span>{job.company}</span>
+                  <span>{jobData.company}</span>
                 )}
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <MapPin className="h-4 w-4" />
-                <span>{job.location}</span>
-                {job.isRemote && (
+                <span>{jobData.location}</span>
+                {jobData.isRemote && (
                   <Badge variant="outline" className="ml-2">
                     Remote
                   </Badge>
@@ -508,9 +504,9 @@ export default function JobDetailClientPage({ params }: Props) {
                   className="flex items-center gap-1.5"
                 >
                   <Briefcase className="h-3.5 w-3.5" />
-                  {job.type}
+                  {jobData.type}
                 </Badge>
-                {(job.salaryMin || job.salaryMax) && (
+                {(jobData.salaryMin || jobData.salaryMax) && (
                   <Badge
                     variant="secondary"
                     className="flex items-center gap-1.5"
@@ -525,20 +521,20 @@ export default function JobDetailClientPage({ params }: Props) {
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                   Posted:{' '}
-                  {new Date(job.postedDate as string).toLocaleDateString()}
+                  {new Date(jobData.postedDate as string).toLocaleDateString()}
                 </Badge>
                 {isPrivilegedViewer && (
                   <Badge
                     variant={
-                      job.status === 'approved'
+                      jobData.status === 'approved'
                         ? 'default'
-                        : job.status === 'pending'
+                        : jobData.status === 'pending'
                           ? 'secondary'
                           : 'destructive'
                     }
                     className="ml-2 align-middle"
                   >
-                    Status: {job.status.toUpperCase()}
+                    Status: {jobData.status.toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -553,18 +549,18 @@ export default function JobDetailClientPage({ params }: Props) {
                   Job Description
                 </h2>
                 <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap">
-                  {job.description}
+                  {jobData.description}
                 </div>
               </section>
 
-              {job.skills && job.skills.length > 0 && (
+              {jobData.skills && jobData.skills.length > 0 && (
                 <section>
                   <Separator className="my-6" />
                   <h2 className="text-xl font-semibold mb-3 font-headline">
                     Required Skills
                   </h2>
                   <div className="flex flex-wrap gap-2">
-                    {job.skills.map((skill) => (
+                    {jobData.skills.map((skill) => (
                       <Badge
                         key={skill}
                         variant="default"
@@ -577,24 +573,26 @@ export default function JobDetailClientPage({ params }: Props) {
                 </section>
               )}
               {isPrivilegedViewer &&
-                job.screeningQuestions &&
-                job.screeningQuestions.length > 0 && (
+                jobData.screeningQuestions &&
+                jobData.screeningQuestions.length > 0 && (
                   <section>
                     <Separator className="my-6" />
                     <h2 className="text-xl font-semibold mb-3 font-headline">
                       Screening Questions (For Internal Review)
                     </h2>
                     <ul className="space-y-3 list-disc list-inside text-sm text-foreground/90 pl-4">
-                      {job.screeningQuestions.map((q: ScreeningQuestion) => (
-                        <li key={q.id}>
-                          {q.questionText}{' '}
-                          <Badge variant="outline" className="text-xs ml-1">
-                            Type:{' '}
-                            {q.type === 'yesNo' ? 'Yes/No' : 'Text Answer'}
-                            {q.isRequired && ', Required'}
-                          </Badge>
-                        </li>
-                      ))}
+                      {jobData.screeningQuestions.map(
+                        (q: ScreeningQuestion) => (
+                          <li key={q.id}>
+                            {q.questionText}{' '}
+                            <Badge variant="outline" className="text-xs ml-1">
+                              Type:{' '}
+                              {q.type === 'yesNo' ? 'Yes/No' : 'Text Answer'}
+                              {q.isRequired && ', Required'}
+                            </Badge>
+                          </li>
+                        )
+                      )}
                     </ul>
                     <p className="text-xs text-muted-foreground mt-2">
                       These questions are presented to applicants during the
@@ -664,7 +662,8 @@ export default function JobDetailClientPage({ params }: Props) {
                 </>
               )}
               {(!user ||
-                (user.role !== 'jobSeeker' && job.status === 'approved')) && (
+                (user.role !== 'jobSeeker' &&
+                  jobData.status === 'approved')) && (
                 <Button
                   size="lg"
                   onClick={handleInitiateApply}
@@ -675,7 +674,7 @@ export default function JobDetailClientPage({ params }: Props) {
               )}
               {user &&
                 user.role !== 'jobSeeker' &&
-                job.status !== 'approved' &&
+                jobData.status !== 'approved' &&
                 isPrivilegedViewer && (
                   <div className="p-3 border rounded-md text-center bg-accent/10">
                     <HelpCircle className="mx-auto h-8 w-8 text-accent mb-2" />
@@ -706,13 +705,13 @@ export default function JobDetailClientPage({ params }: Props) {
           </p>
         </CardFooter>
       </Card>
-      {showScreeningModal && job && (
+      {showScreeningModal && jobData && (
         <ScreeningQuestionsModal
           isOpen={showScreeningModal}
           onClose={() => setShowScreeningModal(false)}
-          questions={job.screeningQuestions || []}
+          questions={jobData.screeningQuestions || []}
           onSubmit={handleApply}
-          jobTitle={job.title}
+          jobTitle={jobData.title}
         />
       )}
       <AlertDialog
@@ -724,8 +723,8 @@ export default function JobDetailClientPage({ params }: Props) {
             <AlertDialogTitle>Confirm Application Withdrawal</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to withdraw your application for &quot;
-              {job.title}&quot;? This action cannot be undone, and you will not
-              be able to re-apply for this position.
+              {jobData.title}&quot;? This action cannot be undone, and you will
+              not be able to re-apply for this position.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

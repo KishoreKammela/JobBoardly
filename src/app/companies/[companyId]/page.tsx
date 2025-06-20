@@ -119,5 +119,5 @@ export async function generateMetadata(
 }
 
 export default function CompanyDetailPage({ params }: Props) {
-  return <CompanyDetailClientPage params={params} />;
+  return <CompanyDetailClientPage routeParams={params} />;
 }

@@ -119,5 +119,5 @@ export async function generateMetadata(
 }
 
 export default function JobDetailPage({ params }: Props) {
-  return <JobDetailClientPage params={params} />;
+  return <JobDetailClientPage routeParams={params} />;
 }
