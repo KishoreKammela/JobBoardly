@@ -15,7 +15,7 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter, // Added CardFooter
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -26,25 +26,6 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
-
-// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
-// export const metadata: Metadata = {
-//   title: 'Browse Companies - Discover Employers on JobBoardly',
-//   description:
-//     'Explore company profiles on JobBoardly. Learn about different employers, their culture, and open job opportunities. Find your next great place to work.',
-//   keywords: [
-//     'companies',
-//     'employers',
-//     'company profiles',
-//     'top companies',
-//     'hiring companies',
-//     'JobBoardly companies',
-//   ],
-//   alternates: {
-//     canonical: '/companies',
-//   },
-// };
 
 const COMPANIES_PER_PAGE = 9;
 
@@ -130,7 +111,6 @@ export default function CompaniesListPage() {
       </CardContent>
       <CardFooter className="p-4 border-t">
         {' '}
-        {/* Changed CardContent to CardFooter */}
         <Skeleton className="h-9 w-full rounded-md" />
       </CardFooter>
     </Card>
@@ -223,7 +203,6 @@ export default function CompaniesListPage() {
                 </CardContent>
                 <CardFooter className="p-4 border-t">
                   {' '}
-                  {/* Changed CardContent to CardFooter */}
                   <Button asChild className="w-full">
                     <Link href={`/companies/${company.id}`}>
                       View Company Profile
@@ -263,7 +242,7 @@ export default function CompaniesListPage() {
         <div className="text-center py-12">
           <Building className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
           <p className="text-xl text-muted-foreground">
-            No approved companies found matching your search criteria.
+            No companies found matching your search criteria.
           </p>
         </div>
       )}

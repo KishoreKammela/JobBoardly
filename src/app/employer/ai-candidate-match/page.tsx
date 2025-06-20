@@ -321,7 +321,7 @@ export default function AiCandidateMatchPage() {
       toast({
         title: 'No Candidates Available',
         description:
-          'Cannot perform matching as no searchable candidates are available or there was an error loading them.',
+          'Cannot perform matching as no candidates are available or there was an error loading them.',
         variant: 'destructive',
       });
       return;
@@ -359,7 +359,7 @@ export default function AiCandidateMatchPage() {
           toast({
             title: 'Match IDs found, but no candidate details',
             description:
-              "AI suggested candidate UIDs, but they don't correspond to known searchable profiles.",
+              "AI suggested candidate UIDs, but they don't correspond to known profiles.",
             variant: 'default',
           });
         }
@@ -387,8 +387,6 @@ export default function AiCandidateMatchPage() {
   }
 
   if (user && user.role !== 'employer') {
-    // This case should ideally be handled by the redirect in useEffect,
-    // but as a fallback:
     return (
       <Card className="w-full max-w-3xl mx-auto shadow-xl">
         <CardHeader>
@@ -441,8 +439,8 @@ export default function AiCandidateMatchPage() {
         </CardTitle>
         <CardDescription>
           Input or upload a job description. Our AI will scan our database of
-          searchable candidate profiles to find the best matches for your role.
-          Plain text (.txt) files give the best results for JD parsing.
+          candidate profiles to find the best matches for your role. Plain text
+          (.txt) files give the best results for JD parsing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -521,7 +519,7 @@ export default function AiCandidateMatchPage() {
             <Users className="mr-2 h-5 w-5" />
           )}
           {candidatesLoading
-            ? 'Loading Searchable Candidates...'
+            ? 'Loading Candidates...'
             : isParsingJD
               ? 'Parsing JD...'
               : 'Find Matching Candidates'}
@@ -569,9 +567,9 @@ export default function AiCandidateMatchPage() {
                   <Users className="h-4 w-4" />
                   <AlertDescription>
                     AI identified some potentially relevant candidate UIDs, but
-                    they could not be matched to current searchable profiles.
-                    This might happen if profiles were recently made private or
-                    IDs are incorrect. See reasoning. Relevant UIDs:{' '}
+                    they could not be matched to current profiles. This might
+                    happen if profiles were recently made private or IDs are
+                    incorrect. See reasoning. Relevant UIDs:{' '}
                     {result.relevantCandidateIDs.join(', ')}
                   </AlertDescription>
                 </Alert>
@@ -580,9 +578,8 @@ export default function AiCandidateMatchPage() {
                   <Users className="h-4 w-4" />
                   <AlertDescription>
                     No candidates were matched by the AI based on the provided
-                    job description and available searchable profiles. Try
-                    refining the job description or check back later for new
-                    candidates.
+                    job description and available profiles. Try refining the job
+                    description or check back later for new candidates.
                   </AlertDescription>
                 </Alert>
               )}

@@ -223,9 +223,9 @@ export function AiJobMatcher() {
     }
     if (jobsError || allJobs.length === 0) {
       toast({
-        title: 'No Approved Jobs Available',
+        title: 'No Jobs Available',
         description:
-          'Cannot perform matching as no approved jobs are available or there was an error loading them.',
+          'Cannot perform matching as no jobs are available or there was an error loading them.',
         variant: 'destructive',
       });
       return;
@@ -260,7 +260,7 @@ export function AiJobMatcher() {
           toast({
             title: 'Match IDs found, but no job details',
             description:
-              "AI suggested job IDs, but they don't correspond to known approved jobs. See reasoning.",
+              "AI suggested job IDs, but they don't correspond to known listings. See reasoning.",
             variant: 'default',
           });
         }
@@ -308,9 +308,8 @@ export function AiJobMatcher() {
         </CardTitle>
         <CardDescription>
           Your profile details (auto-filled if available) will be used by our AI
-          to recommend relevant jobs from our entire database of approved
-          listings. Review and edit the summary below for this session if
-          needed.
+          to recommend relevant jobs from our entire database of listings.
+          Review and edit the summary below for this session if needed.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -356,7 +355,7 @@ export function AiJobMatcher() {
           ) : (
             <Sparkles className="mr-2 h-5 w-5" />
           )}
-          {jobsLoading ? 'Loading Approved Jobs...' : 'Get Matches'}
+          {jobsLoading ? 'Loading Jobs...' : 'Get Matches'}
         </Button>
         {!user && (
           <p className="text-sm text-destructive text-center">
@@ -400,9 +399,9 @@ export function AiJobMatcher() {
                   <Briefcase className="h-4 w-4" />
                   <AlertDescription>
                     AI identified some potentially relevant job IDs, but they
-                    could not be matched to current approved listings. This
-                    might happen if jobs were recently removed or their status
-                    changed. See reasoning above. Relevant IDs:{' '}
+                    could not be matched to current listings. This might happen
+                    if jobs were recently removed or their status changed. See
+                    reasoning above. Relevant IDs:{' '}
                     {result.relevantJobIDs.join(', ')}
                   </AlertDescription>
                 </Alert>
@@ -411,9 +410,8 @@ export function AiJobMatcher() {
                   <Briefcase className="h-4 w-4" />
                   <AlertDescription>
                     No specific jobs were matched by the AI based on your
-                    current profile and available approved listings. Try
-                    refining your profile summary or check back later for new
-                    job postings.
+                    current profile and available listings. Try refining your
+                    profile summary or check back later for new job postings.
                   </AlertDescription>
                 </Alert>
               )}
