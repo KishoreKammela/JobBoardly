@@ -8,9 +8,9 @@ Platform staff (Super Admins, Admins, Moderators) are responsible for overseeing
 
 ## 2. Roles & Permissions Overview
 
-- **Super Administrator**: Has all administrative capabilities, including managing other Super Admins, Admins, and Moderators.
-- **Administrator**: Has most administrative capabilities but cannot manage (suspend/activate) other Super Admins or Admins. Can manage Moderators.
-- **Moderator**: Has limited administrative capabilities, primarily focused on content moderation (approving/rejecting pending jobs and companies) and viewing platform data. Cannot manage any user accounts (Job Seekers, Platform Users).
+- **Super Administrator**: Has all administrative capabilities, including managing other Super Admins, Admins, and Moderators. Can perform all content moderation and user management tasks.
+- **Administrator**: Has most administrative capabilities but cannot manage (suspend/activate) other Super Admins or Admins. Can manage Moderators. Can perform all content moderation and Job Seeker management tasks.
+- **Moderator**: Has limited administrative capabilities, primarily focused on content moderation (approving/rejecting pending jobs and companies) and viewing platform data. Cannot manage any user accounts (Job Seekers, Platform Users) except for viewing their profiles.
 
 ## 3. Key Features
 
@@ -31,7 +31,7 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 
   - **View**: Table displays Company Name, Website, Status, Jobs Posted, Applications Received, Creation Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Company Profile` (All)
+    - `👁️ View Company Profile` (SuperAdmin, Admin, Moderator)
     - `✅ Approve` (SuperAdmin, Admin, Moderator)
     - `❌ Reject` (SuperAdmin, Admin, Moderator)
     - `🚫 Suspend` (SuperAdmin, Admin, Moderator)
@@ -43,7 +43,7 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 
   - **View**: Table shows Job Title, Company Name, Status, Applicant Count, Creation Date, Last Updated Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Public Job Page` (All)
+    - `👁️ View Public Job Page` (SuperAdmin, Admin, Moderator)
     - `🚫 Suspend` (SuperAdmin, Admin - NOT Moderator)
     - `✅ Activate` (SuperAdmin, Admin, Moderator)
     - `✅ Approve` (SuperAdmin, Admin, Moderator)
@@ -54,7 +54,7 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 
   - **View**: Table lists Job Seeker Name, Email, Status, Profile Searchable, Jobs Applied, Last Active, Joined Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Profile` (All)
+    - `👁️ View Profile` (SuperAdmin, Admin, Moderator)
     - `🚫 Suspend` (SuperAdmin, Admin - NOT Moderator)
     - `✅ Activate` (SuperAdmin, Admin - NOT Moderator)
     - `🗑️ Delete (Soft)` (SuperAdmin, Admin - NOT Moderator)
@@ -63,26 +63,27 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 - **Platform Users Management Tab (Admins/SuperAdmins/Moderators):** (Viewable by all; Actions vary by role)
   - **View**: Table displays Name, Email, Role (Admin/SuperAdmin/Moderator), Status, Last Active, Joined Date.
   - **Actions (Icon-based, with confirmation modals)**:
+    - `👁️ View Profile` (SuperAdmin, Admin, Moderator) - View profile of other platform staff.
     - `🚫 Suspend / ✅ Activate`:
       - SuperAdmins: Can manage other Admins, SuperAdmins, and Moderators.
       - Admins: Can manage Moderators only.
-      - Moderators: Cannot manage any platform users.
-      - Users cannot suspend/activate themselves.
+      - Moderators: Cannot manage any platform users (buttons disabled).
+      - Users cannot suspend/activate themselves from this tab.
   - **Functionality**: Includes search, sorting, pagination.
 
 ### 3.2. Protected Admin Route & Login
 
 - Access to the admin dashboard (`/admin`) is strictly limited to users with "admin", "superAdmin", or "moderator" roles.
-- A dedicated admin login page is available at `/auth/admin/login`.
+- A dedicated admin login page is available at `/auth/admin/login` for all platform staff.
 
 ## 4. User Journey Map (Admin/Moderator)
 
 ```mermaid
 graph TD
-    A[Start: Admin/Mod Needs to Manage Platform] --> B{Authenticated?}
+    A[Start: Platform Staff Needs to Manage Platform] --> B{Authenticated?}
     B -- No --> C[Navigate to /auth/admin/login]
     C --> D[Enter Credentials]
-    D --> E{Login Successful & Admin/SuperAdmin/Moderator Role?}
+    D --> E{Login Successful & Role is SA/A/M?}
     E -- Yes --> F[Redirect to /admin Dashboard]
     B -- Yes --> F
     E -- No --> G[Error/Redirect to General Login]
@@ -100,28 +101,28 @@ graph TD
     L_Confirm -- No --> K
     H -- Manage Companies --> M[Navigate to 'Companies' Tab (SA, A, M)]
     M --> N[Search/Sort/View Companies]
-    N --> O[Click Action Icon: View, Approve, Reject, Suspend/Activate, Delete (All by SA, A, M)]
+    N --> O[Click Action Icon (SA, A, M actions on Companies)]
     O --> O_Confirm[Confirmation Modal for Company Action]
     O_Confirm -- Yes --> O_Action[Perform Company Status Update]
     O_Action --> M
     O_Confirm -- No --> N
     H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab (SA, A, M)]
     P --> Q[Search/Sort/View Jobs]
-    Q --> R[Click Action Icon: View (All), Suspend (SA, A), Activate/Approve/Reject (SA, A, M)]
+    Q --> R[Click Action Icon (M cannot Suspend Jobs)]
     R --> R_Confirm[Confirmation Modal for Job Action]
     R_Confirm -- Yes --> R_Action[Perform Job Status Update]
     R_Action --> P
     R_Confirm -- No --> Q
-    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab (SA, A, M - M view only)]
+    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab (SA, A, M - M view/profile-view only)]
     S --> T[Search/Sort/View Job Seekers]
     T --> U[Click Action Icon: View Profile (All), Suspend/Activate/Delete (SA, A only)]
     U --> U_Confirm[Confirmation Modal for Job Seeker Action]
     U_Confirm -- Yes --> U_Action[Perform User Status Update]
     U_Action --> S
     U_Confirm -- No --> T
-    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab (SA, A, M - M view only)]
+    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab (SA, A, M - M view/profile-view only)]
     V --> W[Search/Sort/View Platform Users]
-    W --> X[Click Action Icon: Suspend/Activate (SA for SA/A/M; A for M only)]
+    W --> X[Click Action Icon: View Profile (All), Suspend/Activate (SA for SA/A/M; A for M only; M for none)]
     X --> X_Confirm[Confirmation Modal for Platform User Action]
     X_Confirm -- Yes --> X_Action[Perform User Status Update]
     X_Action --> V
@@ -131,24 +132,28 @@ graph TD
 
 ## 5. Page Routes
 
-| Route               | Description                                                                  | Access Level                 |
-| :------------------ | :--------------------------------------------------------------------------- | :--------------------------- |
-| `/auth/admin/login` | Dedicated login page for administrators/moderators.                          | Public (for login)           |
-| `/admin`            | Main admin dashboard with tabs for managing various aspects of the platform. | SuperAdmin, Admin, Moderator |
+| Route                           | Description                                                                                                        | Access Level                 |
+| :------------------------------ | :----------------------------------------------------------------------------------------------------------------- | :--------------------------- |
+| `/auth/admin/login`             | Dedicated login page for administrators, super administrators, and moderators.                                     | Public (for login)           |
+| `/admin`                        | Main admin dashboard with tabs for managing various aspects of the platform.                                       | SuperAdmin, Admin, Moderator |
+| `/profile`                      | Platform staff can manage their own profile details (name, avatar).                                                | SuperAdmin, Admin, Moderator |
+| `/employer/candidates/[userId]` | Used by platform staff to view profiles of any user (Job Seekers or other Platform Users) via the admin dashboard. | SuperAdmin, Admin, Moderator |
 
 ## 6. Key "API" Interactions (Data Flows)
 
-Admins/Moderators interact primarily with the Firebase Firestore database. Permissions are enforced in the UI and backend functions (if any future Cloud Functions are added).
+Platform Staff interact primarily with the Firebase Firestore database. Permissions are enforced in the UI and backend functions (if any future Cloud Functions are added).
 
 - **Fetching Data**: Queries Firestore with filters based on roles.
-- **Updating Status**: Updates Firestore documents. `handleUserStatusUpdate` now has stricter role-based checks.
-  - Moderators cannot use `handleUserStatusUpdate` for user status changes.
+- **Updating Status**: Updates Firestore documents. `handleUserStatusUpdate` now has stricter role-based checks:
+  - Moderators cannot use `handleUserStatusUpdate` for user status changes (Job Seekers or Platform Users).
   - Admins cannot use `handleUserStatusUpdate` for other Admins/SuperAdmins.
+  - SuperAdmins can manage status for all users.
 
 ## 7. Future Updates (Potential Enhancements)
 
 - Granular permissions for Moderators (e.g., can only edit certain fields of a job posting they approved).
 - Dedicated Moderator dashboard view with only relevant tasks.
+- Audit logs for admin actions.
 
 ---
 

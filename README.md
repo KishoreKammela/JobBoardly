@@ -16,7 +16,7 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
   - **Firestore**: NoSQL database for storing job listings, user profiles, applications, company profiles, and settings (including theme preference).
   - **Storage**: For hosting user-uploaded files like resumes.
   - **App Hosting / Functions**: (App Hosting configured via `apphosting.yaml`, Firebase Functions for backend tasks).
-- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing, and intelligent job/candidate matching. Powered by Gemini models.
+- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing (for employers), and intelligent job/candidate matching. Powered by Gemini models.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing, improved code quality, and better developer experience.
 - **Code Quality & Testing**:
   - **Testing Framework**: [Jest](https://jestjs.io/) - For unit and integration testing.
@@ -32,9 +32,9 @@ JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Em
 
 - **For Job Seekers**: User authentication, advanced profile management with resume parsing, downloadable PDF profiles, robust job search and filtering, job saving, one-click applications, AI-powered job matching, and personalized settings.
   - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
-- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting, screening questions, applicant tracking and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
+- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents), screening questions, applicant tracking and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
   - [Detailed Employer Features](./docs/employer-features.md)
-- **For Administrators**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins). Features quick moderation cards and robust search/sort/pagination for all managed entities.
+- **For Platform Staff (Administrators, Super Administrators, Moderators)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator).
   - [Detailed Admin Features](./docs/admin-features.md)
 - **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
 
@@ -49,7 +49,7 @@ A high-level overview of the project's directory structure:
 │   ├── ai/                     # Genkit AI flows and configuration
 │   ├── app/                    # Next.js App Router
 │   │   ├── (auth)/             # Route group for auth pages
-│   │   │   ├── admin/login/
+│   │   │   ├── admin/login/    # Login for SuperAdmins, Admins, Moderators
 │   │   │   └── change-password/
 │   │   ├── admin/              # Admin specific pages
 │   │   ├── employer/           # Employer specific pages
@@ -68,7 +68,7 @@ A high-level overview of the project's directory structure:
 │   │   ├── employer/
 │   │   ├── layout/
 │   │   └── ui/                 # ShadCN UI components
-│   ├── contexts/               # React Context providers (AuthContext)
+│   ├── contexts/               # React Context providers (AuthContext, JobSeekerActionsContext, EmployerActionsContext)
 │   ├── hooks/                  # Custom React hooks (useAuth, useDebounce, useToast, useIsMobile)
 │   ├── lib/                    # Utility functions, Firebase config
 │   └── types/                  # TypeScript type definitions
@@ -76,7 +76,7 @@ A high-level overview of the project's directory structure:
 │   ├── admin-features.md
 │   ├── employer-features.md
 │   ├── job-seeker-features.md
-│   └── routes-documentation.md # NEW: Detailed routes list
+│   └── routes-documentation.md
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -154,12 +154,12 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
     ```
     This typically starts the Genkit server on `http://localhost:3400`.
 
-## Admin User Creation
+## Platform Staff User Creation (Admin/SuperAdmin/Moderator)
 
 1.  A user registers normally (e.g., as a job seeker or employer).
 2.  Manually access your Firebase Firestore database.
 3.  Navigate to the `users` collection, find the user's document by their UID.
-4.  Edit the `role` field to `"admin"` or `"superAdmin"`.
+4.  Edit the `role` field to `"admin"`, `"superAdmin"`, or `"moderator"`.
 5.  Ensure their `status` field is set to `"active"`.
 
 This README provides a high-level overview and setup guide for JobBoardly. For detailed feature descriptions, please refer to the documents in the `/docs` directory.
