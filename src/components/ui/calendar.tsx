@@ -29,7 +29,7 @@ function Calendar({
             props.captionLayout === 'dropdown-buttons') &&
             'sr-only'
         ),
-        caption_dropdowns: 'flex gap-1',
+        caption_dropdowns: 'flex items-center gap-1.5', // Added items-center and adjusted gap
         nav: 'space-x-1 flex items-center',
         nav_button: cn(
           buttonVariants({ variant: 'outline' }),
@@ -57,6 +57,12 @@ function Calendar({
         day_range_middle:
           'aria-selected:bg-accent aria-selected:text-accent-foreground',
         day_hidden: 'invisible',
+        // Styling for the select dropdowns themselves
+        dropdown: cn(
+          'h-7 w-auto appearance-none rounded-md border border-input bg-background px-2 py-0.5 text-sm font-medium text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50'
+        ),
+        dropdown_month: 'rdp-dropdown_month', // Keep react-day-picker's class for potential targeting
+        dropdown_year: 'rdp-dropdown_year', // Keep react-day-picker's class
         ...classNames,
       }}
       components={{
@@ -72,7 +78,6 @@ function Calendar({
             {...restProps}
           />
         ),
-        // No custom Dropdown component, react-day-picker will use its default
       }}
       {...props}
     />
