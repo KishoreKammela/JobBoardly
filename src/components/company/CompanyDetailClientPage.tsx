@@ -40,11 +40,11 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type Props = {
-  routeParams?: { companyId?: string }; // Renamed from 'params' and made optional
+  routeParams?: { companyId?: string };
 };
 
 export default function CompanyDetailClientPage({ routeParams }: Props) {
-  const companyId = routeParams?.companyId;
+  const companyIdFromProps = routeParams?.companyId;
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -56,7 +56,7 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!companyId) {
+    if (!companyIdFromProps) {
       setError('No Company ID provided. Please ensure the URL is correct.');
       setIsCompanyDataLoading(false);
       setCompany(null);
@@ -65,7 +65,7 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
       return;
     }
 
-    setError(null); // Clear previous errors if ID is now present
+    setError(null); // Clear previous errors
     setIsCompanyDataLoading(true);
     setCompany(null); // Reset before fetching
     setRecruiters([]);
@@ -75,7 +75,7 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
 
     const fetchCompanyCoreDetails = async () => {
       try {
-        const companyDocRef = doc(db, 'companies', companyId);
+        const companyDocRef = doc(db, 'companies', companyIdFromProps);
         const companyDocSnap = await getDoc(companyDocRef);
 
         if (!companyDocSnap.exists()) {
@@ -119,7 +119,7 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
     };
 
     fetchCompanyCoreDetails();
-  }, [companyId]);
+  }, [companyIdFromProps]);
 
   useEffect(() => {
     if (
@@ -216,8 +216,7 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
     fetchJobsForCompany();
   }, [company]);
 
-  if (!companyId && !isCompanyDataLoading) {
-    // Handle cases where companyId prop itself is missing before useEffect runs
+  if (!companyIdFromProps && !isCompanyDataLoading) {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
@@ -261,7 +260,6 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
   }
 
   if (!company) {
-    // This case means companyId was valid, but fetch failed or company not approved/found
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">

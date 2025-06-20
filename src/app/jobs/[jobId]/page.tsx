@@ -1,13 +1,15 @@
-import type { Metadata, ResolvingMetadata } from 'next';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Job } from '@/types';
+import type { Metadata } from 'next'; // Removed ResolvingMetadata
+// import { doc, getDoc, Timestamp } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import type { Job } from '@/types';
 import JobDetailClientPage from '@/components/job/JobDetailClientPage';
 
 type PageProps = {
   params: { jobId: string };
 };
 
+// Temporarily commenting out dynamic metadata
+/*
 async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
   if (!db) {
     console.error(
@@ -15,7 +17,7 @@ async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
     );
     return null;
   }
-  if (!jobId) return null;
+   if (!jobId) return null;
   try {
     const jobDocRef = doc(db, 'jobs', jobId);
     const jobDocSnap = await getDoc(jobDocRef);
@@ -49,8 +51,7 @@ export async function generateMetadata(
   { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  // Trivial await to potentially satisfy the static analyzer
-  await Promise.resolve();
+  await Promise.resolve(); // Trivial await
 
   const jobId = params.jobId;
 
@@ -126,7 +127,18 @@ export async function generateMetadata(
     },
   };
 }
+*/
+
+export const metadata: Metadata = {
+  title: 'Job Details | JobBoardly',
+  description: 'View detailed information about a job posting on JobBoardly.',
+  robots: {
+    index: false, // Keep as false for now if dynamic data isn't loading reliably
+    follow: false,
+  },
+};
 
 export default function JobDetailPageServer({ params }: PageProps) {
+  // Pass the params directly to the client component with a distinct prop name
   return <JobDetailClientPage routeParams={params} />;
 }

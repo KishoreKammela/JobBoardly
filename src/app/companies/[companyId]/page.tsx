@@ -1,13 +1,15 @@
-import type { Metadata, ResolvingMetadata } from 'next';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { Company } from '@/types';
+import type { Metadata } from 'next'; // Removed ResolvingMetadata
+// import { doc, getDoc, Timestamp } from 'firebase/firestore';
+// import { db } from '@/lib/firebase';
+// import type { Company } from '@/types';
 import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
 
 type PageProps = {
   params: { companyId: string };
 };
 
+// Temporarily commenting out dynamic metadata
+/*
 async function fetchCompanyForMetadata(
   companyId: string
 ): Promise<Company | null> {
@@ -47,8 +49,7 @@ export async function generateMetadata(
   { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  // Trivial await to potentially satisfy the static analyzer
-  await Promise.resolve();
+  await Promise.resolve(); // Trivial await
 
   const companyId = params.companyId;
 
@@ -126,7 +127,18 @@ export async function generateMetadata(
     },
   };
 }
+*/
+
+export const metadata: Metadata = {
+  title: 'Company Profile | JobBoardly',
+  description: 'View company details and open positions on JobBoardly.',
+  robots: {
+    index: false, // Keep as false for now if dynamic data isn't loading reliably
+    follow: false,
+  },
+};
 
 export default function CompanyDetailPageServer({ params }: PageProps) {
+  // Pass the params directly to the client component with a distinct prop name
   return <CompanyDetailClientPage routeParams={params} />;
 }

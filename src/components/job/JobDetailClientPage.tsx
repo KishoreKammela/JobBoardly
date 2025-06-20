@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 type Props = {
-  routeParams?: { jobId?: string }; // Renamed from 'params' and made optional for safety
+  routeParams?: { jobId?: string };
 };
 
 const ADMIN_LIKE_ROLES = [
@@ -63,7 +63,7 @@ const ADMIN_LIKE_ROLES = [
 ];
 
 export default function JobDetailClientPage({ routeParams }: Props) {
-  const jobId = routeParams?.jobId;
+  const jobIdFromProps = routeParams?.jobId;
 
   const [jobData, setJobData] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +96,7 @@ export default function JobDetailClientPage({ routeParams }: Props) {
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
-    if (!jobId) {
+    if (!jobIdFromProps) {
       setError('No job ID provided. Please ensure the URL is correct.');
       setIsLoading(false);
       setJobData(null);
@@ -104,19 +104,20 @@ export default function JobDetailClientPage({ routeParams }: Props) {
       return;
     }
 
-    setError(null);
+    setError(null); // Clear previous errors if ID is now present
     setAccessDeniedReason(null);
-    setIsLoading(true); // Set loading true before starting fetch
+    setIsLoading(true);
+    setJobData(null); // Reset jobData before fetching new
 
     const fetchJobDetails = async () => {
       try {
-        const jobDocRef = doc(db, 'jobs', jobId);
+        const jobDocRef = doc(db, 'jobs', jobIdFromProps);
         const jobDocSnap = await getDoc(jobDocRef);
 
         if (!jobDocSnap.exists()) {
           setError('Job not found.');
-          setJobData(null); // Explicitly set jobData to null
-          return; // Exit early
+          setJobData(null);
+          return;
         }
 
         const data = jobDocSnap.data() as Omit<Job, 'id'>;
@@ -165,7 +166,7 @@ export default function JobDetailClientPage({ routeParams }: Props) {
               'You do not have permission to view this job posting.'
             );
           }
-          setJobData(null); // Explicitly set jobData to null
+          setJobData(null);
         } else {
           setJobData(fetchedJobData);
         }
@@ -174,14 +175,14 @@ export default function JobDetailClientPage({ routeParams }: Props) {
         setError(
           `Failed to load job details: ${(e as Error).message || 'Unknown error'}`
         );
-        setJobData(null); // Explicitly set jobData to null on error
+        setJobData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchJobDetails();
-  }, [jobId, user?.role, user?.companyId]); // Removed user object, kept role & companyId as they affect permissions
+  }, [jobIdFromProps, user?.role, user?.companyId]);
 
   useEffect(() => {
     if (authLoading || !jobData || !user || user.role !== 'jobSeeker') {
@@ -381,6 +382,20 @@ export default function JobDetailClientPage({ routeParams }: Props) {
     });
   };
 
+  if (!jobIdFromProps && !isLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error Loading Job</AlertTitle>
+          <AlertDescription>
+            No job ID provided. Please ensure the URL is correct.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
@@ -415,13 +430,15 @@ export default function JobDetailClientPage({ routeParams }: Props) {
   }
 
   if (!jobData) {
-    // This case should be covered by error or accessDeniedReason if ID was initially missing
-    // or fetch failed. If reached, it's an unexpected state.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
-          Job details are unavailable. Please try refreshing the page.
+          Job details are unavailable. The job may have been removed or an error
+          occurred.
         </p>
+        <Button variant="link" asChild className="mt-2 block">
+          <Link href="/jobs">Browse other jobs</Link>
+        </Button>
       </div>
     );
   }
