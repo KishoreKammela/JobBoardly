@@ -142,58 +142,58 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 ```mermaid
 graph TD
     A[Start: Platform Staff Needs to Manage Platform] --> B{Authenticated?}
-    B -- No --> C[Navigate to /auth/admin/login]
+    B -->|No| C[Navigate to /auth/admin/login]
     C --> D[Enter Credentials]
     D --> E{Login Successful & Role is Admin-like?}
-    E -- Yes --> F[Redirect to /admin Dashboard]
-    B -- Yes --> F
-    E -- No --> G[Error/Redirect to General Login]
-    F --> FA[View Platform Analytics Overview (SA, A, M, DA)]
+    E -->|Yes| F[Redirect to /admin Dashboard]
+    B -->|Yes| F
+    E -->|No| G[Error/Redirect to General Login]
+    F --> FA[View Platform Analytics Overview SA, A, M, DA]
     FA --> H{Select Task based on Role}
-    H -- Moderate Pending Jobs (SA, A, M) --> I[Use Quick Moderation Card for Jobs]
+    H -->|Moderate Pending Jobs SA, A, M| I[Use Quick Moderation Card for Jobs]
     I --> J_Confirm[Confirm Action: Approve/Reject Job]
-    J_Confirm -- Yes --> J_Action[Perform Job Status Update]
+    J_Confirm -->|Yes| J_Action[Perform Job Status Update]
     J_Action --> F
-    J_Confirm -- No --> I
-    H -- Moderate Pending Companies (SA, A, M) --> K[Use Quick Moderation Card for Companies]
+    J_Confirm -->|No| I
+    H -->|Moderate Pending Companies SA, A, M| K[Use Quick Moderation Card for Companies]
     K --> L_Confirm[Confirm Action: Approve/Reject Company]
-    L_Confirm -- Yes --> L_Action[Perform Company Status Update]
+    L_Confirm -->|Yes| L_Action[Perform Company Status Update]
     L_Action --> F
-    L_Confirm -- No --> K
-    H -- Manage Companies (View: All; Actions: SA, A, M) --> M[Navigate to 'Companies' Tab]
+    L_Confirm -->|No| K
+    H -->|Manage Companies View: All; Actions: SA, A, M| M[Navigate to Companies Tab]
     M --> N[Search/Sort/View Companies]
     N --> O[Click Action Icon]
     O --> O_Confirm[Confirmation Modal for Company Action]
-    O_Confirm -- Yes --> O_Action[Perform Company Status Update]
+    O_Confirm -->|Yes| O_Action[Perform Company Status Update]
     O_Action --> M
-    O_Confirm -- No --> N
-    H -- Manage Jobs (View: All; Actions: SA, A, M - M limited) --> P[Navigate to 'All Jobs' Tab]
+    O_Confirm -->|No| N
+    H -->|Manage Jobs View: All; Actions: SA, A, M - M limited| P[Navigate to All Jobs Tab]
     P --> Q[Search/Sort/View Jobs]
-    Q --> R[Click Action Icon (View, Suspend, Activate, Approve, Reject)]
+    Q --> R[Click Action Icon View, Suspend, Activate, Approve, Reject]
     R --> R_Confirm[Confirmation Modal for Job Action]
-    R_Confirm -- Yes --> R_Action[Perform Job Status Update]
+    R_Confirm -->|Yes| R_Action[Perform Job Status Update]
     R_Action --> P
-    R_Confirm -- No --> Q
-    H -- Manage Job Seekers (View: SA, A, M, SuA, DA; Actions: SA, A) --> S[Navigate to 'Job Seekers' Tab]
+    R_Confirm -->|No| Q
+    H -->|Manage Job Seekers View: SA, A, M, SuA, DA; Actions: SA, A| S[Navigate to Job Seekers Tab]
     S --> T[Search/Sort/View Job Seekers]
     T --> U[Click Action Icon]
     U --> U_Confirm[Confirmation Modal for Job Seeker Action]
-    U_Confirm -- Yes --> U_Action[Perform User Status Update]
+    U_Confirm -->|Yes| U_Action[Perform User Status Update]
     U_Action --> S
-    U_Confirm -- No --> T
-    H -- Manage Platform Users (View: SA, A, M, DA; Actions: SA, A - role-dependent) --> V[Navigate to 'Platform Users' Tab]
+    U_Confirm -->|No| T
+    H -->|Manage Platform Users View: SA, A, M, DA; Actions: SA, A - role-dependent| V[Navigate to Platform Users Tab]
     V --> W[Search/Sort/View Platform Users]
     W --> X[Click Action Icon]
     X --> X_Confirm[Confirmation Modal for Platform User Action]
-    X_Confirm -- Yes --> X_Action[Perform User Status Update]
+    X_Confirm -->|Yes| X_Action[Perform User Status Update]
     X_Action --> V
-    X_Confirm -- No --> W
-    H -- Manage Legal Content (SA only) --> LC[Navigate to 'Legal Content' Tab]
+    X_Confirm -->|No| W
+    H -->|Manage Legal Content SA only| LC[Navigate to Legal Content Tab]
     LC --> LC_Edit[Edit Privacy Policy or Terms of Service]
     LC_Edit --> LC_Save_Confirm[Confirm Save Legal Doc]
-    LC_Save_Confirm -- Yes --> LC_Save[Save Document to Firestore]
+    LC_Save_Confirm -->|Yes| LC_Save[Save Document to Firestore]
     LC_Save --> LC
-    LC_Save_Confirm -- No --> LC_Edit
+    LC_Save_Confirm -->|No| LC_Edit
     F --> Y[Logout]
 ```
 
