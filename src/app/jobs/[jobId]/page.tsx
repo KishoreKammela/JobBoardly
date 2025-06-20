@@ -4,7 +4,6 @@ import { db } from '@/lib/firebase';
 import type { Job } from '@/types';
 import JobDetailClientPage from '@/components/job/JobDetailClientPage';
 
-// Props type is still useful for clarity
 type Props = {
   params: { jobId: string };
 };
@@ -41,10 +40,10 @@ async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
 }
 
 export async function generateMetadata(
-  props: Props, // Changed from { params } to props
+  { params }: Props, // Reverted to destructuring params
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const jobId = props.params.jobId; // Access via props.params
+  const jobId = params.jobId; // Access via params.jobId
   const job = await fetchJobForMetadata(jobId);
   const previousImages = (await parent).openGraph?.images || [];
 

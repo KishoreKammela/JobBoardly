@@ -4,7 +4,6 @@ import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
 import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
 
-// Props type is still useful for clarity, even if not directly destructured in signature
 type Props = {
   params: { companyId: string };
 };
@@ -39,10 +38,10 @@ async function fetchCompanyForMetadata(
 }
 
 export async function generateMetadata(
-  props: Props, // Changed from { params } to props
+  { params }: Props, // Reverted to destructuring params
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const companyId = props.params.companyId; // Access via props.params
+  const companyId = params.companyId; // Access via params.companyId
   const company = await fetchCompanyForMetadata(companyId);
   const previousImages = (await parent).openGraph?.images || [];
 
