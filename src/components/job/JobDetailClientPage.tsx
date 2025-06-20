@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation'; // useParams can be used here or params passed as prop
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase'; // Added auth
 import type { Job, ApplicationAnswer, ScreeningQuestion } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
@@ -65,20 +65,21 @@ const ADMIN_LIKE_ROLES = [
 export default function JobDetailClientPage({ params }: Props) {
   const jobId = params.jobId as string;
   const [job, setJob] = useState<Job | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // For primary job data
   const [error, setError] = useState<string | null>(null);
   const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
     null
   );
+
   const { user } = useAuth();
   const {
     applyForJob,
-    hasAppliedForJob,
+    // hasAppliedForJob, // Keep if used, or remove if getApplicationStatus covers it
+    getApplicationStatus,
     saveJob,
     unsaveJob,
     isJobSaved,
     withdrawApplication,
-    getApplicationStatus,
   } = useJobSeekerActions();
   const { toast } = useToast();
 
@@ -93,20 +94,22 @@ export default function JobDetailClientPage({ params }: Props) {
   const isJobSeekerSuspended =
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
+  // Effect for fetching primary job data
   useEffect(() => {
     if (jobId) {
-      const fetchJob = async () => {
+      const fetchJobData = async () => {
         setIsLoading(true);
         setError(null);
         setAccessDeniedReason(null);
+        setJob(null); // Reset job for new ID
+
         try {
           const jobDocRef = doc(db, 'jobs', jobId);
           const jobDocSnap = await getDoc(jobDocRef);
 
           if (!jobDocSnap.exists()) {
             setError('Job not found.');
-            setIsLoading(false);
-            return;
+            return; // isLoading will be set to false in finally
           }
 
           const data = jobDocSnap.data() as Omit<Job, 'id'>;
@@ -155,16 +158,9 @@ export default function JobDetailClientPage({ params }: Props) {
                 'You do not have permission to view this job posting.'
               );
             }
-            setJob(null);
-            setIsLoading(false);
-            return;
+            return; // isLoading will be set to false in finally
           }
-
           setJob(jobData);
-          if (user && user.role === 'jobSeeker') {
-            setApplicationStatus(getApplicationStatus(jobId));
-            setSaved(isJobSaved(jobId));
-          }
         } catch (e: unknown) {
           console.error('Error fetching job details:', e);
           let message = 'Failed to load job details. Please try again.';
@@ -176,9 +172,24 @@ export default function JobDetailClientPage({ params }: Props) {
           setIsLoading(false);
         }
       };
-      fetchJob();
+      fetchJobData();
+    } else {
+      setError('No job ID provided.');
+      setIsLoading(false);
     }
-  }, [jobId, user, getApplicationStatus, isJobSaved]);
+  }, [jobId, user?.role, user?.companyId]); // Dependencies for fetching job data and checking view permissions
+
+  // Effect for updating user-specific statuses (application, saved)
+  useEffect(() => {
+    if (job && user && user.role === 'jobSeeker') {
+      setApplicationStatus(getApplicationStatus(job.id));
+      setSaved(isJobSaved(job.id));
+    } else if (!user && job) {
+      // If user logs out while on the page, clear their specific status
+      setApplicationStatus(null);
+      setSaved(false);
+    }
+  }, [job, user, getApplicationStatus, isJobSaved]); // Dependencies for user-specific status
 
   const handleApply = async (answers?: ApplicationAnswer[]) => {
     if (!job) return;
@@ -262,11 +273,20 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    if (hasAppliedForJob(job.id)) {
+    // Check application status using the local state, which is derived from context
+    if (applicationStatus && applicationStatus !== 'Applied') {
+      toast({
+        title: 'Application Status',
+        description: `Your application status for this job is: ${applicationStatus}. You cannot re-apply or start a new application.`,
+        variant: 'default',
+      });
+      return;
+    }
+    if (applicationStatus === 'Applied') {
       toast({
         title: 'Already Applied',
         description:
-          'You have already started or completed an application for this job.',
+          'You have already applied for this job. You can withdraw your application if needed.',
         variant: 'default',
       });
       return;
