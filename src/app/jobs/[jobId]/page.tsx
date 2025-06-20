@@ -106,7 +106,7 @@ export default function JobDetailPage() {
             return;
           }
 
-          const data = jobDocSnap.data() as Omit<Job, 'id'>; // Assume data matches Job type
+          const data = jobDocSnap.data() as Omit<Job, 'id'>;
           const jobData: Job = {
             id: jobDocSnap.id,
             ...data,
@@ -117,14 +117,13 @@ export default function JobDetailPage() {
             createdAt:
               data.createdAt instanceof Timestamp
                 ? data.createdAt.toDate().toISOString()
-                : (data.createdAt as string), // Cast if needed
+                : (data.createdAt as string),
             updatedAt:
               data.updatedAt instanceof Timestamp
                 ? data.updatedAt.toDate().toISOString()
-                : (data.updatedAt as string), // Cast if needed
+                : (data.updatedAt as string),
           };
 
-          // Access Control Logic
           let canView = false;
           if (jobData.status === 'approved') {
             canView = true;
@@ -134,7 +133,7 @@ export default function JobDetailPage() {
             user?.role === 'employer' &&
             user.companyId === jobData.companyId
           ) {
-            canView = true; // Employer can view their own non-approved jobs
+            canView = true;
           }
 
           if (!canView) {
@@ -414,6 +413,10 @@ export default function JobDetailPage() {
   const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
   const canShowApplyActions = job.status === 'approved';
 
+  const isPrivilegedViewer =
+    (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) ||
+    (user?.role === 'employer' && user.companyId === job.companyId);
+
   return (
     <div className="container mx-auto py-8 max-w-4xl">
       {isJobSeekerSuspended && (
@@ -488,18 +491,20 @@ export default function JobDetailPage() {
                   Posted:{' '}
                   {new Date(job.postedDate as string).toLocaleDateString()}
                 </Badge>
-                <Badge
-                  variant={
-                    job.status === 'approved'
-                      ? 'default'
-                      : job.status === 'pending'
-                        ? 'secondary'
-                        : 'destructive'
-                  }
-                  className="ml-2 align-middle"
-                >
-                  Status: {job.status.toUpperCase()}
-                </Badge>
+                {isPrivilegedViewer && (
+                  <Badge
+                    variant={
+                      job.status === 'approved'
+                        ? 'default'
+                        : job.status === 'pending'
+                          ? 'secondary'
+                          : 'destructive'
+                    }
+                    className="ml-2 align-middle"
+                  >
+                    Status: {job.status.toUpperCase()}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -535,25 +540,31 @@ export default function JobDetailPage() {
                   </div>
                 </section>
               )}
-              {job.screeningQuestions && job.screeningQuestions.length > 0 && (
-                <section>
-                  <Separator className="my-6" />
-                  <h2 className="text-xl font-semibold mb-3 font-headline">
-                    Screening Questions
-                  </h2>
-                  <ul className="space-y-3 list-disc list-inside text-sm text-foreground/90">
-                    {job.screeningQuestions.map((q) => (
-                      <li key={q.id}>
-                        {q.questionText}{' '}
-                        <Badge variant="outline" className="text-xs ml-1">
-                          {q.type === 'yesNo' ? 'Yes/No' : 'Text Answer'}
-                          {q.isRequired && ', Required'}
-                        </Badge>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
+              {isPrivilegedViewer &&
+                job.screeningQuestions &&
+                job.screeningQuestions.length > 0 && (
+                  <section>
+                    <Separator className="my-6" />
+                    <h2 className="text-xl font-semibold mb-3 font-headline">
+                      Screening Questions for Internal Review
+                    </h2>
+                    <ul className="space-y-3 list-disc list-inside text-sm text-foreground/90 pl-4">
+                      {job.screeningQuestions.map((q) => (
+                        <li key={q.id}>
+                          {q.questionText}{' '}
+                          <Badge variant="outline" className="text-xs ml-1">
+                            Type: {q.type === 'yesNo' ? 'Yes/No' : 'Text'}
+                            {q.isRequired && ', Required'}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      These questions are presented to applicants and are not
+                      visible on the public job posting unless applying.
+                    </p>
+                  </section>
+                )}
             </div>
             <aside className="w-full sm:w-64 space-y-4">
               {user && user.role === 'jobSeeker' && canShowApplyActions && (
@@ -617,10 +628,9 @@ export default function JobDetailPage() {
               )}
               {(!user ||
                 (user.role !== 'jobSeeker' && job.status === 'approved')) && (
-                // Show Apply Now for logged-out users or non-job seekers if job is approved
                 <Button
                   size="lg"
-                  onClick={handleInitiateApply} // Will prompt login if not logged in
+                  onClick={handleInitiateApply}
                   className="w-full"
                 >
                   Apply Now <ExternalLink className="ml-2 h-5 w-5" />
@@ -629,7 +639,6 @@ export default function JobDetailPage() {
               {user &&
                 user.role !== 'jobSeeker' &&
                 job.status !== 'approved' && (
-                  // If logged in as employer/admin and job is not approved, show message
                   <div className="p-3 border rounded-md text-center bg-accent/10">
                     <HelpCircle className="mx-auto h-8 w-8 text-accent mb-2" />
                     <p className="text-sm text-accent-foreground font-medium">
@@ -639,9 +648,11 @@ export default function JobDetailPage() {
                         : 'administrative'}{' '}
                       purposes.
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Job status: {job.status.toUpperCase()}
-                    </p>
+                    {isPrivilegedViewer && (
+                      <p className="text-xs text-muted-foreground">
+                        Job status: {job.status.toUpperCase()}
+                      </p>
+                    )}
                   </div>
                 )}
               <Button
