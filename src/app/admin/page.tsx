@@ -446,8 +446,6 @@ export default function AdminPage() {
     reason?: string
   ) => {
     if (user?.role === 'moderator' && newStatus === 'suspended') {
-      // Assuming moderators can approve/reject but not suspend based on typical roles
-      // This check can be adjusted based on final moderator permissions for jobs
       toast({
         title: 'Permission Denied',
         description: 'Moderators cannot suspend jobs.',
@@ -630,6 +628,7 @@ export default function AdminPage() {
     if (user.role === 'admin') {
       if (
         !isTargetListedAsJobSeeker &&
+        targetUser.role !== 'moderator' &&
         (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
       ) {
         toast({
@@ -2075,17 +2074,19 @@ export default function AdminPage() {
                       {paginatedPlatformUsers.map((u) => {
                         const canLoggedInUserManageTarget = () => {
                           if (!user) return false;
-                          if (user.uid === u.uid) return false; // Cannot manage self
+                          if (user.uid === u.uid) return false;
 
-                          if (user.role === 'superAdmin') return true; // SuperAdmin can manage anyone (except self)
+                          if (user.role === 'superAdmin') return true;
                           if (user.role === 'admin') {
-                            return u.role === 'moderator'; // Admin can only manage moderators
+                            return u.role === 'moderator';
                           }
-                          return false; // Moderators and others cannot manage platform users
+                          return false;
                         };
                         const isActionDisabled =
                           specificActionLoading === `user-${u.uid}` ||
                           !canLoggedInUserManageTarget();
+                        const platformUserIsEffectivelyActive =
+                          u.status === 'active' || u.status === undefined;
 
                         return (
                           <TableRow key={u.uid}>
@@ -2114,14 +2115,12 @@ export default function AdminPage() {
                             <TableCell>
                               <Badge
                                 variant={
-                                  u.status === 'active' ||
-                                  u.status === undefined
+                                  platformUserIsEffectivelyActive
                                     ? 'secondary'
                                     : 'destructive'
                                 }
                                 className={
-                                  u.status === 'active' ||
-                                  u.status === undefined
+                                  platformUserIsEffectivelyActive
                                     ? 'bg-green-100 text-green-800'
                                     : 'bg-red-100 text-red-800'
                                 }
@@ -2143,14 +2142,23 @@ export default function AdminPage() {
                                   ).toLocaleDateString()
                                 : 'N/A'}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-1">
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link
+                                  href={`/employer/candidates/${u.uid}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`View profile of ${u.name || 'platform user'}`}
+                                >
+                                  <Eye className="h-5 w-5" />
+                                </Link>
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
                                   const newStatus =
-                                    u.status === 'active' ||
-                                    u.status === undefined
+                                    platformUserIsEffectivelyActive
                                       ? 'suspended'
                                       : 'active';
                                   showConfirmationModal(
@@ -2165,16 +2173,14 @@ export default function AdminPage() {
                                   );
                                 }}
                                 disabled={isActionDisabled}
-                                aria-label={`${u.status === 'active' || u.status === undefined ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                aria-label={`${platformUserIsEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                                 className={
-                                  u.status === 'active' ||
-                                  u.status === undefined
+                                  platformUserIsEffectivelyActive
                                     ? 'text-orange-600'
                                     : 'text-blue-600'
                                 }
                               >
-                                {u.status === 'active' ||
-                                u.status === undefined ? (
+                                {platformUserIsEffectivelyActive ? (
                                   <Ban className="h-5 w-5" />
                                 ) : (
                                   <CheckSquare className="h-5 w-5" />
