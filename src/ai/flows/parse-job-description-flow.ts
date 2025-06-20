@@ -26,12 +26,16 @@ export type ParseJobDescriptionInput = z.infer<
 const ParseJobDescriptionOutputSchema = z
   .object({
     title: z.string().optional().describe('The job title.'),
-    description: z
+    responsibilities: z // Changed from description
       .string()
       .optional()
       .describe(
-        'The main body of the job description, including responsibilities and qualifications. May contain an error message if parsing failed due to file type.'
+        'The main responsibilities of the job. May contain an error message if parsing failed due to file type.'
       ),
+    requirements: z // Added
+      .string()
+      .optional()
+      .describe('The key qualifications and requirements for the job.'),
     skills: z
       .array(z.string())
       .optional()
@@ -60,10 +64,12 @@ const ParseJobDescriptionOutputSchema = z
       .describe(
         'Whether the salary range should be shown to applicants. Defaults to true if salary is provided.'
       ),
-    benefits: z
-      .array(z.string())
+    benefits: z // Changed from array(z.string())
+      .string()
       .optional()
-      .describe('List of benefits and perks offered.'),
+      .describe(
+        'List of benefits and perks offered, as a single string (e.g., "Health Insurance, PTO, Remote Work").'
+      ),
     industry: z
       .string()
       .optional()
@@ -133,13 +139,14 @@ Job Description Document:
 
 Extract the following details and structure them according to the output schema:
 - Job Title.
-- Full Job Description (responsibilities, qualifications, about the role, etc.). Try to capture the main content.
+- Job Responsibilities: Focus on the primary duties and tasks of the role.
+- Job Requirements: Focus on qualifications, skills, and experience needed.
 - Required or Preferred Skills (as a list of strings).
 - Job Location (e.g., "City, State", "Remote").
 - Job Type (e.g., "Full-time", "Part-time", "Contract", "Internship").
 - Salary range if specified (minimum and maximum annual INR values).
 - Pay Transparency: If salary is mentioned, assume true unless specified otherwise.
-- Benefits: List of perks like health insurance, PTO. Extract as an array of strings.
+- Benefits: List of perks like health insurance, PTO. Extract as a single string, perhaps comma-separated or bulleted if provided that way.
 - Industry: (e.g., "Technology", "Finance").
 - Functional Area/Department: (e.g., "Engineering", "Marketing").
 - Role/Designation: A more specific title if available.
@@ -150,10 +157,11 @@ Extract the following details and structure them according to the output schema:
 - Application Deadline: (in YYYY-MM-DD format).
 
 Prioritize accuracy. If some information is not clearly available, omit the field rather than guessing.
-For skills and benefits, extract distinct items. For salary and experience years, provide numbers if possible.
+For skills, extract distinct items. For benefits, try to capture the list as a single text block. For salary and experience years, provide numbers if possible.
 Ensure the output is valid JSON matching the provided schema.
-If the document content appears to be an error message about file processing, summarize that error in the 'description' field.
+If the document content appears to be an error message about file processing, summarize that error in the 'responsibilities' field.
 If salary is mentioned, set payTransparency to true unless stated otherwise in the document. If no salary, payTransparency can be omitted or false.
+Distinguish clearly between responsibilities (what the person will do) and requirements (what the person needs to have).
 `,
 });
 
@@ -186,7 +194,7 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
           `Consider extracting text content from such documents before sending for AI analysis.`
       );
       return {
-        description: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
+        responsibilities: `Parsing Error: The uploaded file type (${mimeType}) cannot be directly processed by the AI. Please try uploading a plain text file (.txt) or ensure the content is pasted directly if supported.`,
         skills: [],
       };
     }
@@ -199,14 +207,15 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
       );
       return {
         title: undefined,
-        description: undefined,
+        responsibilities: undefined,
+        requirements: undefined,
         skills: [],
         location: undefined,
         jobType: undefined,
         salaryMin: undefined,
         salaryMax: undefined,
         payTransparency: undefined,
-        benefits: [],
+        benefits: undefined,
         industry: undefined,
         department: undefined,
         roleDesignation: undefined,

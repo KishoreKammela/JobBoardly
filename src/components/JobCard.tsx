@@ -145,7 +145,6 @@ export function JobCard({
 
   let salaryDisplay = 'Not Disclosed';
   if (job.payTransparency !== false) {
-    // Show if true or undefined
     if (job.salaryMin && job.salaryMax) {
       salaryDisplay = `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.`;
     } else if (job.salaryMin) {
@@ -251,7 +250,7 @@ export function JobCard({
           )}
         </div>
         <p className="text-sm text-foreground/90 line-clamp-3">
-          {job.description}
+          {job.responsibilities}
         </p>
         {job.skills && job.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
@@ -291,7 +290,7 @@ export function JobCard({
               onClick={handleSaveToggle}
               aria-pressed={saved}
               aria-label={saved ? 'Unsave job' : 'Save job'}
-              disabled={!canCurrentlySave}
+              disabled={!canCurrentlySave || !!applicationStatus}
               title={saved ? 'Unsave Job' : 'Save Job'}
             >
               <Bookmark

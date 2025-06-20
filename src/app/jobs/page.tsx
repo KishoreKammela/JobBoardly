@@ -115,7 +115,7 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData); // Initialize with all jobs
+        setFilteredJobs(jobsData);
       } catch (e: unknown) {
         console.error('Error fetching jobs:', e);
         setError(
@@ -143,7 +143,10 @@ export default function JobsPage() {
           job.skills.some((skill) =>
             skill.toLowerCase().includes(currentGlobalTerm)
           )) ||
-        job.description.toLowerCase().includes(currentGlobalTerm) ||
+        (job.responsibilities &&
+          job.responsibilities.toLowerCase().includes(currentGlobalTerm)) ||
+        (job.requirements &&
+          job.requirements.toLowerCase().includes(currentGlobalTerm)) ||
         job.industry.toLowerCase().includes(currentGlobalTerm) ||
         job.department.toLowerCase().includes(currentGlobalTerm) ||
         (job.roleDesignation &&
@@ -153,9 +156,8 @@ export default function JobsPage() {
             .toLowerCase()
             .includes(currentGlobalTerm)) ||
         (job.benefits &&
-          job.benefits.some((benefit) =>
-            benefit.toLowerCase().includes(currentGlobalTerm)
-          ));
+          typeof job.benefits === 'string' && // Check if benefits is a string
+          job.benefits.toLowerCase().includes(currentGlobalTerm));
 
       const locationMatch =
         debouncedSidebarFilters.location.toLowerCase() === '' ||

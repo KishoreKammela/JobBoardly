@@ -58,7 +58,7 @@ export default function PostJobPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto w-full">
       <div>
         <h1 className="text-3xl font-bold mb-2 font-headline">
           Post a New Job

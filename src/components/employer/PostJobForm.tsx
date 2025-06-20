@@ -84,7 +84,7 @@ const initialJobDataState: Partial<Job> = {
   salaryMin: undefined,
   salaryMax: undefined,
   payTransparency: true,
-  benefits: [],
+  benefits: '', // Changed from []
   industry: '',
   department: '',
   experienceLevel: 'Entry-Level',
@@ -93,6 +93,8 @@ const initialJobDataState: Partial<Job> = {
   educationQualification: '',
   applicationDeadline: undefined,
   screeningQuestions: [],
+  responsibilities: '', // Added
+  requirements: '', // Added
 };
 
 interface ModalState {
@@ -129,7 +131,6 @@ export function PostJobForm() {
 
   const [jobData, setJobData] = useState<Partial<Job>>(initialJobDataState);
   const [skillsInput, setSkillsInput] = useState('');
-  const [benefitsInput, setBenefitsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,7 +207,7 @@ export function PostJobForm() {
             return;
           }
           setJobData({
-            ...initialJobDataState, // ensure all new fields are initialized
+            ...initialJobDataState,
             ...existingJob,
             postedDate:
               existingJob.postedDate instanceof Timestamp
@@ -232,11 +233,10 @@ export function PostJobForm() {
             screeningQuestions: (existingJob.screeningQuestions || []).map(
               (q) => ({ ...q, id: q.id || uuidv4() })
             ),
-            payTransparency: existingJob.payTransparency ?? true, // Default to true if undefined
-            benefits: existingJob.benefits || [],
+            payTransparency: existingJob.payTransparency ?? true,
+            benefits: existingJob.benefits || '', // Ensure it's a string
           });
           setSkillsInput((existingJob.skills || []).join(', '));
-          setBenefitsInput((existingJob.benefits || []).join(', '));
         } else {
           toast({
             title: 'Error',
@@ -249,7 +249,7 @@ export function PostJobForm() {
       } else {
         setJobData((prev) => ({
           ...initialJobDataState,
-          ...prev, // Retains companyId etc. set earlier
+          ...prev,
           screeningQuestions: [],
           status: 'pending',
         }));
@@ -294,18 +294,6 @@ export function PostJobForm() {
     }));
   };
 
-  const handleBenefitsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setBenefitsInput(val);
-    setJobData((prev) => ({
-      ...prev,
-      benefits: val
-        .split(',')
-        .map((benefit) => benefit.trim())
-        .filter((benefit) => benefit),
-    }));
-  };
-
   const handleSelectChange = (name: keyof Job, value: string) => {
     setJobData((prev) => ({ ...prev, [name]: value }));
   };
@@ -343,16 +331,15 @@ export function PostJobForm() {
         });
 
         if (
-          parsedData.description &&
-          parsedData.description.startsWith('Parsing Error:')
+          parsedData.responsibilities &&
+          parsedData.responsibilities.startsWith('Parsing Error:')
         ) {
           toast({
             title: 'Document Parsing Issue',
-            description: parsedData.description,
+            description: parsedData.responsibilities,
             variant: 'destructive',
             duration: 9000,
           });
-          // Keep potentially useful fields
           setJobData((prev) => ({
             ...prev,
             title: parsedData.title || prev.title,
@@ -380,7 +367,9 @@ export function PostJobForm() {
           setJobData((prev) => ({
             ...prev,
             title: parsedData.title || prev.title,
-            description: parsedData.description || prev.description,
+            responsibilities:
+              parsedData.responsibilities || prev.responsibilities,
+            requirements: parsedData.requirements || prev.requirements,
             skills: parsedData.skills || prev.skills,
             location: parsedData.location || prev.location,
             type: parsedData.jobType || prev.type,
@@ -403,7 +392,7 @@ export function PostJobForm() {
               parsedData.applicationDeadline || prev.applicationDeadline,
             payTransparency:
               parsedData.payTransparency ?? prev.payTransparency ?? true,
-            benefits: parsedData.benefits || prev.benefits || [],
+            benefits: parsedData.benefits || prev.benefits || '',
           }));
           toast({
             title: 'Document Parsed',
@@ -413,9 +402,6 @@ export function PostJobForm() {
 
         if (parsedData.skills && parsedData.skills.length > 0) {
           setSkillsInput(parsedData.skills.join(', '));
-        }
-        if (parsedData.benefits && parsedData.benefits.length > 0) {
-          setBenefitsInput(parsedData.benefits.join(', '));
         }
         setFile(null);
       };
@@ -483,7 +469,8 @@ export function PostJobForm() {
     }
     if (
       !jobData.title ||
-      !jobData.description ||
+      !jobData.responsibilities ||
+      !jobData.requirements ||
       !jobData.industry ||
       !jobData.department ||
       !jobData.experienceLevel
@@ -491,7 +478,7 @@ export function PostJobForm() {
       toast({
         title: 'Missing Fields',
         description:
-          'Job title, description, industry, department, and experience level are required.',
+          'Job title, responsibilities, requirements, industry, department, and experience level are required.',
         variant: 'destructive',
       });
       return;
@@ -505,13 +492,14 @@ export function PostJobForm() {
         companyId: user.companyId,
         location: jobData.location || '',
         type: jobData.type || 'Full-time',
-        description: jobData.description,
+        responsibilities: jobData.responsibilities,
+        requirements: jobData.requirements,
         isRemote: jobData.isRemote || false,
         skills: jobData.skills || [],
         salaryMin: jobData.salaryMin === undefined ? null : jobData.salaryMin,
         salaryMax: jobData.salaryMax === undefined ? null : jobData.salaryMax,
         payTransparency: jobData.payTransparency ?? true,
-        benefits: jobData.benefits || [],
+        benefits: jobData.benefits || '',
         industry: jobData.industry,
         department: jobData.department,
         roleDesignation: jobData.roleDesignation || null,
@@ -531,8 +519,8 @@ export function PostJobForm() {
         companyLogoUrl: currentCompanyDetails.logoUrl || null,
         postedById: user.uid,
         updatedAt: serverTimestamp(),
-        status: 'pending', // Always pending on create/update
-        moderationReason: null, // Clear any previous reasons
+        status: 'pending',
+        moderationReason: null,
         screeningQuestions: (jobData.screeningQuestions || []).filter(
           (q) => q.questionText.trim() !== ''
         ),
@@ -568,7 +556,6 @@ export function PostJobForm() {
           screeningQuestions: [],
         });
         setSkillsInput('');
-        setBenefitsInput('');
         setFile(null);
       }
       router.push('/employer/posted-jobs');
@@ -602,7 +589,6 @@ export function PostJobForm() {
     setJobData((prev) => {
       const updatedQuestions = [...(prev.screeningQuestions || [])];
       if (updatedQuestions[index]) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (updatedQuestions[index] as any)[field] = value;
       }
       return { ...prev, screeningQuestions: updatedQuestions };
@@ -690,7 +676,7 @@ export function PostJobForm() {
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline">
-            {editingJobId ? 'Edit Job Opening' : 'Post New Job'} for{' '}
+            {editingJobId ? 'Edit Job Opening' : 'Create Job Posting'} for{' '}
             {currentCompanyDetails.name || 'Your Company'}
           </CardTitle>
           {!editingJobId && (
@@ -792,80 +778,114 @@ export function PostJobForm() {
             onSubmit={handleFormSubmitWithConfirmation}
             className="space-y-6"
           >
-            {/* Core Job Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="title">Job Title *</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={jobData.title || ''}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., Senior Software Engineer"
-                  aria-label="Job Title"
-                />
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-3">Core Job Info</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="title">Job Title *</Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    value={jobData.title || ''}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., Senior Software Engineer"
+                    aria-label="Job Title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    value={jobData.location || ''}
+                    onChange={handleChange}
+                    placeholder="e.g., San Francisco, CA or Remote"
+                    aria-label="Job Location"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  name="location"
-                  value={jobData.location || ''}
-                  onChange={handleChange}
-                  placeholder="e.g., San Francisco, CA or Remote"
-                  aria-label="Job Location"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <Label htmlFor="type">Job Type</Label>
+                  <Select
+                    value={jobData.type || 'Full-time'}
+                    onValueChange={(value) =>
+                      handleSelectChange('type', value as Job['type'])
+                    }
+                  >
+                    <SelectTrigger id="type" aria-label="Select job type">
+                      <SelectValue placeholder="Select job type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-time">Full-time</SelectItem>
+                      <SelectItem value="Part-time">Part-time</SelectItem>
+                      <SelectItem value="Contract">Contract</SelectItem>
+                      <SelectItem value="Internship">Internship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center space-x-2 pt-8">
+                  <Checkbox
+                    id="isRemote"
+                    name="isRemote"
+                    checked={jobData.isRemote || false}
+                    onCheckedChange={(checked) =>
+                      setJobData((prev) => ({
+                        ...prev,
+                        isRemote: Boolean(checked),
+                      }))
+                    }
+                    aria-labelledby="isRemoteLabel"
+                  />
+                  <Label
+                    htmlFor="isRemote"
+                    className="font-medium"
+                    id="isRemoteLabel"
+                  >
+                    This job is remote
+                  </Label>
+                </div>
               </div>
-            </div>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="type">Job Type</Label>
-                <Select
-                  value={jobData.type || 'Full-time'}
-                  onValueChange={(value) =>
-                    handleSelectChange('type', value as Job['type'])
-                  }
-                >
-                  <SelectTrigger id="type" aria-label="Select job type">
-                    <SelectValue placeholder="Select job type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                    <SelectItem value="Internship">Internship</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2 pt-8">
-                <Checkbox
-                  id="isRemote"
-                  name="isRemote"
-                  checked={jobData.isRemote || false}
-                  onCheckedChange={(checked) =>
-                    setJobData((prev) => ({
-                      ...prev,
-                      isRemote: Boolean(checked),
-                    }))
-                  }
-                  aria-labelledby="isRemoteLabel"
-                />
-                <Label
-                  htmlFor="isRemote"
-                  className="font-medium"
-                  id="isRemoteLabel"
-                >
-                  This job is remote
-                </Label>
-              </div>
-            </div>
-
-            {/* Compensation and Benefits */}
-            <Card className="p-4 bg-muted/20">
+            <Card className="p-4">
               <h3 className="text-lg font-semibold mb-3">
-                II. Compensation and Benefits
+                Job Responsibilities & Requirements
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="responsibilities">Responsibilities *</Label>
+                  <Textarea
+                    id="responsibilities"
+                    name="responsibilities"
+                    value={jobData.responsibilities || ''}
+                    onChange={handleChange}
+                    rows={8}
+                    placeholder="Detail the key responsibilities and day-to-day tasks..."
+                    required
+                    aria-label="Job Responsibilities"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="requirements">Requirements *</Label>
+                  <Textarea
+                    id="requirements"
+                    name="requirements"
+                    value={jobData.requirements || ''}
+                    onChange={handleChange}
+                    rows={8}
+                    placeholder="Outline the necessary qualifications, skills, and experience..."
+                    required
+                    aria-label="Job Requirements"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-3">
+                Compensation and Benefits
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -929,23 +949,25 @@ export function PostJobForm() {
                 </Label>
               </div>
               <div className="mt-4">
-                <Label htmlFor="benefitsInput">
-                  Benefits (comma-separated)
+                <Label htmlFor="benefits">
+                  Benefits (Describe the perks and benefits)
                 </Label>
-                <Input
-                  id="benefitsInput"
+                <Textarea
+                  id="benefits"
                   name="benefits"
-                  value={benefitsInput}
-                  onChange={handleBenefitsChange}
-                  placeholder="e.g., Health Insurance, PTO, Remote Work"
+                  value={jobData.benefits || ''}
+                  onChange={handleChange}
+                  placeholder="e.g., Health Insurance, Paid Time Off, Remote Work options, Professional Development..."
                   aria-label="Benefits"
+                  rows={4}
                 />
               </div>
             </Card>
 
-            {/* Job Details */}
-            <Card className="p-4 bg-muted/20">
-              <h3 className="text-lg font-semibold mb-3">III. Job Details</h3>
+            <Card className="p-4">
+              <h3 className="text-lg font-semibold mb-3">
+                Additional Job Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="industry">Industry *</Label>
@@ -1080,24 +1102,10 @@ export function PostJobForm() {
                 aria-label="Required Skills"
               />
             </div>
-            <div>
-              <Label htmlFor="description">Job Description *</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={jobData.description || ''}
-                onChange={handleChange}
-                rows={12}
-                placeholder="Provide a detailed job description, responsibilities, and qualifications..."
-                required
-                aria-label="Job Description"
-              />
-            </div>
 
-            {/* Application Process */}
-            <Card className="p-4 bg-muted/20">
+            <Card className="p-4">
               <h3 className="text-lg font-semibold mb-3">
-                V. Application Process
+                Application Process
               </h3>
               <div>
                 <Label htmlFor="applicationDeadline">
@@ -1136,7 +1144,7 @@ export function PostJobForm() {
               </div>
             </Card>
 
-            <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+            <div className="space-y-4 p-4 border rounded-md">
               <h3 className="text-lg font-semibold">
                 Screening Questions (Optional)
               </h3>
@@ -1177,10 +1185,6 @@ export function PostJobForm() {
                           <SelectContent>
                             <SelectItem value="text">Text Input</SelectItem>
                             <SelectItem value="yesNo">Yes/No</SelectItem>
-                            {/* Future types:
-                            <SelectItem value="multipleChoice">Multiple Choice</SelectItem>
-                            <SelectItem value="checkboxGroup">Checkbox Group</SelectItem>
-                            */}
                           </SelectContent>
                         </Select>
                       </div>

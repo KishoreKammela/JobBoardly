@@ -147,7 +147,8 @@ export interface Job {
   companyId: string;
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
-  description: string;
+  responsibilities?: string; // Changed from description
+  requirements?: string; // Added
   postedDate: string | Timestamp;
   isRemote: boolean;
   skills: string[];
@@ -162,7 +163,7 @@ export interface Job {
   screeningQuestions?: ScreeningQuestion[];
 
   payTransparency?: boolean;
-  benefits?: string[];
+  benefits?: string; // Changed from string[] to string
   industry: string;
   department: string; // Functional Area / Department
   roleDesignation?: string;
@@ -288,7 +289,7 @@ export interface UserProfile {
 
   jobsAppliedCount?: number;
   lastActive?: Timestamp | Date | string;
-  desiredSalary?: number; // Kept for potential future use in profile, but job-specific salary is separate
+  desiredSalary?: number;
 }
 
 export interface ParsedResumeData {
@@ -306,14 +307,15 @@ export interface ParsedResumeData {
 
 export interface ParsedJobData {
   title?: string;
-  description?: string;
+  responsibilities?: string; // Changed
+  requirements?: string; // Added
   skills?: string[];
   location?: string;
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
   payTransparency?: boolean;
-  benefits?: string[];
+  benefits?: string; // Changed
   industry?: string;
   department?: string;
   roleDesignation?: string;
