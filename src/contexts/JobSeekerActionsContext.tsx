@@ -1,23 +1,15 @@
 'use client';
-import type {
-  UserProfile,
-  Filters,
-  SavedSearch,
-  Application,
-  ApplicationStatus,
-  Job,
-} from '@/types';
+import type { Filters, SavedSearch, Application, Job } from '@/types';
 import React, {
   createContext,
   useContext,
   type ReactNode,
   useCallback,
 } from 'react';
-import { auth, db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
   doc,
   setDoc,
-  updateDoc,
   serverTimestamp,
   collection,
   arrayUnion,

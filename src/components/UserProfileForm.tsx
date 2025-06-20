@@ -53,6 +53,7 @@ import {
   Cake,
   Phone,
   AtSign,
+  Lightbulb, // Added for AI Summary Generator
 } from 'lucide-react';
 import {
   Popover,
@@ -77,6 +78,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  generateProfileSummary,
+  type GenerateProfileSummaryOutput,
+} from '@/ai/flows/generate-profile-summary-flow'; // Added AI summary flow
 
 const createEmptyExperience = (): ExperienceEntry => ({
   id: uuidv4(),
@@ -190,6 +195,13 @@ export function UserProfileForm() {
 
   const [modalState, setModalState] = useState<ModalState>(defaultModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
+
+  // AI Summary Generator State
+  const [aiTargetRoleCompany, setAiTargetRoleCompany] = useState('');
+  const [aiGeneratedSummary, setAiGeneratedSummary] = useState<string | null>(
+    null
+  );
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -631,6 +643,92 @@ export function UserProfileForm() {
     );
   };
 
+  const handleGenerateAISummary = async () => {
+    if (!user) return;
+    setIsGeneratingSummary(true);
+    setAiGeneratedSummary(null);
+    try {
+      const profileContext = `
+        Name: ${userFormData.name || 'N/A'}
+        Headline: ${userFormData.headline || 'N/A'}
+        Skills: ${(userFormData.skills || []).join(', ') || 'N/A'}
+        Experiences: ${
+          (userFormData.experiences || [])
+            .map(
+              (exp) =>
+                `${exp.jobRole} at ${exp.companyName} (${exp.startDate} - ${exp.currentlyWorking ? 'Present' : exp.endDate}): ${exp.description}`
+            )
+            .join('; ') || 'N/A'
+        }
+        Education: ${
+          (userFormData.educations || [])
+            .map(
+              (edu) =>
+                `${edu.degreeName} in ${edu.specialization} from ${edu.instituteName}`
+            )
+            .join('; ') || 'N/A'
+        }
+        Total Experience: ${userFormData.totalYearsExperience || 0} years, ${userFormData.totalMonthsExperience || 0} months
+      `;
+
+      const result: GenerateProfileSummaryOutput = await generateProfileSummary(
+        {
+          jobSeekerProfileData: profileContext,
+          targetRoleOrCompany: aiTargetRoleCompany,
+        }
+      );
+      setAiGeneratedSummary(
+        result.generatedSummary ||
+          'AI could not generate a summary. Please try again or ensure your profile has enough details.'
+      );
+      if (result.generatedSummary) {
+        toast({
+          title: 'AI Summary Generated!',
+          description: 'Review the summary below and choose to use it.',
+        });
+      }
+    } catch (err: unknown) {
+      console.error('Error generating AI summary:', err);
+      toast({
+        title: 'AI Summary Error',
+        description:
+          'Failed to generate summary. ' +
+          (err instanceof Error ? err.message : 'Please try again.'),
+        variant: 'destructive',
+      });
+      setAiGeneratedSummary(
+        'Error generating summary. Please try again later.'
+      );
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const handleUseAISummary = () => {
+    if (
+      aiGeneratedSummary &&
+      !aiGeneratedSummary.startsWith('Error') &&
+      !aiGeneratedSummary.startsWith('Could not')
+    ) {
+      setUserFormData((prev) => ({
+        ...prev,
+        parsedResumeText: aiGeneratedSummary,
+      }));
+      toast({
+        title: 'Summary Applied',
+        description:
+          'AI-generated summary has been copied to your Professional Summary field. Remember to save all profile changes.',
+      });
+    } else {
+      toast({
+        title: 'No Summary to Apply',
+        description:
+          'Generate a summary first or the generated summary had an issue.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="flex justify-center items-center py-10">
@@ -645,6 +743,11 @@ export function UserProfileForm() {
 
   const isJobSeeker = user.role === 'jobSeeker';
   const isCompanyAdmin = user.role === 'employer' && user.isCompanyAdmin;
+  const isDisabledByStatus =
+    (user.role === 'jobSeeker' && user.status === 'suspended') ||
+    (user.role === 'employer' &&
+      company &&
+      (company.status === 'suspended' || company.status === 'deleted'));
 
   const dobDate =
     userFormData.dateOfBirth &&
@@ -673,6 +776,11 @@ export function UserProfileForm() {
                   onChange={handleUserChange}
                   required
                   placeholder="e.g., John Doe"
+                  disabled={
+                    isDisabledByStatus &&
+                    user.role !== 'employer' &&
+                    user.role !== 'jobSeeker'
+                  }
                 />
               </div>
               <div>
@@ -706,6 +814,11 @@ export function UserProfileForm() {
                   value={userFormData.avatarUrl || ''}
                   onChange={handleUserChange}
                   data-ai-hint="avatar photo"
+                  disabled={
+                    isDisabledByStatus &&
+                    user.role !== 'employer' &&
+                    user.role !== 'jobSeeker'
+                  }
                 />
               </div>
               {isJobSeeker && (
@@ -724,6 +837,7 @@ export function UserProfileForm() {
                     placeholder="e.g., +919876543210"
                     value={userFormData.mobileNumber || ''}
                     onChange={handleUserChange}
+                    disabled={isDisabledByStatus}
                   />
                 </div>
               )}
@@ -744,6 +858,7 @@ export function UserProfileForm() {
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
+                          disabled={isDisabledByStatus}
                           className={`w-full justify-start text-left font-normal ${!userFormData.dateOfBirth && 'text-muted-foreground'}`}
                           aria-label="Pick date of birth"
                         >
@@ -765,6 +880,7 @@ export function UserProfileForm() {
                           toYear={new Date().getFullYear() - 10}
                           defaultMonth={dobDate}
                           initialFocus
+                          disabled={isDisabledByStatus}
                         />
                       </PopoverContent>
                     </Popover>
@@ -778,8 +894,13 @@ export function UserProfileForm() {
                       onValueChange={(value) =>
                         handleUserSelectChange('gender', value)
                       }
+                      disabled={isDisabledByStatus}
                     >
-                      <SelectTrigger id="gender" aria-label="Select gender">
+                      <SelectTrigger
+                        id="gender"
+                        aria-label="Select gender"
+                        disabled={isDisabledByStatus}
+                      >
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -808,6 +929,7 @@ export function UserProfileForm() {
                       value={userFormData.homeCity || ''}
                       onChange={handleUserChange}
                       placeholder="e.g., Mumbai"
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                   <div>
@@ -824,6 +946,7 @@ export function UserProfileForm() {
                       value={userFormData.homeState || ''}
                       onChange={handleUserChange}
                       placeholder="e.g., Maharashtra"
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                 </div>
@@ -832,6 +955,84 @@ export function UserProfileForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Summary Generator - For Job Seekers Only */}
+      {/* TODO: Add admin feature flag check here to conditionally render this section */}
+      {isJobSeeker && (
+        <Card className="w-full shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-xl font-headline flex items-center gap-2">
+              <Lightbulb className="text-yellow-400" /> AI Summary Generator
+            </CardTitle>
+            <CardDescription>
+              Let AI help you craft a professional summary tailored to a
+              specific role or company. The generated summary will appear below,
+              and you can choose to use it in your main profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="aiTargetRoleCompany">
+                Target Role or Company (Optional)
+              </Label>
+              <Input
+                id="aiTargetRoleCompany"
+                value={aiTargetRoleCompany}
+                onChange={(e) => setAiTargetRoleCompany(e.target.value)}
+                placeholder="e.g., Product Manager at Google, Fintech roles"
+                disabled={isGeneratingSummary || isDisabledByStatus}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleGenerateAISummary}
+              disabled={isGeneratingSummary || isDisabledByStatus}
+              className="w-full sm:w-auto"
+            >
+              {isGeneratingSummary ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              Generate Summary with AI
+            </Button>
+            {aiGeneratedSummary && (
+              <div className="space-y-2">
+                <Label htmlFor="aiGeneratedSummaryText">
+                  AI Generated Summary:
+                </Label>
+                <Textarea
+                  id="aiGeneratedSummaryText"
+                  value={aiGeneratedSummary}
+                  readOnly
+                  rows={5}
+                  className="bg-muted/30 whitespace-pre-wrap"
+                />
+                <Button
+                  type="button"
+                  onClick={handleUseAISummary}
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    isGeneratingSummary ||
+                    isDisabledByStatus ||
+                    aiGeneratedSummary.startsWith('Error') ||
+                    aiGeneratedSummary.startsWith('Could not')
+                  }
+                >
+                  Use This Summary in My Profile
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Clicking &quot;Use This Summary&quot; will copy it to your
+                  &quot;Professional Summary&quot; field above. Remember to save
+                  all profile changes using the main save button at the bottom
+                  of the page.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {isJobSeeker && (
         <>
@@ -857,6 +1058,7 @@ export function UserProfileForm() {
                     placeholder="e.g., Senior Software Engineer | AI Enthusiast"
                     value={userFormData.headline || ''}
                     onChange={handleUserChange}
+                    disabled={isDisabledByStatus}
                   />
                 </div>
                 <div>
@@ -870,6 +1072,7 @@ export function UserProfileForm() {
                     onChange={handleUserChange}
                     rows={6}
                     placeholder="A brief overview of your career, skills, and goals. Often extracted from your resume."
+                    disabled={isDisabledByStatus}
                   />
                 </div>
                 <div>
@@ -885,6 +1088,7 @@ export function UserProfileForm() {
                     value={skillsInput}
                     onChange={handleSkillsChange}
                     placeholder="e.g., React, Node.js, Project Management, Agile"
+                    disabled={isDisabledByStatus}
                   />
                 </div>
 
@@ -908,6 +1112,7 @@ export function UserProfileForm() {
                       }
                       onChange={handleUserChange}
                       min="0"
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                   <div>
@@ -927,6 +1132,7 @@ export function UserProfileForm() {
                       onChange={handleUserChange}
                       min="0"
                       max="11"
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                 </div>
@@ -950,6 +1156,7 @@ export function UserProfileForm() {
                           : userFormData.currentCTCValue
                       }
                       onChange={handleUserChange}
+                      disabled={isDisabledByStatus}
                     />
                     {userFormData.currentCTCValue !== undefined && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -970,6 +1177,7 @@ export function UserProfileForm() {
                         )
                       }
                       aria-labelledby="currentCTCConfidentialLabel"
+                      disabled={isDisabledByStatus}
                     />
                     <Label
                       htmlFor="currentCTCConfidential"
@@ -995,6 +1203,7 @@ export function UserProfileForm() {
                           : userFormData.expectedCTCValue
                       }
                       onChange={handleUserChange}
+                      disabled={isDisabledByStatus}
                     />
                     {userFormData.expectedCTCValue !== undefined && (
                       <p className="text-xs text-muted-foreground mt-1">
@@ -1015,6 +1224,7 @@ export function UserProfileForm() {
                         )
                       }
                       aria-labelledby="expectedCTCNegotiableLabel"
+                      disabled={isDisabledByStatus}
                     />
                     <Label
                       htmlFor="expectedCTCNegotiable"
@@ -1068,6 +1278,7 @@ export function UserProfileForm() {
                               )
                             }
                             placeholder="e.g., Software Engineer"
+                            disabled={isDisabledByStatus}
                           />
                         </div>
                         <div>
@@ -1086,6 +1297,7 @@ export function UserProfileForm() {
                               )
                             }
                             placeholder="e.g., Tech Solutions Inc."
+                            disabled={isDisabledByStatus}
                           />
                         </div>
                       </div>
@@ -1098,6 +1310,7 @@ export function UserProfileForm() {
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
+                                disabled={isDisabledByStatus}
                                 className={`w-full justify-start text-left font-normal ${!exp.startDate && 'text-muted-foreground'}`}
                                 aria-label="Pick experience start date"
                               >
@@ -1125,6 +1338,7 @@ export function UserProfileForm() {
                                 toYear={new Date().getFullYear()}
                                 defaultMonth={expStartDateObj}
                                 initialFocus
+                                disabled={isDisabledByStatus}
                               />
                             </PopoverContent>
                           </Popover>
@@ -1135,7 +1349,9 @@ export function UserProfileForm() {
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
-                                disabled={exp.currentlyWorking}
+                                disabled={
+                                  exp.currentlyWorking || isDisabledByStatus
+                                }
                                 className={`w-full justify-start text-left font-normal ${!exp.endDate && !exp.currentlyWorking && 'text-muted-foreground'}`}
                                 aria-label="Pick experience end date"
                               >
@@ -1153,7 +1369,9 @@ export function UserProfileForm() {
                               <Calendar
                                 mode="single"
                                 selected={expEndDateObj}
-                                disabled={exp.currentlyWorking}
+                                disabled={
+                                  exp.currentlyWorking || isDisabledByStatus
+                                }
                                 onSelect={(date) =>
                                   handleExperienceDateChange(
                                     index,
@@ -1185,6 +1403,7 @@ export function UserProfileForm() {
                               )
                             }
                             aria-labelledby={`exp-current-label-${exp.id}`}
+                            disabled={isDisabledByStatus}
                           />
                           <Label
                             htmlFor={`exp-current-${exp.id}`}
@@ -1214,6 +1433,7 @@ export function UserProfileForm() {
                             )
                           }
                           placeholder="e.g., 1200000"
+                          disabled={isDisabledByStatus}
                         />
                         {exp.annualCTC !== undefined && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -1238,6 +1458,7 @@ export function UserProfileForm() {
                           }
                           rows={3}
                           placeholder="Describe your role and achievements..."
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                       {(userFormData.experiences || []).length > 1 && (
@@ -1248,6 +1469,7 @@ export function UserProfileForm() {
                           onClick={() => removeArrayItem('experiences', exp.id)}
                           className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
                           aria-label={`Remove experience ${exp.jobRole || 'entry'}`}
+                          disabled={isDisabledByStatus}
                         >
                           <Trash2 className="h-4 w-4" /> Remove Experience
                         </Button>
@@ -1263,6 +1485,7 @@ export function UserProfileForm() {
                   }
                   className="flex items-center gap-1"
                   aria-label="Add another work experience"
+                  disabled={isDisabledByStatus}
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Experience
                 </Button>
@@ -1296,10 +1519,12 @@ export function UserProfileForm() {
                               value
                             )
                           }
+                          disabled={isDisabledByStatus}
                         >
                           <SelectTrigger
                             id={`edu-level-${edu.id}`}
                             aria-label={`Select education level for ${edu.degreeName || 'entry'}`}
+                            disabled={isDisabledByStatus}
                           >
                             <SelectValue placeholder="Select level" />
                           </SelectTrigger>
@@ -1336,6 +1561,7 @@ export function UserProfileForm() {
                             )
                           }
                           placeholder="e.g., B.Tech, MBA"
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                     </div>
@@ -1356,6 +1582,7 @@ export function UserProfileForm() {
                             )
                           }
                           placeholder="e.g., Computer Science, Marketing"
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                       <div>
@@ -1374,6 +1601,7 @@ export function UserProfileForm() {
                             )
                           }
                           placeholder="e.g., University of Technology"
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                     </div>
@@ -1392,10 +1620,12 @@ export function UserProfileForm() {
                               value
                             )
                           }
+                          disabled={isDisabledByStatus}
                         >
                           <SelectTrigger
                             id={`edu-courseType-${edu.id}`}
                             aria-label={`Select course type for ${edu.degreeName || 'entry'}`}
+                            disabled={isDisabledByStatus}
                           >
                             <SelectValue placeholder="Select course type" />
                           </SelectTrigger>
@@ -1428,6 +1658,7 @@ export function UserProfileForm() {
                               'number'
                             )
                           }
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                       <div>
@@ -1448,6 +1679,7 @@ export function UserProfileForm() {
                               'number'
                             )
                           }
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                     </div>
@@ -1464,6 +1696,7 @@ export function UserProfileForm() {
                           )
                         }
                         aria-labelledby={`edu-relevant-label-${edu.id}`}
+                        disabled={isDisabledByStatus}
                       />
                       <Label
                         htmlFor={`edu-relevant-${edu.id}`}
@@ -1490,6 +1723,7 @@ export function UserProfileForm() {
                         }
                         rows={2}
                         placeholder="Any additional details, achievements, or notes..."
+                        disabled={isDisabledByStatus}
                       />
                     </div>
                     {(userFormData.educations || []).length > 1 && (
@@ -1500,6 +1734,7 @@ export function UserProfileForm() {
                         onClick={() => removeArrayItem('educations', edu.id)}
                         className="mt-3 text-destructive hover:text-destructive flex items-center gap-1"
                         aria-label={`Remove education ${edu.degreeName || 'entry'}`}
+                        disabled={isDisabledByStatus}
                       >
                         <Trash2 className="h-4 w-4" /> Remove Education
                       </Button>
@@ -1514,6 +1749,7 @@ export function UserProfileForm() {
                   }
                   className="flex items-center gap-1"
                   aria-label="Add another education entry"
+                  disabled={isDisabledByStatus}
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Education
                 </Button>
@@ -1551,6 +1787,7 @@ export function UserProfileForm() {
                             )
                           }
                           placeholder="e.g., English, Hindi"
+                          disabled={isDisabledByStatus}
                         />
                       </div>
                       <div>
@@ -1567,10 +1804,12 @@ export function UserProfileForm() {
                               value
                             )
                           }
+                          disabled={isDisabledByStatus}
                         >
                           <SelectTrigger
                             id={`lang-proficiency-${lang.id}`}
                             aria-label={`Select proficiency for ${lang.languageName || 'language'}`}
+                            disabled={isDisabledByStatus}
                           >
                             <SelectValue placeholder="Select proficiency" />
                           </SelectTrigger>
@@ -1599,6 +1838,7 @@ export function UserProfileForm() {
                             )
                           }
                           aria-labelledby={`lang-read-label-${lang.id}`}
+                          disabled={isDisabledByStatus}
                         />
                         <Label
                           htmlFor={`lang-read-${lang.id}`}
@@ -1620,6 +1860,7 @@ export function UserProfileForm() {
                             )
                           }
                           aria-labelledby={`lang-write-label-${lang.id}`}
+                          disabled={isDisabledByStatus}
                         />
                         <Label
                           htmlFor={`lang-write-${lang.id}`}
@@ -1641,6 +1882,7 @@ export function UserProfileForm() {
                             )
                           }
                           aria-labelledby={`lang-speak-label-${lang.id}`}
+                          disabled={isDisabledByStatus}
                         />
                         <Label
                           htmlFor={`lang-speak-${lang.id}`}
@@ -1658,6 +1900,7 @@ export function UserProfileForm() {
                         onClick={() => removeArrayItem('languages', lang.id)}
                         className="mt-2 text-destructive hover:text-destructive flex items-center gap-1"
                         aria-label={`Remove language ${lang.languageName || 'entry'}`}
+                        disabled={isDisabledByStatus}
                       >
                         <Trash2 className="h-4 w-4" /> Remove Language
                       </Button>
@@ -1670,6 +1913,7 @@ export function UserProfileForm() {
                   onClick={() => addArrayItem('languages', createEmptyLanguage)}
                   className="flex items-center gap-1"
                   aria-label="Add another language"
+                  disabled={isDisabledByStatus}
                 >
                   <PlusCircle className="h-4 w-4" /> Add Another Language
                 </Button>
@@ -1694,6 +1938,7 @@ export function UserProfileForm() {
                       placeholder="https://yourportfolio.com"
                       value={userFormData.portfolioUrl || ''}
                       onChange={handleUserChange}
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                   <div>
@@ -1704,6 +1949,7 @@ export function UserProfileForm() {
                       placeholder="https://linkedin.com/in/yourprofile"
                       value={userFormData.linkedinUrl || ''}
                       onChange={handleUserChange}
+                      disabled={isDisabledByStatus}
                     />
                   </div>
                 </div>
@@ -1717,6 +1963,7 @@ export function UserProfileForm() {
                     value={locationsInput}
                     onChange={handleLocationsChange}
                     placeholder="e.g., San Francisco, Remote, New York"
+                    disabled={isDisabledByStatus}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1727,10 +1974,12 @@ export function UserProfileForm() {
                       onValueChange={(value) =>
                         handleUserSelectChange('jobSearchStatus', value)
                       }
+                      disabled={isDisabledByStatus}
                     >
                       <SelectTrigger
                         id="jobSearchStatus"
                         aria-label="Select job search status"
+                        disabled={isDisabledByStatus}
                       >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -1752,10 +2001,12 @@ export function UserProfileForm() {
                       onValueChange={(value) =>
                         handleUserSelectChange('availability', value)
                       }
+                      disabled={isDisabledByStatus}
                     >
                       <SelectTrigger
                         id="availability"
                         aria-label="Select availability"
+                        disabled={isDisabledByStatus}
                       >
                         <SelectValue placeholder="Select availability" />
                       </SelectTrigger>
@@ -1780,6 +2031,7 @@ export function UserProfileForm() {
                       handleUserSwitchChange('isProfileSearchable', checked)
                     }
                     aria-label="Profile searchable toggle"
+                    disabled={isDisabledByStatus}
                   />
                   <Label
                     htmlFor="isProfileSearchable"
@@ -1818,7 +2070,8 @@ export function UserProfileForm() {
                   companyFormData.status === 'approved'
                     ? 'default'
                     : companyFormData.status === 'rejected' ||
-                        companyFormData.status === 'suspended'
+                        companyFormData.status === 'suspended' ||
+                        companyFormData.status === 'deleted'
                       ? 'destructive'
                       : 'secondary'
                 }
@@ -1847,6 +2100,7 @@ export function UserProfileForm() {
                   onChange={handleCompanyChange}
                   required
                   placeholder="e.g., Your Company Inc."
+                  disabled={isDisabledByStatus}
                 />
               </div>
               <div>
@@ -1857,6 +2111,7 @@ export function UserProfileForm() {
                   placeholder="https://yourcompany.com"
                   value={companyFormData.websiteUrl || ''}
                   onChange={handleCompanyChange}
+                  disabled={isDisabledByStatus}
                 />
               </div>
               <div>
@@ -1868,6 +2123,7 @@ export function UserProfileForm() {
                   value={companyFormData.logoUrl || ''}
                   onChange={handleCompanyChange}
                   data-ai-hint="company logo"
+                  disabled={isDisabledByStatus}
                 />
               </div>
               <div>
@@ -1881,6 +2137,7 @@ export function UserProfileForm() {
                   value={companyFormData.bannerImageUrl || ''}
                   onChange={handleCompanyChange}
                   data-ai-hint="company banner"
+                  disabled={isDisabledByStatus}
                 />
               </div>
               <div>
@@ -1894,6 +2151,7 @@ export function UserProfileForm() {
                   onChange={handleCompanyChange}
                   rows={6}
                   placeholder="Briefly describe your company, its mission, and culture..."
+                  disabled={isDisabledByStatus}
                 />
               </div>
               <hr className="my-6" />
@@ -1956,7 +2214,7 @@ export function UserProfileForm() {
       <div className="flex justify-end pt-4">
         <Button
           type="submit"
-          disabled={isLoading || authLoading}
+          disabled={isLoading || authLoading || isDisabledByStatus}
           className="text-lg py-3 px-6"
           aria-label="Save all profile changes"
         >

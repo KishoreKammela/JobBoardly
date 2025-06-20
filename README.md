@@ -1,6 +1,6 @@
 # JobBoardly - AI-Powered Job Portal
 
-JobBoardly is a modern, AI-enhanced job board platform designed to connect job seekers with employers efficiently. It leverages cutting-edge technologies to provide features like resume parsing, AI-driven job matching, and a seamless application process.
+JobBoardly is a modern, AI-enhanced job board platform designed to connect job seekers with employers efficiently. It leverages cutting-edge technologies to provide features like resume parsing, AI-driven job matching, and a seamless application process. Our vision is to create the most intelligent and automated job marketplace, where AI guides careers and optimizes hiring success.
 
 ## Tech Stack
 
@@ -16,7 +16,7 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
   - **Firestore**: NoSQL database for storing job listings, user profiles, applications, company profiles, and settings (including theme preference).
   - **Storage**: For hosting user-uploaded files like resumes.
   - **App Hosting / Functions**: (App Hosting configured via `apphosting.yaml`, Firebase Functions for backend tasks).
-- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing (for employers), and intelligent job/candidate matching. Powered by Gemini models.
+- **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing (for employers), AI-powered professional summary generation, and intelligent job/candidate matching. Powered by Gemini models.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing, improved code quality, and better developer experience.
 - **Code Quality & Testing**:
   - **Testing Framework**: [Jest](https://jestjs.io/) - For unit and integration testing.
@@ -30,13 +30,14 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
-- **For Job Seekers**: User authentication, advanced profile management with resume parsing, downloadable PDF profiles, robust job search and filtering, job saving, one-click applications, AI-powered job matching, and personalized settings.
+- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering, job saving, one-click applications, AI-powered job matching, and personalized settings.
   - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
 - **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents), screening questions, applicant tracking and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
   - [Detailed Employer Features](./docs/employer-features.md)
-- **For Platform Staff (Administrators, Super Administrators, Moderators)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator).
+- **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator > Support Agent/Data Analyst with restricted views).
   - [Detailed Admin Features](./docs/admin-features.md)
 - **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
+- **AI Vision**: See our ambitious [AI Features Roadmap](./docs/ai-roadmap.md) to understand how we're building the future of job searching and hiring.
 
 ## Folder Structure
 
@@ -49,7 +50,7 @@ A high-level overview of the project's directory structure:
 │   ├── ai/                     # Genkit AI flows and configuration
 │   ├── app/                    # Next.js App Router
 │   │   ├── (auth)/             # Route group for auth pages
-│   │   │   ├── admin/login/    # Login for SuperAdmins, Admins, Moderators
+│   │   │   ├── admin/login/    # Login for SuperAdmins, Admins, Moderators, etc.
 │   │   │   └── change-password/
 │   │   ├── admin/              # Admin specific pages
 │   │   ├── employer/           # Employer specific pages
@@ -76,7 +77,8 @@ A high-level overview of the project's directory structure:
 │   ├── admin-features.md
 │   ├── employer-features.md
 │   ├── job-seeker-features.md
-│   └── routes-documentation.md
+│   ├── routes-documentation.md
+│   └── ai-roadmap.md           # New AI roadmap document
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -154,12 +156,12 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
     ```
     This typically starts the Genkit server on `http://localhost:3400`.
 
-## Platform Staff User Creation (Admin/SuperAdmin/Moderator)
+## Platform Staff User Creation (Admin/SuperAdmin/Moderator/SupportAgent/DataAnalyst)
 
 1.  A user registers normally (e.g., as a job seeker or employer).
 2.  Manually access your Firebase Firestore database.
 3.  Navigate to the `users` collection, find the user's document by their UID.
-4.  Edit the `role` field to `"admin"`, `"superAdmin"`, or `"moderator"`.
+4.  Edit the `role` field to `"admin"`, `"superAdmin"`, `"moderator"`, `"supportAgent"`, or `"dataAnalyst"`.
 5.  Ensure their `status` field is set to `"active"`.
 
 This README provides a high-level overview and setup guide for JobBoardly. For detailed feature descriptions, please refer to the documents in the `/docs` directory.

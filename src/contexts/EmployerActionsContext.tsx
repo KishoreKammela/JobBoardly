@@ -1,10 +1,8 @@
 'use client';
 import type {
-  UserProfile,
   CandidateFilters,
   SavedCandidateSearch,
   ApplicationStatus,
-  Company,
 } from '@/types';
 import React, {
   createContext,
@@ -19,7 +17,6 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
-  Timestamp,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/hooks/use-toast';

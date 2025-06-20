@@ -22,8 +22,6 @@ import {
   Eye,
   AlertTriangle,
   Ban,
-  Database,
-  Headset,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';

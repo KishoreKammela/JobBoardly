@@ -57,7 +57,7 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 - **Technical monitoring focused.**
 - Future capabilities: Monitor system health and performance, view error logs and system metrics. Alert management for technical issues. Cannot access user data directly.
 
-## 3. Key Features (Current Implementation for SuperAdmin, Admin, Moderator)
+## 3. Key Features (Current Implementation for SuperAdmin, Admin, Moderator, SupportAgent, DataAnalyst)
 
 ### 3.1. Admin Dashboard
 
@@ -102,6 +102,7 @@ The central hub for administrative tasks, accessible after logging in via the Ad
   - **Functionality**: Includes search, sorting, pagination.
 
 - **Platform Users Management Tab:** (Viewable by SuperAdmin, Admin, Data Analyst; Actions vary by role)
+
   - **View**: Table displays Name, Email, Role, Status, Last Active, Joined Date.
   - **Actions (Icon-based, with confirmation modals)**:
     - `👁️ View Profile` (SuperAdmin, Admin, Moderator, Data Analyst)
@@ -112,6 +113,9 @@ The central hub for administrative tasks, accessible after logging in via the Ad
       - Users cannot suspend/activate themselves from this tab.
   - **Functionality**: Includes search, sorting, pagination.
   - (Tab hidden for Support Agents and Moderators)
+
+- **AI Feature Management Tab (Placeholder):** (Visible to SuperAdmins only)
+  - A placeholder UI to indicate where future controls for enabling/disabling specific AI features (e.g., AI Career Path Advisor, Dynamic Summary Generator) will reside. Currently non-functional.
 
 ### 3.2. Protected Admin Route & Login
 
@@ -181,18 +185,11 @@ graph TD
 | `/profile`                      | Platform staff can manage their own profile details (name, avatar).                                                | All Authenticated Platform Staff Roles                                      |
 | `/employer/candidates/[userId]` | Used by platform staff to view profiles of any user (Job Seekers or other Platform Users) via the admin dashboard. | All Platform Staff Roles (employers are restricted to job seekers)          |
 
-## 6. Key "API" Interactions (Data Flows)
-
-Platform Staff interact primarily with the Firebase Firestore database. Permissions are enforced in the UI and backend functions (if any future Cloud Functions are added for complex operations).
-
-- **Fetching Data**: Queries Firestore with filters based on roles.
-- **Updating Status**: Updates Firestore documents. `handleUserStatusUpdate` now has stricter role-based checks.
-
-## 7. Future Enhancements / Detailed Roadmap
+## 6. Future Enhancements / Detailed Roadmap
 
 This section outlines the comprehensive plan for evolving the JobBoardly Admin Panel, based on the enhanced requirements provided.
 
-### 7.1. Phase 1 (High Priority - Immediate Next Steps after foundational role setup)
+### 6.1. Phase 1 (High Priority - Immediate Next Steps)
 
 1.  **Enhanced User Types (Full Implementation):**
     - **Support Agent:** Implement tools for password resets, basic account issue handling, and an issue escalation system. Create a dedicated (or heavily adapted) dashboard view for support tickets and user lookups.
@@ -205,7 +202,7 @@ This section outlines the comprehensive plan for evolving the JobBoardly Admin P
 4.  **Audit Logging System (Basic):**
     - Start logging critical admin actions to Firestore (e.g., user status changes, job/company approvals/rejections, platform user role changes). Create a simple interface for SuperAdmins to view these logs.
 
-### 7.2. Phase 2 (Medium Priority)
+### 6.2. Phase 2 (Medium Priority)
 
 1.  **Introduce New User Roles (Full Implementation):**
     - **Compliance Officer:** Develop tools for reviewing flagged content, managing privacy requests (data access/deletion stubs), and viewing audit trails relevant to compliance.
@@ -221,8 +218,10 @@ This section outlines the comprehensive plan for evolving the JobBoardly Admin P
 5.  **Security Monitoring Enhancements:**
     - Display failed login attempt counts for user profiles in the admin panel.
     - Basic IP address logging for user actions (viewable by SuperAdmins).
+6.  **AI Feature Toggle Management:**
+    - Allow administrators (SuperAdmins/Admins) to enable or disable specific AI-powered features (e.g., AI Career Path Advisor, Dynamic Summary Generator) for job seekers and/or employers globally or potentially based on subscription tiers (if applicable in the future). This would involve managing feature flags in the system and creating a UI in the admin panel (likely under System Administration).
 
-### 7.3. Phase 3 (Long-term) & Beyond
+### 6.3. Phase 3 (Long-term) & Beyond
 
 1.  **Full Role-Based Dashboards:** Implement dedicated, streamlined dashboard UIs for each admin role (Content Moderator, Support Agent, Data Analyst, Compliance Officer, System Monitor) as outlined in the "Enhanced Admin Dashboard Structure" requirement.
 2.  **Predictive Analytics:**
@@ -234,11 +233,12 @@ This section outlines the comprehensive plan for evolving the JobBoardly Admin P
     - Two-factor authentication enforcement for admin accounts.
     - Advanced session management.
     - Data breach response toolkit (procedures, communication tools).
-4.  **System Administration & Configuration:**
-    - Feature flags management UI.
+4.  **System Administration & Configuration (Full):**
+    - Full feature flags management UI.
     - System maintenance mode controls.
     - Email template management UI.
     - Rate limiting configuration.
+    - Global platform settings UI.
 5.  **AI-Powered Moderation & Quality Control:**
     - Automated content flagging for inappropriate content.
     - Plagiarism detection for job descriptions.
@@ -254,19 +254,19 @@ This section outlines the comprehensive plan for evolving the JobBoardly Admin P
     - Test data management tools.
 9.  **Database & Performance Optimization Tools.**
 
-### 7.4. Advanced User Management (Roadmap)
+### 6.4. Advanced User Management (Full Roadmap)
 
 - **Bulk Operations**: CSV import/export, batch notifications, bulk profile updates.
 - **User Lifecycle Management**: Account verification (manual for premium), onboarding tracking, inactive user management, account recovery assistance.
 - **Advanced User Filters**: Registration date ranges, last activity, application activity, profile completion %, geographic distribution, account status history.
 
-### 7.5. Advanced Content Management (Roadmap)
+### 6.5. Advanced Content Management (Full Roadmap)
 
 - **Job Management**: Salary range validation, job performance analytics, job template management.
 - **Company Verification**: Verification levels, document verification, website/domain verification, social media verification, compliance tracking.
 - **Content Moderation**: User reporting system, content categorization.
 
-### 7.6. Technical Considerations (To be addressed throughout development)
+### 6.6. Technical Considerations (To be addressed throughout development)
 
 - **Database Design**: Implement tables for granular permissions, comprehensive audit logs, flexible platform settings, and workflow task queues.
 - **Security**: Adhere to the principle of least privilege, implement action confirmations, enhance session security, and encrypt sensitive admin data.

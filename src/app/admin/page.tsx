@@ -38,9 +38,6 @@ import {
   Users,
   FileText,
   ClipboardList,
-  ShieldQuestion,
-  Headset,
-  Database,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -59,7 +56,6 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
-  documentId,
 } from 'firebase/firestore';
 import type { Job, UserProfile, Company, UserRole } from '@/types';
 import Link from 'next/link';
@@ -885,7 +881,7 @@ export default function AdminPage() {
 
   // UI visibility flags based on role
   const showQuickModeration = canModerateContent;
-  const showFullUserManagement = canPerformActions; // For Job Seekers & Platform Users tabs management
+  // const showFullUserManagement = canPerformActions; // For Job Seekers & Platform Users tabs management
   const showPlatformUsersTab =
     user?.role === 'admin' ||
     user?.role === 'superAdmin' ||

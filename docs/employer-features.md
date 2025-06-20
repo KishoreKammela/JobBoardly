@@ -196,7 +196,7 @@ graph TD
 | `/employer/posted-jobs`              | Dashboard of posted jobs. Actions restricted if company 'suspended'/'deleted' or job 'suspended'.                                                                                 | Employer                               |
 | `/employer/jobs/[jobId]/applicants`  | View/manage applicants. Disabled if company 'suspended'/'deleted' or job 'suspended'. Status updates require confirmation.                                                        | Employer                               |
 | `/employer/find-candidates`          | Search/filter candidates. Disabled if company 'suspended'/'deleted'. Can save search criteria.                                                                                    | Employer                               |
-| `/employer/candidates/[candidateId]` | View candidate profile. Admins can also use this route to view profiles.                                                                                                          | Employer, Admin, SuperAdmin, Moderator |
+| `/employer/candidates/[candidateId]` | View user profile (Job Seeker by Employer; Any User by Platform Staff). Access for platform staff depends on their role's permissions.                                            | Employer, Admin, SuperAdmin, Moderator |
 | `/employer/ai-candidate-match`       | AI candidate matcher. Disabled if company 'suspended'/'deleted'.                                                                                                                  | Employer                               |
 | `/settings`                          | Manage settings (theme, saved candidate searches). Most disabled if company 'suspended'/'deleted', except theme. Deleting saved search needs confirm.                             | Employer                               |
 | `/auth/change-password`              | Page to change password. (Accessible if company suspended/deleted). Password change requires confirmation.                                                                        | Employer                               |
@@ -250,6 +250,7 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **Team Management**: For Company Admins to invite and manage recruiter accounts (currently admin task).
 - **Clearer guidance for recruiters** whose company account is suspended or deleted.
 - **Enhanced candidate search analytics**: Insights on search effectiveness.
+- **Extensive AI-powered enhancements** are planned, including AI Recruiter Assistant and Smart Job Description Optimizer. See `docs/ai-roadmap.md` for the full AI vision.
 
 ---
 
