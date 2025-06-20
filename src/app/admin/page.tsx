@@ -38,6 +38,7 @@ import {
   Users,
   FileText,
   ClipboardList,
+  ShieldQuestion,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -57,7 +58,7 @@ import {
   serverTimestamp,
   getCountFromServer,
 } from 'firebase/firestore';
-import type { Job, UserProfile, Company } from '@/types';
+import type { Job, UserProfile, Company, UserRole } from '@/types';
 import Link from 'next/link';
 import {
   Table,
@@ -320,7 +321,7 @@ export default function AdminPage() {
 
       const platformUsersQuery = query(
         collection(db, 'users'),
-        where('role', 'in', ['admin', 'superAdmin']),
+        where('role', 'in', ['admin', 'superAdmin', 'moderator']),
         orderBy('createdAt', 'desc')
       );
       const platformUsersSnapshot = await getDocs(platformUsersQuery);
@@ -386,7 +387,11 @@ export default function AdminPage() {
       router.replace(
         `/auth/admin/login?redirect=${encodeURIComponent(pathname)}`
       );
-    } else if (user.role !== 'admin' && user.role !== 'superAdmin') {
+    } else if (
+      user.role !== 'admin' &&
+      user.role !== 'superAdmin' &&
+      user.role !== 'moderator'
+    ) {
       router.replace(
         user.role === 'jobSeeker'
           ? '/jobs'
@@ -440,6 +445,17 @@ export default function AdminPage() {
     newStatus: 'approved' | 'rejected' | 'suspended',
     reason?: string
   ) => {
+    if (user?.role === 'moderator' && newStatus === 'suspended') {
+      // Assuming moderators can approve/reject but not suspend based on typical roles
+      // This check can be adjusted based on final moderator permissions for jobs
+      toast({
+        title: 'Permission Denied',
+        description: 'Moderators cannot suspend jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setSpecificActionLoading(`job-${jobId}`);
     try {
       const jobUpdates: Record<string, unknown> = {
@@ -564,44 +580,11 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended' | 'deleted'
   ) => {
-    if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
-      toast({
-        title: 'Permission Denied',
-        description: 'You do not have permission to perform this action.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const isTargetListedAsJobSeeker = allJobSeekers.some(
-      (js) => js.uid === userId
-    );
-
-    if (user.uid === userId && !isTargetListedAsJobSeeker) {
-      toast({
-        title: 'Action Denied',
-        description:
-          'You cannot change your own status as a platform user. This action targets your admin account.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (user.uid === userId && isTargetListedAsJobSeeker) {
-      toast({
-        title: 'Caution: Self-Action',
-        description:
-          'You are attempting to modify your own job seeker record. Proceed with caution.',
-        variant: 'default',
-        duration: 5000,
-      });
-      // Allow to proceed for job seeker self-modification by admin for now,
-      // but this specific "You cannot change your own status" toast should not appear for this case.
-    }
+    if (!user) return;
 
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
       (u) => u.uid === userId
     );
-
     if (!targetUser) {
       toast({
         title: 'Error',
@@ -611,10 +594,42 @@ export default function AdminPage() {
       return;
     }
 
+    const isTargetListedAsJobSeeker = allJobSeekers.some(
+      (js) => js.uid === userId
+    );
+
+    if (user.uid === userId) {
+      if (!isTargetListedAsJobSeeker) {
+        toast({
+          title: 'Action Denied',
+          description:
+            'You cannot change your own status as a platform user. This action targets your admin/moderator account.',
+          variant: 'destructive',
+        });
+        return;
+      } else {
+        toast({
+          title: 'Caution: Self-Action',
+          description:
+            'You are attempting to modify your own job seeker record. Proceed with caution if this is intended.',
+          variant: 'default',
+          duration: 5000,
+        });
+      }
+    }
+
+    if (user.role === 'moderator') {
+      toast({
+        title: 'Permission Denied',
+        description: 'Moderators cannot change user statuses.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (user.role === 'admin') {
       if (
         !isTargetListedAsJobSeeker &&
-        targetUser.uid !== user.uid && // Ensure we are not re-checking self if it's a platform user action
         (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
       ) {
         toast({
@@ -636,7 +651,7 @@ export default function AdminPage() {
       });
 
       const updatedTime = new Date().toISOString();
-      if (targetUser.role === 'jobSeeker' || isTargetListedAsJobSeeker) {
+      if (isTargetListedAsJobSeeker) {
         setAllJobSeekers((prev) =>
           prev.map((u) =>
             u.uid === userId
@@ -784,7 +799,12 @@ export default function AdminPage() {
       </div>
     );
   }
-  if (user && user.role !== 'admin' && user.role !== 'superAdmin') {
+  if (
+    user &&
+    user.role !== 'admin' &&
+    user.role !== 'superAdmin' &&
+    user.role !== 'moderator'
+  ) {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
@@ -809,6 +829,16 @@ export default function AdminPage() {
             {user?.role === 'superAdmin' && (
               <Badge variant="destructive" className="ml-2">
                 Super Admin
+              </Badge>
+            )}
+            {user?.role === 'admin' && (
+              <Badge variant="secondary" className="ml-2 bg-primary/80">
+                Admin
+              </Badge>
+            )}
+            {user?.role === 'moderator' && (
+              <Badge variant="outline" className="ml-2 border-primary/50">
+                Moderator
               </Badge>
             )}
           </p>
@@ -1516,7 +1546,8 @@ export default function AdminPage() {
                                   )
                                 }
                                 disabled={
-                                  specificActionLoading === `job-${job.id}`
+                                  specificActionLoading === `job-${job.id}` ||
+                                  user?.role === 'moderator'
                                 }
                                 aria-label={`Suspend job ${job.title}`}
                                 className="text-orange-600"
@@ -1745,6 +1776,8 @@ export default function AdminPage() {
                       {paginatedJobSeekers.map((u) => {
                         const isUserEffectivelyActive =
                           u.status === 'active' || u.status === undefined;
+                        const canManageJobSeekers =
+                          user?.role === 'admin' || user?.role === 'superAdmin';
                         return (
                           <TableRow key={u.uid}>
                             <TableCell className="font-medium">
@@ -1830,7 +1863,8 @@ export default function AdminPage() {
                                       );
                                     }}
                                     disabled={
-                                      specificActionLoading === `user-${u.uid}`
+                                      specificActionLoading ===
+                                        `user-${u.uid}` || !canManageJobSeekers
                                     }
                                     aria-label={`${isUserEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                                     className={
@@ -1862,7 +1896,8 @@ export default function AdminPage() {
                                       )
                                     }
                                     disabled={
-                                      specificActionLoading === `user-${u.uid}`
+                                      specificActionLoading ===
+                                        `user-${u.uid}` || !canManageJobSeekers
                                     }
                                     aria-label={`Delete user ${u.name || 'user'}`}
                                     className="text-destructive"
@@ -1921,7 +1956,7 @@ export default function AdminPage() {
                 Manage Platform Users ({sortedPlatformUsers.length})
               </CardTitle>
               <Input
-                placeholder="Search admins by name or email..."
+                placeholder="Search platform users by name or email..."
                 value={platformUsersSearchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setPlatformUsersSearchTerm(e.target.value)
@@ -1938,13 +1973,13 @@ export default function AdminPage() {
                 </div>
               ) : paginatedPlatformUsers.length === 0 ? (
                 <p className="text-muted-foreground">
-                  No platform users (Admins/SuperAdmins) found.
+                  No platform users (Admins/SuperAdmins/Moderators) found.
                 </p>
               ) : (
                 <>
                   <Table>
                     <TableCaption>
-                      A list of platform administrators.
+                      A list of platform administrators and moderators.
                     </TableCaption>
                     <TableHeader>
                       <TableRow>
@@ -2037,96 +2072,118 @@ export default function AdminPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedPlatformUsers.map((u) => (
-                        <TableRow key={u.uid}>
-                          <TableCell className="font-medium">
-                            {u.name || 'N/A'}
-                          </TableCell>
-                          <TableCell>{u.email}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                u.role === 'superAdmin'
-                                  ? 'destructive'
-                                  : 'default'
-                              }
-                            >
-                              {u.role.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                u.status === 'active'
-                                  ? 'secondary'
-                                  : 'destructive'
-                              }
-                              className={
-                                u.status === 'active'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-red-100 text-red-800'
-                              }
-                            >
-                              {(u.status || 'ACTIVE').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {u.lastActive
-                              ? new Date(
-                                  u.lastActive as string
-                                ).toLocaleString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {u.createdAt
-                              ? new Date(
-                                  u.createdAt as string
-                                ).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const newStatus =
-                                  u.status === 'active'
-                                    ? 'suspended'
-                                    : 'active';
-                                showConfirmationModal(
-                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} Admin User "${u.name || u.email}"?`,
-                                  `Are you sure you want to ${newStatus} this platform user account?`,
-                                  async () =>
-                                    handleUserStatusUpdate(u.uid, newStatus),
-                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                                  newStatus === 'suspended'
+                      {paginatedPlatformUsers.map((u) => {
+                        const canLoggedInUserManageTarget = () => {
+                          if (!user) return false;
+                          if (user.uid === u.uid) return false; // Cannot manage self
+
+                          if (user.role === 'superAdmin') return true; // SuperAdmin can manage anyone (except self)
+                          if (user.role === 'admin') {
+                            return u.role === 'moderator'; // Admin can only manage moderators
+                          }
+                          return false; // Moderators and others cannot manage platform users
+                        };
+                        const isActionDisabled =
+                          specificActionLoading === `user-${u.uid}` ||
+                          !canLoggedInUserManageTarget();
+
+                        return (
+                          <TableRow key={u.uid}>
+                            <TableCell className="font-medium">
+                              {u.name || 'N/A'}
+                            </TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  u.role === 'superAdmin'
                                     ? 'destructive'
-                                    : 'default'
-                                );
-                              }}
-                              disabled={
-                                specificActionLoading === `user-${u.uid}` ||
-                                user?.uid === u.uid ||
-                                (user?.role === 'admin' &&
-                                  (u.role === 'admin' ||
-                                    u.role === 'superAdmin'))
-                              }
-                              aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
-                              className={
-                                u.status === 'active'
-                                  ? 'text-orange-600'
-                                  : 'text-blue-600'
-                              }
-                            >
-                              {u.status === 'active' ? (
-                                <Ban className="h-5 w-5" />
-                              ) : (
-                                <CheckSquare className="h-5 w-5" />
-                              )}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                    : u.role === 'admin'
+                                      ? 'default'
+                                      : 'secondary'
+                                }
+                                className={
+                                  u.role === 'moderator'
+                                    ? 'border-primary/50 text-primary/90'
+                                    : ''
+                                }
+                              >
+                                {u.role.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  u.status === 'active' ||
+                                  u.status === undefined
+                                    ? 'secondary'
+                                    : 'destructive'
+                                }
+                                className={
+                                  u.status === 'active' ||
+                                  u.status === undefined
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-red-100 text-red-800'
+                                }
+                              >
+                                {(u.status || 'ACTIVE').toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {u.lastActive
+                                ? new Date(
+                                    u.lastActive as string
+                                  ).toLocaleString()
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {u.createdAt
+                                ? new Date(
+                                    u.createdAt as string
+                                  ).toLocaleDateString()
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const newStatus =
+                                    u.status === 'active' ||
+                                    u.status === undefined
+                                      ? 'suspended'
+                                      : 'active';
+                                  showConfirmationModal(
+                                    `${newStatus === 'active' ? 'Activate' : 'Suspend'} Platform User "${u.name || u.email}"?`,
+                                    `Are you sure you want to ${newStatus} this platform user account?`,
+                                    async () =>
+                                      handleUserStatusUpdate(u.uid, newStatus),
+                                    `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                    newStatus === 'suspended'
+                                      ? 'destructive'
+                                      : 'default'
+                                  );
+                                }}
+                                disabled={isActionDisabled}
+                                aria-label={`${u.status === 'active' || u.status === undefined ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                className={
+                                  u.status === 'active' ||
+                                  u.status === undefined
+                                    ? 'text-orange-600'
+                                    : 'text-blue-600'
+                                }
+                              >
+                                {u.status === 'active' ||
+                                u.status === undefined ? (
+                                  <Ban className="h-5 w-5" />
+                                ) : (
+                                  <CheckSquare className="h-5 w-5" />
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   {totalPlatformUsersPages > 1 && (

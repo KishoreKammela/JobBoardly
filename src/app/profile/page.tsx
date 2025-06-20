@@ -48,8 +48,9 @@ export default function ProfilePage() {
     if (user.role === 'employer' && user.isCompanyAdmin)
       return 'Manage Company Profile & Your Recruiter Info';
     if (user.role === 'employer') return 'My Recruiter Profile';
-    if (user.role === 'admin' || user.role === 'superAdmin')
-      return `${user.role === 'superAdmin' ? 'Super Admin' : 'Admin'} Profile`;
+    if (user.role === 'admin') return 'Admin Profile';
+    if (user.role === 'superAdmin') return 'Super Admin Profile';
+    if (user.role === 'moderator') return 'Moderator Profile';
     return 'Profile';
   };
 
@@ -65,8 +66,12 @@ export default function ProfilePage() {
       return "Edit your company's public details and your personal recruiter information.";
     if (user.role === 'employer')
       return 'Manage your personal recruiter details.';
-    if (user.role === 'admin' || user.role === 'superAdmin')
-      return `Manage your ${user.role === 'superAdmin' ? 'Super Admin' : 'Admin'} profile details.`;
+    if (
+      user.role === 'admin' ||
+      user.role === 'superAdmin' ||
+      user.role === 'moderator'
+    )
+      return `Manage your ${user.role === 'superAdmin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'Moderator'} profile details.`;
     return 'Manage your account details.';
   };
 

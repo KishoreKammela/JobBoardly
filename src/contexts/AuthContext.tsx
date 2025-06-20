@@ -295,7 +295,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               applyTheme(profileData.theme);
             }
 
-            if (profileData.role === 'employer' && profileData.companyId) {
+            if (
+              (profileData.role === 'employer' ||
+                profileData.role === 'admin' || // Admins/Mods might be associated with a "platform" company if needed
+                profileData.role === 'moderator' ||
+                profileData.role === 'superAdmin') &&
+              profileData.companyId
+            ) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
               const companyDocSnap = await getDoc(companyDocRef);
               if (companyDocSnap.exists()) {
@@ -314,9 +320,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 } as Company);
               } else {
                 setCompany(null);
-                console.warn(
-                  `Company with ID ${profileData.companyId} not found for user ${fbUser.uid}`
-                );
+                if (profileData.role === 'employer') {
+                  console.warn(
+                    `Company with ID ${profileData.companyId} not found for user ${fbUser.uid}`
+                  );
+                }
               }
             } else {
               setCompany(null);
@@ -402,7 +410,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name:
         name ||
         fbUser.displayName ||
-        (role === 'employer' ? 'Recruiter' : 'New User'),
+        (role === 'employer'
+          ? 'Recruiter'
+          : role === 'admin' || role === 'superAdmin' || role === 'moderator'
+            ? 'Platform Staff'
+            : 'New User'),
       role: role,
       avatarUrl: fbUser.photoURL || '',
       createdAt: serverTimestamp() as Timestamp,
@@ -447,7 +459,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.jobSearchStatus = 'activelyLooking';
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
+    } else if (
+      role === 'admin' ||
+      role === 'superAdmin' ||
+      role === 'moderator'
+    ) {
+      // Admin/SuperAdmin/Moderator specific fields (if any)
+      // For example, they might not have job seeker specific fields
+      // or might be associated with a default "platform" company for organizational purposes.
+      // For now, they'll have basic profile + role.
     }
+
     const finalProfileDataForFirestore: Record<string, unknown> = {};
     for (const key in userProfileData) {
       const typedKey = key as keyof UserProfile;
@@ -479,7 +501,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ) {
           finalProfileDataForFirestore[key] = null;
         }
-        if (role === 'employer' && typedKey === 'avatarUrl') {
+        if (
+          (role === 'employer' ||
+            role === 'admin' ||
+            role === 'superAdmin' ||
+            role === 'moderator') &&
+          typedKey === 'avatarUrl'
+        ) {
           finalProfileDataForFirestore[key] = null;
         }
       }
@@ -874,7 +902,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(existingProfile);
           if (existingProfile.theme) applyTheme(existingProfile.theme);
           if (
-            existingProfile.role === 'employer' &&
+            (existingProfile.role === 'employer' ||
+              existingProfile.role === 'admin' ||
+              existingProfile.role === 'moderator' ||
+              existingProfile.role === 'superAdmin') &&
             existingProfile.companyId
           ) {
             const companyDocRef = doc(

@@ -1,6 +1,11 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'jobSeeker' | 'employer' | 'admin' | 'superAdmin';
+export type UserRole =
+  | 'jobSeeker'
+  | 'employer'
+  | 'admin'
+  | 'superAdmin'
+  | 'moderator'; // Added moderator
 
 export interface ScreeningQuestion {
   id: string;

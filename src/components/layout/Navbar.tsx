@@ -47,7 +47,7 @@ interface NavLinkConfig {
   publicAccess?: boolean;
   employerOnly?: boolean;
   jobSeekerOnly?: boolean;
-  adminOnly?: boolean;
+  adminOnly?: boolean; // Includes admin, superAdmin, moderator
 }
 
 const mainNavLinksConfig: NavLinkConfig[] = [
@@ -57,7 +57,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     icon: <Search className="h-4 w-4" />,
     authRequired: false,
     publicAccess: true,
-    roles: ['jobSeeker', 'admin', 'superAdmin'],
+    roles: ['jobSeeker', 'admin', 'superAdmin', 'moderator'],
   },
   {
     href: '/companies',
@@ -65,7 +65,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     icon: <Columns className="h-4 w-4" />,
     authRequired: false,
     publicAccess: true,
-    roles: ['jobSeeker', 'employer', 'admin', 'superAdmin'],
+    roles: ['jobSeeker', 'employer', 'admin', 'superAdmin', 'moderator'],
   },
   {
     href: '/employer',
@@ -112,7 +112,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     label: 'Admin Panel',
     icon: <Shield className="h-4 w-4" />,
     authRequired: true,
-    roles: ['admin', 'superAdmin'],
+    roles: ['admin', 'superAdmin', 'moderator'],
     adminOnly: true,
   },
 ];
@@ -206,6 +206,23 @@ const userAccountDropdownLinksConfig = {
       icon: <Settings className="h-4 w-4" />,
     },
   ],
+  moderator: [
+    {
+      href: '/profile',
+      label: 'My Profile',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      href: '/auth/change-password',
+      label: 'Change Password',
+      icon: <KeyRound className="h-4 w-4" />,
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ],
 };
 
 export function Navbar() {
@@ -237,6 +254,7 @@ export function Navbar() {
       return user?.isCompanyAdmin ? 'Company Admin' : 'Recruiter';
     if (role === 'admin') return 'Platform Admin';
     if (role === 'superAdmin') return 'Super Admin';
+    if (role === 'moderator') return 'Moderator';
     return '';
   };
 
@@ -266,7 +284,9 @@ export function Navbar() {
 
       if (link.roles.includes(user.role)) return true;
       if (
-        (user.role === 'admin' || user.role === 'superAdmin') &&
+        (user.role === 'admin' ||
+          user.role === 'superAdmin' ||
+          user.role === 'moderator') &&
         link.publicAccess &&
         (link.href === '/jobs' || link.href === '/companies')
       ) {

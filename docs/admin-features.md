@@ -1,127 +1,127 @@
 # JobBoardly - Admin Features Guide
 
-This document outlines the features, user flows, and technical interactions specific to the Administrator and Super Administrator roles within the JobBoardly platform.
+This document outlines the features, user flows, and technical interactions specific to the Administrator, Super Administrator, and Moderator roles within the JobBoardly platform.
 
 ## 1. Core Responsibilities
 
-Administrators (and Super Admins) are responsible for overseeing the platform's integrity, managing users, and ensuring the quality of content (job postings and company profiles).
+Platform staff (Super Admins, Admins, Moderators) are responsible for overseeing the platform's integrity, managing users (to varying degrees), and ensuring the quality of content (job postings and company profiles).
 
-## 2. Key Features
+## 2. Roles & Permissions Overview
 
-### 2.1. Admin Dashboard
+- **Super Administrator**: Has all administrative capabilities, including managing other Super Admins, Admins, and Moderators.
+- **Administrator**: Has most administrative capabilities but cannot manage (suspend/activate) other Super Admins or Admins. Can manage Moderators.
+- **Moderator**: Has limited administrative capabilities, primarily focused on content moderation (approving/rejecting pending jobs and companies) and viewing platform data. Cannot manage any user accounts (Job Seekers, Platform Users).
 
-The central hub for all administrative tasks, accessible after logging in via the Admin Login page. The dashboard presents an overview and a tabbed interface for organized management. All critical actions (status changes, deletions) are protected by confirmation modals.
+## 3. Key Features
 
-- **Platform Analytics Overview (Dashboard):**
+### 3.1. Admin Dashboard
 
-  - **Total Job Seekers**: Count of all registered job seeker accounts.
-  - **Total Companies**: Count of all registered company profiles.
-  - **Total Jobs**: Count of all job postings in the system.
-  - **Approved Jobs**: Count of currently active and approved job postings.
-  - **Total Applications**: Count of all applications submitted on the platform.
+The central hub for administrative tasks, accessible after logging in via the Admin Login page. The dashboard presents an overview and a tabbed interface for organized management. All critical actions (status changes, deletions) are protected by confirmation modals.
 
-- **Quick Moderation Cards (Dashboard Overview):**
+- **Platform Analytics Overview (Dashboard):** (Visible to SuperAdmin, Admin, Moderator)
 
-  - **Pending Job Approvals**: Allows admins to quickly review and approve (`✅`) or reject (`❌`) newly submitted job postings without navigating to the full jobs table.
-  - **Pending Company Approvals**: Enables swift approval (`✅`) or rejection (`❌`) of new company profiles.
+  - Total Job Seekers, Total Companies, Total Jobs, Approved Jobs, Total Applications.
 
-- **Companies Management Tab:**
+- **Quick Moderation Cards (Dashboard Overview):** (Usable by SuperAdmin, Admin, Moderator)
 
-  - **View**: Table displays Company Name, Website, Status (e.g., `Pending`, `Approved`, `Rejected`, `Suspended`, `Deleted`), Jobs Posted count, Applications Received count, and Creation Date.
+  - **Pending Job Approvals**: Quickly approve (`✅`) or reject (`❌`) new job postings.
+  - **Pending Company Approvals**: Quickly approve (`✅`) or reject (`❌`) new company profiles.
+
+- **Companies Management Tab:** (Viewable by all; Actions vary by role)
+
+  - **View**: Table displays Company Name, Website, Status, Jobs Posted, Applications Received, Creation Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Company Profile`: Opens the public company profile page in a new tab.
-    - `✅ Approve`: Changes company status to 'Approved'. (For 'Pending' companies)
-    - `❌ Reject`: Changes company status to 'Rejected'. (For 'Pending' companies)
-    - `🚫 Suspend`: Changes company status to 'Suspended'. Recruiters from suspended companies can log in but have limited access (cannot post/edit jobs, edit company profile; can edit personal details). (For 'Approved' or 'Active' companies)
-    - `✅ Activate`: Changes company status to 'Active' (if previously suspended) or 'Approved' (if previously rejected/pending). Restores full access for recruiters.
-    - `🗑️ Delete (Soft)`: Changes company status to 'Deleted'. Recruiters from deleted companies will effectively be locked out of employer features after login (Firebase Auth succeeds, but app context logs them out/restricts access). Data is retained.
-  - **Functionality**: Includes search by name/website, sorting by columns, and pagination.
+    - `👁️ View Company Profile` (All)
+    - `✅ Approve` (SuperAdmin, Admin, Moderator)
+    - `❌ Reject` (SuperAdmin, Admin, Moderator)
+    - `🚫 Suspend` (SuperAdmin, Admin, Moderator)
+    - `✅ Activate` (SuperAdmin, Admin, Moderator)
+    - `🗑️ Delete (Soft)` (SuperAdmin, Admin, Moderator)
+  - **Functionality**: Includes search, sorting, pagination.
 
-- **All Jobs Management Tab:**
+- **All Jobs Management Tab:** (Viewable by all; Actions vary by role)
 
-  - **View**: Table shows Job Title, Company Name, Status (e.g., `pending`, `approved`, `rejected`, `suspended`), Applicant Count, Creation Date, and Last Updated Date.
+  - **View**: Table shows Job Title, Company Name, Status, Applicant Count, Creation Date, Last Updated Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Public Job Page`: Opens the public job details page.
-    - `🚫 Suspend`: Changes job status to 'Suspended'. Suspended jobs are not visible to job seekers, and recruiters cannot manage applicants or edit the job. (For 'Approved' jobs)
-    - `✅ Activate`: Changes job status to 'Approved'. (For 'Suspended' or 'Rejected' jobs)
-    - `✅ Approve`: Changes job status to 'Approved'. (For 'Pending' jobs)
-    - `❌ Reject`: Changes job status to 'Rejected'. (For 'Pending' jobs)
-  - **Functionality**: Includes search by title/company, sorting by columns, and pagination.
+    - `👁️ View Public Job Page` (All)
+    - `🚫 Suspend` (SuperAdmin, Admin - NOT Moderator)
+    - `✅ Activate` (SuperAdmin, Admin, Moderator)
+    - `✅ Approve` (SuperAdmin, Admin, Moderator)
+    - `❌ Reject` (SuperAdmin, Admin, Moderator)
+  - **Functionality**: Includes search, sorting, pagination.
 
-- **Job Seekers Management Tab:**
+- **Job Seekers Management Tab:** (Viewable by all; Actions vary by role)
 
-  - **View**: Table lists Job Seeker Name, Email, Status (e.g., `active`, `suspended`, `deleted`), Profile Searchable (Yes/No), Jobs Applied count, Last Active date, and Joined Date.
+  - **View**: Table lists Job Seeker Name, Email, Status, Profile Searchable, Jobs Applied, Last Active, Joined Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `👁️ View Profile`: Opens the candidate's profile preview page (as an employer/admin would see it).
-    - `🚫 Suspend`: Changes job seeker account status to 'Suspended'. Suspended users can log in but have limited functionality (cannot apply for jobs, edit main profile sections, save jobs, use AI job matcher; can view jobs, change password, some settings).
-    - `✅ Activate`: Changes job seeker account status to 'Active'. Restores full functionality.
-    - `🗑️ Delete (Soft)`: Changes job seeker account status to 'Deleted'. Deleted users cannot log in (Firebase Auth login succeeds, but app context immediately logs them out). Data is retained.
-  - **Functionality**: Includes search by name/email, sorting by columns, and pagination.
+    - `👁️ View Profile` (All)
+    - `🚫 Suspend` (SuperAdmin, Admin - NOT Moderator)
+    - `✅ Activate` (SuperAdmin, Admin - NOT Moderator)
+    - `🗑️ Delete (Soft)` (SuperAdmin, Admin - NOT Moderator)
+  - **Functionality**: Includes search, sorting, pagination.
 
-- **Platform Users Management Tab (Admins/SuperAdmins):**
-  - **View**: Table displays Name, Email, Role (Admin/SuperAdmin), Status, Last Active date, and Joined Date.
+- **Platform Users Management Tab (Admins/SuperAdmins/Moderators):** (Viewable by all; Actions vary by role)
+  - **View**: Table displays Name, Email, Role (Admin/SuperAdmin/Moderator), Status, Last Active, Joined Date.
   - **Actions (Icon-based, with confirmation modals)**:
-    - `🚫 Suspend / ✅ Activate`: Toggles Admin/SuperAdmin account status.
-    - _Restriction_: SuperAdmins can manage other Admins and SuperAdmins. Regular Admins cannot manage other platform users. Users cannot suspend/activate themselves.
-  - **Functionality**: Includes search by name/email, sorting by columns, and pagination.
+    - `🚫 Suspend / ✅ Activate`:
+      - SuperAdmins: Can manage other Admins, SuperAdmins, and Moderators.
+      - Admins: Can manage Moderators only.
+      - Moderators: Cannot manage any platform users.
+      - Users cannot suspend/activate themselves.
+  - **Functionality**: Includes search, sorting, pagination.
 
-### 2.2. Protected Admin Route & Login
+### 3.2. Protected Admin Route & Login
 
-- Access to the admin dashboard (`/admin`) is strictly limited to users with "admin" or "superAdmin" roles.
+- Access to the admin dashboard (`/admin`) is strictly limited to users with "admin", "superAdmin", or "moderator" roles.
 - A dedicated admin login page is available at `/auth/admin/login`.
 
-### 2.3. SuperAdmin Capabilities
-
-- SuperAdmins have all the capabilities of regular Admins.
-- Additionally, SuperAdmins can manage (suspend/activate) regular Admin accounts.
-
-## 3. User Journey Map (Admin)
+## 4. User Journey Map (Admin/Moderator)
 
 ```mermaid
 graph TD
-    A[Start: Admin Needs to Manage Platform] --> B{Authenticated?}
+    A[Start: Admin/Mod Needs to Manage Platform] --> B{Authenticated?}
     B -- No --> C[Navigate to /auth/admin/login]
     C --> D[Enter Credentials]
-    D --> E{Login Successful & Admin Role?}
+    D --> E{Login Successful & Admin/SuperAdmin/Moderator Role?}
     E -- Yes --> F[Redirect to /admin Dashboard]
     B -- Yes --> F
     E -- No --> G[Error/Redirect to General Login]
     F --> FA[View Platform Analytics Overview]
     FA --> H{Select Task}
-    H -- Moderate Pending Jobs --> I[Use Quick Moderation Card for Jobs]
+    H -- Moderate Pending Jobs --> I[Use Quick Moderation Card for Jobs (SA, A, M)]
     I --> J_Confirm[Confirm Action: Approve/Reject Job]
     J_Confirm -- Yes --> J_Action[Perform Job Status Update]
     J_Action --> F
     J_Confirm -- No --> I
-    H -- Moderate Pending Companies --> K[Use Quick Moderation Card for Companies]
+    H -- Moderate Pending Companies --> K[Use Quick Moderation Card for Companies (SA, A, M)]
     K --> L_Confirm[Confirm Action: Approve/Reject Company]
     L_Confirm -- Yes --> L_Action[Perform Company Status Update]
     L_Action --> F
     L_Confirm -- No --> K
-    H -- Manage Companies --> M[Navigate to 'Companies' Tab]
+    H -- Manage Companies --> M[Navigate to 'Companies' Tab (SA, A, M)]
     M --> N[Search/Sort/View Companies]
-    N --> O[Click Action Icon: View, Approve, Reject, Suspend/Activate, Delete]
+    N --> O[Click Action Icon: View, Approve, Reject, Suspend/Activate, Delete (All by SA, A, M)]
     O --> O_Confirm[Confirmation Modal for Company Action]
     O_Confirm -- Yes --> O_Action[Perform Company Status Update]
     O_Action --> M
     O_Confirm -- No --> N
-    H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab]
+    H -- Manage Jobs --> P[Navigate to 'All Jobs' Tab (SA, A, M)]
     P --> Q[Search/Sort/View Jobs]
-    Q --> R[Click Action Icon: View, Suspend/Activate, Approve/Reject]
+    Q --> R[Click Action Icon: View (All), Suspend (SA, A), Activate/Approve/Reject (SA, A, M)]
     R --> R_Confirm[Confirmation Modal for Job Action]
     R_Confirm -- Yes --> R_Action[Perform Job Status Update]
     R_Action --> P
     R_Confirm -- No --> Q
-    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab]
+    H -- Manage Job Seekers --> S[Navigate to 'Job Seekers' Tab (SA, A, M - M view only)]
     S --> T[Search/Sort/View Job Seekers]
-    T --> U[Click Action Icon: View Profile, Suspend/Activate, Delete]
+    T --> U[Click Action Icon: View Profile (All), Suspend/Activate/Delete (SA, A only)]
     U --> U_Confirm[Confirmation Modal for Job Seeker Action]
     U_Confirm -- Yes --> U_Action[Perform User Status Update]
     U_Action --> S
     U_Confirm -- No --> T
-    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab]
+    H -- Manage Platform Users --> V[Navigate to 'Platform Users' Tab (SA, A, M - M view only)]
     V --> W[Search/Sort/View Platform Users]
-    W --> X[Click Action Icon: Suspend/Activate if SuperAdmin]
+    W --> X[Click Action Icon: Suspend/Activate (SA for SA/A/M; A for M only)]
     X --> X_Confirm[Confirmation Modal for Platform User Action]
     X_Confirm -- Yes --> X_Action[Perform User Status Update]
     X_Action --> V
@@ -129,51 +129,26 @@ graph TD
     F --> Y[Logout]
 ```
 
-## 4. Page Routes
+## 5. Page Routes
 
-| Route               | Description                                                                  | Access Level       |
-| :------------------ | :--------------------------------------------------------------------------- | :----------------- |
-| `/auth/admin/login` | Dedicated login page for administrators.                                     | Public (for login) |
-| `/admin`            | Main admin dashboard with tabs for managing various aspects of the platform. | Admin, SuperAdmin  |
+| Route               | Description                                                                  | Access Level                 |
+| :------------------ | :--------------------------------------------------------------------------- | :--------------------------- |
+| `/auth/admin/login` | Dedicated login page for administrators/moderators.                          | Public (for login)           |
+| `/admin`            | Main admin dashboard with tabs for managing various aspects of the platform. | SuperAdmin, Admin, Moderator |
 
-## 5. Key "API" Interactions (Data Flows)
+## 6. Key "API" Interactions (Data Flows)
 
-Admins interact primarily with the Firebase Firestore database to manage platform data. There are no traditional REST APIs for admin actions; operations are direct database manipulations triggered by UI events (with confirmation modals).
+Admins/Moderators interact primarily with the Firebase Firestore database. Permissions are enforced in the UI and backend functions (if any future Cloud Functions are added).
 
-- **Fetching Data for Tables (e.g., Companies, Jobs, Users):**
+- **Fetching Data**: Queries Firestore with filters based on roles.
+- **Updating Status**: Updates Firestore documents. `handleUserStatusUpdate` now has stricter role-based checks.
+  - Moderators cannot use `handleUserStatusUpdate` for user status changes.
+  - Admins cannot use `handleUserStatusUpdate` for other Admins/SuperAdmins.
 
-  - **Action**: Admin navigates to a management tab.
-  - **Interaction**: Queries Firestore collections (`companies`, `jobs`, `users`) with appropriate filters, ordering, and pagination.
-  - **Data**: Retrieves arrays of Company, Job, or UserProfile objects.
+## 7. Future Updates (Potential Enhancements)
 
-- **Fetching Platform Analytics:**
-
-  - **Action**: Admin dashboard loads.
-  - **Interaction**: Uses Firestore's `getCountFromServer` on `users` (filtered by role), `companies`, `jobs` (total and filtered by status 'approved'), and `applications` collections.
-  - **Data**: Retrieves numerical counts for display.
-
-- **Updating Status (e.g., Approve/Reject/Suspend/Delete Company/Job/User):**
-
-  - **Action**: Admin clicks an action icon, confirms in modal.
-  - **Input Data**: ID of the entity (company, job, user), the new status string, and optionally a moderation reason.
-  - **Interaction**: Updates the specific document in Firestore (e.g., in the `companies` collection, sets the `status` field to 'approved' and `updatedAt` to server timestamp).
-  - **Output/Effect**: Document status is changed in the database, UI updates to reflect the change.
-
-- **Counting Related Items (e.g., Jobs per company, Applicants per job):**
-  - **Action**: Data tables often display counts.
-  - **Interaction**: Uses Firestore's `getCountFromServer` with queries (e.g., count jobs where `companyId` matches, count applications where `jobId` matches).
-  - **Data**: Retrieves a numerical count.
-
-## 6. Future Updates (Potential Enhancements)
-
-- **Advanced Platform Analytics**: Visual charts (e.g., using Recharts) and stats on user registration trends, job posting trends, application rates over time (e.g., last 7/30 days).
-- **Time-Based Filtering for Analytics**: Allow viewing stats for specific periods.
-- **Detailed Audit Logs**: Comprehensive logs of all admin actions for security and accountability.
-- **Bulk Actions**: Ability to select multiple items (e.g., jobs, users) and perform actions like suspend/approve in bulk.
-- **Communication Tools**: Ability to send platform-wide announcements or messages to specific user groups (e.g., all employers).
-- **Custom Reporting**: Generate custom reports based on platform data.
-- **Content Moderation Tools**: AI-assisted flagging of potentially problematic content in job descriptions or company profiles.
-- **More Granular Role Permissions**: Ability to assign specific moderation tasks to different admin levels if needed.
+- Granular permissions for Moderators (e.g., can only edit certain fields of a job posting they approved).
+- Dedicated Moderator dashboard view with only relevant tasks.
 
 ---
 
