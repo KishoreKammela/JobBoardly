@@ -37,6 +37,8 @@ export interface Filters {
   roleType: string;
   isRemote: boolean;
   recentActivity?: 'any' | '24h' | '7d' | '30d' | null;
+  industry?: string;
+  experienceLevel?: JobExperienceLevel | 'all';
 }
 
 export interface CandidateFilters {
@@ -130,6 +132,14 @@ export interface Company {
   applicationCount?: number;
 }
 
+export type JobExperienceLevel =
+  | 'Entry-Level'
+  | 'Mid-Level'
+  | 'Senior-Level'
+  | 'Lead'
+  | 'Manager'
+  | 'Executive';
+
 export interface Job {
   id: string;
   title: string;
@@ -150,6 +160,17 @@ export interface Job {
   createdAt?: Timestamp | Date | string;
   updatedAt?: Timestamp | Date | string;
   screeningQuestions?: ScreeningQuestion[];
+
+  payTransparency?: boolean;
+  benefits?: string[];
+  industry: string;
+  department: string; // Functional Area / Department
+  roleDesignation?: string;
+  experienceLevel: JobExperienceLevel;
+  minExperienceYears?: number;
+  maxExperienceYears?: number;
+  educationQualification?: string;
+  applicationDeadline?: string | Timestamp; // Store as ISO string or Firestore Timestamp
 }
 
 export type ApplicationStatus =
@@ -267,7 +288,7 @@ export interface UserProfile {
 
   jobsAppliedCount?: number;
   lastActive?: Timestamp | Date | string;
-  desiredSalary?: number;
+  desiredSalary?: number; // Kept for potential future use in profile, but job-specific salary is separate
 }
 
 export interface ParsedResumeData {
@@ -291,6 +312,16 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
+  payTransparency?: boolean;
+  benefits?: string[];
+  industry?: string;
+  department?: string;
+  roleDesignation?: string;
+  experienceLevel?: JobExperienceLevel;
+  minExperienceYears?: number;
+  maxExperienceYears?: number;
+  educationQualification?: string;
+  applicationDeadline?: string;
 }
 
 export interface UserSettings {

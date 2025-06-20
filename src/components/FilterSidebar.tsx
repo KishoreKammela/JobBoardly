@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import type { Filters } from '@/types';
+import type { Filters, JobExperienceLevel } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,16 @@ interface FilterSidebarProps {
   currentGlobalSearchTerm?: string;
 }
 
+const experienceLevelOptions: (JobExperienceLevel | 'all')[] = [
+  'all',
+  'Entry-Level',
+  'Mid-Level',
+  'Senior-Level',
+  'Lead',
+  'Manager',
+  'Executive',
+];
+
 export function FilterSidebar({
   onFilterChange,
   initialFilters,
@@ -44,6 +54,8 @@ export function FilterSidebar({
     roleType: initialFilters?.roleType || 'all',
     isRemote: initialFilters?.isRemote || false,
     recentActivity: initialFilters?.recentActivity || 'any',
+    industry: initialFilters?.industry || '',
+    experienceLevel: initialFilters?.experienceLevel || 'all',
   });
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
@@ -52,26 +64,28 @@ export function FilterSidebar({
   const { toast } = useToast();
 
   useEffect(() => {
-    // This effect ensures that if the parent's initialFilters prop changes
-    // (e.g., due to URL searchParams changing), the internal state reflects it.
-    // Crucially, it only calls setFilters if the values have actually changed
-    // to prevent infinite loops.
     const newLocation = initialFilters?.location || '';
     const newRoleType = initialFilters?.roleType || 'all';
     const newIsRemote = initialFilters?.isRemote || false;
     const newRecentActivity = initialFilters?.recentActivity || 'any';
+    const newIndustry = initialFilters?.industry || '';
+    const newExperienceLevel = initialFilters?.experienceLevel || 'all';
 
     if (
       newLocation !== filters.location ||
       newRoleType !== filters.roleType ||
       newIsRemote !== filters.isRemote ||
-      newRecentActivity !== filters.recentActivity
+      newRecentActivity !== filters.recentActivity ||
+      newIndustry !== filters.industry ||
+      newExperienceLevel !== filters.experienceLevel
     ) {
       setFilters({
         location: newLocation,
         roleType: newRoleType,
         isRemote: newIsRemote,
         recentActivity: newRecentActivity,
+        industry: newIndustry,
+        experienceLevel: newExperienceLevel,
       });
     }
   }, [
@@ -80,10 +94,11 @@ export function FilterSidebar({
     filters.roleType,
     filters.isRemote,
     filters.recentActivity,
-  ]); // Dependencies include current filter values for correct comparison
+    filters.industry,
+    filters.experienceLevel,
+  ]);
 
   useEffect(() => {
-    // This effect notifies the parent component when the internal filters change.
     onFilterChange(filters);
   }, [filters, onFilterChange]);
 
@@ -121,6 +136,8 @@ export function FilterSidebar({
       roleType: 'all',
       isRemote: false,
       recentActivity: 'any',
+      industry: '',
+      experienceLevel: 'all',
     };
     setFilters(resetFiltersData);
   };
@@ -188,6 +205,44 @@ export function FilterSidebar({
       </CardHeader>
       <CardContent>
         <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+          <div>
+            <Label htmlFor="industry">Industry</Label>
+            <Input
+              id="industry"
+              name="industry"
+              placeholder="e.g., Technology, Healthcare"
+              value={filters.industry}
+              onChange={handleInputChange}
+              aria-label="Industry filter for jobs"
+            />
+          </div>
+          <div>
+            <Label htmlFor="experienceLevel">Experience Level</Label>
+            <Select
+              name="experienceLevel"
+              value={filters.experienceLevel || 'all'}
+              onValueChange={(value) =>
+                handleSelectChange(
+                  'experienceLevel',
+                  value as JobExperienceLevel | 'all'
+                )
+              }
+            >
+              <SelectTrigger
+                id="experienceLevel"
+                aria-label="Filter by experience level"
+              >
+                <SelectValue placeholder="Select level" />
+              </SelectTrigger>
+              <SelectContent>
+                {experienceLevelOptions.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level === 'all' ? 'All Levels' : level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label htmlFor="location">Location</Label>
             <Input

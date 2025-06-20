@@ -37,6 +37,13 @@ import {
   RotateCcw,
   HelpCircle,
   Ban,
+  Users,
+  BookOpen,
+  Award,
+  Network,
+  Sparkles as BenefitsIcon,
+  GraduationCap as EducationIcon,
+  Clock,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -53,7 +60,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { format, isValid, parse } from 'date-fns';
 
 const ADMIN_LIKE_ROLES: UserRole[] = [
   'admin',
@@ -89,7 +97,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   } = useJobSeekerActions();
   const { toast } = useToast();
   const router = useRouter();
-  const pathname = usePathname();
 
   const [applicationStatus, setApplicationStatus] =
     useState<ApplicationStatus | null>(null);
@@ -145,7 +152,12 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
             data.updatedAt instanceof Timestamp
               ? data.updatedAt.toDate().toISOString()
               : (data.updatedAt as string),
+          applicationDeadline:
+            data.applicationDeadline instanceof Timestamp
+              ? data.applicationDeadline.toDate().toISOString().split('T')[0]
+              : (data.applicationDeadline as string | undefined),
           screeningQuestions: data.screeningQuestions || [],
+          benefits: data.benefits || [],
         };
 
         let canView = false;
@@ -486,14 +498,27 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   const companyLogo =
     jobData.companyLogoUrl ||
     `https://placehold.co/100x100.png?text=${jobData.company?.substring(0, 2).toUpperCase() || 'C'}`;
-  const salaryDisplay =
-    jobData.salaryMin && jobData.salaryMax
-      ? `${formatCurrencyINR(jobData.salaryMin)} - ${formatCurrencyINR(jobData.salaryMax)} p.a.`
-      : jobData.salaryMin
-        ? `${formatCurrencyINR(jobData.salaryMin)} p.a.`
-        : jobData.salaryMax
-          ? `${formatCurrencyINR(jobData.salaryMax)} p.a.`
-          : 'Not Disclosed';
+
+  let salaryDisplay = 'Not Disclosed';
+  if (jobData.payTransparency !== false) {
+    // Show if true or undefined (default to show)
+    if (jobData.salaryMin && jobData.salaryMax) {
+      salaryDisplay = `${formatCurrencyINR(jobData.salaryMin)} - ${formatCurrencyINR(jobData.salaryMax)} p.a.`;
+    } else if (jobData.salaryMin) {
+      salaryDisplay = `${formatCurrencyINR(jobData.salaryMin)} p.a.`;
+    } else if (jobData.salaryMax) {
+      salaryDisplay = `${formatCurrencyINR(jobData.salaryMax)} p.a.`;
+    }
+  }
+
+  const applicationDeadlineDate = jobData.applicationDeadline
+    ? typeof jobData.applicationDeadline === 'string' &&
+      isValid(parse(jobData.applicationDeadline, 'yyyy-MM-dd', new Date()))
+      ? parse(jobData.applicationDeadline, 'yyyy-MM-dd', new Date())
+      : jobData.applicationDeadline instanceof Timestamp
+        ? jobData.applicationDeadline.toDate()
+        : null
+    : null;
 
   const isPrivilegedViewer =
     (user?.role && ADMIN_LIKE_ROLES.includes(user.role as UserRole)) ||
@@ -625,7 +650,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                   <Briefcase className="h-3.5 w-3.5" />
                   {jobData.type}
                 </Badge>
-                {(jobData.salaryMin || jobData.salaryMax) && (
+                {salaryDisplay !== 'Not Disclosed' && (
                   <Badge
                     variant="secondary"
                     className="flex items-center gap-1.5"
@@ -642,6 +667,15 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                   Posted:{' '}
                   {new Date(jobData.postedDate as string).toLocaleDateString()}
                 </Badge>
+                {applicationDeadlineDate && (
+                  <Badge
+                    variant="destructive"
+                    className="flex items-center gap-1.5"
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Apply by: {format(applicationDeadlineDate, 'PPP')}
+                  </Badge>
+                )}
                 {isPrivilegedViewer && jobData.status !== 'approved' && (
                   <Badge
                     variant={
@@ -661,17 +695,67 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
             <div className="flex-1 space-y-6">
               <section>
                 <h2 className="text-xl font-semibold mb-3 font-headline">
+                  Job Details
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <p>
+                    <strong className="text-foreground/80">Industry:</strong>{' '}
+                    {jobData.industry}
+                  </p>
+                  <p>
+                    <strong className="text-foreground/80">Department:</strong>{' '}
+                    {jobData.department}
+                  </p>
+                  {jobData.roleDesignation && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Role/Designation:
+                      </strong>{' '}
+                      {jobData.roleDesignation}
+                    </p>
+                  )}
+                  <p>
+                    <strong className="text-foreground/80">
+                      Experience Level:
+                    </strong>{' '}
+                    {jobData.experienceLevel}
+                  </p>
+                  {(jobData.minExperienceYears !== undefined ||
+                    jobData.maxExperienceYears !== undefined) && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Years of Experience:
+                      </strong>
+                      {jobData.minExperienceYears !== undefined
+                        ? `${jobData.minExperienceYears} `
+                        : 'Up to '}
+                      {jobData.maxExperienceYears !== undefined
+                        ? `- ${jobData.maxExperienceYears} years`
+                        : `${jobData.minExperienceYears ? 'years' : ' years'}`}
+                    </p>
+                  )}
+                  {jobData.educationQualification && (
+                    <p>
+                      <strong className="text-foreground/80">Education:</strong>{' '}
+                      {jobData.educationQualification}
+                    </p>
+                  )}
+                </div>
+              </section>
+              <Separator />
+              <section>
+                <h2 className="text-xl font-semibold mb-3 font-headline">
                   Job Description
                 </h2>
                 <div className="prose prose-sm max-w-none text-foreground/90 whitespace-pre-wrap">
                   {jobData.description}
                 </div>
               </section>
-
               {jobData.skills && jobData.skills.length > 0 && (
                 <section>
                   <Separator className="my-6" />
-                  <h2 className="text-xl font-semibold mb-3 font-headline">
+                  <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-1.5">
+                    <Award />
                     Required Skills
                   </h2>
                   <div className="flex flex-wrap gap-2">
@@ -687,15 +771,30 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                   </div>
                 </section>
               )}
+              {jobData.benefits && jobData.benefits.length > 0 && (
+                <section>
+                  <Separator className="my-6" />
+                  <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-1.5">
+                    <BenefitsIcon />
+                    Benefits
+                  </h2>
+                  <ul className="list-disc list-inside pl-5 space-y-1 text-sm text-foreground/90">
+                    {jobData.benefits.map((benefit, index) => (
+                      <li key={index}>{benefit}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
               {isPrivilegedViewer &&
                 jobData.screeningQuestions &&
                 jobData.screeningQuestions.length > 0 && (
                   <section>
                     <Separator className="my-6" />
-                    <h2 className="text-xl font-semibold mb-3 font-headline">
+                    <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-1.5">
+                      <HelpCircle />
                       Screening Questions (For Internal Review)
                     </h2>
-                    <ul className="space-y-3 list-disc list-inside text-sm text-foreground/90 pl-4">
+                    <ul className="space-y-3 list-decimal list-inside text-sm text-foreground/90 pl-4">
                       {jobData.screeningQuestions.map(
                         (q: ScreeningQuestion) => (
                           <li key={q.id}>

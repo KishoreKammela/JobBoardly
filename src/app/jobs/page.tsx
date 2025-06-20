@@ -30,15 +30,15 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext'; // Added
-import { useIsMobile } from '@/hooks/use-mobile'; // Added
+import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const JOBS_PER_PAGE = 9;
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
-  const { user } = useAuth(); // Added
-  const isMobile = useIsMobile(); // Added
+  const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
@@ -46,7 +46,7 @@ export default function JobsPage() {
   const [isFiltering, setIsFiltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid'); // Initial fallback
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const [globalSearchTerm, setGlobalSearchTerm] = useState(
     searchParams.get('q') || ''
@@ -61,6 +61,9 @@ export default function JobsPage() {
     isRemote: searchParams.get('remote') === 'true',
     recentActivity:
       (searchParams.get('activity') as Filters['recentActivity']) || 'any',
+    industry: searchParams.get('industry') || '',
+    experienceLevel:
+      (searchParams.get('expLevel') as Filters['experienceLevel']) || 'all',
   });
   const debouncedSidebarFilters = useDebounce(sidebarFilters, 500);
 
@@ -68,13 +71,11 @@ export default function JobsPage() {
     document.title = 'Find Jobs - Search & Apply | JobBoardly';
   }, []);
 
-  // Effect to set initial view mode based on user preference or device size
   useEffect(() => {
     const userPreference = user?.jobBoardDisplay;
     if (userPreference) {
       setViewMode(userPreference);
     } else {
-      // Only set device-based default if isMobile is determined (not undefined)
       if (isMobile !== undefined) {
         setViewMode(isMobile ? 'list' : 'grid');
       }
@@ -114,7 +115,7 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData);
+        setFilteredJobs(jobsData); // Initialize with all jobs
       } catch (e: unknown) {
         console.error('Error fetching jobs:', e);
         setError(
@@ -141,6 +142,19 @@ export default function JobsPage() {
         (job.skills &&
           job.skills.some((skill) =>
             skill.toLowerCase().includes(currentGlobalTerm)
+          )) ||
+        job.description.toLowerCase().includes(currentGlobalTerm) ||
+        job.industry.toLowerCase().includes(currentGlobalTerm) ||
+        job.department.toLowerCase().includes(currentGlobalTerm) ||
+        (job.roleDesignation &&
+          job.roleDesignation.toLowerCase().includes(currentGlobalTerm)) ||
+        (job.educationQualification &&
+          job.educationQualification
+            .toLowerCase()
+            .includes(currentGlobalTerm)) ||
+        (job.benefits &&
+          job.benefits.some((benefit) =>
+            benefit.toLowerCase().includes(currentGlobalTerm)
           ));
 
       const locationMatch =
@@ -155,6 +169,18 @@ export default function JobsPage() {
           debouncedSidebarFilters.roleType.toLowerCase();
 
       const remoteMatch = !debouncedSidebarFilters.isRemote || job.isRemote;
+
+      const industryMatch =
+        !debouncedSidebarFilters.industry ||
+        job.industry
+          .toLowerCase()
+          .includes(debouncedSidebarFilters.industry.toLowerCase());
+
+      const experienceLevelMatch =
+        !debouncedSidebarFilters.experienceLevel ||
+        debouncedSidebarFilters.experienceLevel === 'all' ||
+        job.experienceLevel.toLowerCase() ===
+          debouncedSidebarFilters.experienceLevel.toLowerCase();
 
       let recentActivityMatch = true;
       if (
@@ -180,7 +206,9 @@ export default function JobsPage() {
         locationMatch &&
         roleTypeMatch &&
         remoteMatch &&
-        recentActivityMatch
+        recentActivityMatch &&
+        industryMatch &&
+        experienceLevelMatch
       );
     });
     setFilteredJobs(newFilteredJobs);
@@ -242,7 +270,7 @@ export default function JobsPage() {
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search job title, company, or skills..."
+              placeholder="Search job title, company, skills, industry, description..."
               className="w-full h-12 pl-10 text-base rounded-lg shadow-sm"
               value={globalSearchTerm}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

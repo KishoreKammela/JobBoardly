@@ -38,6 +38,7 @@ import {
 } from 'firebase/firestore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrencyINR } from '@/lib/utils';
+import { format, isValid, parse } from 'date-fns';
 
 const formatExperiencesForAI = (experiences?: ExperienceEntry[]): string => {
   if (!experiences || experiences.length === 0)
@@ -170,6 +171,11 @@ export function AiJobMatcher() {
               data.updatedAt instanceof Timestamp
                 ? data.updatedAt.toDate().toISOString()
                 : data.updatedAt,
+            applicationDeadline:
+              data.applicationDeadline instanceof Timestamp
+                ? data.applicationDeadline.toDate().toISOString().split('T')[0]
+                : (data.applicationDeadline as string | undefined),
+            benefits: data.benefits || [],
           } as Job;
         });
         setAllJobs(jobsData);
@@ -187,10 +193,38 @@ export function AiJobMatcher() {
 
   const formatJobsForAI = (jobs: Job[]): string => {
     return jobs
-      .map(
-        (job) =>
-          `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\nDescription:\n${job.description}\nRequired Skills: ${(job.skills || []).join(', ')}\nSalary Range (Annual INR): ${job.salaryMin ? formatCurrencyINR(job.salaryMin) : 'N/A'} - ${job.salaryMax ? formatCurrencyINR(job.salaryMax) : 'N/A'}\n`
-      )
+      .map((job) => {
+        let jobString = `Job ID: ${job.id}\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nRemote: ${job.isRemote}\n`;
+        jobString += `Description:\n${job.description}\n`;
+        jobString += `Required Skills: ${(job.skills || []).join(', ')}\n`;
+        jobString += `Salary Range (Annual INR): ${job.salaryMin ? formatCurrencyINR(job.salaryMin) : 'N/A'} - ${job.salaryMax ? formatCurrencyINR(job.salaryMax) : 'N/A'}\n`;
+        jobString += `Pay Transparency: ${job.payTransparency ?? true}\n`;
+        if (job.benefits && job.benefits.length > 0)
+          jobString += `Benefits: ${job.benefits.join(', ')}\n`;
+        jobString += `Industry: ${job.industry}\n`;
+        jobString += `Department: ${job.department}\n`;
+        if (job.roleDesignation)
+          jobString += `Role/Designation: ${job.roleDesignation}\n`;
+        jobString += `Experience Level: ${job.experienceLevel}\n`;
+        if (job.minExperienceYears !== undefined)
+          jobString += `Min Experience Years: ${job.minExperienceYears}\n`;
+        if (job.maxExperienceYears !== undefined)
+          jobString += `Max Experience Years: ${job.maxExperienceYears}\n`;
+        if (job.educationQualification)
+          jobString += `Education Qualification: ${job.educationQualification}\n`;
+        if (job.applicationDeadline) {
+          const deadlineDate =
+            typeof job.applicationDeadline === 'string' &&
+            isValid(parse(job.applicationDeadline, 'yyyy-MM-dd', new Date()))
+              ? parse(job.applicationDeadline, 'yyyy-MM-dd', new Date())
+              : job.applicationDeadline instanceof Timestamp
+                ? job.applicationDeadline.toDate()
+                : null;
+          if (deadlineDate)
+            jobString += `Application Deadline: ${format(deadlineDate, 'yyyy-MM-dd')}\n`;
+        }
+        return jobString;
+      })
       .join('\n---\n');
   };
 

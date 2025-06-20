@@ -10,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import type { JobExperienceLevel } from '@/types';
 
 const ParseJobDescriptionInputSchema = z.object({
   jobDescriptionDataUri: z
@@ -45,8 +46,67 @@ const ParseJobDescriptionOutputSchema = z
       .enum(['Full-time', 'Part-time', 'Contract', 'Internship'])
       .optional()
       .describe('The type of employment (e.g., Full-time, Contract).'),
-    salaryMin: z.number().optional().describe('Minimum salary, if specified.'),
-    salaryMax: z.number().optional().describe('Maximum salary, if specified.'),
+    salaryMin: z
+      .number()
+      .optional()
+      .describe('Minimum salary (annual INR), if specified.'),
+    salaryMax: z
+      .number()
+      .optional()
+      .describe('Maximum salary (annual INR), if specified.'),
+    payTransparency: z
+      .boolean()
+      .optional()
+      .describe(
+        'Whether the salary range should be shown to applicants. Defaults to true if salary is provided.'
+      ),
+    benefits: z
+      .array(z.string())
+      .optional()
+      .describe('List of benefits and perks offered.'),
+    industry: z
+      .string()
+      .optional()
+      .describe('The industry the job belongs to (e.g., Technology, Finance).'),
+    department: z
+      .string()
+      .optional()
+      .describe(
+        'The functional area or department (e.g., Engineering, Marketing).'
+      ),
+    roleDesignation: z
+      .string()
+      .optional()
+      .describe('A more specific title for the position.'),
+    experienceLevel: z
+      .enum([
+        'Entry-Level',
+        'Mid-Level',
+        'Senior-Level',
+        'Lead',
+        'Manager',
+        'Executive',
+      ])
+      .optional()
+      .describe('The required experience level.'),
+    minExperienceYears: z
+      .number()
+      .optional()
+      .describe('Minimum years of experience required.'),
+    maxExperienceYears: z
+      .number()
+      .optional()
+      .describe('Maximum years of experience preferred.'),
+    educationQualification: z
+      .string()
+      .optional()
+      .describe(
+        "Minimum educational background required (e.g., Bachelor's Degree)."
+      ),
+    applicationDeadline: z
+      .string()
+      .optional()
+      .describe('Application deadline in YYYY-MM-DD format.'),
   })
   .describe(
     'Structured information extracted from the job description document.'
@@ -77,12 +137,23 @@ Extract the following details and structure them according to the output schema:
 - Required or Preferred Skills (as a list of strings).
 - Job Location (e.g., "City, State", "Remote").
 - Job Type (e.g., "Full-time", "Part-time", "Contract", "Internship").
-- Salary range if specified (minimum and maximum values).
+- Salary range if specified (minimum and maximum annual INR values).
+- Pay Transparency: If salary is mentioned, assume true unless specified otherwise.
+- Benefits: List of perks like health insurance, PTO. Extract as an array of strings.
+- Industry: (e.g., "Technology", "Finance").
+- Functional Area/Department: (e.g., "Engineering", "Marketing").
+- Role/Designation: A more specific title if available.
+- Experience Level: (e.g., "Entry-Level", "Mid-Level", "Senior-Level", "Lead", "Manager", "Executive").
+- Minimum Years of Experience: (e.g., 2, 5).
+- Maximum Years of Experience: (e.g., 5, 10).
+- Education Qualification: (e.g., "Bachelor's Degree in Computer Science").
+- Application Deadline: (in YYYY-MM-DD format).
 
 Prioritize accuracy. If some information is not clearly available, omit the field rather than guessing.
-For skills, extract distinct skills. For salary, provide numbers if possible.
+For skills and benefits, extract distinct items. For salary and experience years, provide numbers if possible.
 Ensure the output is valid JSON matching the provided schema.
-If the document content appears to be an error message about file processing, summarize that error.
+If the document content appears to be an error message about file processing, summarize that error in the 'description' field.
+If salary is mentioned, set payTransparency to true unless stated otherwise in the document. If no salary, payTransparency can be omitted or false.
 `,
 });
 
@@ -134,8 +205,27 @@ const jobDescriptionParserFlowInstance = ai.defineFlow(
         jobType: undefined,
         salaryMin: undefined,
         salaryMax: undefined,
+        payTransparency: undefined,
+        benefits: [],
+        industry: undefined,
+        department: undefined,
+        roleDesignation: undefined,
+        experienceLevel: undefined,
+        minExperienceYears: undefined,
+        maxExperienceYears: undefined,
+        educationQualification: undefined,
+        applicationDeadline: undefined,
       };
     }
+    // Ensure payTransparency default logic
+    if (output.salaryMin !== undefined || output.salaryMax !== undefined) {
+      if (output.payTransparency === undefined) {
+        output.payTransparency = true;
+      }
+    } else {
+      output.payTransparency = false; // If no salary, default to false or omit
+    }
+
     return output;
   }
 );

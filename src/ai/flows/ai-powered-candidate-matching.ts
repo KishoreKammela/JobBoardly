@@ -2,7 +2,7 @@
 /**
  * @fileOverview This file defines the AI-powered candidate matching flow for employers.
  *
- * It takes a job description and a list of candidate profiles (including detailed work experience, education, skills, languages, preferences like salary and location, total experience),
+ * It takes a job description (including new fields like industry, experience level, etc.) and a list of candidate profiles,
  * then suggests relevant candidates whose profiles are marked as searchable.
  *
  * @exported
@@ -18,7 +18,7 @@ const AIPoweredCandidateMatchingInputSchema = z.object({
   jobDescription: z
     .string()
     .describe(
-      'A detailed job description, including responsibilities, qualifications, preferred skills, location, job type, and salary range (if available, in INR).'
+      'A detailed job description, including responsibilities, qualifications, preferred skills, location, job type, salary range (if available, in INR) and pay transparency, benefits, industry, department/functional area, role/designation, experience level (e.g., Entry-Level, Mid-Level), min/max years of experience, education qualification, and application deadline (YYYY-MM-DD).'
     ),
   candidateProfiles: z
     .string()
@@ -40,7 +40,7 @@ const AIPoweredCandidateMatchingOutputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, total experience, detailed work experience (roles, responsibilities, CTCs), detailed education (specializations, course types), languages (proficiency), salary expectations (current and expected CTC vs job range), preferences (location, availability, job search status), personal details (gender, DOB, home location), and resume summary align with the job description. Mention any potential misalignments if significant but outweighed by other factors.'
+      'A detailed explanation of why these specific candidates were selected. For each candidate, highlight how their skills, total experience, detailed work experience (roles, responsibilities, CTCs), detailed education (specializations, course types), languages (proficiency), salary expectations (current and expected CTC vs job range if pay transparency is enabled), preferences (location, availability, job search status), personal details (gender, DOB, home location), and resume summary align with the job description (including its industry, department, required experience level, years of experience, and education qualification). Mention any potential misalignments if significant but outweighed by other factors.'
     ),
 });
 
@@ -67,7 +67,7 @@ Searchable Candidate Profiles:
 {{{candidateProfiles}}}
 
 Based on the provided information:
-1.  Thoroughly analyze the job description, noting key responsibilities, required and preferred skills, language requirements (if any), experience level (including total years if specified), location, job type, and salary range (if provided).
+1.  Thoroughly analyze the job description, noting key responsibilities, required and preferred skills, language requirements (if any), experience level (e.g., "Entry-Level", "Mid-Level", "Senior-Level") and specific min/max years of experience if specified, location, job type, salary range (and whether pay transparency is enabled for applicants), benefits, industry, department/functional area, role/designation, and education qualification.
 2.  Carefully review each candidate's profile. Pay close attention to their:
     - Skills (technical and soft)
     - Languages (including proficiency and RWS abilities)
@@ -78,12 +78,12 @@ Based on the provided information:
     - Personal Details (gender, date of birth, home state/city, if they might influence location or cultural fit, though be cautious with biases)
     - Any summary from their resume document.
 3.  Identify the candidate UIDs that are the MOST relevant matches for the job description.
-4.  Provide a detailed reasoning for your selections. For each recommended candidate, explain how their comprehensive profile aligns with the job's requirements. Highlight specific matches in skills, total experience, depth and type of experience (including specific roles and responsibilities), education, languages, salary expectations (if their expected salary is compatible with the job's range or market rates, considering their current CTC), and location preferences. Also, note any potential minor misalignments if the overall match is strong.
+4.  Provide a detailed reasoning for your selections. For each recommended candidate, explain how their comprehensive profile aligns with the job's requirements. Highlight specific matches in skills, total experience (vs. job's required experience level and years), depth and type of experience (including specific roles and responsibilities), education (vs. job's education qualification), languages, salary expectations (if their expected salary is compatible with the job's range if pay transparency is enabled, considering their current CTC), location preferences, and industry/department alignment. Also, note any potential minor misalignments if the overall match is strong.
 5.  Return the UIDs of the matched candidates in the 'relevantCandidateIDs' array, ideally ordered by relevance (most relevant first).
 6.  Ensure your output is a correctly formatted JSON object matching the defined output schema.
 
-Prioritize candidates whose skills and experience (including total years) closely align with the core requirements of the job description.
-Consider factors like years of experience, specific technical skills, language proficiency, cultural fit (if discernible), and alignment of preferences (salary, location).
+Prioritize candidates whose skills and experience (including total years and specific experience level) closely align with the core requirements of the job description.
+Consider factors like years of experience, specific technical skills, language proficiency, cultural fit (if discernible), alignment of preferences (salary, location), industry match, and education.
 If no candidates are a strong match, return an empty 'relevantCandidateIDs' array and explain why in the 'reasoning' field.
 `,
 });

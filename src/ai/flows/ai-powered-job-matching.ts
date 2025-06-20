@@ -23,7 +23,7 @@ const AIPoweredJobMatchingInputSchema = z.object({
   jobPostings: z
     .string()
     .describe(
-      'A list/collection of available job postings. Each posting should include: Job ID, Title, Company, Location, Type (Full-time, Part-time, etc.), Remote status, a detailed Description (responsibilities, qualifications), Required Skills (comma-separated list), and Salary Range (Annual INR, e.g., "₹10LPA - ₹15LPA").'
+      'A list/collection of available job postings. Each posting should include: Job ID, Title, Company, Location, Type (Full-time, Part-time, etc.), Remote status, a detailed Description (responsibilities, qualifications), Required Skills (comma-separated list), Salary Range (Annual INR, e.g., "₹10LPA - ₹15LPA"), Pay Transparency (boolean), Benefits (array of strings), Industry, Department/Functional Area, Role/Designation, Experience Level (e.g., Entry-Level, Mid-Level), Min/Max Years of Experience, Education Qualification, and Application Deadline (YYYY-MM-DD).'
     ),
 });
 
@@ -40,7 +40,7 @@ const AIPoweredJobMatchingOutputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      "A detailed explanation of why these specific jobs were selected for the seeker, highlighting key matches between the seeker's profile (skills, total experience, detailed work experience including roles/responsibilities/CTCs, detailed education including specializations, languages with proficiency, salary expectations vs job's range, location preferences, CTC, gender, DOB, home location, availability, job search status, and resume summary) and the job requirements."
+      "A detailed explanation of why these specific jobs were selected for the seeker, highlighting key matches between the seeker's profile (skills, total experience, detailed work experience including roles/responsibilities/CTCs, detailed education including specializations, languages with proficiency, salary expectations vs job's range, location preferences, CTC, gender, DOB, home location, availability, job search status, and resume summary) and the job requirements (including industry, department, experience level, specific years of experience, education qualification, and benefits)."
     ),
 });
 
@@ -77,13 +77,13 @@ Your task is to:
     - Stated Preferences (preferred locations, expected salary in INR, job search status, current CTC, availability to start)
     - Personal Details (gender, date of birth, home state/city if they might influence location or cultural fit, though be cautious with biases)
     - Any summary from their resume document.
-2.  Carefully review each job posting, focusing on the job description, required skills, language requirements, location, job type, remote status, and salary range (if provided).
+2.  Carefully review each job posting, focusing on the job description, required skills, language requirements, location, job type, remote status, salary range (and pay transparency), benefits, industry, department, role designation, experience level, min/max years of experience, education qualification, and application deadline.
 3.  Identify the job IDs that are the MOST relevant matches for the job seeker. Consider a holistic match, not just keyword stuffing.
-4.  Provide a detailed reasoning for your selections. Explain for each recommended job (or generally for the set of recommendations) how it aligns with the seeker's comprehensive profile. Highlight specific connections, e.g., "The seeker's experience in 'Project Management' and skill 'Agile' directly match Job ID XYZ's requirements." or "Job ID ABC aligns with the seeker's expected salary range and preferred remote work option." Also consider total years of experience, language skills, educational background alignment, and how their detailed work history (specific roles and responsibilities) maps to the job's needs.
+4.  Provide a detailed reasoning for your selections. Explain for each recommended job (or generally for the set of recommendations) how it aligns with the seeker's comprehensive profile. Highlight specific connections, e.g., "The seeker's experience in 'Project Management' and skill 'Agile' directly match Job ID XYZ's requirements in the 'Technology' industry and 'Engineering' department." or "Job ID ABC aligns with the seeker's expected salary range, preferred remote work option, and the job's 'Mid-Level' experience requirement fits the seeker's 5 years of experience." Also consider total years of experience, language skills, educational background alignment, and how their detailed work history (specific roles and responsibilities) maps to the job's needs.
 5.  Return the job IDs in the 'relevantJobIDs' array, ideally ordered by relevance (most relevant first).
 6.  Ensure your output is a correctly formatted JSON object matching the defined output schema.
 
-Prioritize jobs that offer a strong alignment in skills, depth and type of experience (including total years of experience), salary expectations (if seeker's expected salary falls within or near job's range, considering current CTC), and location/remote preferences.
+Prioritize jobs that offer a strong alignment in skills, depth and type of experience (including total years of experience and alignment with the job's experience level), salary expectations (if seeker's expected salary falls within or near job's range, considering current CTC and job's pay transparency), location/remote preferences, industry, and education.
 If the seeker's profile is sparse, make the best judgment based on the available information.
 If no jobs are a good match, return an empty 'relevantJobIDs' array and explain why in the 'reasoning' field.
 `,

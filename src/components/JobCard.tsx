@@ -21,6 +21,8 @@ import {
   RotateCcw,
   AlertTriangle,
   Ban,
+  Users,
+  Clock,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -30,6 +32,7 @@ import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import type { Timestamp } from 'firebase/firestore';
+import { format, isValid, parse } from 'date-fns';
 
 interface JobCardProps {
   job: Job;
@@ -85,21 +88,21 @@ export function JobCard({
       });
       return;
     }
-    if (!user || user.role !== 'jobSeeker') {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in as a job seeker to save jobs.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    // Disable saving/unsaving if an application process has started or concluded
     if (applicationStatus) {
       toast({
         title: 'Action Not Allowed',
         description:
           'Cannot save or unsave a job that has an active or concluded application status.',
         variant: 'default',
+      });
+      return;
+    }
+
+    if (!user || user.role !== 'jobSeeker') {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in as a job seeker to save jobs.',
+        variant: 'destructive',
       });
       return;
     }
@@ -139,14 +142,27 @@ export function JobCard({
   const companyLogo =
     job.companyLogoUrl ||
     `https://placehold.co/64x64.png?text=${job.company?.substring(0, 2).toUpperCase() || 'C'}`;
-  const salaryDisplay =
-    job.salaryMin && job.salaryMax
-      ? `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.`
-      : job.salaryMin
-        ? `${formatCurrencyINR(job.salaryMin)} p.a.`
-        : job.salaryMax
-          ? `${formatCurrencyINR(job.salaryMax)} p.a.`
-          : 'Not Disclosed';
+
+  let salaryDisplay = 'Not Disclosed';
+  if (job.payTransparency !== false) {
+    // Show if true or undefined
+    if (job.salaryMin && job.salaryMax) {
+      salaryDisplay = `${formatCurrencyINR(job.salaryMin)} - ${formatCurrencyINR(job.salaryMax)} p.a.`;
+    } else if (job.salaryMin) {
+      salaryDisplay = `${formatCurrencyINR(job.salaryMin)} p.a.`;
+    } else if (job.salaryMax) {
+      salaryDisplay = `${formatCurrencyINR(job.salaryMax)} p.a.`;
+    }
+  }
+
+  const applicationDeadlineDate = job.applicationDeadline
+    ? typeof job.applicationDeadline === 'string' &&
+      isValid(parse(job.applicationDeadline, 'yyyy-MM-dd', new Date()))
+      ? parse(job.applicationDeadline, 'yyyy-MM-dd', new Date())
+      : job.applicationDeadline instanceof Timestamp
+        ? job.applicationDeadline.toDate()
+        : null
+    : null;
 
   const canCurrentlyApply =
     !applicationStatus && job.status === 'approved' && !isJobSeekerSuspended;
@@ -220,9 +236,17 @@ export function JobCard({
           <p className="flex items-center gap-1.5">
             <Briefcase className="h-4 w-4 text-primary/80" /> {job.type}
           </p>
-          {(job.salaryMin || job.salaryMax) && (
+          {salaryDisplay !== 'Not Disclosed' && (
             <p className="flex items-center gap-1.5">
               <DollarSign className="h-4 w-4 text-primary/80" /> {salaryDisplay}
+            </p>
+          )}
+          <p className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 text-primary/80" /> {job.experienceLevel}
+          </p>
+          {job.industry && (
+            <p className="flex items-center gap-1.5">
+              <Building className="h-4 w-4 text-primary/80" /> {job.industry}
             </p>
           )}
         </div>
@@ -243,14 +267,22 @@ export function JobCard({
         )}
       </CardContent>
       <CardFooter className="flex flex-wrap justify-between items-center pt-4 border-t gap-2">
-        <p className="text-xs text-muted-foreground whitespace-nowrap">
-          Posted:{' '}
-          {job.postedDate
-            ? typeof job.postedDate === 'string'
-              ? new Date(job.postedDate).toLocaleDateString()
-              : (job.postedDate as Timestamp).toDate().toLocaleDateString()
-            : 'N/A'}
-        </p>
+        <div className="text-xs text-muted-foreground whitespace-nowrap space-y-0.5">
+          <p>
+            Posted:{' '}
+            {job.postedDate
+              ? typeof job.postedDate === 'string'
+                ? new Date(job.postedDate).toLocaleDateString()
+                : (job.postedDate as Timestamp).toDate().toLocaleDateString()
+              : 'N/A'}
+          </p>
+          {applicationDeadlineDate && (
+            <p className="flex items-center gap-1 text-destructive/90">
+              <Clock className="h-3 w-3" /> Apply by:{' '}
+              {format(applicationDeadlineDate, 'PP')}
+            </p>
+          )}
+        </div>
         {user?.role === 'jobSeeker' && (
           <div className="flex flex-wrap items-center gap-2">
             <Button

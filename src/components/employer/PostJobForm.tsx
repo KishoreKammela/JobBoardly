@@ -11,6 +11,7 @@ import type {
   Company,
   ScreeningQuestion,
   ScreeningQuestionType,
+  JobExperienceLevel,
 } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ import {
   Edit,
   PlusCircle,
   Trash2,
+  CalendarDays,
 } from 'lucide-react';
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
@@ -66,6 +68,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format, parse, isValid } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
 const initialJobDataState: Partial<Job> = {
@@ -74,6 +83,15 @@ const initialJobDataState: Partial<Job> = {
   status: 'pending',
   salaryMin: undefined,
   salaryMax: undefined,
+  payTransparency: true,
+  benefits: [],
+  industry: '',
+  department: '',
+  experienceLevel: 'Entry-Level',
+  minExperienceYears: undefined,
+  maxExperienceYears: undefined,
+  educationQualification: '',
+  applicationDeadline: undefined,
   screeningQuestions: [],
 };
 
@@ -93,6 +111,15 @@ const defaultModalState: ModalState = {
   confirmText: 'Confirm',
 };
 
+const experienceLevelOptions: JobExperienceLevel[] = [
+  'Entry-Level',
+  'Mid-Level',
+  'Senior-Level',
+  'Lead',
+  'Manager',
+  'Executive',
+];
+
 export function PostJobForm() {
   const { user, company: authCompany } = useAuth();
   const { toast } = useToast();
@@ -102,6 +129,7 @@ export function PostJobForm() {
 
   const [jobData, setJobData] = useState<Partial<Job>>(initialJobDataState);
   const [skillsInput, setSkillsInput] = useState('');
+  const [benefitsInput, setBenefitsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,6 +139,15 @@ export function PostJobForm() {
   >({});
   const [modalState, setModalState] = useState<ModalState>(defaultModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
+
+  const appDeadlineDate =
+    jobData.applicationDeadline &&
+    typeof jobData.applicationDeadline === 'string' &&
+    isValid(parse(jobData.applicationDeadline, 'yyyy-MM-dd', new Date()))
+      ? parse(jobData.applicationDeadline, 'yyyy-MM-dd', new Date())
+      : jobData.applicationDeadline instanceof Timestamp
+        ? jobData.applicationDeadline.toDate()
+        : undefined;
 
   useEffect(() => {
     const initializeForm = async () => {
@@ -169,6 +206,7 @@ export function PostJobForm() {
             return;
           }
           setJobData({
+            ...initialJobDataState, // ensure all new fields are initialized
             ...existingJob,
             postedDate:
               existingJob.postedDate instanceof Timestamp
@@ -184,11 +222,21 @@ export function PostJobForm() {
               existingJob.salaryMax === undefined
                 ? undefined
                 : existingJob.salaryMax,
+            applicationDeadline:
+              existingJob.applicationDeadline instanceof Timestamp
+                ? existingJob.applicationDeadline
+                    .toDate()
+                    .toISOString()
+                    .split('T')[0]
+                : (existingJob.applicationDeadline as string | undefined),
             screeningQuestions: (existingJob.screeningQuestions || []).map(
               (q) => ({ ...q, id: q.id || uuidv4() })
             ),
+            payTransparency: existingJob.payTransparency ?? true, // Default to true if undefined
+            benefits: existingJob.benefits || [],
           });
           setSkillsInput((existingJob.skills || []).join(', '));
+          setBenefitsInput((existingJob.benefits || []).join(', '));
         } else {
           toast({
             title: 'Error',
@@ -201,7 +249,7 @@ export function PostJobForm() {
       } else {
         setJobData((prev) => ({
           ...initialJobDataState,
-          ...prev,
+          ...prev, // Retains companyId etc. set earlier
           screeningQuestions: [],
           status: 'pending',
         }));
@@ -220,7 +268,12 @@ export function PostJobForm() {
     } else {
       setJobData((prev) => {
         let newValue: string | number | undefined = value;
-        if (name === 'salaryMin' || name === 'salaryMax') {
+        if (
+          name === 'salaryMin' ||
+          name === 'salaryMax' ||
+          name === 'minExperienceYears' ||
+          name === 'maxExperienceYears'
+        ) {
           newValue = value === '' ? undefined : parseFloat(value);
           if (isNaN(newValue as number)) newValue = undefined;
         }
@@ -241,8 +294,27 @@ export function PostJobForm() {
     }));
   };
 
+  const handleBenefitsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setBenefitsInput(val);
+    setJobData((prev) => ({
+      ...prev,
+      benefits: val
+        .split(',')
+        .map((benefit) => benefit.trim())
+        .filter((benefit) => benefit),
+    }));
+  };
+
   const handleSelectChange = (name: keyof Job, value: string) => {
-    setJobData((prev) => ({ ...prev, [name]: value as Job['type'] }));
+    setJobData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (fieldName: keyof Job, date: Date | undefined) => {
+    setJobData((prev) => ({
+      ...prev,
+      [fieldName]: date ? format(date, 'yyyy-MM-dd') : undefined,
+    }));
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -280,6 +352,7 @@ export function PostJobForm() {
             variant: 'destructive',
             duration: 9000,
           });
+          // Keep potentially useful fields
           setJobData((prev) => ({
             ...prev,
             title: parsedData.title || prev.title,
@@ -288,6 +361,20 @@ export function PostJobForm() {
             type: parsedData.jobType || prev.type,
             salaryMin: parsedData.salaryMin ?? prev.salaryMin,
             salaryMax: parsedData.salaryMax ?? prev.salaryMax,
+            industry: parsedData.industry || prev.industry,
+            department: parsedData.department || prev.department,
+            roleDesignation: parsedData.roleDesignation || prev.roleDesignation,
+            experienceLevel: parsedData.experienceLevel || prev.experienceLevel,
+            minExperienceYears:
+              parsedData.minExperienceYears ?? prev.minExperienceYears,
+            maxExperienceYears:
+              parsedData.maxExperienceYears ?? prev.maxExperienceYears,
+            educationQualification:
+              parsedData.educationQualification || prev.educationQualification,
+            applicationDeadline:
+              parsedData.applicationDeadline || prev.applicationDeadline,
+            payTransparency: parsedData.payTransparency ?? prev.payTransparency,
+            benefits: parsedData.benefits || prev.benefits,
           }));
         } else {
           setJobData((prev) => ({
@@ -299,6 +386,24 @@ export function PostJobForm() {
             type: parsedData.jobType || prev.type,
             salaryMin: parsedData.salaryMin ?? prev.salaryMin,
             salaryMax: parsedData.salaryMax ?? prev.salaryMax,
+            industry: parsedData.industry || prev.industry,
+            department: parsedData.department || prev.department,
+            roleDesignation: parsedData.roleDesignation || prev.roleDesignation,
+            experienceLevel:
+              parsedData.experienceLevel ||
+              prev.experienceLevel ||
+              'Entry-Level',
+            minExperienceYears:
+              parsedData.minExperienceYears ?? prev.minExperienceYears,
+            maxExperienceYears:
+              parsedData.maxExperienceYears ?? prev.maxExperienceYears,
+            educationQualification:
+              parsedData.educationQualification || prev.educationQualification,
+            applicationDeadline:
+              parsedData.applicationDeadline || prev.applicationDeadline,
+            payTransparency:
+              parsedData.payTransparency ?? prev.payTransparency ?? true,
+            benefits: parsedData.benefits || prev.benefits || [],
           }));
           toast({
             title: 'Document Parsed',
@@ -308,6 +413,9 @@ export function PostJobForm() {
 
         if (parsedData.skills && parsedData.skills.length > 0) {
           setSkillsInput(parsedData.skills.join(', '));
+        }
+        if (parsedData.benefits && parsedData.benefits.length > 0) {
+          setBenefitsInput(parsedData.benefits.join(', '));
         }
         setFile(null);
       };
@@ -373,10 +481,17 @@ export function PostJobForm() {
       });
       return;
     }
-    if (!jobData.title || !jobData.description) {
+    if (
+      !jobData.title ||
+      !jobData.description ||
+      !jobData.industry ||
+      !jobData.department ||
+      !jobData.experienceLevel
+    ) {
       toast({
         title: 'Missing Fields',
-        description: 'Job title and description are required.',
+        description:
+          'Job title, description, industry, department, and experience level are required.',
         variant: 'destructive',
       });
       return;
@@ -385,16 +500,34 @@ export function PostJobForm() {
 
     try {
       const jobPayloadForFirestore: Record<string, unknown> = {
-        title: jobData.title || '',
+        title: jobData.title,
         company: currentCompanyDetails.name || 'N/A Company',
         companyId: user.companyId,
         location: jobData.location || '',
         type: jobData.type || 'Full-time',
-        description: jobData.description || '',
+        description: jobData.description,
         isRemote: jobData.isRemote || false,
         skills: jobData.skills || [],
         salaryMin: jobData.salaryMin === undefined ? null : jobData.salaryMin,
         salaryMax: jobData.salaryMax === undefined ? null : jobData.salaryMax,
+        payTransparency: jobData.payTransparency ?? true,
+        benefits: jobData.benefits || [],
+        industry: jobData.industry,
+        department: jobData.department,
+        roleDesignation: jobData.roleDesignation || null,
+        experienceLevel: jobData.experienceLevel,
+        minExperienceYears:
+          jobData.minExperienceYears === undefined
+            ? null
+            : jobData.minExperienceYears,
+        maxExperienceYears:
+          jobData.maxExperienceYears === undefined
+            ? null
+            : jobData.maxExperienceYears,
+        educationQualification: jobData.educationQualification || null,
+        applicationDeadline: jobData.applicationDeadline
+          ? Timestamp.fromDate(new Date(jobData.applicationDeadline as string))
+          : null,
         companyLogoUrl: currentCompanyDetails.logoUrl || null,
         postedById: user.uid,
         updatedAt: serverTimestamp(),
@@ -435,6 +568,7 @@ export function PostJobForm() {
           screeningQuestions: [],
         });
         setSkillsInput('');
+        setBenefitsInput('');
         setFile(null);
       }
       router.push('/employer/posted-jobs');
@@ -658,9 +792,10 @@ export function PostJobForm() {
             onSubmit={handleFormSubmitWithConfirmation}
             className="space-y-6"
           >
+            {/* Core Job Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="title">Job Title</Label>
+                <Label htmlFor="title">Job Title *</Label>
                 <Input
                   id="title"
                   name="title"
@@ -727,6 +862,213 @@ export function PostJobForm() {
               </div>
             </div>
 
+            {/* Compensation and Benefits */}
+            <Card className="p-4 bg-muted/20">
+              <h3 className="text-lg font-semibold mb-3">
+                II. Compensation and Benefits
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="salaryMin">Salary Minimum (Annual INR)</Label>
+                  <Input
+                    id="salaryMin"
+                    name="salaryMin"
+                    type="number"
+                    placeholder="e.g., 800000"
+                    value={
+                      jobData.salaryMin === undefined ? '' : jobData.salaryMin
+                    }
+                    onChange={handleChange}
+                    aria-label="Minimum Salary"
+                  />
+                  {jobData.salaryMin !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Formatted: {formatCurrencyINR(jobData.salaryMin)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="salaryMax">Salary Maximum (Annual INR)</Label>
+                  <Input
+                    id="salaryMax"
+                    name="salaryMax"
+                    type="number"
+                    placeholder="e.g., 1200000"
+                    value={
+                      jobData.salaryMax === undefined ? '' : jobData.salaryMax
+                    }
+                    onChange={handleChange}
+                    aria-label="Maximum Salary"
+                  />
+                  {jobData.salaryMax !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Formatted: {formatCurrencyINR(jobData.salaryMax)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 pt-4">
+                <Checkbox
+                  id="payTransparency"
+                  name="payTransparency"
+                  checked={jobData.payTransparency ?? true}
+                  onCheckedChange={(checked) =>
+                    setJobData((prev) => ({
+                      ...prev,
+                      payTransparency: Boolean(checked),
+                    }))
+                  }
+                  aria-labelledby="payTransparencyLabel"
+                />
+                <Label
+                  htmlFor="payTransparency"
+                  className="font-medium"
+                  id="payTransparencyLabel"
+                >
+                  Show salary range to applicants
+                </Label>
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="benefitsInput">
+                  Benefits (comma-separated)
+                </Label>
+                <Input
+                  id="benefitsInput"
+                  name="benefits"
+                  value={benefitsInput}
+                  onChange={handleBenefitsChange}
+                  placeholder="e.g., Health Insurance, PTO, Remote Work"
+                  aria-label="Benefits"
+                />
+              </div>
+            </Card>
+
+            {/* Job Details */}
+            <Card className="p-4 bg-muted/20">
+              <h3 className="text-lg font-semibold mb-3">III. Job Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="industry">Industry *</Label>
+                  <Input
+                    id="industry"
+                    name="industry"
+                    value={jobData.industry || ''}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., Technology, Finance, Healthcare"
+                    aria-label="Industry"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="department">
+                    Functional Area/Department *
+                  </Label>
+                  <Input
+                    id="department"
+                    name="department"
+                    value={jobData.department || ''}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g., Engineering, Marketing, Sales"
+                    aria-label="Department"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="roleDesignation">
+                  Role/Designation (Specific Title)
+                </Label>
+                <Input
+                  id="roleDesignation"
+                  name="roleDesignation"
+                  value={jobData.roleDesignation || ''}
+                  onChange={handleChange}
+                  placeholder="e.g., Frontend Lead, Product Marketing Manager"
+                  aria-label="Role Designation"
+                />
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="experienceLevel">Experience Level *</Label>
+                <Select
+                  value={jobData.experienceLevel || 'Entry-Level'}
+                  onValueChange={(value) =>
+                    handleSelectChange(
+                      'experienceLevel',
+                      value as JobExperienceLevel
+                    )
+                  }
+                  required
+                >
+                  <SelectTrigger
+                    id="experienceLevel"
+                    aria-label="Select experience level"
+                  >
+                    <SelectValue placeholder="Select experience level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {experienceLevelOptions.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <Label htmlFor="minExperienceYears">
+                    Min. Years of Experience
+                  </Label>
+                  <Input
+                    id="minExperienceYears"
+                    name="minExperienceYears"
+                    type="number"
+                    placeholder="e.g., 2"
+                    value={
+                      jobData.minExperienceYears === undefined
+                        ? ''
+                        : jobData.minExperienceYears
+                    }
+                    onChange={handleChange}
+                    min="0"
+                    aria-label="Minimum Years of Experience"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="maxExperienceYears">
+                    Max. Years of Experience
+                  </Label>
+                  <Input
+                    id="maxExperienceYears"
+                    name="maxExperienceYears"
+                    type="number"
+                    placeholder="e.g., 5"
+                    value={
+                      jobData.maxExperienceYears === undefined
+                        ? ''
+                        : jobData.maxExperienceYears
+                    }
+                    onChange={handleChange}
+                    min="0"
+                    aria-label="Maximum Years of Experience"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="educationQualification">
+                  Education Qualification
+                </Label>
+                <Input
+                  id="educationQualification"
+                  name="educationQualification"
+                  value={jobData.educationQualification || ''}
+                  onChange={handleChange}
+                  placeholder="e.g., Bachelor's in CS, MBA"
+                  aria-label="Education Qualification"
+                />
+              </div>
+            </Card>
+
             <div>
               <Label htmlFor="skills">Required Skills (comma-separated)</Label>
               <Input
@@ -738,54 +1080,8 @@ export function PostJobForm() {
                 aria-label="Required Skills"
               />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="salaryMin">
-                  Salary Minimum (Annual INR, Optional)
-                </Label>
-                <Input
-                  id="salaryMin"
-                  name="salaryMin"
-                  type="number"
-                  placeholder="e.g., 800000"
-                  value={
-                    jobData.salaryMin === undefined ? '' : jobData.salaryMin
-                  }
-                  onChange={handleChange}
-                  aria-label="Minimum Salary"
-                />
-                {jobData.salaryMin !== undefined && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Formatted: {formatCurrencyINR(jobData.salaryMin)}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="salaryMax">
-                  Salary Maximum (Annual INR, Optional)
-                </Label>
-                <Input
-                  id="salaryMax"
-                  name="salaryMax"
-                  type="number"
-                  placeholder="e.g., 1200000"
-                  value={
-                    jobData.salaryMax === undefined ? '' : jobData.salaryMax
-                  }
-                  onChange={handleChange}
-                  aria-label="Maximum Salary"
-                />
-                {jobData.salaryMax !== undefined && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Formatted: {formatCurrencyINR(jobData.salaryMax)}
-                  </p>
-                )}
-              </div>
-            </div>
-
             <div>
-              <Label htmlFor="description">Job Description</Label>
+              <Label htmlFor="description">Job Description *</Label>
               <Textarea
                 id="description"
                 name="description"
@@ -797,6 +1093,48 @@ export function PostJobForm() {
                 aria-label="Job Description"
               />
             </div>
+
+            {/* Application Process */}
+            <Card className="p-4 bg-muted/20">
+              <h3 className="text-lg font-semibold mb-3">
+                V. Application Process
+              </h3>
+              <div>
+                <Label htmlFor="applicationDeadline">
+                  Application Deadline
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start text-left font-normal ${!jobData.applicationDeadline && 'text-muted-foreground'}`}
+                      aria-label="Pick application deadline"
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {appDeadlineDate ? (
+                        format(appDeadlineDate, 'PPP')
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={appDeadlineDate}
+                      onSelect={(date) =>
+                        handleDateChange('applicationDeadline', date)
+                      }
+                      captionLayout="dropdown"
+                      fromYear={new Date().getFullYear()}
+                      toYear={new Date().getFullYear() + 5}
+                      defaultMonth={appDeadlineDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </Card>
 
             <div className="space-y-4 p-4 border rounded-md bg-muted/20">
               <h3 className="text-lg font-semibold">
@@ -839,6 +1177,10 @@ export function PostJobForm() {
                           <SelectContent>
                             <SelectItem value="text">Text Input</SelectItem>
                             <SelectItem value="yesNo">Yes/No</SelectItem>
+                            {/* Future types:
+                            <SelectItem value="multipleChoice">Multiple Choice</SelectItem>
+                            <SelectItem value="checkboxGroup">Checkbox Group</SelectItem>
+                            */}
                           </SelectContent>
                         </Select>
                       </div>
