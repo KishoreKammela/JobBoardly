@@ -60,7 +60,6 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const pathname = usePathname();
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);

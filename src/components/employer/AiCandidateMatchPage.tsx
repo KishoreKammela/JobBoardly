@@ -28,7 +28,6 @@ import type {
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
-  Job,
 } from '@/types';
 import { CandidateCard } from '@/components/employer/CandidateCard';
 import { db } from '@/lib/firebase';

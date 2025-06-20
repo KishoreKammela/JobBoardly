@@ -56,7 +56,7 @@ export default function ProfilePreviewPage() {
   const { toast } = useToast(); // Added
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // Kept for actual data errors if any
+  const [error] = useState<string | null>(null); // Kept for actual data errors if any
   const printableProfileRef = React.useRef<HTMLDivElement>(null);
 
   const handlePrintProfile = useReactToPrint({

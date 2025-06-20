@@ -10,7 +10,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { JobExperienceLevel } from '@/types';
 
 const ParseJobDescriptionInputSchema = z.object({
   jobDescriptionDataUri: z

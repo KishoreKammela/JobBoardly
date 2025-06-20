@@ -37,12 +37,8 @@ import {
   RotateCcw,
   HelpCircle,
   Ban,
-  Users,
-  BookOpen,
   Award,
-  Network,
   Sparkles as BenefitsIcon,
-  GraduationCap as EducationIcon,
   Clock,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
