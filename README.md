@@ -40,6 +40,7 @@ JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Em
 - **Future Vision & Roadmaps**:
   - See our ambitious **[AI Features Roadmap](./docs/ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
   - Explore our broader **[Platform Enhancement Roadmap](./docs/enhanced-feature-recommendations.md)** for a comprehensive look at planned features and long-term vision.
+  - Review our detailed **[Notification & Email System Plan](./docs/notification-system-plan.md)** for engaging user communication.
 
 ## Folder Structure
 
@@ -80,8 +81,9 @@ A high-level overview of the project's directory structure:
 │   ├── employer-features.md
 │   ├── job-seeker-features.md
 │   ├── routes-documentation.md
-│   ├── ai-features-roadmap.md  # New AI Roadmap
-│   └── enhanced-feature-recommendations.md # New General Roadmap
+│   ├── ai-features-roadmap.md
+│   ├── enhanced-feature-recommendations.md
+│   └── notification-system-plan.md # New Notification System Plan
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml

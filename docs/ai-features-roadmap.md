@@ -35,7 +35,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 #### **AI Resume Builder & Optimizer**
 
 - **Role-Specific Resume Generation**: Generate different resume versions optimized for specific job types
-- **Dynamic Summary Generator**: Create compelling professional summaries based on target role and company _(Initial version implemented for profile page)_
+- **Dynamic Summary Generator**: Create compelling professional summaries based on target role and company _(Initial version implemented for profile page; full functionality and admin toggle pending)_
 - **Bullet Point Optimizer**: Transform weak bullet points into impact-driven statements
 - **Format Optimizer**: Suggest best resume format based on industry and career level
 
@@ -173,7 +173,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ### **Phase 1 (Months 1-6): Foundation**
 
-- Enhanced profile optimization features (includes initial Dynamic Summary Generator - _implemented_)
+- Enhanced profile optimization features (includes initial Dynamic Summary Generator - _partially implemented_)
 - Basic conversational search
 - Application success predictor
 - Job description optimizer

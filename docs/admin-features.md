@@ -14,10 +14,10 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 
 - **Full platform control.**
 - Can manage all other admin types (SuperAdmins, Admins, Moderators, Support Agents, Data Analysts, etc.).
-- Access to sensitive operations (e.g., data exports, critical system settings, AI Feature Toggles).
+- Access to sensitive operations (e.g., data exports, critical system settings, AI Feature Toggles, Notification System Toggles).
 - Can create/delete/suspend/activate any platform staff account.
 - Can perform all content moderation and user (Job Seeker, Employer) management tasks.
-- Manages platform-wide feature toggles (future capability, placeholder UI exists).
+- Manages platform-wide feature toggles.
 
 ### 2.2. Administrator
 
@@ -26,7 +26,7 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 - Can manage Moderators, Support Agents, and Data Analysts.
 - Full content moderation capabilities (jobs, companies).
 - Full Job Seeker management capabilities.
-- May have access to some feature toggles (future capability).
+- May have access to some feature toggles (e.g., enabling/disabling certain AI or notification features for specific user groups, subject to SuperAdmin approval).
 
 ### 2.3. Content Moderator
 
@@ -37,14 +37,14 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 - Primary focus on content quality and adherence to platform guidelines.
 - Can view job details, including screening questions (for context during moderation).
 
-### 2.4. Support Agent (Foundational Implementation)
+### 2.4. Support Agent
 
 - **User support focused.**
 - Can view user profiles (Job Seekers, Employers, other Platform Staff) and application history.
 - **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can primarily view data tables but cannot perform modification actions (e.g., suspend users, approve content). Can view job details, including screening questions.
 - **Future Enhancements (from Roadmap):** Will have tools to reset passwords, handle basic account issues, and escalate complex issues. Will use a dedicated Support Agent Dashboard.
 
-### 2.5. Data Analyst (Foundational Implementation)
+### 2.5. Data Analyst
 
 - **Analytics and reporting focused.**
 - **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can view the Platform Analytics overview and other data tables (including jobs with screening questions) but cannot perform modification actions.
@@ -120,7 +120,7 @@ The central hub for administrative tasks, accessible after logging in via the Ad
 
 - **AI Feature Management Tab (Conceptual Placeholder):** (Visible to SuperAdmins only)
   - A placeholder UI to indicate where future controls for enabling/disabling specific AI features (e.g., AI Career Path Advisor, Dynamic Summary Generator, AI Recruiter Assistant) will reside. Currently non-functional.
-  - This section will be expanded into a comprehensive "Platform Feature Toggle Management" system as a high-priority future enhancement, allowing granular control over all new platform and AI features.
+  - This section will be expanded into a comprehensive "Platform Feature Toggle Management" system.
 
 ### 3.2. Protected Admin Route & Login
 
@@ -193,32 +193,44 @@ graph TD
 
 ## 6. Future Enhancements / Detailed Roadmap
 
-This section outlines the comprehensive plan for evolving the JobBoardly Admin Panel, based on the enhanced requirements provided.
+This section outlines the comprehensive plan for evolving the JobBoardly Admin Panel, based on the enhanced requirements and future roadmaps.
 
-**Prerequisite: Platform Feature Toggle Management System**
-A robust system within the Admin Panel (likely under a dedicated "System Administration" or "Feature Management" tab, primarily for SuperAdmins/Admins) to enable or disable specific platform features is a **critical prerequisite** for rolling out most new functionalities detailed in the platform's roadmaps (both AI and general enhancements). This system will ensure controlled deployment and adherence to the requirement that new features are not available to all users by default. This involves backend logic for feature flags, database changes to store flag states, and checks throughout the application where features are conditionally rendered or executed.
+### Prerequisite: Platform Feature Toggle Management System
 
-### Phase 1 (High Priority - Immediate Next Steps)
+A robust system within the Admin Panel (likely under a dedicated "System Administration" or "Feature Management" tab, primarily for SuperAdmins/Admins) to enable or disable specific platform features is a **critical prerequisite** for rolling out most new functionalities. This applies to:
 
-1.  **Full Functionality for New Roles:**
-    - **Support Agent:** Implement tools for password resets, basic account issue handling, and an issue escalation system. Create a dedicated (or heavily adapted) dashboard view for support tickets and user lookups.
-    - **Data Analyst:** Develop initial read-only advanced data views/dashboards if different from the main admin overview. Begin work on a simple report generation tool.
+- All features listed in the [AI Features Roadmap](./ai-features-roadmap.md).
+- All features listed in the [Platform Enhancement Roadmap](./enhanced-feature-recommendations.md).
+- All notification types and behaviors detailed in the [Notification & Email System Plan](./notification-system-plan.md).
+
+This system must allow:
+
+- Global toggles for major features.
+- Potentially granular toggles for sub-features or specific user roles (Job Seeker, Employer).
+- Backend logic for feature flags, database changes to store flag states, and checks throughout the application where features are conditionally rendered or executed.
+- **This feature toggle system is a high-priority item for the next phase of development.**
+
+### Phase 1 (High Priority - Next Steps, post current implementation)
+
+1.  **Full Functionality for New Roles (Iterative Development):**
+    - **Support Agent:** Implement tools for password resets, basic account issue handling, and an issue escalation system. Begin work on a dedicated (or heavily adapted) dashboard view for support tickets and user lookups.
+    - **Data Analyst:** Develop initial read-only advanced data views/dashboards. Start work on a simple report generation tool.
 2.  **Basic Audit Logging System:**
-    - Start logging critical admin actions to Firestore (e.g., user status changes, job/company approvals/rejections, platform user role changes). Create a simple interface for SuperAdmins to view these logs.
+    - Start logging critical admin actions to Firestore (e.g., user status changes, job/company approvals/rejections, platform user role changes, feature toggle changes). Create a simple interface for SuperAdmins/Admins to view these logs.
 3.  **Basic Bulk Operations (Content):**
-    - Implement basic bulk approval/rejection for pending jobs and companies in the respective admin tables if not already fully robust.
-4.  **Implement Platform Feature Toggle Management System (as described above).**
+    - Enhance bulk approval/rejection for pending jobs and companies in the respective admin tables if not already fully robust.
+4.  **Implement the Platform Feature Toggle Management System (as described above).** This is foundational for enabling other roadmap items.
 
-### Phase 2 (Medium Priority)
+### Phase 2 (Medium Priority - Following successful Phase 1)
 
 1.  **Introduce New User Roles (Full Implementation):**
     - **Compliance Officer:** Develop tools for reviewing flagged content, managing privacy requests (data access/deletion stubs), and viewing audit trails relevant to compliance.
-    - **System Monitor:** Create a dashboard to display (mock or basic) system health metrics, error log summaries (if available/integrated), and alert examples.
+    - **System Monitor:** Create a dashboard to display (mock or basic) system health metrics, error log summaries, and alert examples.
 2.  **Advanced Content Quality Tools (Initial):**
     - Basic duplicate detection for job postings (flag potential duplicates).
     - Profile completeness indicators for job seekers and companies, visible in admin views.
-3.  **Communication & Notification Management (Initial):**
-    - Admin-to-user notification system: Allow admins to send targeted email notifications to user segments.
+3.  **Communication & Notification Management (Initial - based on [Notification Plan](./notification-system-plan.md)):**
+    - Admin-to-user notification system: Allow admins to send targeted email notifications to user segments (controlled by feature toggles).
     - Basic internal admin notes on user/company/job records.
 4.  **Custom Reporting System (Basic):**
     - Allow Data Analysts (and SuperAdmins) to generate pre-defined exportable reports (CSV/Excel) for key metrics.
@@ -228,26 +240,29 @@ A robust system within the Admin Panel (likely under a dedicated "System Adminis
 6.  **Bulk User Operations (Initial):**
     - Allow selection of multiple users (job seekers first) for status changes (suspend/activate).
 
-### Phase 3 (Long-term) & Beyond (Based on provided "Enhanced Admin Features" document)
+### Phase 3 & Beyond (Long-term - Based on provided Roadmaps & Plans)
 
-This phase will encompass the full implementation of the features detailed in the "Enhanced Admin Features" document, controlled by the Platform Feature Toggle system. This includes:
+This phase will encompass the full implementation of the features detailed in the:
 
-1.  **Full Role-Based Dashboards:** Implement dedicated, streamlined dashboard UIs for each admin role (Content Moderator, Support Agent, Data Analyst, Compliance Officer, System Monitor).
-2.  **Advanced User Management:** CSV import/export, batch notifications, user lifecycle management (verification, onboarding), advanced filters (registration date, last activity, profile completion, geo distribution, status history).
-3.  **Advanced Content Management:**
-    - **Jobs:** AI Job quality scoring, full duplicate detection, salary validation, job performance analytics, job templates.
-    - **Companies:** Company verification levels, document verification, website/domain verification, social media verification, compliance tracking.
-    - **Moderation:** AI content flagging, user reporting system, content categorization, plagiarism detection.
-4.  **Advanced Analytics & Reporting:** Real-time dashboards, custom report builder, scheduled reports, data visualization, comparative analysis, predictive analytics (user churn, job success, market trends, capacity planning).
-5.  **Advanced Communication & Notification:** Custom templates, targeted/scheduled notifications, A/B testing, internal admin chat, task assignment, knowledge base, escalation workflows.
+- [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md) (General Platform Enhancements)
+- [AI Features Roadmap](./ai-features-roadmap.md) (AI-Specific Features)
+- [Notification & Email System Plan](./notification-system-plan.md) (Communication Features)
+
+All features will be controlled by the Platform Feature Toggle system. Key areas include:
+
+1.  **Full Role-Based Dashboards:** Dedicated, streamlined UIs for each admin role.
+2.  **Advanced User Management:** CSV import/export, batch notifications, user lifecycle tools, advanced filters.
+3.  **Advanced Content Management:** AI job quality scoring, full duplicate detection, company verification levels, AI content flagging, user reporting, plagiarism detection.
+4.  **Advanced Analytics & Reporting:** Real-time dashboards, custom report builder, scheduled reports, data visualization, predictive analytics.
+5.  **Advanced Communication & Notification:** Full implementation of the Notification System Plan, including custom templates, targeted/scheduled notifications, A/B testing, internal admin chat, task assignment, knowledge base, escalation workflows.
 6.  **Full Security & Compliance:** Comprehensive audit logs, data retention policies, GDPR/CCPA tools, 2FA enforcement, data breach response, IP management, session management.
-7.  **Full System Administration:** System maintenance mode, email template UI, rate limiting config, integration management (third-party services, API keys, webhooks), database optimization tools.
+7.  **Full System Administration:** System maintenance mode, email template UI, rate limiting config, integration management, database optimization tools.
 8.  **Full QA & Testing Tools:** User impersonation, test data management, feature testing panel, error reproduction tools.
-9.  **Advanced UI Components:** Smart filters (saved sets, AI suggestions, sharing), workflow management (task queues, priority management, batch processing, progress tracking).
+9.  **Advanced UI Components:** Smart filters, workflow management.
 
-### Technical Considerations (To be addressed throughout development - from provided document)
+### Technical Considerations (To be addressed throughout development)
 
-- **Database Design:** Implement tables/collections for granular permissions, comprehensive audit logs, flexible platform settings, and workflow task queues.
+- **Database Design:** Implement tables/collections for granular permissions, comprehensive audit logs, flexible platform settings (including feature flags), and workflow task queues.
 - **Security:** Adhere to the principle of least privilege, implement action confirmations, enhance session security, and encrypt sensitive admin data.
 - **Performance:** Utilize lazy loading, caching, efficient pagination, and background processing for long-running tasks.
 
