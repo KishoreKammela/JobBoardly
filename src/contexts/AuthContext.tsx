@@ -85,6 +85,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const ADMIN_LIKE_ROLES: UserRole[] = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+  'complianceOfficer',
+  'systemMonitor',
+];
+
 const createEmptyExperience = (): ExperienceEntry => ({
   id: uuidv4(),
   companyName: '',
@@ -1248,7 +1258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [firebaseUser]
+    [firebaseUser, toast] // Added toast to dependency array
   );
 
   const markAllNotificationsAsRead = useCallback(async () => {
@@ -1274,7 +1284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
     }
-  }, [firebaseUser, notifications]);
+  }, [firebaseUser, notifications, toast]); // Added toast to dependency array
 
   return (
     <AuthContext.Provider
