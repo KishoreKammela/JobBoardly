@@ -234,9 +234,9 @@ export default function AdminPage() {
         pendingJobsSnapshot.docs.map((d) => {
           const data = d.data();
           return {
-            id: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            id: d.id,
           } as Job;
         })
       );
@@ -252,9 +252,9 @@ export default function AdminPage() {
         pendingCompaniesSnapshot.docs.map((d) => {
           const data = d.data();
           return {
-            id: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            id: d.id,
           } as Company;
         })
       );
@@ -269,7 +269,6 @@ export default function AdminPage() {
         allCompaniesSnapshot.docs.map(async (companyDoc) => {
           const companyData = companyDoc.data();
           const company = {
-            id: companyDoc.id,
             ...companyData,
             createdAt: (companyData.createdAt as Timestamp)
               ?.toDate()
@@ -277,6 +276,7 @@ export default function AdminPage() {
             updatedAt: (companyData.updatedAt as Timestamp)
               ?.toDate()
               .toISOString(),
+            id: companyDoc.id,
           } as Company;
 
           const jobCountQuery = query(
@@ -309,12 +309,12 @@ export default function AdminPage() {
         jobSeekersSnapshot.docs.map((d) => {
           const data = d.data();
           return {
-            uid: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
             updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
             lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
             jobsAppliedCount: (data.appliedJobIds || []).length,
+            uid: d.id,
           } as UserProfile;
         })
       );
@@ -329,11 +329,11 @@ export default function AdminPage() {
         platformUsersSnapshot.docs.map((d) => {
           const data = d.data();
           return {
-            uid: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
             updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
             lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
+            uid: d.id,
           } as UserProfile;
         })
       );
@@ -346,9 +346,10 @@ export default function AdminPage() {
       const allJobsSnapshot = await getDocs(allJobsQuery);
       const jobsData = await Promise.all(
         allJobsSnapshot.docs.map(async (jobDoc) => {
+          const jobData = jobDoc.data();
           const job = {
+            ...jobData,
             id: jobDoc.id,
-            ...jobDoc.data(),
           } as Job;
           const appCountQuery = query(
             collection(db, 'applications'),
@@ -628,7 +629,7 @@ export default function AdminPage() {
     if (user.role === 'admin') {
       if (
         !isTargetListedAsJobSeeker &&
-        targetUser.role !== 'moderator' &&
+        targetUser.uid !== user.uid &&
         (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
       ) {
         toast({
@@ -2080,7 +2081,7 @@ export default function AdminPage() {
                           if (user.role === 'admin') {
                             return u.role === 'moderator';
                           }
-                          return false;
+                          return false; // Moderators cannot manage anyone
                         };
                         const isActionDisabled =
                           specificActionLoading === `user-${u.uid}` ||
