@@ -127,7 +127,7 @@ export function AISummaryGeneratorSection({
         <CardDescription>
           Let AI help you craft a professional summary tailored to a specific
           role or company. The generated summary will appear below, and you can
-          choose to use it in your "Professional Summary" field.
+          choose to use it in your &quot;Professional Summary&quot; field.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -31,7 +31,7 @@ const AdminAiFeatures: React.FC = () => {
             specific AI features (e.g., AI Career Path Advisor, Dynamic Summary
             Generator targeting, AI Recruiter Assistant) will be implemented
             here in future development phases. This will expand into a
-            comprehensive "Platform Feature Toggle Management" system.
+            comprehensive &quot;Platform Feature Toggle Management&quot; system.
           </AlertDescription>
         </Alert>
         <div className="mt-6 p-4 border rounded-md bg-muted/30">

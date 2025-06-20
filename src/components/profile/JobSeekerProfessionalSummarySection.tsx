@@ -12,7 +12,6 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Sparkles, Award, Clock } from 'lucide-react';
-import { formatCurrencyINR } from '@/lib/utils';
 
 interface JobSeekerProfessionalSummarySectionProps {
   userFormData: Partial<UserProfile>;

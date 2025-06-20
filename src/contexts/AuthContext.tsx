@@ -7,6 +7,8 @@ import type {
   EducationEntry,
   LanguageEntry,
   Notification,
+  SavedSearch,
+  SavedCandidateSearch,
 } from '@/types';
 import React, {
   createContext,
@@ -46,7 +48,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
-import { toast } from '@/hooks/use-toast';
+import { toast as globalToast } from '@/hooks/use-toast'; // Renamed to avoid conflict
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -208,7 +210,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setNotifications([]);
               setUnreadNotificationCount(0);
               setLoading(false);
-              toast({
+              globalToast({
+                // Use renamed import
                 title: 'Account Deactivated',
                 description:
                   'Your account has been deactivated. Please contact support for assistance.',
@@ -751,7 +754,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompany(null);
           setNotifications([]);
           setUnreadNotificationCount(0);
-          toast({
+          globalToast({
+            // Use renamed import
             title: 'Account Deactivated',
             description:
               'This account has been deactivated. Please contact support.',
@@ -1243,14 +1247,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUnreadNotificationCount((prev) => Math.max(0, prev - 1));
       } catch (error: unknown) {
         console.error('Error marking notification as read:', error);
-        toast({
+        globalToast({
+          // Use renamed import
           title: 'Error',
           description: 'Could not update notification status.',
           variant: 'destructive',
         });
       }
     },
-    [firebaseUser, toast]
+    [firebaseUser]
   );
 
   const markAllNotificationsAsRead = useCallback(async () => {
@@ -1270,13 +1275,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUnreadNotificationCount(0);
     } catch (error: unknown) {
       console.error('Error marking all notifications as read:', error);
-      toast({
+      globalToast({
+        // Use renamed import
         title: 'Error',
         description: 'Could not update all notification statuses.',
         variant: 'destructive',
       });
     }
-  }, [firebaseUser, notifications, toast]);
+  }, [firebaseUser, notifications]);
 
   return (
     <AuthContext.Provider

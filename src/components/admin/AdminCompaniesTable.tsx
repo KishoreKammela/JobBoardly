@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { Company, UserRole } from '@/types';
+import type { Company } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +53,6 @@ function getSortableValue<T>(
 interface AdminCompaniesTableProps {
   companies: Company[];
   isLoading: boolean;
-  currentUserRole?: UserRole;
   showConfirmationModal: (
     title: string,
     description: React.ReactNode,
@@ -73,7 +72,6 @@ interface AdminCompaniesTableProps {
 const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
   companies,
   isLoading,
-  currentUserRole,
   showConfirmationModal,
   handleCompanyStatusUpdate,
   specificActionLoading,

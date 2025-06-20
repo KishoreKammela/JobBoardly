@@ -230,11 +230,14 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           title: 'Applied!',
           description: `You've applied for ${jobData.title} at ${jobData.company}.`,
         });
-      } catch (e: any) {
-        if (e.message !== 'Already applied or application process started.') {
+      } catch (e: unknown) {
+        const error = e as Error;
+        if (
+          error.message !== 'Already applied or application process started.'
+        ) {
           toast({
             title: 'Application Failed',
-            description: e.message || 'Could not submit your application.',
+            description: error.message || 'Could not submit your application.',
             variant: 'destructive',
           });
         }
@@ -318,7 +321,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         title: 'Application Withdrawn',
         description: `Your application for ${jobData.title} has been withdrawn.`,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       toast({
         title: 'Error',
         description: 'Failed to withdraw application.',

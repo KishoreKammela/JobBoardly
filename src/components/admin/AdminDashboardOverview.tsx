@@ -22,7 +22,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
-import type { Job, Company, UserRole } from '@/types';
+import type { Job, Company } from '@/types';
 
 interface PlatformStats {
   totalJobSeekers: number;

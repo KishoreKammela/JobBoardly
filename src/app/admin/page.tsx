@@ -1,12 +1,5 @@
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -19,14 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  AlertCircle,
-  ShieldCheck,
-  Loader2,
-  BarChart3,
-  Gavel,
-  Cpu,
-} from 'lucide-react';
+import { AlertCircle, ShieldCheck, Loader2, Gavel, Cpu } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import React, { useEffect, useState, useCallback } from 'react';
@@ -164,7 +150,7 @@ export default function AdminPage() {
         );
       }
       setIsLegalContentLoaded((prev) => ({ ...prev, terms: true }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching legal content:', error);
       toast({
         title: 'Error Fetching Legal Docs',
@@ -712,7 +698,7 @@ export default function AdminPage() {
         title: 'Success',
         description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error saving ${docId}:`, error);
       toast({
         title: 'Error Saving Document',
@@ -868,7 +854,6 @@ export default function AdminPage() {
           <AdminCompaniesTable
             companies={allCompanies}
             isLoading={isAllCompaniesLoading}
-            currentUserRole={user?.role}
             showConfirmationModal={showConfirmationModal}
             handleCompanyStatusUpdate={handleCompanyStatusUpdate}
             specificActionLoading={specificActionLoading}
