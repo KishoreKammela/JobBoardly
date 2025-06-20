@@ -48,7 +48,7 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
-import { toast as globalToast } from '@/hooks/use-toast'; // Renamed to avoid conflict
+import { toast as globalToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -211,7 +211,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUnreadNotificationCount(0);
               setLoading(false);
               globalToast({
-                // Use renamed import
                 title: 'Account Deactivated',
                 description:
                   'Your account has been deactivated. Please contact support for assistance.',
@@ -755,7 +754,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setNotifications([]);
           setUnreadNotificationCount(0);
           globalToast({
-            // Use renamed import
             title: 'Account Deactivated',
             description:
               'This account has been deactivated. Please contact support.',
@@ -1152,10 +1150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     if (actualChanges.length > 0 || Object.keys(updatedData).length > 0) {
-      // Also update if only timestamps are changing
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState = { ...user } as UserProfile; // Start with current user state
+        const updatedUserForState = { ...user } as UserProfile;
         for (const key in payloadForFirestore) {
           if (key !== 'updatedAt' && key !== 'lastActive') {
             const typedKey = key as keyof UserProfile;
@@ -1163,7 +1160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               payloadForFirestore[key] as UserProfile[typeof typedKey];
           }
         }
-        updatedUserForState.updatedAt = new Date().toISOString(); // Set client-side optimistic update
+        updatedUserForState.updatedAt = new Date().toISOString();
         updatedUserForState.lastActive = new Date().toISOString();
         setUser(updatedUserForState);
         if (updatedData.theme) {
@@ -1248,7 +1245,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error: unknown) {
         console.error('Error marking notification as read:', error);
         globalToast({
-          // Use renamed import
           title: 'Error',
           description: 'Could not update notification status.',
           variant: 'destructive',
@@ -1276,7 +1272,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: unknown) {
       console.error('Error marking all notifications as read:', error);
       globalToast({
-        // Use renamed import
         title: 'Error',
         description: 'Could not update all notification statuses.',
         variant: 'destructive',
@@ -1305,7 +1300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         changeUserPassword,
       }}
     >
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

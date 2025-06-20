@@ -9,6 +9,7 @@ import { EmployerActionsProvider } from '@/contexts/EmployerActionsContext';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Inter } from 'next/font/google';
+import GlobalLoadingIndicatorWrapper from '@/components/layout/GlobalLoadingIndicatorWrapper';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -85,8 +86,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#007bff' }, // Primary color
-    { media: '(prefers-color-scheme: dark)', color: '#0056b3' }, // Darker primary or suitable dark theme color
+    { media: '(prefers-color-scheme: light)', color: '#007bff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0056b3' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -103,16 +104,18 @@ export default function RootLayout({
       <head />
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
-          <JobSeekerActionsProvider>
-            <EmployerActionsProvider>
-              <Navbar />
-              <main className="flex-grow container mx-auto px-4 py-8">
-                {children}
-              </main>
-              <Footer />
-              <Toaster />
-            </EmployerActionsProvider>
-          </JobSeekerActionsProvider>
+          <GlobalLoadingIndicatorWrapper>
+            <JobSeekerActionsProvider>
+              <EmployerActionsProvider>
+                <Navbar />
+                <main className="flex-grow container mx-auto px-4 py-8">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster />
+              </EmployerActionsProvider>
+            </JobSeekerActionsProvider>
+          </GlobalLoadingIndicatorWrapper>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
