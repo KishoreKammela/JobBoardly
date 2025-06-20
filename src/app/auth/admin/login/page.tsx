@@ -17,20 +17,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
-// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
-
-// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
-// export const metadata: Metadata = {
-//   title: 'Admin Login - JobBoardly Platform Management',
-//   description: 'Secure login for JobBoardly administrators and platform staff to access the admin dashboard.',
-//   robots: {
-//     index: false,
-//     follow: false,
-//   },
-//    alternates: {
-//     canonical: '/auth/admin/login',
-//   },
-// };
 
 const ADMIN_ROLES: string[] = [
   'admin',
@@ -45,7 +31,7 @@ const ADMIN_ROLES: string[] = [
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start true to wait for auth check
   const { user, loading: authLoading, loginUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,10 +39,11 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (authLoading) {
-      setIsLoading(true); // Ensure loading spinner is shown while auth state resolves
+      setIsLoading(true); // Page is loading if auth state is loading
       return;
     }
 
+    // Auth state is resolved (authLoading is false)
     if (user) {
       const redirectPath = searchParams.get('redirect');
       if (user.role && ADMIN_ROLES.includes(user.role)) {
@@ -65,6 +52,7 @@ export default function AdminLoginPage() {
           description: 'Redirecting to dashboard...',
         });
         router.replace(redirectPath || '/admin');
+        // Component will unmount, no need to set isLoading to false
       } else {
         toast({
           title: 'Access Denied',
@@ -76,18 +64,21 @@ export default function AdminLoginPage() {
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
         else router.replace('/');
+        // Component will unmount
       }
+    } else {
+      // No user, and auth state resolved, so show the login form
+      setIsLoading(false);
     }
-    // Only set isLoading to false after auth state is resolved and user presence checked
-    setIsLoading(false);
   }, [user, authLoading, router, searchParams, toast]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsLoading(true); // Loading during form submission
     try {
       await loginUser(email, password);
-      // On successful login, AuthContext will update, and the useEffect above will handle redirection and toasts.
+      // On successful login, AuthContext will update, and the useEffect above will handle redirection.
+      // toast message for success is handled in useEffect.
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error('Admin Login error:', firebaseError.message);
@@ -108,18 +99,13 @@ export default function AdminLoginPage() {
     }
   };
 
-  if (isLoading && !user) {
-    // Show loader if actively loading OR if authLoading is true and user isn't set yet
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
-
-  // If user is already logged in and is an admin, useEffect will redirect.
-  // If user is logged in but not admin, useEffect will also handle it.
-  // This form should only render if no user is logged in OR if loading is complete and user is not admin (before redirect).
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)] py-12">
@@ -136,8 +122,7 @@ export default function AdminLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="emailAdmin">Email Address</Label>{' '}
-              {/* Changed ID to be unique */}
+              <Label htmlFor="emailAdmin">Email Address</Label>
               <Input
                 id="emailAdmin"
                 type="email"
@@ -149,8 +134,7 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="passwordAdmin">Password</Label>{' '}
-              {/* Changed ID to be unique */}
+              <Label htmlFor="passwordAdmin">Password</Label>
               <Input
                 id="passwordAdmin"
                 type="password"

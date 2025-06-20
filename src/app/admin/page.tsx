@@ -38,8 +38,8 @@ import {
   Users,
   FileText,
   ClipboardList,
-  Gavel, // Icon for Legal Content
-  Save, // Icon for Save button
+  Gavel,
+  Save,
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -58,8 +58,8 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
-  setDoc, // For legal content
-  getDoc, // For legal content
+  setDoc,
+  getDoc,
 } from 'firebase/firestore';
 import type {
   Job,
@@ -79,7 +79,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // For legal content editor
+import { Textarea } from '@/components/ui/textarea';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 
@@ -210,7 +210,6 @@ export default function AdminPage() {
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
-  // Legal Content State
   const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
   const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
   const [isLegalContentLoaded, setIsLegalContentLoaded] = useState({
@@ -557,7 +556,7 @@ export default function AdminPage() {
     }
     if (
       (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') &&
-      newStatus !== 'pending' // Prevent these roles from changing status other than to pending (which shouldn't happen here)
+      newStatus !== 'pending'
     ) {
       toast({
         title: 'Permission Denied',
@@ -1283,10 +1282,10 @@ export default function AdminPage() {
         </div>
       )}
 
-      <Tabs defaultValue="companies">
-        <TabsList className={`grid w-full grid-cols-${visibleTabs.length}`}>
+      <Tabs defaultValue="companies" className="w-full">
+        <TabsList className="w-full">
           {visibleTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+            <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
               {tab.label}
             </TabsTrigger>
           ))}
