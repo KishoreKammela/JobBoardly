@@ -1,7 +1,6 @@
 // src/components/company/CompanyDetailClientPage.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-// Removed useParams import as it's not used when params are passed as props
 import {
   doc,
   getDoc,
@@ -66,9 +65,12 @@ export default function CompanyDetailClientPage({ params }: Props) {
       return;
     }
 
+    // If companyIdFromProps is valid, clear any previous error.
+    setError(null);
+
     const fetchCompanyCoreDetails = async () => {
       setIsCompanyDataLoading(true);
-      setError(null);
+      // setError(null); // Already cleared above
       setCompany(null);
       setRecruiters([]);
       setJobs([]);
@@ -219,21 +221,6 @@ export default function CompanyDetailClientPage({ params }: Props) {
     fetchJobsForCompany();
   }, [company]);
 
-  if (!companyIdFromProps && !isCompanyDataLoading) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>Error: Missing Company ID</AlertTitle>
-          <AlertDescription>
-            The Company ID is missing from the page parameters. This page cannot
-            be loaded.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   if (isCompanyDataLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
@@ -243,19 +230,33 @@ export default function CompanyDetailClientPage({ params }: Props) {
     );
   }
 
-  if (error || !company) {
+  if (error) {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
           <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>{error ? 'Error' : 'Profile Unavailable'}</AlertTitle>
+          <AlertTitle>Error Loading Profile</AlertTitle>
           <AlertDescription>
-            {error || 'This company profile is not currently available.'}
+            {error}
             <Button variant="link" asChild className="mt-2 block">
               <Link href="/companies">Browse other companies</Link>
             </Button>
           </AlertDescription>
         </Alert>
+      </div>
+    );
+  }
+
+  if (!company) {
+    // This case implies companyIdFromProps was valid, but fetch failed or company not approved/found
+    return (
+      <div className="container mx-auto py-10 text-center">
+        <p className="text-xl text-muted-foreground">
+          Company profile not found or is currently unavailable.
+        </p>
+        <Button variant="link" asChild className="mt-2 block">
+          <Link href="/companies">Browse other companies</Link>
+        </Button>
       </div>
     );
   }
