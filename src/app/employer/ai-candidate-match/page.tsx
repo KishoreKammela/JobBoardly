@@ -279,7 +279,7 @@ export default function AiCandidateMatchPage() {
           variant: 'destructive',
         });
       };
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown parsing error.';
       toast({

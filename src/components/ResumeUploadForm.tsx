@@ -113,10 +113,9 @@ export function ResumeUploadForm() {
           title: 'Resume Parsing Error',
           description: parsedData.errorMessage,
           variant: 'destructive',
-          duration: 10000, // Longer duration for important errors
+          duration: 10000,
         });
-        setIsProcessing(false); // Ensure loading state is reset
-        // If it's a server-side error, we might not want to update the profile at all.
+        setIsProcessing(false);
         if (parsedData.errorMessage.includes('Server-side error')) {
           return;
         }
@@ -124,20 +123,17 @@ export function ResumeUploadForm() {
 
       const profileUpdates: Partial<UserProfile> = {};
 
-      // This handles error messages that the *prompt itself* might put into the 'experience' field
       if (
         parsedData.experience &&
         parsedData.experience.startsWith('Parsing Error:')
       ) {
         toast({
           title: 'Resume Parsing Issue',
-          description: parsedData.experience, // Display specific error from AI
+          description: parsedData.experience,
           variant: 'destructive',
           duration: 9000,
         });
-        // Continue with other updates if any, but don't use this experience field
       } else if (parsedData.experience) {
-        // Only update parsedResumeText if there wasn't a file-specific parsing error in the experience field
         let summaryText = `Experience Summary:\n${parsedData.experience}\n\n`;
         if (parsedData.education) {
           summaryText += `Education Summary:\n${parsedData.education}\n\n`;
@@ -167,22 +163,21 @@ export function ResumeUploadForm() {
           user.totalMonthsExperience === undefined ||
           user.totalMonthsExperience === 0
         ) {
-          profileUpdates.totalMonthsExperience = 0; // Default months if years are parsed
+          profileUpdates.totalMonthsExperience = 0;
         }
       }
 
+      // File handling for resumeUrl and resumeFileName will be managed by updateUserProfile logic.
+      // We only set resumeFileName if a file was processed, or a placeholder for pasted text.
       if (file) {
         profileUpdates.resumeFileName = file.name;
-        // The resumeUrl itself would be set after successful upload to Firebase Storage,
-        // which is handled by updateUserProfile if a file is passed to it.
-        // For now, just the name to indicate a file was processed.
+        // Do not set resumeUrl here, it's handled by updateUserProfile's file upload logic
       } else if (pastedResume) {
         profileUpdates.resumeFileName = 'Pasted Resume Text';
-        profileUpdates.resumeUrl = undefined; // No URL for pasted text
+        profileUpdates.resumeUrl = undefined; // Ensure no old URL remains if pasting text
       }
 
       if (!parsedData.errorMessage) {
-        // Only show success toast if no critical server error
         toast({
           title: 'Resume Processed',
           description: `${sourceName} has been parsed. Review and complete your profile details.`,
@@ -190,10 +185,7 @@ export function ResumeUploadForm() {
       }
 
       if (Object.keys(profileUpdates).length > 0) {
-        // If there's a file, updateUserProfile in AuthContext should handle the upload to storage
-        // and then update Firestore with the URL along with other profileUpdates.
-        // For this component, we're just passing the file object itself if it exists.
-        await updateUserProfile(profileUpdates, file || undefined);
+        await updateUserProfile(profileUpdates);
       }
       setFile(null);
       setPastedResume('');
@@ -262,16 +254,11 @@ export function ResumeUploadForm() {
 
   const performRemoveResume = async () => {
     if (!user) return;
-    // Pass undefined or an empty string for resumeUrl and resumeFileName to clear them.
-    // Also pass the file as undefined to signal no new upload.
-    await updateUserProfile(
-      {
-        resumeUrl: undefined, // Explicitly set to undefined to clear
-        resumeFileName: undefined, // Explicitly set to undefined to clear
-        parsedResumeText: undefined, // Clear parsed text as well
-      },
-      undefined
-    ); // Pass undefined for the file to avoid re-upload
+    await updateUserProfile({
+      resumeUrl: undefined,
+      resumeFileName: undefined,
+      parsedResumeText: undefined,
+    });
 
     toast({
       title: 'Resume Removed',
@@ -342,8 +329,6 @@ export function ResumeUploadForm() {
                 onClick={() => {
                   setFile(null);
                   setPastedResume('');
-                  // Optionally clear user.resumeFileName here if you want the UI to immediately reflect an empty state
-                  // updateUserProfile({ resumeFileName: undefined, resumeUrl: undefined }); // This would persist the removal immediately
                 }}
                 disabled={isProcessing}
                 variant="outline"

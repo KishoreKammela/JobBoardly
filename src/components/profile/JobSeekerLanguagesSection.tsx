@@ -26,7 +26,7 @@ interface JobSeekerLanguagesSectionProps {
   onFieldChange: (
     index: number,
     field: keyof LanguageEntry,
-    value: string | boolean | undefined | HTMLInputElement,
+    value: string | boolean | undefined,
     inputType?: string
   ) => void;
   onAddItem: () => void;

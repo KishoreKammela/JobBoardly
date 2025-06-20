@@ -27,7 +27,7 @@ interface JobSeekerEducationSectionProps {
   onFieldChange: (
     index: number,
     field: keyof EducationEntry,
-    value: string | boolean | number | undefined | HTMLInputElement,
+    value: string | boolean | number | undefined,
     inputType?: string
   ) => void;
   onAddItem: () => void;

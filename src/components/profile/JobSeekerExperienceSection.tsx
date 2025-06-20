@@ -28,13 +28,14 @@ interface JobSeekerExperienceSectionProps {
   onFieldChange: (
     index: number,
     field: keyof ExperienceEntry,
-    value: string | boolean | number | undefined | HTMLInputElement | Date,
+    value: string | boolean | number | undefined, // Date is handled by onDateChange
     inputType?: string
   ) => void;
   onAddItem: () => void;
   onRemoveItem: (id: string) => void;
   isDisabled: boolean;
   onDateChange: (
+    // Specific handler for dates
     index: number,
     fieldName: 'startDate' | 'endDate',
     date: Date | undefined

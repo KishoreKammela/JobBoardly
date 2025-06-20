@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUnreadNotificationCount(
           fetchedNotifications.filter((n) => !n.isRead).length
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching notifications:', error);
       }
     } else {
@@ -308,17 +308,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 rawData.lastActive instanceof Timestamp
                   ? rawData.lastActive.toDate().toISOString()
                   : rawData.lastActive,
-              savedSearches: (rawData.savedSearches || []).map((s: any) => ({
-                ...s,
-                id: s.id || uuidv4(),
-                createdAt:
-                  s.createdAt instanceof Timestamp
-                    ? s.createdAt.toDate().toISOString()
-                    : s.createdAt || new Date().toISOString(),
-              })),
+              savedSearches: (rawData.savedSearches || []).map(
+                (s: Partial<SavedSearch>) => ({
+                  ...s,
+                  id: s.id || uuidv4(),
+                  createdAt:
+                    s.createdAt instanceof Timestamp
+                      ? s.createdAt.toDate().toISOString()
+                      : s.createdAt || new Date().toISOString(),
+                })
+              ),
               savedCandidateSearches: (
                 rawData.savedCandidateSearches || []
-              ).map((s: any) => ({
+              ).map((s: Partial<SavedCandidateSearch>) => ({
                 ...s,
                 id: s.id || uuidv4(),
                 createdAt:
@@ -632,11 +634,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         lastActive: new Date().toISOString(),
-        experiences: finalProfileDataForFirestore.experiences || [],
-        educations: finalProfileDataForFirestore.educations || [],
-        languages: finalProfileDataForFirestore.languages || [],
+        experiences:
+          (finalProfileDataForFirestore.experiences as ExperienceEntry[]) || [],
+        educations:
+          (finalProfileDataForFirestore.educations as EducationEntry[]) || [],
+        languages:
+          (finalProfileDataForFirestore.languages as LanguageEntry[]) || [],
         savedCandidateSearches:
-          finalProfileDataForFirestore.savedCandidateSearches || [],
+          (finalProfileDataForFirestore.savedCandidateSearches as SavedCandidateSearch[]) ||
+          [],
         totalYearsExperience:
           finalProfileDataForFirestore.totalYearsExperience === null
             ? undefined
@@ -793,16 +799,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             rawData.lastActive instanceof Timestamp
               ? rawData.lastActive.toDate().toISOString()
               : rawData.lastActive,
-          savedSearches: (rawData.savedSearches || []).map((s: any) => ({
-            ...s,
-            id: s.id || uuidv4(),
-            createdAt:
-              s.createdAt instanceof Timestamp
-                ? s.createdAt.toDate().toISOString()
-                : s.createdAt || new Date().toISOString(),
-          })),
+          savedSearches: (rawData.savedSearches || []).map(
+            (s: Partial<SavedSearch>) => ({
+              ...s,
+              id: s.id || uuidv4(),
+              createdAt:
+                s.createdAt instanceof Timestamp
+                  ? s.createdAt.toDate().toISOString()
+                  : s.createdAt || new Date().toISOString(),
+            })
+          ),
           savedCandidateSearches: (rawData.savedCandidateSearches || []).map(
-            (s: any) => ({
+            (s: Partial<SavedCandidateSearch>) => ({
               ...s,
               id: s.id || uuidv4(),
               createdAt:
@@ -1139,17 +1147,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (k) => k !== 'updatedAt' && k !== 'lastActive'
     );
 
-    if (actualChanges.length > 0) {
+    if (actualChanges.length > 0 || Object.keys(updatedData).length > 0) {
+      // Also update if only timestamps are changing
       try {
         await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState: UserProfile = { ...user } as UserProfile;
+        const updatedUserForState = { ...user } as UserProfile; // Start with current user state
         for (const key in payloadForFirestore) {
           if (key !== 'updatedAt' && key !== 'lastActive') {
             const typedKey = key as keyof UserProfile;
-            (updatedUserForState[typedKey] as any) = payloadForFirestore[key];
+            (updatedUserForState[typedKey] as UserProfile[typeof typedKey]) =
+              payloadForFirestore[key] as UserProfile[typeof typedKey];
           }
         }
-        updatedUserForState.updatedAt = new Date().toISOString();
+        updatedUserForState.updatedAt = new Date().toISOString(); // Set client-side optimistic update
         updatedUserForState.lastActive = new Date().toISOString();
         setUser(updatedUserForState);
         if (updatedData.theme) {
@@ -1157,24 +1167,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error: unknown) {
         console.error('AuthContext: updateUserProfile error', error);
-        throw error;
-      }
-    } else if (user) {
-      try {
-        await updateDoc(userDocRef, {
-          updatedAt: serverTimestamp(),
-          lastActive: serverTimestamp(),
-        });
-        setUser({
-          ...user,
-          updatedAt: new Date().toISOString(),
-          lastActive: new Date().toISOString(),
-        } as UserProfile);
-      } catch (error: unknown) {
-        console.error(
-          'AuthContext: updateUserProfile (timestamps only) error',
-          error
-        );
         throw error;
       }
     }
@@ -1249,7 +1241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           )
         );
         setUnreadNotificationCount((prev) => Math.max(0, prev - 1));
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error marking notification as read:', error);
         toast({
           title: 'Error',
@@ -1258,7 +1250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [firebaseUser, toast] // Added toast to dependency array
+    [firebaseUser, toast]
   );
 
   const markAllNotificationsAsRead = useCallback(async () => {
@@ -1276,7 +1268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await batch.commit();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadNotificationCount(0);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error marking all notifications as read:', error);
       toast({
         title: 'Error',
@@ -1284,7 +1276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
     }
-  }, [firebaseUser, notifications, toast]); // Added toast to dependency array
+  }, [firebaseUser, notifications, toast]);
 
   return (
     <AuthContext.Provider

@@ -4,7 +4,7 @@ import type { UserProfile, Company } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building, User, Save } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ import { JobSeekerEducationSection } from './profile/JobSeekerEducationSection';
 import { JobSeekerLanguagesSection } from './profile/JobSeekerLanguagesSection';
 import { JobSeekerCompensationSection } from './profile/JobSeekerCompensationSection';
 import { JobSeekerPreferencesSection } from './profile/JobSeekerPreferencesSection';
-import { EmployerCompanyProfileFormSection } from './profile/EmployerCompanyProfileFormSection'; // Assuming this will be created or exists for employer admin
+import { EmployerCompanyProfileFormSection } from './profile/EmployerCompanyProfileFormSection';
 
 import type { ExperienceEntry, EducationEntry, LanguageEntry } from '@/types';
 
@@ -278,55 +278,76 @@ export function UserProfileForm() {
     }));
   };
 
-  const handleArrayFieldChange = <T extends { id: string }>(
-    arrayName: keyof Pick<
+  const handleArrayFieldChange = <
+    K extends keyof Pick<
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
+      ? NonNullable<UserProfile[K]>[number]
+      : never,
+  >(
+    arrayName: K,
     index: number,
     field: keyof T,
-    value: string | boolean | number | undefined | HTMLInputElement,
+    value: string | boolean | number | undefined,
     inputType?: string
   ) => {
     setUserFormData((prev) => {
-      const newArray = [...((prev[arrayName] as T[]) || [])];
-      if (newArray[index]) {
-        let processedValue = value;
-        if (inputType === 'checkbox') {
-          processedValue = (value as HTMLInputElement).checked;
-        } else if (inputType === 'number') {
-          if (
-            field === 'annualCTC' ||
-            field === 'startYear' ||
-            field === 'endYear'
-          ) {
-            processedValue =
-              value === ''
-                ? undefined
-                : field === 'annualCTC'
-                  ? parseFloat(value as string)
-                  : parseInt(value as string, 10);
-            if (isNaN(processedValue as number)) processedValue = undefined;
-          }
-        } else if (field === 'startDate' || field === 'endDate') {
-          processedValue = value
-            ? format(value as Date, 'yyyy-MM-dd')
-            : undefined;
+      const currentArray = prev[arrayName] as T[] | undefined;
+      if (!currentArray || !currentArray[index]) return prev;
+
+      const newArray = [...currentArray];
+      const itemToUpdate = { ...newArray[index] };
+
+      let processedValueFinal: T[keyof T];
+
+      if (inputType === 'checkbox' && typeof value === 'boolean') {
+        processedValueFinal = value as T[keyof T];
+      } else if (inputType === 'number') {
+        const strVal = String(value);
+        if (strVal === '' || value === undefined) {
+          processedValueFinal = undefined as T[keyof T];
+        } else {
+          const targetFieldExample = itemToUpdate[field];
+          const isFloat =
+            typeof targetFieldExample === 'number' &&
+            String(targetFieldExample).includes('.');
+
+          const numVal =
+            isFloat || String(value).includes('.')
+              ? parseFloat(strVal)
+              : parseInt(strVal, 10);
+          processedValueFinal = isNaN(numVal)
+            ? undefined
+            : (numVal as T[keyof T]);
         }
-        newArray[index] = {
-          ...newArray[index],
-          [field]: processedValue,
-        } as T;
+      } else if (typeof value === 'string') {
+        processedValueFinal = value as T[keyof T];
+      } else if (typeof value === 'number') {
+        processedValueFinal = value as T[keyof T];
+      } else {
+        processedValueFinal = value as T[keyof T];
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (itemToUpdate as any)[field] = processedValueFinal;
+      newArray[index] = itemToUpdate;
       return { ...prev, [arrayName]: newArray };
     });
   };
 
-  const addArrayItem = <T extends { id: string }>(
-    arrayName: keyof Pick<
+  const addArrayItem = <
+    K extends keyof Pick<
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
+      ? NonNullable<UserProfile[K]>[number]
+      : never,
+  >(
+    arrayName: K,
     creatorFunc: () => T
   ) => {
     setUserFormData((prev) => ({
@@ -335,11 +356,17 @@ export function UserProfileForm() {
     }));
   };
 
-  const removeArrayItem = <T extends { id: string }>(
-    arrayName: keyof Pick<
+  const removeArrayItem = <
+    K extends keyof Pick<
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
+      ? NonNullable<UserProfile[K]>[number]
+      : never,
+  >(
+    arrayName: K,
     idToRemove: string
   ) => {
     setUserFormData((prev) => ({
@@ -546,7 +573,12 @@ export function UserProfileForm() {
             onRemoveItem={(id) => removeArrayItem('experiences', id)}
             isDisabled={isDisabledByStatus}
             onDateChange={(index, fieldName, date) =>
-              handleArrayFieldChange('experiences', index, fieldName, date)
+              handleArrayFieldChange(
+                'experiences',
+                index,
+                fieldName,
+                date ? format(date, 'yyyy-MM-dd') : undefined
+              )
             }
           />
           <JobSeekerEducationSection
@@ -598,8 +630,8 @@ export function UserProfileForm() {
               [e.target.name]: e.target.value,
             }))
           }
-          recruiters={user.companyRecruiters || []} // Assuming recruiters are fetched and stored on user object in AuthContext
-          isFetchingRecruiters={false} // Manage this state if needed
+          recruiters={user.companyRecruiters || []}
+          isFetchingRecruiters={false}
           isDisabled={isDisabledByStatus}
           companyStatus={company.status}
           moderationReason={company.moderationReason}

@@ -398,8 +398,8 @@ export function PostJobForm() {
         companyLogoUrl: currentCompanyDetails.logoUrl || null,
         postedById: user.uid,
         updatedAt: serverTimestamp(),
-        status: 'pending',
-        moderationReason: null,
+        status: 'pending', // Always pending on create/update
+        moderationReason: null, // Clear any previous reasons
         screeningQuestions: (jobData.screeningQuestions || []).filter(
           (q) => q.questionText.trim() !== ''
         ),
@@ -468,6 +468,7 @@ export function PostJobForm() {
     setJobData((prev) => {
       const updatedQuestions = [...(prev.screeningQuestions || [])];
       if (updatedQuestions[index]) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (updatedQuestions[index] as any)[field] = value;
       }
       return { ...prev, screeningQuestions: updatedQuestions };

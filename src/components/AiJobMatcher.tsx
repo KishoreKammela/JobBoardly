@@ -173,7 +173,7 @@ export function AiJobMatcher() {
           } as Job;
         });
         setAllJobs(jobsData);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Error fetching jobs for AI matcher:', e);
         setJobsError(
           'Failed to load jobs for matching. Please try again later.'
@@ -265,7 +265,7 @@ export function AiJobMatcher() {
           });
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('AI Matching Error:', e);
       const errorMessage =
         e instanceof Error ? e.message : 'An unknown error occurred.';

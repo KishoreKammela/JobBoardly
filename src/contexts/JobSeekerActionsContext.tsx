@@ -79,7 +79,7 @@ export function JobSeekerActionsProvider({
             appsMap.set(appData.jobId, appData);
           });
           setUserApplications(appsMap);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to fetch user applications:', error);
         } finally {
           setIsAppsLoading(false);
@@ -158,9 +158,9 @@ export function JobSeekerActionsProvider({
         await updateUserProfile({
           appliedJobIds: arrayUnion(job.id) as unknown as string[],
         });
-      } catch (error: unknown) {
-        console.error('JobSeekerActionsContext: applyForJob error', error);
-        throw error;
+      } catch (e: unknown) {
+        console.error('JobSeekerActionsContext: applyForJob error', e);
+        throw e;
       }
     },
     [user, updateUserProfile, userApplications]
@@ -239,14 +239,14 @@ export function JobSeekerActionsProvider({
         setUserApplications((prev) =>
           new Map(prev).set(jobIdToWithdraw, updatedApp)
         );
-      } catch (error) {
-        console.error('Failed to withdraw application:', error);
+      } catch (err: unknown) {
+        console.error('Failed to withdraw application:', err);
         toast({
           title: 'Error',
           description: 'Failed to withdraw application. Please try again.',
           variant: 'destructive',
         });
-        throw error;
+        throw err;
       }
     },
     [user, userApplications]
