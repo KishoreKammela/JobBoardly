@@ -1,22 +1,29 @@
 import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
 import type { Metadata } from 'next';
 
-// Static metadata to simplify
+// Using static metadata for now to ensure page loads correctly.
+// Dynamic metadata can be re-introduced or handled client-side if needed.
 export const metadata: Metadata = {
   title: 'Company Profile | JobBoardly',
-  description: 'View company details and open positions on JobBoardly.',
+  description:
+    "Explore company profiles on JobBoardly. Learn about a company's culture, view their open positions, and discover your next employer.",
+  keywords: [
+    'company profile',
+    'employer details',
+    'jobs at company',
+    'company culture',
+    'company information',
+  ],
   robots: {
-    index: false, // Keep as false until dynamic data loading is reliable
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 
-// Define a more specific type for params
 type PageProps = {
   params: { companyId: string };
 };
 
 export default function CompanyDetailPageServer({ params }: PageProps) {
-  // Pass only the companyId string directly to the client component
   return <CompanyDetailClientPage companyId={params.companyId} />;
 }

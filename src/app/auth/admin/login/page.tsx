@@ -18,6 +18,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
 
+// Metadata for this page should be set in a server component or root layout
+// For client components, we can update document.title dynamically if needed.
+
 const ADMIN_ROLES: string[] = [
   'admin',
   'superAdmin',
@@ -38,6 +41,10 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    document.title = 'Admin Login - Platform Management | JobBoardly';
+  }, []);
+
+  useEffect(() => {
     if (authLoading) {
       setIsLoading(true); // Page is loading if auth state is loading
       return;
@@ -52,7 +59,6 @@ export default function AdminLoginPage() {
           description: 'Redirecting to dashboard...',
         });
         router.replace(redirectPath || '/admin');
-        // Component will unmount, no need to set isLoading to false
       } else {
         toast({
           title: 'Access Denied',
@@ -64,7 +70,6 @@ export default function AdminLoginPage() {
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
         else router.replace('/');
-        // Component will unmount
       }
     } else {
       // No user, and auth state resolved, so show the login form
@@ -77,9 +82,7 @@ export default function AdminLoginPage() {
     setIsLoading(true); // Loading during form submission
     try {
       await loginUser(email, password);
-      // On successful login, AuthContext will update, and the useEffect above will handle redirection.
-      // toast message for success is handled in useEffect.
-    } catch (error) {
+    } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error('Admin Login error:', firebaseError.message);
       let friendlyMessage = 'Login failed. Please check your credentials.';
@@ -95,7 +98,7 @@ export default function AdminLoginPage() {
         description: friendlyMessage,
         variant: 'destructive',
       });
-      setIsLoading(false); // Set loading to false only on error in submit
+      setIsLoading(false);
     }
   };
 
@@ -112,9 +115,9 @@ export default function AdminLoginPage() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <ShieldCheck className="mx-auto h-12 w-12 text-primary mb-2" />
-          <CardTitle className="text-2xl font-headline">
+          <h1 className="text-2xl font-bold font-headline">
             Platform Management Login
-          </CardTitle>
+          </h1>
           <CardDescription>
             Access the JobBoardly Admin Dashboard.
           </CardDescription>

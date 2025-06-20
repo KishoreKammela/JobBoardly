@@ -33,20 +33,9 @@ import {
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
 import { checkPasswordStrength, type PasswordStrength } from '@/lib/utils';
-// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
 
-// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
-// export const metadata: Metadata = {
-//   title: 'Register as a Job Seeker - Join JobBoardly',
-//   description: 'Create your JobBoardly job seeker account to find jobs, build your profile, and apply for your next career opportunity.',
-//   robots: { // Typically, registration pages are not indexed for SEO
-//     index: false,
-//     follow: false,
-//   },
-//   alternates: {
-//     canonical: '/auth/register',
-//   },
-// };
+// Metadata for this page should be set in a server component or root layout
+// For client components, we can update document.title dynamically if needed.
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -66,6 +55,10 @@ export default function RegisterPage() {
   const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>(
     checkPasswordStrength('')
   );
+
+  useEffect(() => {
+    document.title = 'Register as a Job Seeker - Join JobBoardly';
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -110,7 +103,7 @@ export default function RegisterPage() {
     try {
       await registerUser(email, password, name, 'jobSeeker' as UserRole);
       handleRegisterSuccess();
-    } catch (error) {
+    } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error('Registration error:', firebaseError.message);
       let friendlyMessage = 'Registration failed. Please try again.';
@@ -142,7 +135,7 @@ export default function RegisterPage() {
 
       await signInWithSocial(authProvider, 'jobSeeker');
       handleRegisterSuccess();
-    } catch (error) {
+    } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
       toast({
@@ -161,15 +154,15 @@ export default function RegisterPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null;
+  if (user && !authLoading) return null; // Handled by useEffect
 
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">
+          <h1 className="text-2xl font-bold font-headline">
             Create Job Seeker Account
-          </CardTitle>
+          </h1>
           <CardDescription>
             Join JobBoardly to find your next career opportunity.
           </CardDescription>

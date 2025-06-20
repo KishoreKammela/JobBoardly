@@ -12,10 +12,17 @@ import {
   CardContent,
 } from '@/components/ui/card';
 
+// Metadata for this page should be set in a server component or root layout
+// For client components, we can update document.title dynamically if needed.
+
 export default function ChangePasswordPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    document.title = 'Change Your Password | JobBoardly';
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -36,9 +43,9 @@ export default function ChangePasswordPage() {
     <div className="container mx-auto flex min-h-[calc(100vh-200px)] items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">
+          <h1 className="text-2xl font-bold font-headline">
             Change Your Password
-          </CardTitle>
+          </h1>
           <CardDescription>
             Update your password below. Choose a strong, unique password.
           </CardDescription>

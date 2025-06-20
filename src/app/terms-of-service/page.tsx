@@ -79,9 +79,9 @@ export default async function TermsOfServicePage() {
     <div className="container mx-auto py-12 max-w-3xl">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold font-headline text-center">
+          <h1 className="text-3xl font-bold font-headline text-center">
             Terms of Service
-          </CardTitle>
+          </h1>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-muted-foreground text-center text-sm">

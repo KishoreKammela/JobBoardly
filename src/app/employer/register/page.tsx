@@ -5,10 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
+// Metadata for this page should be set in a server component or root layout
+// For client components, we can update document.title dynamically if needed.
+
 export default function EmployerRegisterPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    document.title = 'Employer Registration - Join JobBoardly | JobBoardly';
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -31,7 +38,7 @@ export default function EmployerRegisterPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null;
+  if (user && !authLoading) return null; // Handled by useEffect
 
   return (
     <div className="container mx-auto flex min-h-[calc(100vh-150px)] items-center justify-center py-12">

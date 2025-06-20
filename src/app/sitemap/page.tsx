@@ -20,8 +20,14 @@ import {
 export const metadata: Metadata = {
   title: 'Sitemap - Navigate JobBoardly',
   description:
-    'Explore all sections of JobBoardly. Find links to job searches, company profiles, employer resources, legal information, and more.',
-  keywords: ['sitemap', 'JobBoardly navigation', 'site structure', 'all pages'],
+    'Explore all sections of JobBoardly. Find links to job searches, company profiles, employer resources, legal information, and more to easily navigate our site.',
+  keywords: [
+    'sitemap',
+    'JobBoardly navigation',
+    'site structure',
+    'all pages',
+    'navigate JobBoardly',
+  ],
   alternates: {
     canonical: '/sitemap',
   },
@@ -110,9 +116,9 @@ export default function SitemapPage() {
     <div className="container mx-auto py-12 max-w-4xl">
       <Card className="shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold font-headline">
+          <h1 className="text-3xl font-bold font-headline">
             JobBoardly Sitemap
-          </CardTitle>
+          </h1>
           <CardDescription>
             Navigate through all sections of our platform.
           </CardDescription>

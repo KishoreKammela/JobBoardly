@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     siteName: 'JobBoardly',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`, // You'll need to create this image in /public
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`,
         width: 1200,
         height: 630,
         alt: 'JobBoardly Logo and Tagline',
@@ -61,7 +61,6 @@ export const metadata: Metadata = {
     title: 'JobBoardly - AI-Powered Job Portal',
     description:
       'AI-driven job matching and talent acquisition. Find jobs or post openings on JobBoardly.',
-    // images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/twitter-image.png`], // Optional: Create a specific Twitter image
   },
   robots: {
     index: true,
@@ -79,10 +78,9 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
       { url: '/icon.svg', type: 'image/svg+xml' },
     ],
-    apple: '/apple-touch-icon.png', // e.g. 180x180
+    apple: '/apple-touch-icon.png',
     shortcut: '/favicon.ico',
   },
-  // manifest: '/site.webmanifest', // Optional: If you have a web app manifest
 };
 
 export const viewport: Viewport = {

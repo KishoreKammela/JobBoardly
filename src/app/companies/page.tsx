@@ -26,6 +26,11 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
+
+// Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
+// For a page like this which is client-rendered, the root layout.tsx's metadata or a specific server wrapper would set the primary metadata.
+// We can add dynamic title updates via useEffect if needed.
 
 const COMPANIES_PER_PAGE = 9;
 
@@ -36,6 +41,10 @@ export default function CompaniesListPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    document.title = 'Explore Companies - Find Your Next Employer | JobBoardly';
+  }, []);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -142,10 +151,9 @@ export default function CompaniesListPage() {
       <Separator className="my-8" />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: COMPANIES_PER_PAGE }).map((_, index) => (
-            <CompanySkeletonCard key={index} />
-          ))}
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-2">Loading companies...</p>
         </div>
       ) : error ? (
         <Alert variant="destructive">
@@ -175,11 +183,11 @@ export default function CompaniesListPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <CardTitle className="text-xl font-headline leading-tight hover:text-primary transition-colors">
+                    <h2 className="text-xl font-headline leading-tight hover:text-primary transition-colors">
                       <Link href={`/companies/${company.id}`}>
                         {company.name}
                       </Link>
-                    </CardTitle>
+                    </h2>
                     {company.websiteUrl && (
                       <a
                         href={

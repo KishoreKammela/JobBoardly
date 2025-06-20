@@ -10,6 +10,7 @@ import {
   List,
   AlertCircle,
   Search as SearchIcon,
+  Loader2,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -30,6 +31,10 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
+
+// Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
+// For a page like this which is client-rendered, the root layout.tsx's metadata or a specific server wrapper would set the primary metadata.
+// We can add dynamic title updates via useEffect if needed.
 
 const JOBS_PER_PAGE = 9;
 
@@ -59,6 +64,10 @@ export default function JobsPage() {
       (searchParams.get('activity') as Filters['recentActivity']) || 'any',
   });
   const debouncedSidebarFilters = useDebounce(sidebarFilters, 500);
+
+  useEffect(() => {
+    document.title = 'Find Jobs - Search & Apply | JobBoardly';
+  }, []);
 
   useEffect(() => {
     const fetchJobs = async () => {

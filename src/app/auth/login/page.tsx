@@ -23,20 +23,9 @@ import {
   microsoftProvider,
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
-// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
 
-// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
-// export const metadata: Metadata = {
-//   title: 'Job Seeker Login - Access Your JobBoardly Account',
-//   description: 'Log in to your JobBoardly job seeker account to manage your profile, applications, and find new job opportunities.',
-//   robots: { // Typically, login pages are not indexed for SEO
-//     index: false,
-//     follow: false,
-//   },
-//    alternates: {
-//     canonical: '/auth/login',
-//   },
-// };
+// Metadata for this page should be set in a server component or root layout
+// For client components, we can update document.title dynamically if needed.
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -47,6 +36,10 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+
+  useEffect(() => {
+    document.title = 'Job Seeker Login - Access Your Account | JobBoardly';
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -65,7 +58,6 @@ export default function LoginPage() {
 
   const handleLoginSuccess = () => {
     toast({ title: 'Login Successful', description: `Welcome back!` });
-    // Redirection is now handled by the useEffect above
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -73,10 +65,8 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await loginUser(email, password);
-      // `user` state will update via onAuthStateChanged, then useEffect will trigger redirect.
-      // We can call handleLoginSuccess for the toast immediately.
       handleLoginSuccess();
-    } catch (error) {
+    } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error('Login error:', firebaseError.message);
       let friendlyMessage = 'Login failed. Please check your credentials.';
@@ -109,7 +99,7 @@ export default function LoginPage() {
 
       await signInWithSocial(authProvider, 'jobSeeker');
       handleLoginSuccess();
-    } catch (error) {
+    } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
       toast({
@@ -129,15 +119,13 @@ export default function LoginPage() {
     );
   }
 
-  if (user && !authLoading) return null;
+  if (user && !authLoading) return null; // Handled by useEffect
 
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-headline">
-            Job Seeker Login
-          </CardTitle>
+          <h1 className="text-2xl font-bold font-headline">Job Seeker Login</h1>
           <CardDescription>Sign in to continue to JobBoardly.</CardDescription>
         </CardHeader>
         <CardContent>

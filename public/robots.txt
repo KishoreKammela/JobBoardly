@@ -1,0 +1,15 @@
+# robots.txt for JobBoardly
+User-agent: *
+Disallow: /admin/
+Disallow: /profile/
+Disallow: /settings/
+Disallow: /auth/
+Disallow: /employer/post-job/
+Disallow: /employer/jobs/
+Disallow: /employer/ai-candidate-match/
+Disallow: /my-jobs/
+Disallow: /ai-match/
+
+Allow: /
+
+Sitemap: [REPLACE_WITH_YOUR_PRODUCTION_DOMAIN]/sitemap.xml
