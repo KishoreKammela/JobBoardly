@@ -1,8 +1,9 @@
-'use client'; // This component handles client-side logic
+// src/components/job/JobDetailClientPage.tsx
+'use client';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation'; // useParams can be used here or params passed as prop
+// Removed useParams as it's not used directly here; params are passed as props
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase'; // Added auth
+import { db } from '@/lib/firebase';
 import type { Job, ApplicationAnswer, ScreeningQuestion } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
@@ -63,23 +64,24 @@ const ADMIN_LIKE_ROLES = [
 ];
 
 export default function JobDetailClientPage({ params }: Props) {
-  const jobId = params.jobId as string;
+  const jobIdFromProps = params?.jobId;
+
   const [job, setJob] = useState<Job | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // For primary job data
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
     null
   );
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth(); // Added authLoading
   const {
     applyForJob,
-    // hasAppliedForJob, // Keep if used, or remove if getApplicationStatus covers it
     getApplicationStatus,
     saveJob,
     unsaveJob,
     isJobSaved,
     withdrawApplication,
+    userApplications, // To get up-to-date status
   } = useJobSeekerActions();
   const { toast } = useToast();
 
@@ -94,102 +96,114 @@ export default function JobDetailClientPage({ params }: Props) {
   const isJobSeekerSuspended =
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
-  // Effect for fetching primary job data
   useEffect(() => {
-    if (jobId) {
-      const fetchJobData = async () => {
-        setIsLoading(true);
-        setError(null);
-        setAccessDeniedReason(null);
-        setJob(null); // Reset job for new ID
-
-        try {
-          const jobDocRef = doc(db, 'jobs', jobId);
-          const jobDocSnap = await getDoc(jobDocRef);
-
-          if (!jobDocSnap.exists()) {
-            setError('Job not found.');
-            return; // isLoading will be set to false in finally
-          }
-
-          const data = jobDocSnap.data() as Omit<Job, 'id'>;
-          const jobData: Job = {
-            id: jobDocSnap.id,
-            ...data,
-            postedDate:
-              data.postedDate instanceof Timestamp
-                ? data.postedDate.toDate().toISOString().split('T')[0]
-                : (data.postedDate as string),
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
-                : (data.createdAt as string),
-            updatedAt:
-              data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate().toISOString()
-                : (data.updatedAt as string),
-          };
-
-          let canView = false;
-          if (jobData.status === 'approved') {
-            canView = true;
-          } else if (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) {
-            canView = true;
-          } else if (
-            user?.role === 'employer' &&
-            user.companyId === jobData.companyId
-          ) {
-            canView = true;
-          }
-
-          if (!canView) {
-            if (jobData.status === 'pending') {
-              setAccessDeniedReason(
-                'This job is pending review and not yet publicly available.'
-              );
-            } else if (jobData.status === 'rejected') {
-              setAccessDeniedReason(
-                'This job posting is not available (rejected).'
-              );
-            } else if (jobData.status === 'suspended') {
-              setAccessDeniedReason('This job is currently suspended.');
-            } else {
-              setAccessDeniedReason(
-                'You do not have permission to view this job posting.'
-              );
-            }
-            return; // isLoading will be set to false in finally
-          }
-          setJob(jobData);
-        } catch (e: unknown) {
-          console.error('Error fetching job details:', e);
-          let message = 'Failed to load job details. Please try again.';
-          if (e instanceof Error) {
-            message = `Failed to load job details: ${e.message}`;
-          }
-          setError(message);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchJobData();
-    } else {
-      setError('No job ID provided.');
+    // Primary data fetching effect based on jobIdFromProps
+    if (!jobIdFromProps) {
+      setError('No job ID provided. Please ensure the URL is correct.');
       setIsLoading(false);
+      setJob(null);
+      setAccessDeniedReason(null);
+      return;
     }
-  }, [jobId, user?.role, user?.companyId]); // Dependencies for fetching job data and checking view permissions
 
-  // Effect for updating user-specific statuses (application, saved)
+    const fetchJobData = async () => {
+      setIsLoading(true);
+      setError(null);
+      setAccessDeniedReason(null);
+      setJob(null);
+
+      try {
+        const jobDocRef = doc(db, 'jobs', jobIdFromProps);
+        const jobDocSnap = await getDoc(jobDocRef);
+
+        if (!jobDocSnap.exists()) {
+          setError('Job not found.');
+          return; // setIsLoading(false) will be called in finally
+        }
+
+        const data = jobDocSnap.data() as Omit<Job, 'id'>;
+        const jobData: Job = {
+          id: jobDocSnap.id,
+          ...data,
+          postedDate:
+            data.postedDate instanceof Timestamp
+              ? data.postedDate.toDate().toISOString().split('T')[0]
+              : (data.postedDate as string),
+          createdAt:
+            data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate().toISOString()
+              : (data.createdAt as string),
+          updatedAt:
+            data.updatedAt instanceof Timestamp
+              ? data.updatedAt.toDate().toISOString()
+              : (data.updatedAt as string),
+        };
+
+        let canView = false;
+        if (jobData.status === 'approved') {
+          canView = true;
+        } else if (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) {
+          canView = true;
+        } else if (
+          user?.role === 'employer' &&
+          user.companyId === jobData.companyId
+        ) {
+          canView = true;
+        }
+
+        if (!canView) {
+          if (jobData.status === 'pending') {
+            setAccessDeniedReason(
+              'This job is pending review and not yet publicly available.'
+            );
+          } else if (jobData.status === 'rejected') {
+            setAccessDeniedReason(
+              'This job posting is not available (rejected).'
+            );
+          } else if (jobData.status === 'suspended') {
+            setAccessDeniedReason('This job is currently suspended.');
+          } else {
+            setAccessDeniedReason(
+              'You do not have permission to view this job posting.'
+            );
+          }
+          return; // setIsLoading(false) will be called in finally
+        }
+        setJob(jobData);
+      } catch (e: unknown) {
+        console.error('Error fetching job details:', e);
+        let message = 'Failed to load job details. Please try again.';
+        if (e instanceof Error) {
+          message = `Failed to load job details: ${e.message}`;
+        }
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobData();
+  }, [jobIdFromProps, user?.role, user?.companyId]);
+
   useEffect(() => {
+    // Effect for user-specific data (application status, saved status)
+    if (authLoading) return; // Wait for auth state to resolve
+
     if (job && user && user.role === 'jobSeeker') {
       setApplicationStatus(getApplicationStatus(job.id));
       setSaved(isJobSaved(job.id));
     } else if (!user && job) {
-      // If user logs out while on the page, clear their specific status
       setApplicationStatus(null);
       setSaved(false);
     }
-  }, [job, user, getApplicationStatus, isJobSaved]); // Dependencies for user-specific status
+  }, [
+    job,
+    user,
+    authLoading,
+    getApplicationStatus,
+    isJobSaved,
+    userApplications,
+  ]); // Added userApplications to re-evaluate if it changes
 
   const handleApply = async (answers?: ApplicationAnswer[]) => {
     if (!job) return;
@@ -214,13 +228,14 @@ export default function JobDetailClientPage({ params }: Props) {
     if (user && user.role === 'jobSeeker') {
       try {
         await applyForJob(job, answers);
-        setApplicationStatus('Applied');
+        // Application status will be updated via userApplications context change, triggering re-render
         setShowScreeningModal(false);
         toast({
           title: 'Applied!',
           description: `You've applied for ${job.title} at ${job.company}.`,
         });
       } catch (e: any) {
+        // Error toast handled within applyForJob if it's "Already applied"
         if (e.message !== 'Already applied or application process started.') {
           toast({
             title: 'Application Failed',
@@ -228,7 +243,7 @@ export default function JobDetailClientPage({ params }: Props) {
             variant: 'destructive',
           });
         }
-        setShowScreeningModal(false);
+        setShowScreeningModal(false); // Ensure modal closes on error too
       }
     } else if (!user) {
       toast({
@@ -273,16 +288,16 @@ export default function JobDetailClientPage({ params }: Props) {
       });
       return;
     }
-    // Check application status using the local state, which is derived from context
-    if (applicationStatus && applicationStatus !== 'Applied') {
+    const currentAppStatus = getApplicationStatus(job.id); // Get fresh status
+    if (currentAppStatus && currentAppStatus !== 'Applied') {
       toast({
         title: 'Application Status',
-        description: `Your application status for this job is: ${applicationStatus}. You cannot re-apply or start a new application.`,
+        description: `Your application status for this job is: ${currentAppStatus}. You cannot re-apply or start a new application.`,
         variant: 'default',
       });
       return;
     }
-    if (applicationStatus === 'Applied') {
+    if (currentAppStatus === 'Applied') {
       toast({
         title: 'Already Applied',
         description:
@@ -295,7 +310,7 @@ export default function JobDetailClientPage({ params }: Props) {
     if (job.screeningQuestions && job.screeningQuestions.length > 0) {
       setShowScreeningModal(true);
     } else {
-      handleApply();
+      handleApply(); // No screening questions, apply directly
     }
   };
 
@@ -304,7 +319,7 @@ export default function JobDetailClientPage({ params }: Props) {
     setIsWithdrawing(true);
     try {
       await withdrawApplication(job.id);
-      setApplicationStatus('Withdrawn by Applicant');
+      // Status update handled by context and useEffect
       toast({
         title: 'Application Withdrawn',
         description: `Your application for ${job.title} has been withdrawn.`,
@@ -374,7 +389,25 @@ export default function JobDetailClientPage({ params }: Props) {
     });
   };
 
-  if (isLoading) {
+  if (!jobIdFromProps && !isLoading) {
+    // This case is hit if params.jobId was not passed, handled by initial check
+    // The error state set by the initial check will be rendered.
+    // We can return a more specific message if needed, or rely on the Alert from render.
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error: Missing Job ID</AlertTitle>
+          <AlertDescription>
+            The Job ID is missing from the page parameters. This page cannot be
+            loaded.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -408,6 +441,7 @@ export default function JobDetailClientPage({ params }: Props) {
   }
 
   if (!job) {
+    // This implies job is null after loading is false and no specific error/accessDenied reason
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">

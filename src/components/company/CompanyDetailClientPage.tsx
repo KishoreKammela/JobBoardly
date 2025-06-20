@@ -1,11 +1,12 @@
-'use client'; // This component handles client-side logic
+// src/components/company/CompanyDetailClientPage.tsx
+'use client';
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+// Removed useParams import as it's not used when params are passed as props
 import {
   doc,
   getDoc,
   collection,
-  query as firestoreQuery, // Renamed to avoid conflict with React.query
+  query as firestoreQuery,
   where,
   getDocs,
   Timestamp,
@@ -44,7 +45,7 @@ type Props = {
 };
 
 export default function CompanyDetailClientPage({ params }: Props) {
-  const companyId = params.companyId as string;
+  const companyIdFromProps = params?.companyId;
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -56,9 +57,10 @@ export default function CompanyDetailClientPage({ params }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!companyId) {
-      setError('No Company ID provided.');
+    if (!companyIdFromProps) {
+      setError('No Company ID provided. Please ensure the URL is correct.');
       setIsCompanyDataLoading(false);
+      setCompany(null);
       setAreRecruitersLoading(false);
       setAreJobsLoading(false);
       return;
@@ -70,11 +72,11 @@ export default function CompanyDetailClientPage({ params }: Props) {
       setCompany(null);
       setRecruiters([]);
       setJobs([]);
-      setAreRecruitersLoading(true); // Reset dependent loading states
-      setAreJobsLoading(true); // Reset dependent loading states
+      setAreRecruitersLoading(true);
+      setAreJobsLoading(true);
 
       try {
-        const companyDocRef = doc(db, 'companies', companyId);
+        const companyDocRef = doc(db, 'companies', companyIdFromProps);
         const companyDocSnap = await getDoc(companyDocRef);
 
         if (!companyDocSnap.exists()) {
@@ -118,7 +120,7 @@ export default function CompanyDetailClientPage({ params }: Props) {
     };
 
     fetchCompanyCoreDetails();
-  }, [companyId]);
+  }, [companyIdFromProps]);
 
   useEffect(() => {
     if (
@@ -216,6 +218,21 @@ export default function CompanyDetailClientPage({ params }: Props) {
 
     fetchJobsForCompany();
   }, [company]);
+
+  if (!companyIdFromProps && !isCompanyDataLoading) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>Error: Missing Company ID</AlertTitle>
+          <AlertDescription>
+            The Company ID is missing from the page parameters. This page cannot
+            be loaded.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   if (isCompanyDataLoading) {
     return (
