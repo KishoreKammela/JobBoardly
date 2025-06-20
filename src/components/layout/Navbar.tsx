@@ -1,3 +1,4 @@
+// src/components/layout/Navbar.tsx
 'use client';
 import Link from 'next/link';
 import {
@@ -37,7 +38,7 @@ import {
 import { useRouter, usePathname } from 'next/navigation';
 import type { UserRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { NotificationBell } from './NotificationBell'; // Added
+import { NotificationBell } from './NotificationBell';
 
 interface NavLinkConfig {
   href: string;
@@ -307,7 +308,7 @@ const userAccountDropdownLinksConfig = {
 };
 
 export function Navbar() {
-  const { user, company, logout, loading } = useAuth();
+  const { user, company, logout, loading, pendingJobsCount } = useAuth(); // Added pendingJobsCount
   const router = useRouter();
   const pathname = usePathname();
 
@@ -416,6 +417,11 @@ export function Navbar() {
                 ? user.savedJobIds?.length || 0
                 : 0;
 
+            const displayPendingJobsCount =
+              user?.role === 'employer' &&
+              link.href === '/employer/posted-jobs' &&
+              pendingJobsCount > 0;
+
             return (
               <Link
                 key={link.href}
@@ -436,6 +442,14 @@ export function Navbar() {
                     className="h-5 px-1.5 text-xs ml-0.5"
                   >
                     {savedJobsCount}
+                  </Badge>
+                )}
+                {displayPendingJobsCount && (
+                  <Badge
+                    variant="default" // Or another appropriate variant
+                    className="h-5 px-1.5 text-xs ml-0.5 bg-primary/80 text-primary-foreground"
+                  >
+                    {pendingJobsCount}
                   </Badge>
                 )}
               </Link>
@@ -563,6 +577,11 @@ export function Navbar() {
                           ? user.savedJobIds?.length || 0
                           : 0;
 
+                      const displayPendingJobsCountInDropdown =
+                        user?.role === 'employer' &&
+                        link.href === '/employer/posted-jobs' &&
+                        pendingJobsCount > 0;
+
                       return (
                         <DropdownMenuItem
                           key={`dd-main-${link.href}`}
@@ -588,6 +607,14 @@ export function Navbar() {
                                 className="h-5 px-1.5 text-xs ml-auto"
                               >
                                 {savedJobsCount}
+                              </Badge>
+                            )}
+                            {displayPendingJobsCountInDropdown && (
+                              <Badge
+                                variant="default"
+                                className="h-5 px-1.5 text-xs ml-auto bg-primary/80 text-primary-foreground"
+                              >
+                                {pendingJobsCount}
                               </Badge>
                             )}
                           </Link>

@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 'use client';
 import type {
   UserProfile,
@@ -45,6 +46,7 @@ import {
   limit,
   writeBatch,
   getDocs,
+  getCountFromServer, // Import getCountFromServer
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
@@ -57,6 +59,7 @@ interface AuthContextType {
   loading: boolean;
   notifications: Notification[];
   unreadNotificationCount: number;
+  pendingJobsCount: number; // Added for employer's pending jobs
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -137,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [pendingJobsCount, setPendingJobsCount] = useState(0); // Added
 
   const fetchNotifications = useCallback(async () => {
     if (firebaseUser && db) {
@@ -173,6 +177,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [firebaseUser]);
 
+  const fetchPendingJobsCount = useCallback(async (userId: string) => {
+    if (db && userId) {
+      try {
+        const jobsQuery = query(
+          collection(db, 'jobs'),
+          where('postedById', '==', userId),
+          where('status', '==', 'pending')
+        );
+        const snapshot = await getCountFromServer(jobsQuery);
+        setPendingJobsCount(snapshot.data().count);
+      } catch (error: unknown) {
+        console.error('Error fetching pending jobs count:', error);
+        setPendingJobsCount(0);
+      }
+    } else {
+      setPendingJobsCount(0);
+    }
+  }, []);
+
   useEffect(() => {
     if (!auth || !db) {
       console.warn(
@@ -184,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
+      setPendingJobsCount(0); // Reset
       return;
     }
 
@@ -209,6 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
               setNotifications([]);
               setUnreadNotificationCount(0);
+              setPendingJobsCount(0); // Reset
               setLoading(false);
               globalToast({
                 title: 'Account Deactivated',
@@ -360,6 +385,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(profileData);
             await fetchNotifications();
 
+            if (profileData.role === 'employer') {
+              await fetchPendingJobsCount(fbUser.uid); // Fetch count for employer
+            } else {
+              setPendingJobsCount(0); // Reset for other roles
+            }
+
             if (profileData.theme) {
               applyTheme(profileData.theme);
             }
@@ -401,6 +432,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setCompany(null);
             setNotifications([]);
             setUnreadNotificationCount(0);
+            setPendingJobsCount(0); // Reset
           }
         } catch (error: unknown) {
           console.error(
@@ -411,19 +443,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompany(null);
           setNotifications([]);
           setUnreadNotificationCount(0);
+          setPendingJobsCount(0); // Reset
         }
       } else {
         setUser(null);
         setCompany(null);
         setNotifications([]);
         setUnreadNotificationCount(0);
+        setPendingJobsCount(0); // Reset
         applyTheme('system');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [fetchNotifications]);
+  }, [fetchNotifications, fetchPendingJobsCount]); // Added fetchPendingJobsCount
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -657,6 +691,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(fullProfile);
       await fetchNotifications();
+      if (role === 'employer') {
+        await fetchPendingJobsCount(fbUser.uid);
+      }
 
       if (fullProfile.theme) {
         applyTheme(fullProfile.theme);
@@ -753,6 +790,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompany(null);
           setNotifications([]);
           setUnreadNotificationCount(0);
+          setPendingJobsCount(0); // Reset
           globalToast({
             title: 'Account Deactivated',
             description:
@@ -1002,6 +1040,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
         await fetchNotifications();
+        if (existingProfile.role === 'employer') {
+          await fetchPendingJobsCount(fbUser.uid);
+        }
       }
       return fbUser;
     } catch (error: unknown) {
@@ -1018,6 +1059,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
+      setPendingJobsCount(0); // Reset
       applyTheme('system');
       return;
     }
@@ -1032,6 +1074,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
+      setPendingJobsCount(0); // Reset
       applyTheme('system');
     } catch (error: unknown) {
       console.error('AuthContext: logout error', error);
@@ -1288,6 +1331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         notifications,
         unreadNotificationCount,
+        pendingJobsCount, // Added
         fetchNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
