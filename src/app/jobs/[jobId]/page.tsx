@@ -43,8 +43,24 @@ export async function generateMetadata(
   { params }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  // Use params.jobId directly in the async call
-  const job = await fetchJobForMetadata(params.jobId);
+  const jobId = params.jobId;
+
+  if (!jobId) {
+    return {
+      title: 'Job Not Found or Unavailable',
+      description:
+        'The job ID is missing or this job posting is currently not available or does not exist.',
+      alternates: {
+        canonical: `/jobs/not-found`,
+      },
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const job = await fetchJobForMetadata(jobId);
   const previousImages = (await parent).openGraph?.images || [];
 
   if (!job || job.status !== 'approved') {
@@ -53,7 +69,7 @@ export async function generateMetadata(
       description:
         'This job posting is currently not available or does not exist.',
       alternates: {
-        canonical: `/jobs/${params.jobId}`,
+        canonical: `/jobs/${jobId}`,
       },
       robots: {
         index: false,
@@ -79,12 +95,12 @@ export async function generateMetadata(
     description,
     keywords,
     alternates: {
-      canonical: `/jobs/${params.jobId}`,
+      canonical: `/jobs/${jobId}`,
     },
     openGraph: {
       title,
       description,
-      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/jobs/${params.jobId}`,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/jobs/${jobId}`,
       type: 'article',
       images: job.companyLogoUrl
         ? [
