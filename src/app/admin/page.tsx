@@ -311,6 +311,7 @@ export default function AdminPage() {
             uid: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
             lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
             jobsAppliedCount: (data.appliedJobIds || []).length,
           } as UserProfile;
@@ -330,6 +331,7 @@ export default function AdminPage() {
             uid: d.id,
             ...data,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
+            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
             lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
           } as UserProfile;
         })
@@ -1788,10 +1790,7 @@ export default function AdminPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => {
-                                      const currentStatusIsActive =
-                                        u.status === 'active' ||
-                                        u.status === undefined;
-                                      const newStatus = currentStatusIsActive
+                                      const newStatus = isUserEffectivelyActive
                                         ? 'suspended'
                                         : 'active';
                                       showConfirmationModal(
@@ -1811,14 +1810,14 @@ export default function AdminPage() {
                                     disabled={
                                       specificActionLoading === `user-${u.uid}`
                                     }
-                                    aria-label={`${currentStatusIsActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                    aria-label={`${isUserEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                                     className={
-                                      currentStatusIsActive
+                                      isUserEffectivelyActive
                                         ? 'text-orange-600'
                                         : 'text-blue-600'
                                     }
                                   >
-                                    {currentStatusIsActive ? (
+                                    {isUserEffectivelyActive ? (
                                       <Ban className="h-5 w-5" />
                                     ) : (
                                       <CheckSquare className="h-5 w-5" />
