@@ -2,7 +2,12 @@
 import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Job, ApplicationAnswer, ScreeningQuestion } from '@/types';
+import type {
+  Job,
+  ApplicationAnswer,
+  ScreeningQuestion,
+  UserRole,
+} from '@/types'; // Added UserRole
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +52,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const ADMIN_LIKE_ROLES = [
+const ADMIN_LIKE_ROLES: UserRole[] = [
+  // Explicitly typed UserRole
   'admin',
   'superAdmin',
   'moderator',
@@ -142,7 +148,11 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         let canView = false;
         if (fetchedJobData.status === 'approved') {
           canView = true;
-        } else if (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) {
+        } else if (
+          user?.role &&
+          ADMIN_LIKE_ROLES.includes(user.role as UserRole)
+        ) {
+          // Added explicit cast
           canView = true;
         } else if (
           user?.role === 'employer' &&
@@ -231,13 +241,15 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           description: `You've applied for ${jobData.title} at ${jobData.company}.`,
         });
       } catch (e: unknown) {
-        const error = e as Error;
+        const errorApply = e as Error; // Explicitly type 'e'
         if (
-          error.message !== 'Already applied or application process started.'
+          errorApply.message !==
+          'Already applied or application process started.'
         ) {
           toast({
             title: 'Application Failed',
-            description: error.message || 'Could not submit your application.',
+            description:
+              errorApply.message || 'Could not submit your application.',
             variant: 'destructive',
           });
         }
@@ -308,7 +320,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     if (jobData.screeningQuestions && jobData.screeningQuestions.length > 0) {
       setShowScreeningModal(true);
     } else {
-      handleApply();
+      handleApply(); // No need for explicit undefined here
     }
   };
 
@@ -467,7 +479,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   const canShowApplyActions = jobData.status === 'approved';
 
   const isPrivilegedViewer =
-    (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) ||
+    (user?.role && ADMIN_LIKE_ROLES.includes(user.role as UserRole)) || // Added explicit cast
     (user?.role === 'employer' && user.companyId === jobData.companyId);
 
   return (
@@ -544,14 +556,10 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                   Posted:{' '}
                   {new Date(jobData.postedDate as string).toLocaleDateString()}
                 </Badge>
-                {isPrivilegedViewer && (
+                {isPrivilegedViewer && jobData.status !== 'approved' && (
                   <Badge
                     variant={
-                      jobData.status === 'approved'
-                        ? 'default'
-                        : jobData.status === 'pending'
-                          ? 'secondary'
-                          : 'destructive'
+                      jobData.status === 'pending' ? 'secondary' : 'destructive'
                     }
                     className="ml-2 align-middle"
                   >
