@@ -53,6 +53,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useRouter, usePathname } from 'next/navigation';
 
 const ADMIN_LIKE_ROLES: UserRole[] = [
   'admin',
@@ -87,6 +88,8 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     userApplications,
   } = useJobSeekerActions();
   const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [applicationStatus, setApplicationStatus] =
     useState<ApplicationStatus | null>(null);
@@ -161,24 +164,20 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         }
 
         if (!canView) {
+          let reason = 'You do not have permission to view this job posting.';
           if (fetchedJobData.status === 'pending') {
-            setAccessDeniedReason(
-              'This job is pending review and not yet publicly available.'
-            );
+            reason =
+              'This job is pending review and not yet publicly available.';
           } else if (fetchedJobData.status === 'rejected') {
-            setAccessDeniedReason(
-              'This job posting is not available (rejected).'
-            );
+            reason = 'This job posting is not available (rejected).';
           } else if (fetchedJobData.status === 'suspended') {
-            setAccessDeniedReason('This job is currently suspended.');
-          } else {
-            setAccessDeniedReason(
-              'You do not have permission to view this job posting.'
-            );
+            reason = 'This job is currently suspended.';
           }
+          setAccessDeniedReason(reason);
           setJobData(null);
         } else {
           setJobData(fetchedJobData);
+          setAccessDeniedReason(null);
         }
       } catch (e: unknown) {
         console.error('Error fetching job details:', e);
@@ -193,6 +192,26 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
 
     fetchJobDetails();
   }, [jobIdFromProps, user?.role, user?.companyId]);
+
+  useEffect(() => {
+    if (accessDeniedReason && !isLoading && !authLoading) {
+      toast({
+        title: 'Access Denied',
+        description: accessDeniedReason,
+        variant: 'destructive',
+      });
+      if (user) {
+        if (user.role === 'jobSeeker') router.replace('/jobs');
+        else if (user.role === 'employer')
+          router.replace('/employer/posted-jobs');
+        else if (ADMIN_LIKE_ROLES.includes(user.role as UserRole))
+          router.replace('/admin');
+        else router.replace('/');
+      } else {
+        router.replace('/jobs');
+      }
+    }
+  }, [accessDeniedReason, isLoading, authLoading, user, router, toast]);
 
   useEffect(() => {
     if (authLoading || !jobData || !user || user.role !== 'jobSeeker') {
@@ -299,7 +318,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     }
     const currentAppStatus = getApplicationStatus(jobData.id);
     if (currentAppStatus) {
-      // This includes 'Applied', 'Withdrawn by Applicant', 'Rejected By Company', 'Hired'
       toast({
         title: 'Application Status',
         description: `Your application status for this job is: ${currentAppStatus}. You cannot re-apply.`,
@@ -430,6 +448,15 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     );
   }
 
+  if (accessDeniedReason && !isLoading && !authLoading) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-3 text-lg">Redirecting...</p>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="container mx-auto py-10">
@@ -437,18 +464,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Job</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
-  if (accessDeniedReason) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>{accessDeniedReason}</AlertDescription>
         </Alert>
       </div>
     );
@@ -541,8 +556,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         </Badge>
       );
     }
-
-    // If no applicationStatus (i.e., null), show "Apply Now"
     return (
       <Button
         size="lg"
@@ -709,7 +722,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                 jobData.status === 'approved' && (
                   <Button
                     size="lg"
-                    onClick={handleInitiateApply} // Will prompt login if not logged in
+                    onClick={handleInitiateApply}
                     className="w-full"
                   >
                     Apply Now <ExternalLink className="ml-2 h-5 w-5" />
@@ -717,13 +730,14 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                 )}
               {user &&
                 user.role === 'jobSeeker' &&
-                jobData.status === 'approved' && (
+                jobData.status === 'approved' &&
+                !applicationStatus && (
                   <Button
                     variant="outline"
                     size="lg"
                     onClick={handleSaveToggle}
                     className="w-full"
-                    disabled={isJobSeekerSuspended || !!applicationStatus}
+                    disabled={isJobSeekerSuspended}
                   >
                     <Bookmark
                       className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`}

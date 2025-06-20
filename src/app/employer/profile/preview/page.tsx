@@ -39,10 +39,12 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CompanyProfilePreviewPage() {
   const { user, company: authCompany, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [companyDetails, setCompanyDetails] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -52,14 +54,28 @@ export default function CompanyProfilePreviewPage() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!user) {
+      toast({
+        title: 'Login Required',
+        description:
+          'Please log in as an employer to preview your company profile.',
+        variant: 'destructive',
+      });
       router.replace('/employer/login?redirect=/employer/profile/preview');
       return;
     }
+
     if (user.role !== 'employer' || !user.companyId) {
-      setError(
-        'This preview is only available for employers associated with a company.'
-      );
+      const reason =
+        'This preview is only available for employers associated with a company.';
+      toast({
+        title: 'Access Denied',
+        description: reason,
+        variant: 'destructive',
+      });
+      if (user.role === 'jobSeeker') router.replace('/jobs');
+      else router.replace('/');
       setIsLoading(false);
       return;
     }
@@ -170,7 +186,7 @@ export default function CompanyProfilePreviewPage() {
     if (user.companyId) {
       fetchCompanyAndRelatedData(user.companyId);
     }
-  }, [user, authCompany, authLoading, router]);
+  }, [user, authCompany, authLoading, router, toast]);
 
   if (authLoading || isLoading) {
     return (
@@ -200,7 +216,8 @@ export default function CompanyProfilePreviewPage() {
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
-          Company details not available for preview.
+          Company details not available for preview. This might happen if your
+          company profile is not yet set up or an error occurred.
         </p>
         <Button variant="link" asChild className="mt-2 block">
           <Link href="/profile">Go to My Profile</Link>

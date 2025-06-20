@@ -12,7 +12,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, UserProfile, Job } from '@/types';
+import type { Company, UserProfile, Job, UserRole } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -37,14 +37,30 @@ import { Separator } from '@/components/ui/separator';
 import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter, usePathname } from 'next/navigation';
 
-// Props now directly accept companyId
 type Props = {
-  companyId?: string; // Make it optional to handle initial undefined state if necessary
+  companyId?: string;
 };
 
+const ADMIN_LIKE_ROLES_COMPANY_PAGE: UserRole[] = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+  'complianceOfficer',
+  'systemMonitor',
+];
+
 export default function CompanyDetailClientPage({ companyId }: Props) {
-  const companyIdFromProps = companyId; // Use the direct prop
+  const companyIdFromProps = companyId;
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -54,6 +70,9 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
   const [areRecruitersLoading, setAreRecruitersLoading] = useState(true);
   const [areJobsLoading, setAreJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!companyIdFromProps) {
@@ -66,6 +85,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
     }
 
     setError(null);
+    setAccessDeniedReason(null);
     setIsCompanyDataLoading(true);
     setCompany(null);
     setRecruiters([]);
@@ -79,7 +99,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
         const companyDocSnap = await getDoc(companyDocRef);
 
         if (!companyDocSnap.exists()) {
-          setError('Company not found or is not currently visible.');
+          setError('Company not found.'); // This is a genuine "not found"
           setCompany(null);
         } else {
           const companyDataFromDb = companyDocSnap.data() as Omit<
@@ -87,7 +107,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
             'id'
           >;
           if (companyDataFromDb.status !== 'approved') {
-            setError(
+            setAccessDeniedReason(
               'This company profile is currently under review or not publicly visible.'
             );
             setCompany(null);
@@ -105,6 +125,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
                   : companyDataFromDb.updatedAt,
             };
             setCompany(processedCompanyData);
+            setAccessDeniedReason(null);
           }
         }
       } catch (e: unknown) {
@@ -120,6 +141,33 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
 
     fetchCompanyCoreDetails();
   }, [companyIdFromProps]);
+
+  useEffect(() => {
+    if (accessDeniedReason && !isCompanyDataLoading && !authLoading) {
+      toast({
+        title: 'Access Denied',
+        description: accessDeniedReason,
+        variant: 'destructive',
+      });
+      if (user) {
+        if (user.role === 'jobSeeker') router.replace('/companies');
+        else if (user.role === 'employer')
+          router.replace('/employer/posted-jobs');
+        else if (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role as UserRole))
+          router.replace('/admin');
+        else router.replace('/');
+      } else {
+        router.replace('/companies');
+      }
+    }
+  }, [
+    accessDeniedReason,
+    isCompanyDataLoading,
+    authLoading,
+    user,
+    router,
+    toast,
+  ]);
 
   useEffect(() => {
     if (
@@ -233,7 +281,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
     );
   }
 
-  if (isCompanyDataLoading) {
+  if (isCompanyDataLoading || authLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -242,7 +290,16 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
     );
   }
 
-  if (error) {
+  if (accessDeniedReason && !isCompanyDataLoading && !authLoading) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-3 text-lg">Redirecting...</p>
+      </div>
+    );
+  }
+
+  if (error && !isCompanyDataLoading && !authLoading) {
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">

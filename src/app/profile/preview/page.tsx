@@ -48,13 +48,15 @@ import { format, isValid, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast'; // Added
 
 export default function ProfilePreviewPage() {
   const { user: currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast(); // Added
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Kept for actual data errors if any
   const printableProfileRef = React.useRef<HTMLDivElement>(null);
 
   const handlePrintProfile = useReactToPrint({
@@ -72,19 +74,34 @@ export default function ProfilePreviewPage() {
 
   useEffect(() => {
     if (authLoading) return;
+
     if (!currentUser) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in as a job seeker to preview your profile.',
+        variant: 'destructive',
+      });
       router.replace('/auth/login?redirect=/profile/preview');
       return;
     }
+
     if (currentUser.role !== 'jobSeeker') {
-      setError('Profile preview is only available for job seekers.');
+      const reason = 'Profile preview is only available for job seekers.';
+      toast({
+        title: 'Access Denied',
+        description: reason,
+        variant: 'destructive',
+      });
+      if (currentUser.role === 'employer') router.replace('/employer');
+      else router.replace('/');
       setIsLoading(false);
       setCandidate(null);
       return;
     }
+
     setCandidate(currentUser);
     setIsLoading(false);
-  }, [currentUser, authLoading, router]);
+  }, [currentUser, authLoading, router, toast]);
 
   if (authLoading || isLoading) {
     return (
@@ -95,6 +112,7 @@ export default function ProfilePreviewPage() {
     );
   }
 
+  // Error state is now less likely for access denial, but kept for other potential issues
   if (error) {
     return (
       <div className="container mx-auto py-10">
@@ -111,6 +129,7 @@ export default function ProfilePreviewPage() {
   }
 
   if (!candidate) {
+    // This case should ideally not be hit if redirects work correctly
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
