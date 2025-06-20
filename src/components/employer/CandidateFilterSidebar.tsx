@@ -248,9 +248,7 @@ export function CandidateFilterSidebar({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="desiredSalaryMin">
-                Min Expected CTC (Annual INR)
-              </Label>
+              <Label htmlFor="desiredSalaryMin">Min CTC</Label>
               <Input
                 id="desiredSalaryMin"
                 name="desiredSalaryMin"
@@ -266,9 +264,7 @@ export function CandidateFilterSidebar({
               />
             </div>
             <div>
-              <Label htmlFor="desiredSalaryMax">
-                Max Expected CTC (Annual INR)
-              </Label>
+              <Label htmlFor="desiredSalaryMax">Max CTC</Label>
               <Input
                 id="desiredSalaryMax"
                 name="desiredSalaryMax"
