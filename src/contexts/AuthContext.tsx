@@ -46,7 +46,7 @@ import {
   limit,
   writeBatch,
   getDocs,
-  getCountFromServer, // Import getCountFromServer
+  getCountFromServer,
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { format, isValid, parse } from 'date-fns';
@@ -59,7 +59,7 @@ interface AuthContextType {
   loading: boolean;
   notifications: Notification[];
   unreadNotificationCount: number;
-  pendingJobsCount: number; // Added for employer's pending jobs
+  pendingJobsCount: number;
   fetchNotifications: () => Promise<void>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [pendingJobsCount, setPendingJobsCount] = useState(0); // Added
+  const [pendingJobsCount, setPendingJobsCount] = useState(0);
 
   const fetchNotifications = useCallback(async () => {
     if (firebaseUser && db) {
@@ -207,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
-      setPendingJobsCount(0); // Reset
+      setPendingJobsCount(0);
       return;
     }
 
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setCompany(null);
               setNotifications([]);
               setUnreadNotificationCount(0);
-              setPendingJobsCount(0); // Reset
+              setPendingJobsCount(0);
               setLoading(false);
               globalToast({
                 title: 'Account Deactivated',
@@ -373,6 +373,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   : rawData.role === 'jobSeeker'
                     ? [createEmptyLanguage()]
                     : [],
+              savedJobIds: rawData.savedJobIds || [],
+              appliedJobIds: rawData.appliedJobIds || [],
+              skills: rawData.skills || [],
+              preferredLocations: rawData.preferredLocations || [],
               totalYearsExperience:
                 rawData.totalYearsExperience === null
                   ? undefined
@@ -386,9 +390,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await fetchNotifications();
 
             if (profileData.role === 'employer') {
-              await fetchPendingJobsCount(fbUser.uid); // Fetch count for employer
+              await fetchPendingJobsCount(fbUser.uid);
             } else {
-              setPendingJobsCount(0); // Reset for other roles
+              setPendingJobsCount(0);
             }
 
             if (profileData.theme) {
@@ -397,7 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (
               (profileData.role === 'employer' ||
-                ADMIN_LIKE_ROLES.includes(profileData.role)) &&
+                ADMIN_LIKE_ROLES.includes(profileData.role as UserRole)) &&
               profileData.companyId
             ) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
@@ -432,7 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setCompany(null);
             setNotifications([]);
             setUnreadNotificationCount(0);
-            setPendingJobsCount(0); // Reset
+            setPendingJobsCount(0);
           }
         } catch (error: unknown) {
           console.error(
@@ -443,21 +447,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompany(null);
           setNotifications([]);
           setUnreadNotificationCount(0);
-          setPendingJobsCount(0); // Reset
+          setPendingJobsCount(0);
         }
       } else {
         setUser(null);
         setCompany(null);
         setNotifications([]);
         setUnreadNotificationCount(0);
-        setPendingJobsCount(0); // Reset
+        setPendingJobsCount(0);
         applyTheme('system');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [fetchNotifications, fetchPendingJobsCount]); // Added fetchPendingJobsCount
+  }, [fetchNotifications, fetchPendingJobsCount]);
 
   const applyTheme = (theme: 'light' | 'dark' | 'system') => {
     const root = window.document.documentElement;
@@ -790,7 +794,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompany(null);
           setNotifications([]);
           setUnreadNotificationCount(0);
-          setPendingJobsCount(0); // Reset
+          setPendingJobsCount(0);
           globalToast({
             title: 'Account Deactivated',
             description:
@@ -910,6 +914,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               canSpeak: lang.canSpeak || false,
             })
           ),
+          savedJobIds: rawData.savedJobIds || [],
+          appliedJobIds: rawData.appliedJobIds || [],
+          skills: rawData.skills || [],
+          preferredLocations: rawData.preferredLocations || [],
           totalYearsExperience:
             rawData.totalYearsExperience === null
               ? undefined
@@ -1013,7 +1021,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (existingProfile.theme) applyTheme(existingProfile.theme);
           if (
             (existingProfile.role === 'employer' ||
-              ADMIN_LIKE_ROLES.includes(existingProfile.role)) &&
+              ADMIN_LIKE_ROLES.includes(existingProfile.role as UserRole)) &&
             existingProfile.companyId
           ) {
             const companyDocRef = doc(
@@ -1059,7 +1067,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
-      setPendingJobsCount(0); // Reset
+      setPendingJobsCount(0);
       applyTheme('system');
       return;
     }
@@ -1074,7 +1082,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany(null);
       setNotifications([]);
       setUnreadNotificationCount(0);
-      setPendingJobsCount(0); // Reset
+      setPendingJobsCount(0);
       applyTheme('system');
     } catch (error: unknown) {
       console.error('AuthContext: logout error', error);
@@ -1139,48 +1147,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       'companyId',
     ];
 
+    // Prepare payload for Firestore (handles FieldValues like arrayUnion/Remove)
     (Object.keys(updatedData) as Array<keyof UserProfile>).forEach((key) => {
       const value = updatedData[key];
+      const isArrayField = [
+        'savedJobIds',
+        'appliedJobIds',
+        'skills',
+        'preferredLocations',
+        'experiences',
+        'educations',
+        'languages',
+        'savedSearches',
+        'savedCandidateSearches',
+      ].includes(key);
 
-      if (value === undefined) {
-        if (nullableFields.includes(key)) {
-          payloadForFirestore[key] = null;
-        }
-      } else if (Array.isArray(value)) {
-        if (
-          key === 'experiences' ||
-          key === 'educations' ||
-          key === 'languages'
-        ) {
-          payloadForFirestore[key] = value.map(
-            (item: Record<string, unknown>) => {
-              const cleanedItem: { [key: string]: unknown } = { ...item };
-              Object.keys(cleanedItem).forEach((prop) => {
-                if (cleanedItem[prop] === undefined) {
-                  if (
-                    (prop === 'startDate' ||
-                      prop === 'endDate' ||
-                      prop === 'annualCTC') &&
-                    key === 'experiences'
-                  ) {
-                    cleanedItem[prop] = null;
-                  } else if (
-                    (prop === 'startYear' || prop === 'endYear') &&
-                    key === 'educations'
-                  ) {
-                    cleanedItem[prop] = null;
-                  } else {
-                    delete cleanedItem[prop];
-                  }
-                }
-              });
-              return cleanedItem;
-            }
-          );
-        } else {
-          payloadForFirestore[key] = value;
-        }
-      } else {
+      if (isArrayField && !Array.isArray(value) && value !== undefined) {
+        // This is likely a Firestore FieldValue (arrayUnion/Remove)
+        payloadForFirestore[key] = value;
+      } else if (value === undefined && nullableFields.includes(key)) {
+        payloadForFirestore[key] = null;
+      } else if (value !== undefined) {
         payloadForFirestore[key] = value;
       }
     });
@@ -1188,31 +1175,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     payloadForFirestore.updatedAt = serverTimestamp();
     payloadForFirestore.lastActive = serverTimestamp();
 
-    const actualChanges = Object.keys(payloadForFirestore).filter(
-      (k) => k !== 'updatedAt' && k !== 'lastActive'
-    );
+    try {
+      await updateDoc(userDocRef, payloadForFirestore);
 
-    if (actualChanges.length > 0 || Object.keys(updatedData).length > 0) {
-      try {
-        await updateDoc(userDocRef, payloadForFirestore);
-        const updatedUserForState = { ...user } as UserProfile;
-        for (const key in payloadForFirestore) {
-          if (key !== 'updatedAt' && key !== 'lastActive') {
-            const typedKey = key as keyof UserProfile;
-            (updatedUserForState[typedKey] as UserProfile[typeof typedKey]) =
-              payloadForFirestore[key] as UserProfile[typeof typedKey];
+      // Update local user state carefully
+      setUser((prevUser) => {
+        if (!prevUser) return null;
+        const newUser = { ...prevUser };
+
+        (Object.keys(updatedData) as Array<keyof UserProfile>).forEach(
+          (key) => {
+            const value = updatedData[key];
+            const isArrayField = [
+              'savedJobIds',
+              'appliedJobIds',
+              'skills',
+              'preferredLocations',
+              'experiences',
+              'educations',
+              'languages',
+              'savedSearches',
+              'savedCandidateSearches',
+            ].includes(key);
+
+            if (isArrayField) {
+              if (Array.isArray(value)) {
+                (newUser[key] as UserProfile[typeof key]) = value;
+              }
+              // If 'value' is a FieldValue, don't assign it directly to newUser[key].
+              // The local state for arrays will reflect changes after the next full fetch,
+              // or if the calling context manages its own optimistic update based on FieldValue.
+            } else if (value !== undefined) {
+              (newUser[key] as UserProfile[typeof key]) = value;
+            } else if (value === undefined && nullableFields.includes(key)) {
+              (newUser[key] as UserProfile[typeof key]) =
+                null as UserProfile[typeof key];
+            }
           }
-        }
-        updatedUserForState.updatedAt = new Date().toISOString();
-        updatedUserForState.lastActive = new Date().toISOString();
-        setUser(updatedUserForState);
-        if (updatedData.theme) {
-          applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
-        }
-      } catch (error: unknown) {
-        console.error('AuthContext: updateUserProfile error', error);
-        throw error;
+        );
+
+        newUser.updatedAt = new Date().toISOString();
+        newUser.lastActive = new Date().toISOString();
+        return newUser;
+      });
+
+      if (updatedData.theme) {
+        applyTheme(updatedData.theme as 'light' | 'dark' | 'system');
       }
+    } catch (error: unknown) {
+      console.error('AuthContext: updateUserProfile error', error);
+      throw error;
     }
   };
 
@@ -1331,7 +1343,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         notifications,
         unreadNotificationCount,
-        pendingJobsCount, // Added
+        pendingJobsCount,
         fetchNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,

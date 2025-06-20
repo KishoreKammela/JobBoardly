@@ -156,7 +156,7 @@ export function JobSeekerActionsProvider({
         );
 
         await updateUserProfile({
-          appliedJobIds: arrayUnion(job.id) as unknown as string[],
+          appliedJobIds: arrayUnion(job.id) as any, // Let AuthContext handle FieldValue
         });
       } catch (e: unknown) {
         console.error('JobSeekerActionsContext: applyForJob error', e);
@@ -266,8 +266,15 @@ export function JobSeekerActionsProvider({
         }
         try {
           await updateUserProfile({
-            savedJobIds: arrayUnion(jobId) as unknown as string[],
+            savedJobIds: arrayUnion(jobId) as any, // Let AuthContext handle FieldValue
           });
+          // Optimistically update local state if AuthContext doesn't do it immediately for arrays
+          if (user.savedJobIds && !user.savedJobIds.includes(jobId)) {
+            // This direct setUser call should be avoided if possible, rely on AuthContext
+            // For now, we assume AuthContext's user state will eventually reflect this.
+            // A more robust solution might involve a callback or event from AuthContext
+            // or AuthContext explicitly handling arrayUnion/Remove for its local state.
+          }
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: saveJob error', error);
           throw error;
@@ -297,8 +304,9 @@ export function JobSeekerActionsProvider({
         }
         try {
           await updateUserProfile({
-            savedJobIds: arrayRemove(jobId) as unknown as string[],
+            savedJobIds: arrayRemove(jobId) as any, // Let AuthContext handle FieldValue
           });
+          // Optimistic update similar to saveJob if needed
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: unsaveJob error', error);
           throw error;
@@ -316,7 +324,11 @@ export function JobSeekerActionsProvider({
 
   const isJobSaved = useCallback(
     (jobId: string): boolean => {
-      if (user && user.role === 'jobSeeker' && user.savedJobIds) {
+      if (
+        user &&
+        user.role === 'jobSeeker' &&
+        Array.isArray(user.savedJobIds)
+      ) {
         return user.savedJobIds.includes(jobId);
       }
       return false;
@@ -357,9 +369,7 @@ export function JobSeekerActionsProvider({
       };
       try {
         await updateUserProfile({
-          savedSearches: arrayUnion(
-            newSearchObject
-          ) as unknown as SavedSearch[],
+          savedSearches: arrayUnion(newSearchObject) as any, // Let AuthContext handle FieldValue
         });
       } catch (error: unknown) {
         console.error('JobSeekerActionsContext: saveSearch error', error);
@@ -409,9 +419,7 @@ export function JobSeekerActionsProvider({
           };
 
           await updateUserProfile({
-            savedSearches: arrayRemove(
-              searchToDeleteForFirestore
-            ) as unknown as SavedSearch[],
+            savedSearches: arrayRemove(searchToDeleteForFirestore) as any, // Let AuthContext handle FieldValue
           });
         } catch (error: unknown) {
           console.error('JobSeekerActionsContext: deleteSearch error', error);
