@@ -109,21 +109,20 @@ To empower employers to efficiently find and connect with qualified candidates b
 graph TD
     A[Start: Needs to Hire] --> B[Visit JobBoardly Employer Section: /employer]
     B --> C{Has Account & Company Setup?}
-    C -- No --> D[Register Company & Recruiter Account: /employer/register]
+    C -->|No| D[Register Company & Recruiter Account: /employer/register]
     D --> E[Company Profile Pending Admin Approval]
     E --> F[Login: /employer/login]
     F --> F_check_status{Company Status OK?}
-    F_check_status -- Deleted --> F_deleted[Show Account Deactivated, Logout/Lockout]
-    F_check_status -- Suspended --> G_suspended[Go to Post Job, Feature Disabled]
-    C -- Yes --> F
-    F_check_status -- Active/Approved --> G[Navigate to Post Job: /employer/post-job]
+    F_check_status -->|Deleted| F_deleted[Show Account Deactivated, Logout/Lockout]
+    F_check_status -->|Suspended| G_suspended[Go to Post Job, Feature Disabled]
+    C -->|Yes| F
+    F_check_status -->|Active/Approved| G[Navigate to Post Job: /employer/post-job]
     G --> H[Fill Job Details or Upload/Parse JD Document with AI]
-    H --> I[Add Screening Questions Optional (Text, Yes/No)]
+    H --> I[Add Screening Questions Optional Text, Yes/No]
     I --> J_confirm[Confirm Job Submission]
-    J_confirm -- Yes --> J[Submit Job for Admin Approval]
+    J_confirm -->|Yes| J[Submit Job for Admin Approval]
     J --> K[Job Pending in My Postings: /employer/posted-jobs]
     K --> L[Await Admin Approval for Job or Preview job details]
-
     G_suspended --> M[Show Alert: Posting Disabled]
 ```
 
