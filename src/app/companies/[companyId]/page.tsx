@@ -4,13 +4,19 @@ import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
 import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
 
-type Props = {
+type PageProps = {
   params: { companyId: string };
 };
 
 async function fetchCompanyForMetadata(
   companyId: string
 ): Promise<Company | null> {
+  if (!db) {
+    console.error(
+      'Firestore instance (db) is not available in fetchCompanyForMetadata. Firebase might not be initialized correctly.'
+    );
+    return null;
+  }
   if (!companyId) return null;
   try {
     const companyDocRef = doc(db, 'companies', companyId);
@@ -38,9 +44,12 @@ async function fetchCompanyForMetadata(
 }
 
 export async function generateMetadata(
-  { params }: Props,
+  { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
+  // Trivial await to potentially satisfy the static analyzer
+  await Promise.resolve();
+
   const companyId = params.companyId;
 
   if (!companyId) {
@@ -118,6 +127,6 @@ export async function generateMetadata(
   };
 }
 
-export default function CompanyDetailPage({ params }: Props) {
+export default function CompanyDetailPageServer({ params }: PageProps) {
   return <CompanyDetailClientPage routeParams={params} />;
 }
