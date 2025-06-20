@@ -52,15 +52,38 @@ export function FilterSidebar({
   const { toast } = useToast();
 
   useEffect(() => {
-    setFilters({
-      location: initialFilters?.location || '',
-      roleType: initialFilters?.roleType || 'all',
-      isRemote: initialFilters?.isRemote || false,
-      recentActivity: initialFilters?.recentActivity || 'any',
-    });
-  }, [initialFilters]);
+    // This effect ensures that if the parent's initialFilters prop changes
+    // (e.g., due to URL searchParams changing), the internal state reflects it.
+    // Crucially, it only calls setFilters if the values have actually changed
+    // to prevent infinite loops.
+    const newLocation = initialFilters?.location || '';
+    const newRoleType = initialFilters?.roleType || 'all';
+    const newIsRemote = initialFilters?.isRemote || false;
+    const newRecentActivity = initialFilters?.recentActivity || 'any';
+
+    if (
+      newLocation !== filters.location ||
+      newRoleType !== filters.roleType ||
+      newIsRemote !== filters.isRemote ||
+      newRecentActivity !== filters.recentActivity
+    ) {
+      setFilters({
+        location: newLocation,
+        roleType: newRoleType,
+        isRemote: newIsRemote,
+        recentActivity: newRecentActivity,
+      });
+    }
+  }, [
+    initialFilters,
+    filters.location,
+    filters.roleType,
+    filters.isRemote,
+    filters.recentActivity,
+  ]); // Dependencies include current filter values for correct comparison
 
   useEffect(() => {
+    // This effect notifies the parent component when the internal filters change.
     onFilterChange(filters);
   }, [filters, onFilterChange]);
 
@@ -93,13 +116,13 @@ export function FilterSidebar({
   };
 
   const handleReset = () => {
-    const resetFilters: Omit<Filters, 'searchTerm'> = {
+    const resetFiltersData: Omit<Filters, 'searchTerm'> = {
       location: '',
       roleType: 'all',
       isRemote: false,
       recentActivity: 'any',
     };
-    setFilters(resetFilters);
+    setFilters(resetFiltersData);
   };
 
   const handleOpenSaveSearchDialog = () => {
