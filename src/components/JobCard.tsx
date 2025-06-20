@@ -20,6 +20,7 @@ import {
   CheckCircle,
   RotateCcw,
   AlertTriangle,
+  Ban,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -76,6 +77,14 @@ export function JobCard({
       });
       return;
     }
+    if (job.status !== 'approved') {
+      toast({
+        title: 'Cannot Save',
+        description: 'This job is not currently approved and cannot be saved.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (!user || user.role !== 'jobSeeker') {
       toast({
         title: 'Login Required',
@@ -84,6 +93,17 @@ export function JobCard({
       });
       return;
     }
+    // Disable saving/unsaving if an application process has started or concluded
+    if (applicationStatus) {
+      toast({
+        title: 'Action Not Allowed',
+        description:
+          'Cannot save or unsave a job that has an active or concluded application status.',
+        variant: 'default',
+      });
+      return;
+    }
+
     if (saved) {
       await unsaveJob(job.id);
       setSaved(false);
@@ -128,16 +148,36 @@ export function JobCard({
           ? `${formatCurrencyINR(job.salaryMax)} p.a.`
           : 'Not Disclosed';
 
-  const canApply =
-    !applicationStatus ||
-    (applicationStatus !== 'Hired' &&
-      !applicationStatus.startsWith('Rejected') &&
-      applicationStatus !== 'Withdrawn by Applicant');
-  const showAppliedBadge =
-    applicationStatus &&
-    applicationStatus !== 'Applied' &&
-    applicationStatus !== 'Withdrawn by Applicant';
-  const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
+  const canCurrentlyApply =
+    !applicationStatus && job.status === 'approved' && !isJobSeekerSuspended;
+  const canCurrentlySave =
+    !applicationStatus && job.status === 'approved' && !isJobSeekerSuspended;
+  const canCurrentlyWithdraw =
+    applicationStatus === 'Applied' && !isJobSeekerSuspended;
+
+  const renderApplicationStatusBadge = () => {
+    if (!applicationStatus || applicationStatus === 'Applied') return null;
+
+    let variant: 'default' | 'destructive' | 'secondary' | 'outline' =
+      'secondary';
+    let icon = <CheckCircle className="mr-1.5 h-4 w-4" />;
+
+    if (applicationStatus === 'Hired') {
+      variant = 'default';
+    } else if (applicationStatus.startsWith('Rejected')) {
+      variant = 'destructive';
+      icon = <AlertTriangle className="mr-1.5 h-4 w-4" />;
+    } else if (applicationStatus === 'Withdrawn by Applicant') {
+      variant = 'outline';
+      icon = <RotateCcw className="mr-1.5 h-4 w-4" />;
+    }
+
+    return (
+      <Badge variant={variant} className="py-1.5 px-2.5 text-sm">
+        {icon} {applicationStatus}
+      </Badge>
+    );
+  };
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
@@ -219,56 +259,45 @@ export function JobCard({
               onClick={handleSaveToggle}
               aria-pressed={saved}
               aria-label={saved ? 'Unsave job' : 'Save job'}
-              disabled={isJobSeekerSuspended}
+              disabled={!canCurrentlySave}
               title={saved ? 'Unsave Job' : 'Save Job'}
             >
               <Bookmark
                 className={`h-4 w-4 ${saved ? 'fill-primary text-primary' : ''}`}
               />
             </Button>
-            {applicationStatus === 'Applied' ? (
+
+            {canCurrentlyWithdraw ? (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleWithdraw}
-                disabled={isJobSeekerSuspended}
                 title="Withdraw Application"
               >
                 <RotateCcw className="h-4 w-4 mr-1.5" /> Withdraw
               </Button>
-            ) : showAppliedBadge ? (
-              <Badge
-                variant="outline"
-                className="text-green-600 border-green-500 py-1.5 px-2.5"
-              >
-                <CheckCircle className="mr-1.5 h-4 w-4" /> {applicationStatus}
-              </Badge>
-            ) : showWithdrawnBadge ? (
-              <Badge
-                variant="outline"
-                className="text-orange-600 border-orange-500 py-1.5 px-2.5"
-              >
-                <RotateCcw className="mr-1.5 h-4 w-4" /> {applicationStatus}
-              </Badge>
-            ) : canApply ? (
+            ) : applicationStatus && applicationStatus !== 'Applied' ? (
+              renderApplicationStatusBadge()
+            ) : canCurrentlyApply ? (
               <Button
                 size="sm"
                 asChild
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={isJobSeekerSuspended}
               >
                 <Link href={`/jobs/${job.id}`}>
                   Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
             ) : (
-              <Badge variant="destructive" className="py-1.5 px-2.5">
-                <AlertTriangle className="mr-1.5 h-4 w-4" /> Cannot Re-apply
-              </Badge>
+              job.status !== 'approved' && (
+                <Badge variant="outline" className="text-xs">
+                  <Ban className="mr-1 h-3 w-3" /> Not Available
+                </Badge>
+              )
             )}
           </div>
         )}
-        {!user && (
+        {!user && job.status === 'approved' && (
           <Button
             size="sm"
             asChild

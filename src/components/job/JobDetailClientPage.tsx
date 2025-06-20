@@ -7,7 +7,8 @@ import type {
   ApplicationAnswer,
   ScreeningQuestion,
   UserRole,
-} from '@/types'; // Added UserRole
+  ApplicationStatus,
+} from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +36,7 @@ import {
   AlertTriangle,
   RotateCcw,
   HelpCircle,
+  Ban,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -53,7 +55,6 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const ADMIN_LIKE_ROLES: UserRole[] = [
-  // Explicitly typed UserRole
   'admin',
   'superAdmin',
   'moderator',
@@ -87,9 +88,8 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   } = useJobSeekerActions();
   const { toast } = useToast();
 
-  const [applicationStatus, setApplicationStatus] = useState<string | null>(
-    null
-  );
+  const [applicationStatus, setApplicationStatus] =
+    useState<ApplicationStatus | null>(null);
   const [saved, setSaved] = useState(false);
   const [showScreeningModal, setShowScreeningModal] = useState(false);
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
@@ -152,7 +152,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           user?.role &&
           ADMIN_LIKE_ROLES.includes(user.role as UserRole)
         ) {
-          // Added explicit cast
           canView = true;
         } else if (
           user?.role === 'employer' &&
@@ -241,7 +240,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           description: `You've applied for ${jobData.title} at ${jobData.company}.`,
         });
       } catch (e: unknown) {
-        const errorApply = e as Error; // Explicitly type 'e'
+        const errorApply = e as Error;
         if (
           errorApply.message !==
           'Already applied or application process started.'
@@ -299,19 +298,11 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
       return;
     }
     const currentAppStatus = getApplicationStatus(jobData.id);
-    if (currentAppStatus && currentAppStatus !== 'Applied') {
+    if (currentAppStatus) {
+      // This includes 'Applied', 'Withdrawn by Applicant', 'Rejected By Company', 'Hired'
       toast({
         title: 'Application Status',
-        description: `Your application status for this job is: ${currentAppStatus}. You cannot re-apply or start a new application.`,
-        variant: 'default',
-      });
-      return;
-    }
-    if (currentAppStatus === 'Applied') {
-      toast({
-        title: 'Already Applied',
-        description:
-          'You have already applied for this job. You can withdraw your application if needed.',
+        description: `Your application status for this job is: ${currentAppStatus}. You cannot re-apply.`,
         variant: 'default',
       });
       return;
@@ -320,12 +311,21 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     if (jobData.screeningQuestions && jobData.screeningQuestions.length > 0) {
       setShowScreeningModal(true);
     } else {
-      handleApply(); // No need for explicit undefined here
+      handleApply();
     }
   };
 
   const handleWithdrawApplication = async () => {
     if (!jobData || !user || applicationStatus !== 'Applied') return;
+    if (isJobSeekerSuspended) {
+      toast({
+        title: 'Account Suspended',
+        description:
+          'Your account is currently suspended. You cannot withdraw applications.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsWithdrawing(true);
     try {
       await withdrawApplication(jobData.id);
@@ -361,6 +361,15 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         title: 'Cannot Save',
         description: 'This job is not currently approved and cannot be saved.',
         variant: 'destructive',
+      });
+      return;
+    }
+    if (applicationStatus) {
+      toast({
+        title: 'Action Not Allowed',
+        description:
+          'Cannot save or unsave a job with an active or concluded application.',
+        variant: 'default',
       });
       return;
     }
@@ -471,16 +480,80 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
           ? `${formatCurrencyINR(jobData.salaryMax)} p.a.`
           : 'Not Disclosed';
 
-  const showAppliedBadge =
-    applicationStatus &&
-    applicationStatus !== 'Applied' &&
-    applicationStatus !== 'Withdrawn by Applicant';
-  const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
-  const canShowApplyActions = jobData.status === 'approved';
-
   const isPrivilegedViewer =
-    (user?.role && ADMIN_LIKE_ROLES.includes(user.role as UserRole)) || // Added explicit cast
+    (user?.role && ADMIN_LIKE_ROLES.includes(user.role as UserRole)) ||
     (user?.role === 'employer' && user.companyId === jobData.companyId);
+
+  const renderJobSeekerActions = () => {
+    if (!user || user.role !== 'jobSeeker') return null;
+    if (jobData.status !== 'approved') {
+      return (
+        <Badge
+          variant="outline"
+          className="w-full text-center justify-center py-2.5 text-md"
+        >
+          <Ban className="mr-2 h-5 w-5" /> This job is not currently open for
+          applications.
+        </Badge>
+      );
+    }
+
+    if (applicationStatus === 'Applied') {
+      return (
+        <Button
+          size="lg"
+          variant="outline"
+          className="w-full"
+          onClick={() => setShowWithdrawConfirm(true)}
+          disabled={isJobSeekerSuspended || isWithdrawing}
+        >
+          {isWithdrawing ? (
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          ) : (
+            <RotateCcw className="mr-2 h-5 w-5" />
+          )}
+          Withdraw Application
+        </Button>
+      );
+    }
+
+    if (
+      applicationStatus === 'Withdrawn by Applicant' ||
+      applicationStatus === 'Rejected By Company' ||
+      applicationStatus === 'Hired'
+    ) {
+      let badgeVariant: 'default' | 'destructive' | 'secondary' | 'outline' =
+        'secondary';
+      let icon = <CheckCircle className="mr-2 h-5 w-5" />;
+      if (applicationStatus === 'Hired') badgeVariant = 'default';
+      if (applicationStatus.startsWith('Rejected'))
+        badgeVariant = 'destructive';
+      if (applicationStatus === 'Withdrawn by Applicant') {
+        badgeVariant = 'outline';
+        icon = <RotateCcw className="mr-2 h-5 w-5" />;
+      }
+      return (
+        <Badge
+          variant={badgeVariant}
+          className="w-full text-center justify-center py-2.5 text-md"
+        >
+          {icon} {applicationStatus}
+        </Badge>
+      );
+    }
+
+    // If no applicationStatus (i.e., null), show "Apply Now"
+    return (
+      <Button
+        size="lg"
+        onClick={handleInitiateApply}
+        className="w-full"
+        disabled={isJobSeekerSuspended}
+      >
+        Apply Now <ExternalLink className="ml-2 h-5 w-5" />
+      </Button>
+    );
+  };
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -631,76 +704,33 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                 )}
             </div>
             <aside className="w-full sm:w-64 space-y-4">
-              {user && user.role === 'jobSeeker' && canShowApplyActions && (
-                <>
-                  {applicationStatus === 'Applied' && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setShowWithdrawConfirm(true)}
-                      disabled={isJobSeekerSuspended || isWithdrawing}
-                    >
-                      {isWithdrawing ? (
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      ) : (
-                        <RotateCcw className="mr-2 h-5 w-5" />
-                      )}
-                      Withdraw Application
-                    </Button>
-                  )}
-                  {showAppliedBadge && (
-                    <Badge
-                      variant="outline"
-                      className="w-full text-center justify-center py-2.5 text-md text-green-600 border-green-600"
-                    >
-                      <CheckCircle className="mr-2 h-5 w-5" />{' '}
-                      {applicationStatus}
-                    </Badge>
-                  )}
-                  {showWithdrawnBadge && (
-                    <Badge
-                      variant="outline"
-                      className="w-full text-center justify-center py-2.5 text-md text-orange-600 border-orange-500"
-                    >
-                      <RotateCcw className="mr-2 h-5 w-5" /> {applicationStatus}
-                    </Badge>
-                  )}
-                  {!applicationStatus && (
-                    <Button
-                      size="lg"
-                      onClick={handleInitiateApply}
-                      className="w-full"
-                      disabled={isJobSeekerSuspended}
-                    >
-                      Apply Now <ExternalLink className="ml-2 h-5 w-5" />
-                    </Button>
-                  )}
+              {renderJobSeekerActions()}
+              {(!user || user.role !== 'jobSeeker') &&
+                jobData.status === 'approved' && (
+                  <Button
+                    size="lg"
+                    onClick={handleInitiateApply} // Will prompt login if not logged in
+                    className="w-full"
+                  >
+                    Apply Now <ExternalLink className="ml-2 h-5 w-5" />
+                  </Button>
+                )}
+              {user &&
+                user.role === 'jobSeeker' &&
+                jobData.status === 'approved' && (
                   <Button
                     variant="outline"
                     size="lg"
                     onClick={handleSaveToggle}
                     className="w-full"
-                    disabled={isJobSeekerSuspended}
+                    disabled={isJobSeekerSuspended || !!applicationStatus}
                   >
                     <Bookmark
                       className={`mr-2 h-5 w-5 ${saved ? 'fill-primary text-primary' : ''}`}
                     />
                     {saved ? 'Job Saved' : 'Save Job'}
                   </Button>
-                </>
-              )}
-              {(!user ||
-                (user.role !== 'jobSeeker' &&
-                  jobData.status === 'approved')) && (
-                <Button
-                  size="lg"
-                  onClick={handleInitiateApply}
-                  className="w-full"
-                >
-                  Apply Now <ExternalLink className="ml-2 h-5 w-5" />
-                </Button>
-              )}
+                )}
               {user &&
                 user.role !== 'jobSeeker' &&
                 jobData.status !== 'approved' &&

@@ -22,11 +22,12 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'
   ),
   title: {
-    default: 'JobBoardly - Find Your Next Opportunity | AI-Powered Job Portal',
+    default:
+      'JobBoardly: AI-Powered Job Search & Hiring Platform - Find Your Future',
     template: '%s | JobBoardly',
   },
   description:
-    'JobBoardly is an AI-enhanced job board connecting job seekers with employers. Discover AI-driven job matching, resume parsing, and a seamless application process.',
+    'Discover your dream job or hire top talent with JobBoardly. Our advanced AI-driven platform offers intelligent job matching, resume parsing, and a seamless experience for job seekers and employers alike.',
   keywords: [
     'AI job board',
     'job search',
@@ -36,6 +37,11 @@ export const metadata: Metadata = {
     'JobBoardly',
     'resume parsing',
     'AI job matching',
+    'tech jobs',
+    'marketing jobs',
+    'remote jobs',
+    'post jobs online',
+    'find employees',
   ],
   alternates: {
     canonical: '/',
@@ -104,18 +110,18 @@ export default function RootLayout({
       <head />
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
-          <GlobalLoadingIndicatorWrapper>
-            <JobSeekerActionsProvider>
-              <EmployerActionsProvider>
-                <Navbar />
-                <main className="flex-grow container mx-auto px-4 py-8">
+          <JobSeekerActionsProvider>
+            <EmployerActionsProvider>
+              <Navbar />
+              <main className="flex flex-col flex-grow container mx-auto px-4 py-8">
+                <GlobalLoadingIndicatorWrapper>
                   {children}
-                </main>
-                <Footer />
-                <Toaster />
-              </EmployerActionsProvider>
-            </JobSeekerActionsProvider>
-          </GlobalLoadingIndicatorWrapper>
+                </GlobalLoadingIndicatorWrapper>
+              </main>
+              <Footer />
+              <Toaster />
+            </EmployerActionsProvider>
+          </JobSeekerActionsProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />

@@ -47,7 +47,6 @@ import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 const ADMIN_LIKE_ROLES_CANDIDATE_PAGE: UserRole[] = [
