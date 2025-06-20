@@ -39,7 +39,7 @@ To empower employers to efficiently find and connect with qualified candidates b
 - **Create & Edit Job Postings (`/employer/post-job`)**:
   - Intuitive form to input job details: Title, Location, Type (Full-time, Part-time, etc.), Remote status, Salary range (Min/Max INR), Skills.
   - **AI Job Description Parsing**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields. _Note: Plain text (.txt) is recommended for best parsing results with the current AI model._
-  - **Screening Questions**: Add custom screening questions (text input, yes/no supported initially) to job postings. These questions are presented to job seekers during the application process. Employers can mark questions as required.
+  - **Screening Questions**: Add custom screening questions (text input, yes/no supported) to job postings. These questions are presented to job seekers during the application process. Employers can mark questions as required.
   - Submitting new jobs or updating existing ones requires confirmation.
 - **Job Status**:
   - New jobs are submitted with a 'pending' status and require platform Admin approval.
@@ -94,7 +94,7 @@ To empower employers to efficiently find and connect with qualified candidates b
 
 - Customize basic platform preferences:
   - Theme (Light, Dark, System). (Available even if company suspended/deleted).
-  - Notification preferences (for application updates, etc.). (Disabled if company suspended/deleted).
+  - Notification preferences (for application updates, etc. - _basic UI implemented, backend triggers for notifications pending_). (Disabled if company suspended/deleted).
 - **Manage Saved Candidate Searches**: View a list of your saved candidate search criteria.
   - **Apply Search**: Click a saved search to navigate to the `/employer/find-candidates` page with those filters pre-applied.
   - **Delete Search**: Remove a saved candidate search. Requires confirmation.
@@ -166,7 +166,7 @@ graph TD
 | `/employer/find-candidates`          | Search/filter job seekers. Disabled if company 'suspended'/'deleted'.                                                                                                                    | Employer                                                          |
 | `/employer/candidates/[candidateId]` | View user profile (Job Seeker by Employer; Any User by Platform Staff). Access for platform staff depends on their role's permissions.                                                   | Employer, Admin, SuperAdmin, Moderator, SupportAgent, DataAnalyst |
 | `/employer/ai-candidate-match`       | AI tool to find candidates. Disabled if company 'suspended'/'deleted'.                                                                                                                   | Employer                                                          |
-| `/settings`                          | Manage employer preferences (theme, saved candidate searches). Most disabled if company 'suspended'/'deleted', except theme. Deleting saved search needs confirm.                        | Employer                                                          |
+| `/settings`                          | Manage employer preferences (theme, saved candidate searches, notification settings). Most disabled if company 'suspended'/'deleted', except theme. Deleting saved search needs confirm. | Employer                                                          |
 | `/auth/change-password`              | Page to change password. (Accessible if company suspended/deleted). Password change requires confirmation.                                                                               | Employer                                                          |
 
 ## 5. Key "API" Interactions (Data Flows with Genkit & Firebase)
@@ -196,8 +196,8 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **Clearer guidance for recruiters** whose company account is suspended or deleted.
 - **Enhanced candidate search analytics**: Insights on search effectiveness.
 - **Support for Multiple Choice & Checkbox Screening Questions**: Enhance the UI for employers to create these types and for job seekers to answer them.
-- Extensive AI-powered enhancements are planned, including AI Recruiter Assistant and Smart Job Description Optimizer. See `docs/ai-roadmap.md` for the full AI vision.
-- For a comprehensive view of planned general platform enhancements, consult the [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md).
+- Extensive AI-powered enhancements are planned, including AI Recruiter Assistant and Smart Job Description Optimizer. See `docs/ai-features-roadmap.md` for the full AI vision.
+- For a comprehensive view of planned general platform enhancements, consult the [Future Development Roadmap](../future-development-roadmap.md).
 
 ---
 

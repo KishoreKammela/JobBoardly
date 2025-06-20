@@ -21,14 +21,17 @@ Search Engine Optimization (SEO) is critical for JobBoardly's success, aiming to
 The keyword strategy will focus on a mix of head terms, body keywords, and long-tail keywords.
 
 - **Primary Keywords (Examples):**
-  - Home Page: "AI job board", "find jobs", "hire talent", "JobBoardly"
-  - Job Listings: "jobs", "job search", "latest jobs"
-  - Company Listings: "top companies", "companies hiring"
-  - Employer Landing: "post jobs", "hire candidates", "employer job portal"
+  - Home Page: "AI job board", "find jobs", "hire talent", "JobBoardly", "AI-powered job search"
+  - Job Listings: "jobs", "job search", "latest jobs", "career opportunities"
+  - Company Listings: "top companies", "companies hiring", "employer profiles"
+  - Employer Landing: "post jobs", "hire candidates", "employer job portal", "AI recruitment"
+  - Privacy Policy: "JobBoardly privacy policy", "data protection policy"
+  - Terms of Service: "JobBoardly terms of service", "user agreement"
+  - HTML Sitemap: "JobBoardly sitemap", "site navigation"
 - **Secondary/Body Keywords (Examples):**
-  - Job Listings: "tech jobs", "remote software jobs", "marketing manager positions"
-  - Company Listings: "employer profiles", "company reviews" (if feature exists)
-  - Employer Landing: "applicant tracking", "AI recruitment"
+  - Job Listings: "tech jobs", "remote software jobs", "marketing manager positions", "entry-level jobs"
+  - Company Listings: "company culture", "best places to work"
+  - Employer Landing: "applicant tracking system", "find employees", "talent acquisition"
 - **Long-Tail Keywords (Primarily for Content Marketing - Examples):**
   - "entry level software engineer jobs in Bangalore remote"
   - "how to write a resume for AI product manager role"
@@ -36,8 +39,9 @@ The keyword strategy will focus on a mix of head terms, body keywords, and long-
   - "post a job for free for startups" (if applicable)
   - "common interview questions for data analysts"
   - "tips for effective remote team management for employers"
+  - "JobBoardly privacy information", "JobBoardly terms and conditions"
 
-**Keyword Mapping:** Each significant page (static, dynamic, content pieces) will have a primary keyword focus, supported by relevant secondary and long-tail keywords. Dynamic pages (job details, company details) will derive their primary keywords from the specific entity. Blog posts and guides will target informational and long-tail keywords.
+**Keyword Mapping:** Each significant page (static, dynamic, content pieces) will have a primary keyword focus, supported by relevant secondary and long-tail keywords. Dynamic pages (job details, company details) will derive their primary keywords from the specific entity. Blog posts and guides will target informational and long-tail keywords. Public-facing pages like Home, Job Listings, Company Listings, Employer Landing, Privacy Policy, and Terms of Service have been optimized with specific keywords.
 
 ## 5. On-Page SEO Implementation
 
@@ -47,38 +51,51 @@ The keyword strategy will focus on a mix of head terms, body keywords, and long-
 - **Examples:**
   - Home: `JobBoardly - AI-Powered Job Search & Hiring Platform`
   - Job Detail: `[Job Title] at [Company] - [Location] | JobBoardly`
-  - Blog Post: `[Blog Post Title] - Career Advice | JobBoardly`
+  - Company Detail: `[Company Name] - Profile & Jobs | JobBoardly`
+  - Employer Landing: `Employers - Post Jobs & Find Talent | JobBoardly`
+  - Privacy Policy: `Privacy Policy - How JobBoardly Protects Your Data`
+  - Terms of Service: `Terms of Service - JobBoardly User Agreement`
+  - Blog Post (Future): `[Blog Post Title] - Career Advice | JobBoardly`
 
 ### 5.2. Meta Descriptions
 
 - **Best Practices:** Unique, 150-160 characters, include keywords, act as an "ad" for the page.
 - **Examples:**
-  - Home: `Find your dream job or hire top talent with JobBoardly. Our AI-driven platform offers intelligent job matching, resume parsing, and a seamless experience.`
-  - Blog Post: `Learn how to [solve problem/achieve goal related to blog topic]. Expert tips and insights from JobBoardly.`
+  - Home: `Find your dream job or hire top talent with JobBoardly. Our AI-driven platform offers intelligent job matching, resume parsing, and a seamless experience for job seekers and employers.`
+  - Job Listings: `Search and filter thousands of job openings on JobBoardly. Find full-time, part-time, contract, and remote jobs across various industries and locations.`
+  - Employer Landing: `JobBoardly for Employers: Post job openings, manage applications, and find qualified candidates using our AI-powered tools. Streamline your hiring process today.`
+  - Privacy Policy: `Learn about how JobBoardly collects, uses, shares, and protects your personal information and data. Our commitment to your privacy and data security.`
+  - Terms of Service: `Read the Terms of Service for using JobBoardly. Understand your rights and responsibilities when using our AI-powered job portal and related services.`
+  - Blog Post (Future): `Learn how to [solve problem/achieve goal related to blog topic]. Expert tips and insights from JobBoardly.`
 
 ### 5.3. Header Tags (H1-H6)
 
-- **H1 Tag:** One unique H1 per page, describes page content, includes primary keyword.
-- **H2-H6 Tags:** Structure content logically, incorporate secondary keywords naturally.
+- **H1 Tag:** One unique H1 per page, describes page content, includes primary keyword. Implemented on public landing pages.
+- **H2-H6 Tags:** Structure content logically, incorporate secondary keywords naturally. Implemented on public landing pages.
 
 ### 5.4. Image Optimization
 
-- **Alt Text:** Descriptive alt text for all images.
-- **File Names:** Descriptive, keyword-rich file names.
+- **Alt Text:** Descriptive alt text for all images. Implemented on public landing pages using `next/image` and `data-ai-hint` for placeholders.
+- **File Names:** Descriptive, keyword-rich file names (managed by image source).
 - **Compression:** Optimize images for web (Next.js `next/image` helps).
-- **`data-ai-hint`:** Used for AI-generated placeholders.
+- **`data-ai-hint`:** Used for AI-generated placeholders to suggest relevant image themes.
 
 ### 5.5. Internal Linking
 
-- Strategically link to other relevant pages (jobs to companies, blog posts to feature pages or relevant job categories). Use descriptive anchor text.
+- Strategically link to other relevant pages (jobs to companies, employer landing to post job, etc.). Implemented in updated public pages and footer. HTML sitemap enhances this.
 
 ### 5.6. Content Quality (Overall)
 
-- Focus on original, high-quality, valuable, and regularly updated content.
+- Focus on original, high-quality, valuable, and regularly updated content. Landing pages (Home, Employer) and legal pages have been enhanced. Future blog/guides will expand this.
 
 ### 5.7. Structured Data (Schema Markup)
 
-- **Current:** `JobPosting`, `Organization`, `BreadcrumbList`, `WebSite` with `SearchAction`.
+- **Current (Planned/Implemented):**
+  - `WebSite` with `SearchAction` (potential search box in SERPs).
+  - `Organization` for JobBoardly.
+  - `JobPosting` for individual job detail pages.
+  - `BreadcrumbList` for navigation paths.
+  - `WebPage` for static content pages like Privacy Policy, Terms of Service, Sitemap.
 - **Future (with Content Marketing):**
   - `Article` or `BlogPosting` for blog posts.
   - `HowTo` for guides.
@@ -88,24 +105,25 @@ The keyword strategy will focus on a mix of head terms, body keywords, and long-
 
 ### 5.8. Canonical URLs
 
-- Use canonical tags for all pages. `metadataBase` in root layout aids this. Filtered pages should canonicalize to their unfiltered counterparts.
+- Use canonical tags for all pages. `metadataBase` in root `layout.tsx` aids this. Dynamic pages specify their canonical path. Filtered pages should canonicalize to their unfiltered counterparts (Next.js default behavior for query params usually handles this well, but monitor).
 
 ## 6. Technical SEO Considerations
 
 - **Site Speed:** Continuously leverage Next.js features and monitor with PageSpeed Insights.
-- **Mobile-Friendliness:** Ensure responsive design (Tailwind CSS, test with Mobile-Friendly Test).
+- **Mobile-Friendliness:** Ensure responsive design (Tailwind CSS, test with Mobile-Friendly Test). Implemented.
 - **Crawlability & Indexability:**
-  - **`sitemap.xml`:** Maintain dynamic sitemaps for jobs, companies, static pages, and future content (blog posts, guides). Submit to search engines.
-  - **`robots.txt`:** Configure to guide crawlers, disallow non-public areas (admin, user settings). Ensure content areas (blog) are crawlable.
+  - **`sitemap.xml`:** Dynamically generated for static pages, approved jobs, and approved companies. Submittable to search engines. Implemented via `/sitemap.xml` route.
+  - **`robots.txt`:** Configure to guide crawlers, disallow non-public areas (admin, user settings). Ensure content areas (blog - future) are crawlable. (To be created manually or via Next.js config).
+  - **HTML Sitemap (`/sitemap`):** Provides a user-friendly navigation and helps search engines discover pages. Implemented.
 - **HTTPS:** Standard.
-- **URL Structure:** Clean, logical, keyword-friendly URLs.
-- **Core Web Vitals:** Prioritize Largest Contentful Paint (LCP), First Input Delay (FID, or Interaction to Next Paint - INP), and Cumulative Layout Shift (CLS).
+- **URL Structure:** Clean, logical, keyword-friendly URLs are used (e.g., `/jobs/[jobId]`, `/companies/[companyId]`).
+- **Core Web Vitals:** Prioritize Largest Contentful Paint (LCP), First Input Delay (FID, or Interaction to Next Paint - INP), and Cumulative Layout Shift (CLS). (Ongoing optimization).
 
 ## 7. Content Strategy (Expansion)
 
-This is a cornerstone for attracting organic traffic and establishing authority.
+This is a cornerstone for attracting organic traffic and establishing authority. The current public pages (Home, Employer, Privacy, Terms) have been enhanced with foundational content.
 
-### 7.1. Blog Integration
+### 7.1. Blog Integration (Future)
 
 - **Target Audiences & Topics:**
   - **Job Seekers:**
@@ -138,7 +156,7 @@ This is a cornerstone for attracting organic traffic and establishing authority.
   - Author bios with expertise.
 - **Publishing Cadence:** Establish a regular content calendar (e.g., 1-2 posts per week).
 
-### 7.2. Guides & Resources
+### 7.2. Guides & Resources (Future)
 
 - Develop in-depth, downloadable guides (e.g., PDF checklists, eBooks) on core topics for lead generation (e.g., "The Ultimate Resume Guide," "Employer's Handbook to AI Recruitment").
 - Create dedicated resource pages or tools (e.g., a basic salary estimator for common roles if data can be sourced/aggregated, career path explorer).
@@ -157,7 +175,7 @@ This is a cornerstone for attracting organic traffic and establishing authority.
 
 Building domain authority and driving referral traffic.
 
-### 8.1. High-Quality Backlink Building
+### 8.1. High-Quality Backlink Building (Future)
 
 - **Guest Blogging:** Write articles for reputable career advice websites, HR tech blogs, and industry-specific publications, including a link back to JobBoardly.
 - **Create Link-Worthy Content (Link Bait):**
@@ -173,7 +191,7 @@ Building domain authority and driving referral traffic.
 - **Niche Directory Submissions:** Submit JobBoardly to high-quality, relevant job board or tech directories (avoid low-quality spammy directories).
 - **Testimonials & Case Studies:** Feature success stories of employers finding great candidates or job seekers landing dream jobs, and encourage them to link to their story on JobBoardly.
 
-### 8.2. Social Media Promotion & Engagement
+### 8.2. Social Media Promotion & Engagement (Future)
 
 - **Platform Focus:**
   - **LinkedIn:** Primary platform for professional networking, sharing articles, job postings, company updates.
@@ -195,7 +213,7 @@ Building domain authority and driving referral traffic.
 - **Employee Advocacy:** Encourage the JobBoardly team to share content and engage on their professional networks.
 - **User Advocacy (Future):** Incentivize or make it easy for users to share their JobBoardly successes (e.g., "I found my job on JobBoardly!").
 
-### 8.3. Online Reputation Management
+### 8.3. Online Reputation Management (Future)
 
 - Monitor brand mentions across the web (Google Alerts, social listening tools).
 - Encourage satisfied users (job seekers who found jobs, employers who hired) to share positive feedback or testimonials. This can be on JobBoardly itself (if a review system is built) or on external relevant platforms.
@@ -218,17 +236,24 @@ Building domain authority and driving referral traffic.
 
 ## 10. Next Steps/Action Plan for SEO (Iterative)
 
-### Immediate (Previously Covered/Ongoing)
+### Implemented
 
-- Implement foundational on-page SEO for all public pages (titles, metas, H1s, alt text, canonicals).
-- Ensure `metadataBase` is set for correct canonical URL construction.
+- Foundational on-page SEO for public pages (titles, metas, H1s, alt text, canonicals via `metadataBase`).
+- Dynamic `sitemap.xml` for jobs, companies, static pages.
+- HTML `sitemap` page for user navigation.
+- Enhanced content for Home, Employer, Privacy Policy, and Terms of Service pages.
+- Dynamic metadata generation for Job and Company detail pages.
 
 ### Short-Term (Next Development Cycle - Technical Focus)
 
-- **Generate & Submit `sitemap.xml`:** Dynamically for jobs, companies, static pages. Add sitemap for future blog/content section.
-- **Create & Configure `robots.txt`:** Define crawl rules, disallow non-public paths, ensure content areas are crawlable.
-- **Implement `JobPosting` & `Organization` Schema.org markup.**
-- **Add `noindex` to utility/auth pages** (if not primary landing pages).
+- **Create & Configure `robots.txt`:** Manually or via Next.js config (e.g., in `public` or generated via route handler) to define crawl rules, disallow non-public paths (e.g., `/profile`, `/settings`, `/admin` sections not meant for indexing), and point to `sitemap.xml`.
+- **Implement Structured Data (Schema.org):**
+  - `JobPosting` for individual job detail pages.
+  - `Organization` for JobBoardly on the homepage and potentially company detail pages.
+  - `BreadcrumbList` for navigation paths on relevant pages.
+  - `WebPage` for static content pages like Privacy Policy, Terms of Service, HTML Sitemap.
+- **Set up Google Analytics and Google Search Console** (if not already done through Vercel integrations). Submit sitemap.xml to Google Search Console.
+- **Add `noindex` meta tag to auth pages** (`/auth/*`, `/employer/login`, `/employer/register`, `/auth/admin/login`) via their respective `metadata` objects to prevent indexing.
 
 ### Medium-Term (Content & Initial Off-Page Focus)
 
@@ -237,9 +262,8 @@ Building domain authority and driving referral traffic.
   - Plan for 1-2 blog posts per week.
   - Assign responsibilities for content creation and SEO optimization of content.
 - **Blog Setup:** If not already part of the platform, plan for blog functionality (e.g., `/blog`, `/blog/[slug]`).
-- **Implement `Article` Schema.org markup for blog posts.**
+- **Implement `Article` or `BlogPosting` Schema.org markup for blog posts.**
 - **Internal Linking Audit & Enhancement:** Systematically add internal links from new content to relevant existing pages and vice-versa.
-- **Set up Google Analytics and Google Search Console.**
 - **Start Basic Social Media Promotion:** Regularly share new jobs and upcoming content on LinkedIn and Twitter/X.
 - **Begin Guest Blogging Outreach:** Identify 2-3 initial targets for guest posts.
 

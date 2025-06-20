@@ -32,8 +32,8 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 #### **AI Resume Builder & Optimizer**
 
+- **Dynamic Summary Generator**: Create compelling professional summaries based on target role and company _(Initial version implemented for profile page; full user control & admin toggle pending)_
 - **Role-Specific Resume Generation**: Generate different resume versions optimized for specific job types
-- **Dynamic Summary Generator**: Create compelling professional summaries based on target role and company _(Initial version implemented for profile page)_
 - **Bullet Point Optimizer**: Transform weak bullet points into impact-driven statements
 - **Format Optimizer**: Suggest best resume format based on industry and career level
 
@@ -89,6 +89,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 #### **Smart Job Description Optimizer**
 
+- **AI Job Description Parsing (Implemented)**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields for job posting.
 - **Bias Detection & Removal**: Identify and suggest alternatives for biased language
 - **Performance Predictor**: Predict job posting performance before publishing
 - **Optimal Requirements Generator**: Suggest must-have vs nice-to-have requirements based on market data
@@ -139,6 +140,8 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ### **AI-Powered Matching Engine 2.0**
 
+- **Job Matching for Job Seekers (Implemented)**: Matches job seeker profile against available job postings.
+- **Candidate Matching for Employers (Implemented)**: Matches job description against searchable candidate profiles.
 - **Behavioral Matching**: Match based on work style, career motivations, and cultural preferences
 - **Success Pattern Recognition**: Learn from successful hires to improve future matching
 - **Dynamic Matching**: Continuously refine matches based on user feedback and outcomes
@@ -167,39 +170,26 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ---
 
-## 🚀 Implementation Roadmap
+## 🚀 Implementation Roadmap (Conceptual - see also `docs/future-development-roadmap.md`)
 
-### **Phase 1 (Months 1-6): Foundation**
+### **Implemented / Foundational**
 
-- Enhanced profile optimization features (includes initial Dynamic Summary Generator)
-- Basic conversational search
-- Application success predictor
-- Job description optimizer
+- Resume Parsing
+- Job Description Parsing (for employers)
+- AI-Powered Job Matching (for job seekers)
+- AI-Powered Candidate Matching (for employers)
+- Dynamic Summary Generator (Initial version for job seeker profiles)
 
-### **Phase 2 (Months 7-12): Intelligence**
+### **Future Phases (High-Level - refer to `docs/future-development-roadmap.md` for detailed phasing)**
 
-- AI interview preparation tools
-- Advanced candidate scoring
-- Automated screening features
-- Predictive analytics dashboard
-
-### **Phase 3 (Months 13-18): Automation**
-
-- Full conversational AI assistant
-- Automated outreach and communication
-- Advanced market intelligence
-- Complete hiring process automation
-
-### **Phase 4 (Months 19+): Innovation**
-
-- Video interview analysis
-- Voice-based interactions
-- Advanced behavioral matching
-- Predictive hiring models
+- **Phase 1 (Future):** Focus on completing user controls for existing AI (like summary generator), basic conversational search, initial application success predictors, and early-stage job description optimizers.
+- **Phase 2 (Future):** Introduce AI interview prep tools, more advanced candidate scoring, initial automated screening features, and basic predictive analytics dashboards.
+- **Phase 3 (Future):** Roll out a more complete "JobBot", deeper automation in communication and outreach, advanced market intelligence, and initial behavioral matching.
+- **Phase 4 & Beyond (Future):** Explore cutting-edge AI like video analysis, voice interactions, advanced predictive models, and full AI career coaching.
 
 ---
 
-## 💡 Unique Differentiators
+## 💡 Unique Differentiators (Potential Future Focus)
 
 1. **Industry-First Career Trajectory Predictor**: Use ML to show users their likely career path and timeline
 2. **Behavioral DNA Matching**: Match candidates and companies based on work style and culture compatibility
@@ -217,6 +207,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 - Application response rate increase
 - Time to job placement reduction
 - Salary negotiation success rate
+- Adoption of AI-generated summaries and profile optimization suggestions
 
 ### **Employers**
 
@@ -224,6 +215,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 - Quality of hire improvement
 - Cost per hire reduction
 - Candidate acceptance rate increase
+- Usage of AI candidate matcher and JD parser
 
 ### **Platform**
 
@@ -236,27 +228,28 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ## 🔧 Technical Considerations
 
-### **AI/ML Stack Requirements**
+### **AI/ML Stack Requirements (Genkit with Gemini models currently)**
 
-- **NLP Models**: For resume parsing, job description analysis, conversational AI
-- **Recommendation Engines**: Collaborative filtering, content-based filtering, hybrid approaches
-- **Predictive Models**: Success prediction, salary prediction, market trend analysis
-- **Computer Vision**: For video interview analysis, portfolio evaluation
-- **Voice Processing**: For automated phone screening, voice-based interactions
+- **NLP Models**: For resume parsing, job description analysis, conversational AI (Gemini capabilities).
+- **Recommendation Engines**: (Future) Collaborative filtering, content-based filtering, hybrid approaches.
+- **Predictive Models**: (Future) Success prediction, salary prediction, market trend analysis.
+- **Computer Vision**: (Future) For video interview analysis, portfolio evaluation.
+- **Voice Processing**: (Future) For automated phone screening, voice-based interactions.
+- **Backend Infrastructure (e.g., Firebase Functions):** Will be needed to trigger AI flows based on database events or scheduled tasks for proactive AI features.
 
 ### **Data Requirements**
 
-- **User Behavior Data**: Application patterns, success rates, engagement metrics
-- **Market Data**: Salary trends, job market data, industry benchmarks
-- **Performance Data**: Hiring success rates, employee performance correlations
-- **External Data**: Industry reports, economic indicators, competitive intelligence
+- **User Behavior Data**: Application patterns, success rates, engagement metrics.
+- **Market Data**: Salary trends, job market data, industry benchmarks.
+- **Performance Data**: Hiring success rates, employee performance correlations.
+- **External Data**: Industry reports, economic indicators, competitive intelligence.
 
 ### **Infrastructure Needs**
 
-- **ML Pipeline**: Model training, deployment, monitoring, and retraining
-- **Real-time Processing**: For conversational AI and instant recommendations
-- **Analytics Infrastructure**: For processing large datasets and generating insights
-- **API Integration**: With external data sources, communication tools, calendar systems
+- **ML Pipeline**: Model training, deployment, monitoring, and retraining (managed by Genkit and underlying model providers like Google AI).
+- **Real-time Processing**: For conversational AI and instant recommendations.
+- **Analytics Infrastructure**: For processing large datasets and generating insights.
+- **API Integration**: With external data sources, communication tools, calendar systems.
 
 ---
 

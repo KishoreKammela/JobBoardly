@@ -12,10 +12,10 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) - A utility-first CSS framework for rapid UI development.
 - **PDF Generation**: [react-to-print](https://github.com/gregnb/react-to-print) - For client-side PDF generation of profiles.
 - **Backend & Database**: [Firebase](https://firebase.google.com/)
-  - **Authentication**: Secure user login and registration (Email/Password, Google, GitHub, Microsoft). Handles account status (active/suspended).
-  - **Firestore**: NoSQL database for storing job listings, user profiles, applications, company profiles, and settings (including theme preference).
+  - **Authentication**: Secure user login and registration (Email/Password, Google, GitHub, Microsoft). Handles account status (active/suspended/deleted).
+  - **Firestore**: NoSQL database for storing job listings, user profiles, applications, company profiles, settings (including theme preference and legal content).
   - **Storage**: For hosting user-uploaded files like resumes.
-  - **App Hosting / Functions**: (App Hosting configured via `apphosting.yaml`, Firebase Functions for backend tasks).
+  - **App Hosting / Functions**: (App Hosting configured via `apphosting.yaml`, Firebase Functions for backend tasks - _Functions planned for future features like notification triggers_).
 - **AI Integration**: [Genkit (by Google)](https://firebase.google.com/docs/genkit) - An open-source framework for building AI-powered features, used here for resume parsing, job description parsing (for employers), AI-powered professional summary generation, and intelligent job/candidate matching. Powered by Gemini models.
 - **Language**: [TypeScript](https://www.typescriptlang.org/) - For static typing, improved code quality, and better developer experience.
 - **Code Quality & Testing**:
@@ -30,17 +30,18 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
-- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering, job saving, application submission with screening question support, application withdrawal, AI-powered job matching, and personalized settings.
+- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering (including saving searches), job saving, application submission with screening question support, application withdrawal, AI-powered job matching, and personalized settings. Re-application to the same job is prevented.
   - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
-- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), screening questions management, applicant tracking (including viewing screening question answers) and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
+- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), applicant tracking (including viewing screening question answers), and candidate search with boolean logic, advanced filters, and saved search capabilities. AI-powered candidate matching helps find relevant talent.
   - [Detailed Employer Features](./docs/employer-features.md)
-- **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator > Support Agent/Data Analyst with restricted views). Includes a placeholder for AI Feature Toggle Management.
+- **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), platform users (suspend/activate admins/superAdmins/moderators), and legal content (Privacy Policy, Terms of Service - SuperAdmin only). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role.
   - [Detailed Admin Features](./docs/admin-features.md)
-- **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
+- **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, basic in-app notification UI shell (backend triggers pending), robust Firebase integration, accessibility considerations, and basic privacy/terms pages (content editable by SuperAdmins). SEO enhancements including dynamic XML sitemap and HTML sitemap.
+- **For a complete breakdown of all currently implemented features, see our [Platform Features Overview](./docs/platform-features-overview.md).**
 - **Future Vision & Roadmaps**:
   - See our ambitious **[AI Features Roadmap](./docs/ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
-  - Explore our broader **[Platform Enhancement Roadmap](./docs/enhanced-feature-recommendations.md)** for a comprehensive look at planned features and long-term vision.
-  - Review our detailed **[Notification & Email System Plan](./docs/notification-system-plan.md)** for engaging user communication.
+  - Explore our **[Comprehensive Notification & Email System Plan](./docs/notification-system-plan.md)** for engaging user communication.
+  - Review our **[Future Development Roadmap](./docs/future-development-roadmap.md)** for a holistic view of planned enhancements, new features, and technology considerations. This includes our previous **[Platform Enhancement Recommendations](./docs/enhanced-feature-recommendations.md)**.
 
 ## Folder Structure
 
@@ -65,6 +66,8 @@ A high-level overview of the project's directory structure:
 │   │   │   └── preview/        # Job seeker profile preview page
 │   │   ├── privacy-policy/
 │   │   ├── terms-of-service/
+│   │   ├── sitemap/            # HTML Sitemap page
+│   │   ├── sitemap.xml/        # Dynamic XML Sitemap route
 │   │   ├── globals.css         # Global styles and ShadCN theme
 │   │   ├── layout.tsx          # Root layout
 │   │   └── page.tsx            # Home page
@@ -82,8 +85,11 @@ A high-level overview of the project's directory structure:
 │   ├── job-seeker-features.md
 │   ├── routes-documentation.md
 │   ├── ai-features-roadmap.md
-│   ├── enhanced-feature-recommendations.md
-│   └── notification-system-plan.md # New Notification System Plan
+│   ├── notification-system-plan.md # Notification System Plan
+│   ├── seo-ranking-plan.md         # SEO Plan
+│   ├── platform-features-overview.md # Overview of All Implemented Features
+│   ├── future-development-roadmap.md # Future Development Roadmap (includes enhanced-feature-recommendations)
+│   └── enhanced-feature-recommendations.md # (Content moved to future-development-roadmap.md)
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -126,6 +132,9 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID="G-your-measurement-id" # Optional, for Anal
 # Replace YOUR_GEMINI_API_KEY_HERE with your actual key from Google AI Studio or Google Cloud.
 # Ensure this key has access to the Gemini API.
 GOOGLE_API_KEY="YOUR_GEMINI_API_KEY_HERE"
+
+# Base URL for sitemap generation and metadata
+NEXT_PUBLIC_BASE_URL="http://localhost:9002" # Or your production URL
 ```
 
 **Important**:
@@ -136,7 +145,7 @@ GOOGLE_API_KEY="YOUR_GEMINI_API_KEY_HERE"
 
 ### 2. Firebase Setup
 
-Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled in your Firebase project. Set up necessary composite indexes in Firestore as prompted by errors during development or for query optimization (especially for the Admin Dashboard filtering/sorting).
+Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestore (Native mode), and Storage are enabled in your Firebase project. Set up necessary composite indexes in Firestore as prompted by errors during development or for query optimization (especially for the Admin Dashboard filtering/sorting and sitemap generation). The `legalContent` collection also needs to exist for Privacy Policy and Terms of Service management.
 
 ## Local Development Setup
 

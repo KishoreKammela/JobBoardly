@@ -10,7 +10,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 ### 2.1. Notification Types
 
-- **Real-time In-App Notifications**: Instant alerts within the platform (Initial UI implemented)
+- **Real-time In-App Notifications**: Instant alerts within the platform (Basic UI shell implemented)
 - **Email Notifications**: Structured email communications (Future)
 - **Push Notifications**: Mobile/desktop browser notifications (Future)
 - **SMS Alerts**: Critical updates via text (Future premium feature)
@@ -140,7 +140,7 @@ This comprehensive notification system plan is designed to create a distinctive,
 
 **Notifications:**
 
-- **In-App**: Updates in the "My Jobs" section, potentially a notification feed (basic UI implemented).
+- **In-App**: Updates in the "My Jobs" section, potentially a notification feed (basic UI implemented for receiving).
 - **Email**: Immediate (or batched, user-configurable) alerts for significant status changes (Future).
 - **Content**: Clear indication of the new status and any recommended next actions (e.g., "Employer has reviewed your application").
   _Backend triggers (e.g., when an employer updates an application status) are required._
@@ -521,13 +521,13 @@ _(Triggers and notifications largely covered in 4.3.3)_
   - Fetching notifications for the logged-in user.
   - Marking notifications as read (individually and all).
   - `Notification` type defined.
-- **Remaining for True Phase 1 Completion (Requires Backend):**
+- **Remaining for True Phase 1 Completion (Requires Backend - Firebase Functions):**
   - **Backend Triggers:** Implement Firebase Functions (or similar server-side logic) to create `Notification` documents in Firestore when key events occur. Examples:
-    - **Job Seeker:** Application status changed by employer.
-    - **Employer:** New application received, job approved/rejected by admin.
-    - **Admin:** New job/company pending approval.
-  - Basic email template system and sending for critical alerts (e.g., account status changes, application submission confirmation) - this is a significant step in itself.
-  - User preference settings in `/settings` to toggle basic notification categories (e.g., Application Updates On/Off).
+    - **Job Seeker:** Application status changed by employer, new direct messages (future).
+    - **Employer:** New application received, job approved/rejected by admin, company profile approved/rejected.
+    - **Admin:** New job/company pending approval, user reports (future).
+  - Basic email template system and sending for critical alerts (e.g., account status changes, application submission confirmation, password reset) - this is a significant step in itself.
+  - User preference settings in `/settings` to toggle basic notification categories (e.g., Application Updates On/Off). (Backend support for preferences also needed).
 
 ### 9.2. Phase 2: Enhanced Features & Personalization (Future)
 
@@ -535,7 +535,7 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - **Job Seeker**: Granular notification settings in `/settings`, improved digest emails, AI job match notifications.
 - **Employer**: More detailed new applicant alerts, reminders for pending applications, saved candidate search alerts.
 - **Admin**: More detailed moderation alerts, basic platform health summaries.
-- **Technical**: Robust user preference storage and retrieval, first iteration of intelligent grouping (e.g., daily digests), foundational AI for notification timing (simple heuristics). Admin UI for basic feature toggles for major notification categories.
+- **Technical**: Robust user preference storage and retrieval, first iteration of intelligent grouping (e.g., daily digests), foundational AI for notification timing (simple heuristics). Admin UI for basic feature toggles for major notification categories (part of Platform Feature Toggle Management System).
 
 ### 9.3. Phase 3: Advanced Intelligence & Automation (Future)
 

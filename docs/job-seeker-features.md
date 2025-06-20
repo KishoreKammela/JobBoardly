@@ -61,7 +61,7 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 - **Dynamic Job Detail Pages (`/jobs/[jobId]`)**:
   - View complete details for each job: description, responsibilities, qualifications, skills, salary, company info.
   - **Share Functionality**: Copy a direct link to the job posting.
-  - Screening questions are _not_ visible on the public job detail page.
+  - Screening questions are _not_ visible on the public job detail page (unless being previewed by an Admin or the owning Employer).
 - **Company Profile Pages (`/companies/[companyId]`)**:
   - View details about companies, including their open positions.
 
@@ -94,7 +94,7 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 ### 2.6. User Settings (`/settings`)
 
 - **Theme Customization**: Choose between Light, Dark, or System preference for the platform's appearance. Your choice is saved to your profile. (Available even if suspended).
-- **Notification Preferences**: Manage how you receive alerts (e.g., new jobs matching profile, application status updates). (Disabled if suspended).
+- **Notification Preferences**: Manage how you receive alerts (e.g., new jobs matching profile, application status updates - _basic UI implemented, backend triggers for notifications pending_). (Disabled if suspended).
 - **Manage Saved Searches**: View a list of your saved job search criteria.
   - **Apply Search**: Click a saved search to navigate to the `/jobs` page with those filters pre-applied.
   - **Delete Search**: Remove a saved search. Requires confirmation.
@@ -178,9 +178,9 @@ graph TD
 | `/companies/[companyId]` | View company details.                                                                                                                                                                                | Public       |
 | `/my-jobs`               | Dashboard for saved/applied jobs. Includes withdraw option. Viewing allowed if 'suspended'.                                                                                                          | Job Seeker   |
 | `/ai-match`              | AI job matching tool. Disabled if account 'suspended'.                                                                                                                                               | Job Seeker   |
-| `/settings`              | Manage settings. Most disabled if account 'suspended', except theme. Deleting saved search needs confirm.                                                                                            | Job Seeker   |
-| `/privacy-policy`        | Platform's privacy policy.                                                                                                                                                                           | Public       |
-| `/terms-of-service`      | Platform's terms of service.                                                                                                                                                                         | Public       |
+| `/settings`              | Manage settings (theme, job board display, saved searches, notification settings). Most disabled if account 'suspended', except theme. Deleting saved search needs confirm.                          | Job Seeker   |
+| `/privacy-policy`        | Platform's privacy policy. Content is editable by SuperAdmins.                                                                                                                                       | Public       |
+| `/terms-of-service`      | Platform's terms of service. Content is editable by SuperAdmins.                                                                                                                                     | Public       |
 
 ## 5. Key "API" Interactions (Data Flows with Genkit & Firebase)
 
@@ -206,16 +206,14 @@ Job seekers interact with AI features via Genkit flows and their profile data is
 - **Interview Preparation Tools**: Resources and AI-powered mock interviews.
 - **Career Path Suggestions**: AI-driven recommendations for career growth based on profile and job market trends.
 - **Direct Messaging with Recruiters**: Secure communication channel (post-application or if recruiter initiates).
-- **Enhanced Notifications**:
-  - **Email/Push Notifications for Saved Searches**: Actively notify users when new jobs match their saved criteria.
-  - More granular control over job alerts (e.g., daily/weekly digests, specific company alerts).
+- **Enhanced Notifications**: Full implementation as per `docs/notification-system-plan.md`.
 - **Gamification**: Points or badges for profile completion, applications, etc.
 - **Networking Features**: Ability to connect with other professionals or mentors on the platform.
 - **Clearer guidance for suspended users** on how to resolve their account status.
-- **Filter out withdrawn/rejected jobs from main job feed (`/jobs`)**: This requires more complex data fetching and is a potential future improvement.
+- **Filter out withdrawn/rejected jobs from main job feed (`/jobs`)**: This requires more complex data fetching.
 - **Support for Multiple Choice & Checkbox Screening Questions**: Enhance the UI for job seekers to answer these types.
-- For a broader look at upcoming platform features, refer to the [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md).
-- Extensive AI-powered enhancements are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-roadmap.md` for the full AI vision.
+- For a broader look at upcoming platform features, refer to the [Future Development Roadmap](../future-development-roadmap.md).
+- Extensive AI-powered enhancements are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-features-roadmap.md` for the full AI vision.
 
 ---
 

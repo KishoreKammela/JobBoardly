@@ -4,7 +4,7 @@ This document outlines the features, user flows, and technical interactions spec
 
 ## 1. Core Responsibilities
 
-Platform staff are responsible for overseeing the platform's integrity, managing users (to varying degrees), ensuring content quality, providing user support, analyzing data, and maintaining system compliance and health, depending on their specific role.
+Platform staff are responsible for overseeing the platform's integrity, managing users (to varying degrees), ensuring content quality, providing user support, analyzing data, managing legal content, and maintaining system compliance and health, depending on their specific role.
 
 ## 2. Roles & Permissions Overview
 
@@ -14,15 +14,17 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 
 - **Full platform control.**
 - Can manage all other admin types (SuperAdmins, Admins, Moderators, Support Agents, Data Analysts, etc.).
-- Access to sensitive operations (e.g., data exports, critical system settings, AI Feature Toggles, Notification System Toggles).
+- Access to sensitive operations (e.g., data exports, critical system settings, AI Feature Toggles, Notification System Toggles, **Legal Content Management**).
 - Can create/delete/suspend/activate any platform staff account.
 - Can perform all content moderation and user (Job Seeker, Employer) management tasks.
 - Manages platform-wide feature toggles.
+- **Manages Privacy Policy and Terms of Service content.**
 
 ### 2.2. Administrator
 
 - **General platform management.**
 - Cannot manage (suspend/activate) Super Admins or other Admins.
+- Cannot manage Legal Content.
 - Can manage Moderators, Support Agents, and Data Analysts.
 - Full content moderation capabilities (jobs, companies).
 - Full Job Seeker management capabilities.
@@ -34,6 +36,7 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 - Can approve/reject pending job postings and company profiles.
 - Can manage the status (suspend/activate) of existing jobs (except for suspending, which is Admin+) and companies.
 - Cannot manage any user accounts (Job Seekers, Platform Users) except for viewing their profiles.
+- Cannot manage Legal Content.
 - Primary focus on content quality and adherence to platform guidelines.
 - Can view job details, including screening questions (for context during moderation).
 
@@ -41,13 +44,13 @@ JobBoardly utilizes a hierarchical admin structure with varying levels of access
 
 - **User support focused.**
 - Can view user profiles (Job Seekers, Employers, other Platform Staff) and application history.
-- **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can primarily view data tables but cannot perform modification actions (e.g., suspend users, approve content). Can view job details, including screening questions.
+- **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can primarily view data tables but cannot perform modification actions (e.g., suspend users, approve content, manage legal content). Can view job details, including screening questions.
 - **Future Enhancements (from Roadmap):** Will have tools to reset passwords, handle basic account issues, and escalate complex issues. Will use a dedicated Support Agent Dashboard.
 
 ### 2.5. Data Analyst
 
 - **Analytics and reporting focused.**
-- **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can view the Platform Analytics overview and other data tables (including jobs with screening questions) but cannot perform modification actions.
+- **Currently (Initial Phase):** Access to the admin dashboard is heavily restricted. Can view the Platform Analytics overview and other data tables (including jobs with screening questions) but cannot perform modification actions (e.g., manage legal content).
 - **Future Enhancements (from Roadmap):** Will have read-only access to most data for analysis and access to advanced analytics and reporting tools to generate custom reports. Will use a dedicated Data Analyst Dashboard.
 
 ### 2.6. Compliance Officer (Future Role - Not Implemented)
@@ -118,6 +121,13 @@ The central hub for administrative tasks, accessible after logging in via the Ad
   - **Functionality**: Includes search, sorting, pagination.
   - (Tab hidden for Support Agents and Moderators).
 
+- **Legal Content Management Tab:** (Visible and Editable by SuperAdmins only)
+
+  - **View & Edit**: SuperAdmins can view and edit the content of the Privacy Policy and Terms of Service pages using a Markdown-supported textarea.
+  - **Content Storage**: Legal content is stored in a dedicated Firestore collection (`legalContent`).
+  - **Saving**: Requires confirmation. Changes are reflected live on public pages.
+  - (Tab hidden for Admins, Moderators, Support Agents, Data Analysts).
+
 - **AI Feature Management Tab (Conceptual Placeholder):** (Visible to SuperAdmins only)
   - A placeholder UI to indicate where future controls for enabling/disabling specific AI features (e.g., AI Career Path Advisor, Dynamic Summary Generator, AI Recruiter Assistant) will reside. Currently non-functional.
   - This section will be expanded into a comprehensive "Platform Feature Toggle Management" system.
@@ -178,6 +188,12 @@ graph TD
     X_Confirm -- Yes --> X_Action[Perform User Status Update]
     X_Action --> V
     X_Confirm -- No --> W
+    H -- Manage Legal Content (SA only) --> LC[Navigate to 'Legal Content' Tab]
+    LC --> LC_Edit[Edit Privacy Policy or Terms of Service]
+    LC_Edit --> LC_Save_Confirm[Confirm Save Legal Doc]
+    LC_Save_Confirm -- Yes --> LC_Save[Save Document to Firestore]
+    LC_Save --> LC
+    LC_Save_Confirm -- No --> LC_Edit
     F --> Y[Logout]
 ```
 
@@ -186,7 +202,7 @@ graph TD
 | Route                           | Description                                                                                                        | Access Level                                                                |
 | :------------------------------ | :----------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- |
 | `/auth/admin/login`             | Dedicated login page for all platform staff roles.                                                                 | Public (for login)                                                          |
-| `/admin`                        | Main admin dashboard. Features and actions vary significantly by role.                                             | SuperAdmin, Admin, Moderator, SupportAgent, DataAnalyst (with restrictions) |
+| `/admin`                        | Main admin dashboard. Features and actions vary significantly by role. Includes Legal Content tab for SuperAdmins. | SuperAdmin, Admin, Moderator, SupportAgent, DataAnalyst (with restrictions) |
 | `/profile`                      | Platform staff can manage their own profile details (name, avatar).                                                | All Authenticated Platform Staff Roles                                      |
 | `/employer/candidates/[userId]` | Used by platform staff to view profiles of any user (Job Seekers or other Platform Users) via the admin dashboard. | All Platform Staff Roles (employers are restricted to job seekers)          |
 | `/jobs/[jobId]`                 | Platform staff can view job details, including non-approved jobs and screening questions.                          | All Platform Staff Roles                                                    |
@@ -200,7 +216,7 @@ This section outlines the comprehensive plan for evolving the JobBoardly Admin P
 A robust system within the Admin Panel (likely under a dedicated "System Administration" or "Feature Management" tab, primarily for SuperAdmins/Admins) to enable or disable specific platform features is a **critical prerequisite** for rolling out most new functionalities. This applies to:
 
 - All features listed in the [AI Features Roadmap](./ai-features-roadmap.md).
-- All features listed in the [Platform Enhancement Roadmap](./enhanced-feature-recommendations.md).
+- All features listed in the [Future Development Roadmap](../future-development-roadmap.md) (which incorporates the previous enhanced feature recommendations).
 - All notification types and behaviors detailed in the [Notification & Email System Plan](./notification-system-plan.md).
 
 This system must allow:
@@ -216,10 +232,11 @@ This system must allow:
     - **Support Agent:** Implement tools for password resets, basic account issue handling, and an issue escalation system. Begin work on a dedicated (or heavily adapted) dashboard view for support tickets and user lookups.
     - **Data Analyst:** Develop initial read-only advanced data views/dashboards. Start work on a simple report generation tool.
 2.  **Basic Audit Logging System:**
-    - Start logging critical admin actions to Firestore (e.g., user status changes, job/company approvals/rejections, platform user role changes, feature toggle changes). Create a simple interface for SuperAdmins/Admins to view these logs.
+    - Start logging critical admin actions to Firestore (e.g., user status changes, job/company approvals/rejections, platform user role changes, feature toggle changes, **legal content updates**). Create a simple interface for SuperAdmins/Admins to view these logs.
 3.  **Basic Bulk Operations (Content):**
     - Enhance bulk approval/rejection for pending jobs and companies in the respective admin tables if not already fully robust.
 4.  **Implement the Platform Feature Toggle Management System (as described above).** This is foundational for enabling other roadmap items.
+5.  **Notification Bell Functionality (Backend Triggers):** Implement backend triggers to populate the existing notification UI for admins (e.g., new content pending approval).
 
 ### Phase 2 (Medium Priority - Following successful Phase 1)
 
@@ -244,7 +261,7 @@ This system must allow:
 
 This phase will encompass the full implementation of the features detailed in the:
 
-- [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md) (General Platform Enhancements)
+- [Future Development Roadmap](../future-development-roadmap.md) (General Platform Enhancements)
 - [AI Features Roadmap](./ai-features-roadmap.md) (AI-Specific Features)
 - [Notification & Email System Plan](./notification-system-plan.md) (Communication Features)
 
@@ -262,7 +279,7 @@ All features will be controlled by the Platform Feature Toggle system. Key areas
 
 ### Technical Considerations (To be addressed throughout development)
 
-- **Database Design:** Implement tables/collections for granular permissions, comprehensive audit logs, flexible platform settings (including feature flags), and workflow task queues.
+- **Database Design:** Implement tables/collections for granular permissions, comprehensive audit logs, flexible platform settings (including feature flags and legal content), and workflow task queues.
 - **Security:** Adhere to the principle of least privilege, implement action confirmations, enhance session security, and encrypt sensitive admin data.
 - **Performance:** Utilize lazy loading, caching, efficient pagination, and background processing for long-running tasks.
 
