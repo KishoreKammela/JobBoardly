@@ -211,7 +211,8 @@ export function PostedJobsDisplay() {
                       variant="outline"
                       className="ml-2 align-middle border-orange-500 text-orange-600"
                     >
-                      <Ban className="mr-1 h-3 w-3" /> INACTIVE
+                      <Ban className="mr-1 h-3 w-3" /> INACTIVE (Admin
+                      Suspended)
                     </Badge>
                   )}
                 </CardDescription>
@@ -264,17 +265,27 @@ export function PostedJobsDisplay() {
                 <Edit3 className="mr-2 h-4 w-4" /> Edit Job
               </Link>
             </Button>
-            {job.status === 'approved' && (
-              <Button size="sm" asChild>
-                <Link
-                  href={`/jobs/${job.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Eye className="mr-2 h-4 w-4" /> View Posting
-                </Link>
-              </Button>
-            )}
+            <Button
+              size="sm"
+              asChild
+              variant={job.status === 'approved' ? 'default' : 'secondary'}
+              className={
+                job.status === 'approved'
+                  ? ''
+                  : 'bg-accent hover:bg-accent/90 text-accent-foreground'
+              }
+            >
+              <Link
+                href={`/jobs/${job.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                {job.status === 'approved'
+                  ? 'View Public Posting'
+                  : 'Preview Job Details'}
+              </Link>
+            </Button>
           </CardFooter>
         </Card>
       ))}

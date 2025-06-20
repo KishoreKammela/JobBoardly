@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Job, ApplicationAnswer } from '@/types';
+import type { Job, ApplicationAnswer, ScreeningQuestion } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ import {
   CalendarDays,
   AlertTriangle,
   RotateCcw,
+  HelpCircle,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -47,12 +48,25 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const ADMIN_LIKE_ROLES = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+  'complianceOfficer',
+  'systemMonitor',
+];
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = params.jobId as string;
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
+    null
+  );
   const { user } = useAuth();
   const {
     applyForJob,
@@ -81,44 +95,73 @@ export default function JobDetailPage() {
       const fetchJob = async () => {
         setIsLoading(true);
         setError(null);
+        setAccessDeniedReason(null);
         try {
           const jobDocRef = doc(db, 'jobs', jobId);
           const jobDocSnap = await getDoc(jobDocRef);
-          if (jobDocSnap.exists()) {
-            const data = jobDocSnap.data();
-            if (
-              data.status === 'suspended' &&
-              user?.role !== 'admin' &&
-              user?.role !== 'superAdmin'
-            ) {
-              setError('This job is currently unavailable.');
-              setJob(null);
-              setIsLoading(false);
-              return;
-            }
-            const jobData = {
-              id: jobDocSnap.id,
-              ...data,
-              postedDate:
-                data.postedDate instanceof Timestamp
-                  ? data.postedDate.toDate().toISOString().split('T')[0]
-                  : data.postedDate,
-              createdAt:
-                data.createdAt instanceof Timestamp
-                  ? data.createdAt.toDate().toISOString()
-                  : data.createdAt,
-              updatedAt:
-                data.updatedAt instanceof Timestamp
-                  ? data.updatedAt.toDate().toISOString()
-                  : data.updatedAt,
-            } as Job;
-            setJob(jobData);
-            if (user && user.role === 'jobSeeker') {
-              setApplicationStatus(getApplicationStatus(jobId));
-              setSaved(isJobSaved(jobId));
-            }
-          } else {
+
+          if (!jobDocSnap.exists()) {
             setError('Job not found.');
+            setIsLoading(false);
+            return;
+          }
+
+          const data = jobDocSnap.data() as Omit<Job, 'id'>; // Assume data matches Job type
+          const jobData: Job = {
+            id: jobDocSnap.id,
+            ...data,
+            postedDate:
+              data.postedDate instanceof Timestamp
+                ? data.postedDate.toDate().toISOString().split('T')[0]
+                : (data.postedDate as string),
+            createdAt:
+              data.createdAt instanceof Timestamp
+                ? data.createdAt.toDate().toISOString()
+                : (data.createdAt as string), // Cast if needed
+            updatedAt:
+              data.updatedAt instanceof Timestamp
+                ? data.updatedAt.toDate().toISOString()
+                : (data.updatedAt as string), // Cast if needed
+          };
+
+          // Access Control Logic
+          let canView = false;
+          if (jobData.status === 'approved') {
+            canView = true;
+          } else if (user?.role && ADMIN_LIKE_ROLES.includes(user.role)) {
+            canView = true;
+          } else if (
+            user?.role === 'employer' &&
+            user.companyId === jobData.companyId
+          ) {
+            canView = true; // Employer can view their own non-approved jobs
+          }
+
+          if (!canView) {
+            if (jobData.status === 'pending') {
+              setAccessDeniedReason(
+                'This job is pending review and not yet publicly available.'
+              );
+            } else if (jobData.status === 'rejected') {
+              setAccessDeniedReason(
+                'This job posting is not available (rejected).'
+              );
+            } else if (jobData.status === 'suspended') {
+              setAccessDeniedReason('This job is currently suspended.');
+            } else {
+              setAccessDeniedReason(
+                'You do not have permission to view this job posting.'
+              );
+            }
+            setJob(null);
+            setIsLoading(false);
+            return;
+          }
+
+          setJob(jobData);
+          if (user && user.role === 'jobSeeker') {
+            setApplicationStatus(getApplicationStatus(jobId));
+            setSaved(isJobSaved(jobId));
           }
         } catch (e: unknown) {
           console.error('Error fetching job details:', e);
@@ -146,6 +189,15 @@ export default function JobDetailPage() {
       });
       return;
     }
+    if (job.status !== 'approved') {
+      toast({
+        title: 'Cannot Apply',
+        description:
+          'This job is not currently approved for applications. You might be previewing it.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (user && user.role === 'jobSeeker') {
       try {
         await applyForJob(job, answers);
@@ -156,7 +208,6 @@ export default function JobDetailPage() {
           description: `You've applied for ${job.title} at ${job.company}.`,
         });
       } catch (e: any) {
-        // Error toast is handled within applyForJob if re-application is attempted
         if (e.message !== 'Already applied or application process started.') {
           toast({
             title: 'Application Failed',
@@ -200,8 +251,16 @@ export default function JobDetailPage() {
       });
       return;
     }
+    if (job.status !== 'approved') {
+      toast({
+        title: 'Cannot Apply',
+        description:
+          'This job is not currently approved for applications. You might be previewing it.',
+        variant: 'destructive',
+      });
+      return;
+    }
     if (hasAppliedForJob(job.id)) {
-      // This check is also inside applyForJob, but good for immediate UI feedback
       toast({
         title: 'Already Applied',
         description:
@@ -222,8 +281,7 @@ export default function JobDetailPage() {
     if (!job || !user || applicationStatus !== 'Applied') return;
     setIsWithdrawing(true);
     try {
-      // Find application ID - assuming jobSeekerActionsContext handles this lookup
-      await withdrawApplication(job.id); // Pass job.id, context will find the application for this user & job
+      await withdrawApplication(job.id);
       setApplicationStatus('Withdrawn by Applicant');
       toast({
         title: 'Application Withdrawn',
@@ -248,6 +306,14 @@ export default function JobDetailPage() {
         title: 'Account Suspended',
         description:
           'Your account is currently suspended. You cannot save jobs.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (job.status !== 'approved') {
+      toast({
+        title: 'Cannot Save',
+        description: 'This job is not currently approved and cannot be saved.',
         variant: 'destructive',
       });
       return;
@@ -295,6 +361,18 @@ export default function JobDetailPage() {
     );
   }
 
+  if (accessDeniedReason) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>{accessDeniedReason}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="container mx-auto py-10">
@@ -329,12 +407,12 @@ export default function JobDetailPage() {
           ? `${formatCurrencyINR(job.salaryMax)} p.a.`
           : 'Not Disclosed';
 
-  // const canApply = !applicationStatus || applicationStatus === 'Applied'; // Simplified, more robust check in context
   const showAppliedBadge =
     applicationStatus &&
     applicationStatus !== 'Applied' &&
     applicationStatus !== 'Withdrawn by Applicant';
   const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
+  const canShowApplyActions = job.status === 'approved';
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -410,6 +488,18 @@ export default function JobDetailPage() {
                   Posted:{' '}
                   {new Date(job.postedDate as string).toLocaleDateString()}
                 </Badge>
+                <Badge
+                  variant={
+                    job.status === 'approved'
+                      ? 'default'
+                      : job.status === 'pending'
+                        ? 'secondary'
+                        : 'destructive'
+                  }
+                  className="ml-2 align-middle"
+                >
+                  Status: {job.status.toUpperCase()}
+                </Badge>
               </div>
             </div>
           </div>
@@ -445,9 +535,28 @@ export default function JobDetailPage() {
                   </div>
                 </section>
               )}
+              {job.screeningQuestions && job.screeningQuestions.length > 0 && (
+                <section>
+                  <Separator className="my-6" />
+                  <h2 className="text-xl font-semibold mb-3 font-headline">
+                    Screening Questions
+                  </h2>
+                  <ul className="space-y-3 list-disc list-inside text-sm text-foreground/90">
+                    {job.screeningQuestions.map((q) => (
+                      <li key={q.id}>
+                        {q.questionText}{' '}
+                        <Badge variant="outline" className="text-xs ml-1">
+                          {q.type === 'yesNo' ? 'Yes/No' : 'Text Answer'}
+                          {q.isRequired && ', Required'}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             </div>
             <aside className="w-full sm:w-64 space-y-4">
-              {user && user.role === 'jobSeeker' && (
+              {user && user.role === 'jobSeeker' && canShowApplyActions && (
                 <>
                   {applicationStatus === 'Applied' && (
                     <Button
@@ -506,15 +615,35 @@ export default function JobDetailPage() {
                   </Button>
                 </>
               )}
-              {!user && (
+              {(!user ||
+                (user.role !== 'jobSeeker' && job.status === 'approved')) && (
+                // Show Apply Now for logged-out users or non-job seekers if job is approved
                 <Button
                   size="lg"
-                  onClick={handleInitiateApply}
+                  onClick={handleInitiateApply} // Will prompt login if not logged in
                   className="w-full"
                 >
                   Apply Now <ExternalLink className="ml-2 h-5 w-5" />
                 </Button>
               )}
+              {user &&
+                user.role !== 'jobSeeker' &&
+                job.status !== 'approved' && (
+                  // If logged in as employer/admin and job is not approved, show message
+                  <div className="p-3 border rounded-md text-center bg-accent/10">
+                    <HelpCircle className="mx-auto h-8 w-8 text-accent mb-2" />
+                    <p className="text-sm text-accent-foreground font-medium">
+                      This is a preview for{' '}
+                      {user.role === 'employer'
+                        ? 'your company'
+                        : 'administrative'}{' '}
+                      purposes.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Job status: {job.status.toUpperCase()}
+                    </p>
+                  </div>
+                )}
               <Button
                 variant="outline"
                 size="lg"
