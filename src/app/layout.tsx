@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     siteName: 'JobBoardly',
     images: [
       {
-        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/og-image.png`, // You'll need to create this image in /public
         width: 1200,
         height: 630,
         alt: 'JobBoardly Logo and Tagline',
@@ -61,6 +61,7 @@ export const metadata: Metadata = {
     title: 'JobBoardly - AI-Powered Job Portal',
     description:
       'AI-driven job matching and talent acquisition. Find jobs or post openings on JobBoardly.',
+    // images: [`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/twitter-image.png`], // Optional: Create a specific Twitter image
   },
   robots: {
     index: true,
@@ -73,12 +74,21 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png', // e.g. 180x180
+    shortcut: '/favicon.ico',
+  },
+  // manifest: '/site.webmanifest', // Optional: If you have a web app manifest
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
-    { media: '(prefers-color-scheme: dark)', color: '#1A202C' },
+    { media: '(prefers-color-scheme: light)', color: '#007bff' }, // Primary color
+    { media: '(prefers-color-scheme: dark)', color: '#0056b3' }, // Darker primary or suitable dark theme color
   ],
   width: 'device-width',
   initialScale: 1,
@@ -92,7 +102,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
-      <head>{/* Google Fonts <link> tags for Inter have been removed */}</head>
+      <head />
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
           <JobSeekerActionsProvider>

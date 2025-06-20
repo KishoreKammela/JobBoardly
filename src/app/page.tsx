@@ -16,9 +16,10 @@ import type { Metadata } from 'next';
 import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = {
-  title: 'JobBoardly - AI-Powered Job Search & Hiring Platform',
+  title:
+    'JobBoardly: AI-Powered Job Search & Hiring Platform - Find Your Future',
   description:
-    'Find your dream job or hire top talent with JobBoardly. Our AI-driven platform offers intelligent job matching, resume parsing, and a seamless experience for job seekers and employers.',
+    'Discover your dream job or hire top talent with JobBoardly. Our advanced AI-driven platform offers intelligent job matching, resume parsing, and a seamless experience for job seekers and employers alike.',
   keywords: [
     'AI job board',
     'job search',
@@ -31,6 +32,8 @@ export const metadata: Metadata = {
     'tech jobs',
     'marketing jobs',
     'remote jobs',
+    'post jobs online',
+    'find employees',
   ],
   alternates: {
     canonical: '/',
