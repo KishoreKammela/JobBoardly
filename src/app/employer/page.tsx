@@ -211,7 +211,7 @@ export default function EmployerLandingPage() {
             </Button>
             <Button
               asChild
-              variant="secondary"
+              variant="outline"
               size="lg"
               className="text-lg py-6 px-8"
             >
