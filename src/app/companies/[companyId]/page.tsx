@@ -38,11 +38,11 @@ async function fetchCompanyForMetadata(
 }
 
 export async function generateMetadata(
-  { params }: Props, // Reverted to destructuring params
+  { params }: Props,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const companyId = params.companyId; // Access via params.companyId
-  const company = await fetchCompanyForMetadata(companyId);
+  // Use params.companyId directly in the async call
+  const company = await fetchCompanyForMetadata(params.companyId);
   const previousImages = (await parent).openGraph?.images || [];
 
   if (!company || company.status !== 'approved') {
@@ -51,7 +51,7 @@ export async function generateMetadata(
       description:
         'This company profile is currently not available or does not exist.',
       alternates: {
-        canonical: `/companies/${companyId}`,
+        canonical: `/companies/${params.companyId}`,
       },
       robots: {
         index: false,
@@ -76,12 +76,12 @@ export async function generateMetadata(
     description,
     keywords,
     alternates: {
-      canonical: `/companies/${companyId}`,
+      canonical: `/companies/${params.companyId}`,
     },
     openGraph: {
       title,
       description,
-      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/companies/${companyId}`,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/companies/${params.companyId}`,
       type: 'profile',
       profile: {
         username: company.name,
