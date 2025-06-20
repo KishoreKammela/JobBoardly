@@ -176,7 +176,10 @@
 
 This matrix outlines a potential phasing for implementing the enhanced features. Each phase builds upon the previous, progressively adding value and sophistication to the JobBoardly platform.
 
-### Phase 1: Core Enhancements (Focus: User Experience & Foundational Improvements)
+**Prerequisite: Admin Feature Control System**
+Before rolling out most of the features below, a robust **Platform Feature Toggle Management** system needs to be implemented in the Admin Panel. This allows administrators to enable/disable specific features globally or for specific user groups, ensuring controlled deployment and that new features are not available to all users by default.
+
+### Phase 1: Core Enhancements (Focus: User Experience & Foundational Improvements, post-admin-controls)
 
 1.  **Application Status Tracking (Job Seeker)**: Visual timeline for applications.
 2.  **Application Templates (Job Seeker)**: Save cover letter templates.
@@ -184,26 +187,25 @@ This matrix outlines a potential phasing for implementing the enhanced features.
 4.  **Email/SMS Job Alerts (Job Seeker)**: Customizable alerts for saved searches.
 5.  **Interview Scheduling Integration (Employer - Basic)**: Connect with common calendar tools for basic scheduling.
 6.  **In-Platform Messaging (Core)**: Enable direct, secure communication between recruiters and candidates post-application.
-7.  **Admin Feature Toggle Management (Platform - Prerequisite)**: System for admins to enable/disable features. _(This is a critical enabler for rolling out many other features from roadmaps)._
+7.  **Job Templates (Employer)**: Save and reuse job posting templates.
+8.  **Talent Pool Creation (Employer - Basic)**: Allow employers to create and manage custom candidate pools.
 
 ### Phase 2: Mobile & Analytics (Focus: Accessibility & Insights)
 
 1.  **Progressive Web App (PWA) Development (Platform)**: Enhance mobile experience.
 2.  **Advanced Analytics Dashboard (Admin/Employer)**: More detailed platform and job performance metrics.
 3.  **Company Culture Showcase (Employer - Basic)**: Allow companies to add more branding elements (e.g., "Life at Company" text section, link to culture page).
-4.  **Skill Assessment Integration (Job Seeker/Employer - Basic)**: Integrate with one external skill assessment platform.
-5.  **Job Templates (Employer)**: Save and reuse job posting templates.
-6.  **Referral Program Integration (Employer - Basic)**: Simple tracking for employee referrals.
+4.  **Skills Assessment Integration (Job Seeker/Employer - Basic)**: Integrate with one external skill assessment platform.
+5.  **Referral Program Integration (Employer - Basic)**: Simple tracking for employee referrals.
+6.  **Candidate Tagging System (Employer)**: Implement a basic tagging system.
 
 ### Phase 3: Advanced & Specialized Features (Focus: Differentiation & Market Leadership)
 
 1.  **Learning Platform Integration (Job Seeker)**: Connect with external course providers.
 2.  **Blockchain Verification (Platform - Exploratory)**: Investigate and prototype for credential verification.
 3.  **Global Expansion Features (Platform)**: Multi-language support (UI), basic currency display.
-4.  **Advanced Matching Algorithms (AI)**: Implement more sophisticated matching (e.g., cultural fit, behavioral).
+4.  **Advanced Matching Algorithms (AI)**: Implement more sophisticated matching (e.g., cultural fit, behavioral - ties into AI Roadmap).
 5.  **Market Intelligence Tools (Employer/Admin)**: Basic salary insights, trending skills.
-6.  **Talent Pool Creation (Employer)**: Allow employers to create and manage custom candidate pools.
-7.  **Candidate Tagging (Employer)**: Implement a basic tagging system.
 
 ### Phase 4 & Beyond: Innovation & Ecosystem
 

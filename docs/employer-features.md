@@ -220,7 +220,7 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
   - **Output/Effect**: Displays a list of relevant candidate UIDs with detailed reasoning for the match.
 - **Company & Job Data (Firebase Firestore):**
   - **Company Profile**: Updated in `companies` collection. Admin approval required for new/significant changes. Saving requires confirmation. Editing restricted if company status is 'suspended' or 'deleted'.
-  - **Job Postings**: Created/updated in `jobs` collection. Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended' or 'deleted' or if job itself is admin-suspended.
+  - **Job Postings**: Created/updated in `jobs` collection. Submitting/updating requires confirmation. Editing/management restricted if company status is 'suspended'/'deleted' or if job itself is admin-suspended.
   - **Application Management**: Employers update `status` and `employerNotes` in `application` documents. Status updates require confirmation. Management restricted if company/job is suspended/deleted.
 - **Saving a Candidate Search:**
   - **Action**: User clicks "Save Current Search" in candidate filter sidebar, names the search, confirms.
@@ -250,7 +250,8 @@ Employers use Genkit flows for AI-assisted tasks and interact with Firebase Fire
 - **Team Management**: For Company Admins to invite and manage recruiter accounts (currently admin task).
 - **Clearer guidance for recruiters** whose company account is suspended or deleted.
 - **Enhanced candidate search analytics**: Insights on search effectiveness.
-- **Extensive AI-powered enhancements** are planned, including AI Recruiter Assistant and Smart Job Description Optimizer. See `docs/ai-roadmap.md` for the full AI vision.
+- Extensive AI-powered enhancements are planned, including AI Recruiter Assistant and Smart Job Description Optimizer. See `docs/ai-roadmap.md` for the full AI vision.
+- For a comprehensive view of planned general platform enhancements, consult the [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md).
 
 ---
 

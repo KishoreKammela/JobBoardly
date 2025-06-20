@@ -37,7 +37,9 @@ JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Em
 - **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator > Support Agent/Data Analyst with restricted views).
   - [Detailed Admin Features](./docs/admin-features.md)
 - **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
-- **AI Vision**: See our ambitious [AI Features Roadmap](./docs/ai-roadmap.md) to understand how we're building the future of job searching and hiring.
+- **Future Vision & Roadmaps**:
+  - See our ambitious [AI Features Roadmap](./docs/ai-roadmap.md) to understand how we're building the future of job searching and hiring with AI.
+  - Explore our broader [Platform Enhancement Roadmap](./docs/enhanced-feature-recommendations.md) for a comprehensive look at planned features and long-term vision.
 
 ## Folder Structure
 
@@ -78,7 +80,8 @@ A high-level overview of the project's directory structure:
 │   ├── employer-features.md
 │   ├── job-seeker-features.md
 │   ├── routes-documentation.md
-│   └── ai-roadmap.md           # New AI roadmap document
+│   ├── ai-roadmap.md
+│   └── enhanced-feature-recommendations.md # New General Roadmap
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml

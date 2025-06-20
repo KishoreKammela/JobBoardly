@@ -239,7 +239,8 @@ Job seekers interact with AI features via Genkit flows and their profile data is
 - **Gamification**: Points or badges for profile completion, applications, etc.
 - **Networking Features**: Ability to connect with other professionals or mentors on the platform.
 - **Clearer guidance for suspended users** on how to resolve their account status.
-- **Extensive AI-powered enhancements** are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-roadmap.md` for the full AI vision.
+- Extensive AI-powered enhancements are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-roadmap.md` for the full AI vision.
+- For a broader look at upcoming platform features, refer to the [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md).
 
 ---
 
