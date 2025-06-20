@@ -59,7 +59,8 @@ function Calendar({
         day_hidden: 'invisible',
         // Styling for the select dropdowns themselves
         dropdown: cn(
-          'h-7 w-auto appearance-none rounded-md border border-input bg-background px-2 py-0.5 text-sm font-medium text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50'
+          'h-7 w-auto appearance-none rounded-md border border-input bg-background px-2 py-0.5 text-sm font-medium text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50',
+          'dark:bg-muted dark:text-muted-foreground dark:border-input' // Ensure dark mode dropdowns look good
         ),
         dropdown_month: 'rdp-dropdown_month', // Keep react-day-picker's class for potential targeting
         dropdown_year: 'rdp-dropdown_year', // Keep react-day-picker's class
@@ -78,6 +79,11 @@ function Calendar({
             {...restProps}
           />
         ),
+      }}
+      labels={{
+        labelMonthDropdown: () => '', // Hide "Month:" label
+        labelYearDropdown: () => '', // Hide "Year:" label
+        ...props.labels, // Preserve other custom labels if any
       }}
       {...props}
     />
