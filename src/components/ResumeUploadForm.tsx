@@ -108,63 +108,81 @@ export function ResumeUploadForm() {
         resumeDataUri: dataUri,
       });
 
+      if (parsedData.errorMessage) {
+        toast({
+          title: 'Resume Parsing Error',
+          description: parsedData.errorMessage,
+          variant: 'destructive',
+          duration: 10000, // Longer duration for important errors
+        });
+        setIsProcessing(false); // Ensure loading state is reset
+        // If it's a server-side error, we might not want to update the profile at all.
+        if (parsedData.errorMessage.includes('Server-side error')) {
+          return;
+        }
+      }
+
       const profileUpdates: Partial<UserProfile> = {};
 
+      // This handles error messages that the *prompt itself* might put into the 'experience' field
       if (
         parsedData.experience &&
         parsedData.experience.startsWith('Parsing Error:')
       ) {
         toast({
           title: 'Resume Parsing Issue',
-          description: parsedData.experience,
+          description: parsedData.experience, // Display specific error from AI
           variant: 'destructive',
           duration: 9000,
         });
-        if (file) {
-          profileUpdates.resumeFileName = file.name;
-        }
-      } else {
-        if (parsedData.name && !user.name)
-          profileUpdates.name = parsedData.name;
-        if (parsedData.headline) profileUpdates.headline = parsedData.headline;
-        if (parsedData.skills && parsedData.skills.length > 0)
-          profileUpdates.skills = parsedData.skills;
-
-        let summaryText = '';
-        if (parsedData.experience)
-          summaryText += `Experience Summary:\n${parsedData.experience}\n\n`;
-        if (parsedData.education)
+        // Continue with other updates if any, but don't use this experience field
+      } else if (parsedData.experience) {
+        // Only update parsedResumeText if there wasn't a file-specific parsing error in the experience field
+        let summaryText = `Experience Summary:\n${parsedData.experience}\n\n`;
+        if (parsedData.education) {
           summaryText += `Education Summary:\n${parsedData.education}\n\n`;
-        if (summaryText) profileUpdates.parsedResumeText = summaryText.trim();
+        }
+        profileUpdates.parsedResumeText = summaryText.trim();
+      }
 
-        if (parsedData.portfolioUrl)
-          profileUpdates.portfolioUrl = parsedData.portfolioUrl;
-        if (parsedData.linkedinUrl)
-          profileUpdates.linkedinUrl = parsedData.linkedinUrl;
-        if (parsedData.mobileNumber && !user.mobileNumber)
-          profileUpdates.mobileNumber = parsedData.mobileNumber;
+      if (parsedData.name && !user.name) profileUpdates.name = parsedData.name;
+      if (parsedData.headline) profileUpdates.headline = parsedData.headline;
+      if (parsedData.skills && parsedData.skills.length > 0)
+        profileUpdates.skills = parsedData.skills;
 
+      if (parsedData.portfolioUrl)
+        profileUpdates.portfolioUrl = parsedData.portfolioUrl;
+      if (parsedData.linkedinUrl)
+        profileUpdates.linkedinUrl = parsedData.linkedinUrl;
+      if (parsedData.mobileNumber && !user.mobileNumber)
+        profileUpdates.mobileNumber = parsedData.mobileNumber;
+
+      if (
+        parsedData.totalYearsExperience !== undefined &&
+        (user.totalYearsExperience === undefined ||
+          user.totalYearsExperience === 0)
+      ) {
+        profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
         if (
-          parsedData.totalYearsExperience !== undefined &&
-          (user.totalYearsExperience === undefined ||
-            user.totalYearsExperience === 0)
+          user.totalMonthsExperience === undefined ||
+          user.totalMonthsExperience === 0
         ) {
-          profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
-          if (
-            user.totalMonthsExperience === undefined ||
-            user.totalMonthsExperience === 0
-          ) {
-            profileUpdates.totalMonthsExperience = 0;
-          }
+          profileUpdates.totalMonthsExperience = 0; // Default months if years are parsed
         }
+      }
 
-        if (file) {
-          profileUpdates.resumeFileName = file.name;
-        } else if (pastedResume) {
-          profileUpdates.resumeFileName = 'Pasted Resume Text';
-          profileUpdates.resumeUrl = undefined;
-        }
+      if (file) {
+        profileUpdates.resumeFileName = file.name;
+        // The resumeUrl itself would be set after successful upload to Firebase Storage,
+        // which is handled by updateUserProfile if a file is passed to it.
+        // For now, just the name to indicate a file was processed.
+      } else if (pastedResume) {
+        profileUpdates.resumeFileName = 'Pasted Resume Text';
+        profileUpdates.resumeUrl = undefined; // No URL for pasted text
+      }
 
+      if (!parsedData.errorMessage) {
+        // Only show success toast if no critical server error
         toast({
           title: 'Resume Processed',
           description: `${sourceName} has been parsed. Review and complete your profile details.`,
@@ -172,7 +190,10 @@ export function ResumeUploadForm() {
       }
 
       if (Object.keys(profileUpdates).length > 0) {
-        await updateUserProfile(profileUpdates);
+        // If there's a file, updateUserProfile in AuthContext should handle the upload to storage
+        // and then update Firestore with the URL along with other profileUpdates.
+        // For this component, we're just passing the file object itself if it exists.
+        await updateUserProfile(profileUpdates, file || undefined);
       }
       setFile(null);
       setPastedResume('');
@@ -181,7 +202,7 @@ export function ResumeUploadForm() {
         error instanceof Error
           ? error.message
           : 'An unknown error occurred during parsing.';
-      console.error('Error processing resume:', error);
+      console.error('Error processing resume in component:', error);
       toast({
         title: 'Resume Processing Error',
         description: `Failed to parse resume and update profile. ${errorMessage}`,
@@ -193,7 +214,6 @@ export function ResumeUploadForm() {
   };
 
   const handleSubmit = async () => {
-    // Removed FormEvent, action triggered by modal now
     if (!user) return;
 
     if (file) {
@@ -242,11 +262,17 @@ export function ResumeUploadForm() {
 
   const performRemoveResume = async () => {
     if (!user) return;
-    await updateUserProfile({
-      resumeUrl: undefined,
-      resumeFileName: undefined,
-      parsedResumeText: undefined,
-    });
+    // Pass undefined or an empty string for resumeUrl and resumeFileName to clear them.
+    // Also pass the file as undefined to signal no new upload.
+    await updateUserProfile(
+      {
+        resumeUrl: undefined, // Explicitly set to undefined to clear
+        resumeFileName: undefined, // Explicitly set to undefined to clear
+        parsedResumeText: undefined, // Clear parsed text as well
+      },
+      undefined
+    ); // Pass undefined for the file to avoid re-upload
+
     toast({
       title: 'Resume Removed',
       description:
@@ -316,6 +342,8 @@ export function ResumeUploadForm() {
                 onClick={() => {
                   setFile(null);
                   setPastedResume('');
+                  // Optionally clear user.resumeFileName here if you want the UI to immediately reflect an empty state
+                  // updateUserProfile({ resumeFileName: undefined, resumeUrl: undefined }); // This would persist the removal immediately
                 }}
                 disabled={isProcessing}
                 variant="outline"

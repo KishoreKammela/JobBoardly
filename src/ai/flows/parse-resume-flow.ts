@@ -45,7 +45,7 @@ const ParseResumeOutputSchema = z
       .string()
       .optional()
       .describe(
-        'A detailed summary of the work experience, ideally in Markdown format or well-structured text. This will be used to populate the parsedResumeText field primarily. May contain an error message if parsing failed due to file type. Try to extract job titles, companies, dates, and responsibilities if discernible within this summary.'
+        'A detailed summary of the work experience, ideally in Markdown format or well-structured text. This will be used to populate the parsedResumeText field primarily. Try to extract job titles, companies, dates, and responsibilities if discernible within this summary.'
       ),
     education: z
       .string()
@@ -67,9 +67,15 @@ const ParseResumeOutputSchema = z
       .describe(
         'The total years of professional work experience, if explicitly mentioned or clearly inferable from the resume content.'
       ),
+    errorMessage: z
+      .string()
+      .optional()
+      .describe(
+        'An error message if parsing failed catastrophically, especially for server-side issues.'
+      ),
   })
   .describe(
-    'Structured information extracted from the resume. The "experience" and "education" fields should be comprehensive summaries that can be used for the parsedResumeText field. The AI should attempt to identify distinct job roles/companies and degrees/institutions within these summaries, and infer total years of experience if possible.'
+    'Structured information extracted from the resume. The "experience" and "education" fields are critical for providing a rich summary for the user to then use to fill out structured data. If errorMessage is present, other fields might be unreliable.'
   );
 
 export type ParseResumeOutput = z.infer<typeof ParseResumeOutputSchema>;
@@ -133,27 +139,32 @@ const resumeParserFlow = ai.defineFlow(
         `Resume Parsing: MIME type ${mimeType} is not suitable for direct processing with the current AI model configuration. ` +
           `Consider extracting text content from such documents before sending for AI analysis if results are poor.`
       );
+      // The model might still attempt to parse text from these, so we don't return an error here prematurely.
+      // The prompt guides the AI to summarize errors if it encounters them during processing.
     }
+    try {
+      const { output } = await resumeParserPrompt(input);
 
-    const { output } = await resumeParserPrompt(input);
-
-    if (!output) {
-      console.warn(
-        'Resume parsing returned no output from AI, returning empty structure.'
-      );
+      if (!output) {
+        console.warn(
+          'Resume parsing returned no output from AI, returning structure with error message.'
+        );
+        return {
+          skills: [], // Default empty array
+          errorMessage:
+            'AI model did not return any output. Parsing failed. Please try a different file or ensure it is not corrupted.',
+        };
+      }
+      // The output might contain an error message in the 'experience' field if the *prompt itself* detected a file issue.
+      // The 'errorMessage' field here is for errors calling the prompt.
+      return output;
+    } catch (e: unknown) {
+      const error = e as Error;
+      console.error('CRITICAL ERROR in resumeParserFlow call:', error);
       return {
-        name: undefined,
-        email: undefined,
-        mobileNumber: undefined,
-        headline: undefined,
-        skills: [],
-        experience: undefined,
-        education: undefined,
-        portfolioUrl: undefined,
-        linkedinUrl: undefined,
-        totalYearsExperience: undefined,
+        skills: [], // Default empty array
+        errorMessage: `Server-side error during resume parsing: ${error.message}. Please check server logs. This could be due to API key issues, API access, or other server problems.`,
       };
     }
-    return output;
   }
 );
