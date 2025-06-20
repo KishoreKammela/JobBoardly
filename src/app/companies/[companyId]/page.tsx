@@ -1,346 +1,108 @@
-'use client';
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  Timestamp,
-  orderBy,
-} from 'firebase/firestore';
+import type { Metadata, ResolvingMetadata } from 'next';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, UserProfile, Job } from '@/types';
-import Image from 'next/image';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Briefcase,
-  Users,
-  Link as LinkIcon,
-  Building,
-  Loader2,
-  Mail,
-  ExternalLink,
-  ShieldAlert,
-} from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { JobCard } from '@/components/JobCard';
-import Link from 'next/link';
+import type { Company } from '@/types';
+import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage'; // New import
 
-export default function CompanyDetailPage() {
-  const params = useParams();
-  const companyId = params.companyId as string;
+type Props = {
+  params: { companyId: string };
+};
 
-  const [company, setCompany] = useState<Company | null>(null);
-  const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (companyId) {
-      const fetchCompanyData = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const companyDocRef = doc(db, 'companies', companyId);
-          const companyDocSnap = await getDoc(companyDocRef);
-
-          if (!companyDocSnap.exists()) {
-            setError('Company not found or is not currently visible.');
-            setIsLoading(false);
-            setCompany(null);
-            return;
-          }
-          const companyData = {
-            id: companyDocSnap.id,
-            ...companyDocSnap.data(),
-          } as Company;
-
-          if (companyData.status !== 'approved') {
-            setError(
-              'This company profile is currently under review or not publicly visible.'
-            );
-            setCompany(null);
-            setIsLoading(false);
-            return;
-          }
-          setCompany(companyData);
-
-          if (
-            companyData.recruiterUids &&
-            companyData.recruiterUids.length > 0
-          ) {
-            const recruitersQueryLimit = 30;
-            const fetchedRecruiters: UserProfile[] = [];
-            for (
-              let i = 0;
-              i < companyData.recruiterUids.length;
-              i += recruitersQueryLimit
-            ) {
-              const batchUids = companyData.recruiterUids.slice(
-                i,
-                i + recruitersQueryLimit
-              );
-              if (batchUids.length > 0) {
-                const recruitersQuery = query(
-                  collection(db, 'users'),
-                  where('__name__', 'in', batchUids)
-                );
-                const recruitersSnap = await getDocs(recruitersQuery);
-                recruitersSnap.docs.forEach((d) =>
-                  fetchedRecruiters.push({
-                    uid: d.id,
-                    ...d.data(),
-                  } as UserProfile)
-                );
-              }
-            }
-            setRecruiters(fetchedRecruiters);
-          }
-
-          const jobsQuery = query(
-            collection(db, 'jobs'),
-            where('companyId', '==', companyId),
-            where('status', '==', 'approved'),
-            orderBy('postedDate', 'desc')
-          );
-          const jobsSnap = await getDocs(jobsQuery);
-          const fetchedJobs = jobsSnap.docs.map((d) => {
-            const jobData = d.data();
-            return {
-              id: d.id,
-              ...jobData,
-              postedDate:
-                jobData.postedDate instanceof Timestamp
-                  ? jobData.postedDate.toDate().toISOString().split('T')[0]
-                  : jobData.postedDate,
-              createdAt:
-                jobData.createdAt instanceof Timestamp
-                  ? jobData.createdAt.toDate().toISOString()
-                  : jobData.createdAt,
-              updatedAt:
-                jobData.updatedAt instanceof Timestamp
-                  ? jobData.updatedAt.toDate().toISOString()
-                  : jobData.updatedAt,
-            } as Job;
-          });
-          setJobs(fetchedJobs);
-        } catch (e: unknown) {
-          console.error('Error fetching company details:', e);
-          setError(
-            `Failed to load company details. Error: ${(e as Error).message}`
-          );
-          setCompany(null);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchCompanyData();
+async function fetchCompanyForMetadata(
+  companyId: string
+): Promise<Company | null> {
+  if (!companyId) return null;
+  try {
+    const companyDocRef = doc(db, 'companies', companyId);
+    const companyDocSnap = await getDoc(companyDocRef);
+    if (companyDocSnap.exists()) {
+      const data = companyDocSnap.data();
+      return {
+        id: companyDocSnap.id,
+        ...data,
+        createdAt:
+          data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt,
+        updatedAt:
+          data.updatedAt instanceof Timestamp
+            ? data.updatedAt.toDate().toISOString()
+            : data.updatedAt,
+      } as Company;
     }
-  }, [companyId]);
+    return null;
+  } catch (error) {
+    console.error('Error fetching company for metadata:', error);
+    return null;
+  }
+}
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-[calc(100vh-200px)]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-3 text-lg">Loading company profile...</p>
-      </div>
-    );
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const companyId = params.companyId;
+  const company = await fetchCompanyForMetadata(companyId);
+  const previousImages = (await parent).openGraph?.images || [];
+
+  if (!company || company.status !== 'approved') {
+    return {
+      title: 'Company Profile Not Found or Unavailable',
+      description:
+        'This company profile is currently not available or does not exist.',
+      alternates: {
+        canonical: `/companies/${companyId}`,
+      },
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 
-  if (error || !company) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>{error ? 'Error' : 'Profile Unavailable'}</AlertTitle>
-          <AlertDescription>
-            {error || 'This company profile is not currently available.'}
-            <Button variant="link" asChild className="mt-2 block">
-              <Link href="/companies">Browse other companies</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  const title = `${company.name} - Company Profile & Jobs | JobBoardly`;
+  const description = `Learn about ${company.name}, their culture, and open job positions on JobBoardly. ${(company.description || '').substring(0, 150)}... View their profile for more details.`;
+  const keywords = [
+    company.name,
+    'company profile',
+    'jobs',
+    'careers',
+    'JobBoardly',
+    'employer',
+  ];
 
-  return (
-    <div className="container mx-auto py-8">
-      {company.bannerImageUrl ? (
-        <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-[-50px] md:mb-[-75px] z-0">
-          <Image
-            src={company.bannerImageUrl}
-            alt={`${company.name} banner`}
-            fill
-            style={{ objectFit: 'cover' }}
-            priority
-            data-ai-hint="company banner"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-        </div>
-      ) : (
-        <div className="w-full h-32 md:h-48 rounded-lg bg-muted flex items-center justify-center shadow-lg mb-4">
-          <Building className="h-16 w-16 md:h-24 md:w-24 text-muted-foreground" />
-        </div>
-      )}
+  return {
+    title,
+    description,
+    keywords,
+    alternates: {
+      canonical: `/companies/${companyId}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'}/companies/${companyId}`,
+      type: 'profile',
+      profile: {
+        username: company.name,
+      },
+      images: company.logoUrl
+        ? [
+            { url: company.logoUrl, alt: `${company.name} logo` },
+            ...previousImages,
+          ]
+        : previousImages,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: company.logoUrl ? [company.logoUrl] : undefined,
+    },
+  };
+}
 
-      <Card className="shadow-xl relative z-10 max-w-5xl mx-auto overflow-hidden">
-        <CardHeader
-          className={`p-6 ${company.bannerImageUrl ? 'pt-20 md:pt-24' : 'pt-6'} text-center bg-card`}
-        >
-          <div className="flex flex-col items-center gap-4 -mt-16 md:-mt-20">
-            {company.logoUrl ? (
-              <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-md bg-background">
-                <AvatarImage
-                  src={company.logoUrl}
-                  alt={`${company.name} logo`}
-                  data-ai-hint="company logo"
-                  className="object-contain"
-                />
-                <AvatarFallback className="text-3xl md:text-4xl">
-                  {company.name?.[0]?.toUpperCase() || 'C'}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <div className="h-24 w-24 md:h-32 md:w-32 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-md">
-                <Building className="h-12 w-12 md:h-16 md:w-16 text-primary" />
-              </div>
-            )}
-            <div className="mt-2">
-              <CardTitle className="text-3xl md:text-4xl font-bold font-headline text-primary">
-                {company.name}
-              </CardTitle>
-              {company.websiteUrl && (
-                <a
-                  href={
-                    company.websiteUrl.startsWith('http')
-                      ? company.websiteUrl
-                      : `https://${company.websiteUrl}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1 mt-1"
-                >
-                  <LinkIcon className="h-3.5 w-3.5" /> Visit Website{' '}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-6 space-y-8">
-          {company.description && (
-            <section>
-              <h2 className="text-2xl font-semibold mb-3 font-headline text-center md:text-left">
-                About Us
-              </h2>
-              <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
-                {company.description}
-              </div>
-            </section>
-          )}
-          <Separator />
-
-          <section>
-            <h2 className="text-2xl font-semibold mb-4 font-headline text-center md:text-left">
-              Our Recruiters
-            </h2>
-            {recruiters.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {recruiters.map((recruiter) => (
-                  <Card
-                    key={recruiter.uid}
-                    className="text-center p-4 shadow-sm hover:shadow-md transition-shadow bg-card hover:border-primary/50"
-                  >
-                    <Avatar className="h-20 w-20 mx-auto mb-3 border-2 border-primary/30">
-                      <AvatarImage
-                        src={
-                          recruiter.avatarUrl ||
-                          `https://placehold.co/80x80.png`
-                        }
-                        alt={recruiter.name}
-                        data-ai-hint="recruiter headshot"
-                      />
-                      <AvatarFallback className="text-2xl">
-                        {recruiter.name?.[0]?.toUpperCase() || 'R'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold text-foreground">
-                      {recruiter.name}
-                    </p>
-                    {recruiter.email && (
-                      <a
-                        href={`mailto:${recruiter.email}`}
-                        className="text-xs text-muted-foreground hover:text-primary flex items-center justify-center gap-1"
-                      >
-                        <Mail className="h-3 w-3" /> Contact
-                      </a>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 border rounded-md bg-muted/30">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">
-                  No recruiters listed for this company yet.
-                </p>
-              </div>
-            )}
-          </section>
-          <Separator />
-
-          <section>
-            <h2 className="text-2xl font-semibold mb-6 font-headline text-center md:text-left">
-              Open Positions ({jobs.length})
-            </h2>
-            {jobs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {jobs.map((job) => (
-                  <JobCard key={job.id} job={job} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 border rounded-md bg-muted/30">
-                <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">
-                  This company currently has no approved open positions listed
-                  on JobBoardly.
-                </p>
-                <Button variant="link" asChild className="mt-2">
-                  <Link href="/jobs">Explore other jobs</Link>
-                </Button>
-              </div>
-            )}
-          </section>
-        </CardContent>
-        <CardFooter className="p-6 border-t bg-muted/20 rounded-b-lg">
-          <p className="text-xs text-muted-foreground text-center w-full">
-            Joined:{' '}
-            {company.createdAt
-              ? typeof company.createdAt === 'string'
-                ? new Date(company.createdAt).toLocaleDateString()
-                : (company.createdAt as Timestamp)
-                    ?.toDate()
-                    .toLocaleDateString()
-              : 'N/A'}
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
-  );
+// This is now a Server Component
+export default function CompanyDetailPage({ params }: Props) {
+  return <CompanyDetailClientPage params={params} />;
 }

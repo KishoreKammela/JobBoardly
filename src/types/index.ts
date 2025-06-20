@@ -290,3 +290,9 @@ export interface ParsedJobData {
   salaryMax?: number;
   // companyName?: string; // Potentially extractable
 }
+
+export interface LegalDocument {
+  id: string; // e.g., 'privacyPolicy', 'termsOfService'
+  content: string; // Markdown content
+  lastUpdated: Timestamp | Date | string;
+}

@@ -23,6 +23,20 @@ import {
   microsoftProvider,
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
+// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
+
+// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
+// export const metadata: Metadata = {
+//   title: 'Job Seeker Login - Access Your JobBoardly Account',
+//   description: 'Log in to your JobBoardly job seeker account to manage your profile, applications, and find new job opportunities.',
+//   robots: { // Typically, login pages are not indexed for SEO
+//     index: false,
+//     follow: false,
+//   },
+//    alternates: {
+//     canonical: '/auth/login',
+//   },
+// };
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

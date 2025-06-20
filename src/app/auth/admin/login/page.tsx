@@ -17,6 +17,20 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
+// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
+
+// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
+// export const metadata: Metadata = {
+//   title: 'Admin Login - JobBoardly Platform Management',
+//   description: 'Secure login for JobBoardly administrators and platform staff to access the admin dashboard.',
+//   robots: {
+//     index: false,
+//     follow: false,
+//   },
+//    alternates: {
+//     canonical: '/auth/admin/login',
+//   },
+// };
 
 const ADMIN_ROLES: string[] = [
   'admin',
@@ -122,9 +136,10 @@ export default function AdminLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="emailAdmin">Email Address</Label>{' '}
+              {/* Changed ID to be unique */}
               <Input
-                id="email"
+                id="emailAdmin"
                 type="email"
                 placeholder="admin@example.com"
                 value={email}
@@ -134,9 +149,10 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="passwordAdmin">Password</Label>{' '}
+              {/* Changed ID to be unique */}
               <Input
-                id="password"
+                id="passwordAdmin"
                 type="password"
                 placeholder="••••••••"
                 value={password}

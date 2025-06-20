@@ -4,6 +4,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
+
+// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
+// export const metadata: Metadata = {
+//   title: 'Employer Login - Access Your JobBoardly Company Account',
+//   description: 'Log in to your JobBoardly employer account to post jobs, manage applicants, and find qualified candidates for your company.',
+//   robots: { // Typically, login pages are not indexed for SEO
+//     index: false,
+//     follow: false,
+//   },
+//   alternates: {
+//     canonical: '/employer/login',
+//   },
+// };
 
 export default function EmployerLoginPage() {
   const { user, loading: authLoading } = useAuth();

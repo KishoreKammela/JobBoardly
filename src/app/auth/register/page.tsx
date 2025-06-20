@@ -33,6 +33,20 @@ import {
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
 import { checkPasswordStrength, type PasswordStrength } from '@/lib/utils';
+// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
+
+// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
+// export const metadata: Metadata = {
+//   title: 'Register as a Job Seeker - Join JobBoardly',
+//   description: 'Create your JobBoardly job seeker account to find jobs, build your profile, and apply for your next career opportunity.',
+//   robots: { // Typically, registration pages are not indexed for SEO
+//     index: false,
+//     follow: false,
+//   },
+//   alternates: {
+//     canonical: '/auth/register',
+//   },
+// };
 
 export default function RegisterPage() {
   const [name, setName] = useState('');

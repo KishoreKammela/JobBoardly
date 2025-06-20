@@ -30,6 +30,27 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
+// import type { Metadata } from 'next'; // Metadata object cannot be exported from client components
+
+// Metadata for this page will be handled by the root layout.tsx or by refactoring to a Server Component structure.
+// export const metadata: Metadata = {
+//   title: 'Explore Job Listings - Find Your Next Career Move',
+//   description:
+//     'Search and filter thousands of job openings on JobBoardly. Find full-time, part-time, contract, and remote jobs across various industries and locations.',
+//   keywords: [
+//     'job listings',
+//     'find jobs',
+//     'search jobs',
+//     'career opportunities',
+//     'employment',
+//     'tech jobs',
+//     'marketing jobs',
+//     'remote jobs',
+//   ],
+//   alternates: {
+//     canonical: '/jobs',
+//   },
+// };
 
 const JOBS_PER_PAGE = 9;
 
@@ -93,7 +114,7 @@ export default function JobsPage() {
           } as Job;
         });
         setAllJobs(jobsData);
-        setFilteredJobs(jobsData);
+        setFilteredJobs(jobsData); // Initialize with all jobs
       } catch (e: unknown) {
         console.error('Error fetching jobs:', e);
         setError(
@@ -231,13 +252,13 @@ export default function JobsPage() {
             />
           </div>
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold font-headline">
+            <h1 className="text-2xl font-bold font-headline">
               {isLoading && allJobs.length === 0
                 ? 'Loading Jobs...'
                 : isFiltering
                   ? 'Filtering Jobs...'
                   : `Found ${filteredJobs.length} Approved Jobs`}
-            </h2>
+            </h1>
             <div className="flex gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}

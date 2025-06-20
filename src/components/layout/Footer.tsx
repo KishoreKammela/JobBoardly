@@ -95,6 +95,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/sitemap" className="hover:text-primary">
+                  Sitemap
+                </Link>
+              </li>
+              <li>
                 <Link href="/auth/admin/login" className="hover:text-primary">
                   Admin Login
                 </Link>

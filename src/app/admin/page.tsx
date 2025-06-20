@@ -38,6 +38,8 @@ import {
   Users,
   FileText,
   ClipboardList,
+  Gavel, // Icon for Legal Content
+  Save, // Icon for Save button
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -56,8 +58,16 @@ import {
   orderBy,
   serverTimestamp,
   getCountFromServer,
+  setDoc, // For legal content
+  getDoc, // For legal content
 } from 'firebase/firestore';
-import type { Job, UserProfile, Company, UserRole } from '@/types';
+import type {
+  Job,
+  UserProfile,
+  Company,
+  UserRole,
+  LegalDocument,
+} from '@/types';
 import Link from 'next/link';
 import {
   Table,
@@ -69,6 +79,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // For legal content editor
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 
@@ -198,6 +209,88 @@ export default function AdminPage() {
 
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
+
+  // Legal Content State
+  const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
+  const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
+  const [isLegalContentLoaded, setIsLegalContentLoaded] = useState({
+    privacy: false,
+    terms: false,
+  });
+  const [isSavingLegal, setIsSavingLegal] = useState<
+    'privacy' | 'terms' | null
+  >(null);
+
+  const fetchLegalContent = useCallback(async () => {
+    if (user?.role !== 'superAdmin') return;
+    try {
+      const privacyDocRef = doc(db, 'legalContent', 'privacyPolicy');
+      const privacyDocSnap = await getDoc(privacyDocRef);
+      if (privacyDocSnap.exists()) {
+        setPrivacyPolicyContent(
+          (privacyDocSnap.data() as LegalDocument).content
+        );
+      }
+      setIsLegalContentLoaded((prev) => ({ ...prev, privacy: true }));
+
+      const termsDocRef = doc(db, 'legalContent', 'termsOfService');
+      const termsDocSnap = await getDoc(termsDocRef);
+      if (termsDocSnap.exists()) {
+        setTermsOfServiceContent(
+          (termsDocSnap.data() as LegalDocument).content
+        );
+      }
+      setIsLegalContentLoaded((prev) => ({ ...prev, terms: true }));
+    } catch (error) {
+      console.error('Error fetching legal content:', error);
+      toast({
+        title: 'Error Fetching Legal Docs',
+        description: 'Could not load legal documents for editing.',
+        variant: 'destructive',
+      });
+    }
+  }, [user?.role, toast]);
+
+  useEffect(() => {
+    if (user?.role === 'superAdmin') {
+      fetchLegalContent();
+    }
+  }, [user?.role, fetchLegalContent]);
+
+  const handleSaveLegalDocument = async (
+    docId: 'privacyPolicy' | 'termsOfService',
+    content: string
+  ) => {
+    if (user?.role !== 'superAdmin') {
+      toast({
+        title: 'Permission Denied',
+        description: 'Only Super Admins can update legal documents.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsSavingLegal(docId);
+    try {
+      const legalDocRef = doc(db, 'legalContent', docId);
+      await setDoc(legalDocRef, {
+        content: content,
+        lastUpdated: serverTimestamp(),
+      });
+      toast({
+        title: 'Success',
+        description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
+      });
+    } catch (error) {
+      console.error(`Error saving ${docId}:`, error);
+      toast({
+        title: 'Error Saving Document',
+        description: `Could not save ${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'}.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingLegal(null);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     setIsPendingJobsLoading(true);
@@ -407,8 +500,11 @@ export default function AdminPage() {
       );
     } else {
       fetchData();
+      if (user.role === 'superAdmin') {
+        fetchLegalContent();
+      }
     }
-  }, [user, loading, router, pathname, fetchData]);
+  }, [user, loading, router, pathname, fetchData, fetchLegalContent]);
 
   const showConfirmationModal = (
     title: string,
@@ -871,21 +967,38 @@ export default function AdminPage() {
       case 'moderator':
         return 'secondary';
       case 'supportAgent':
-        return 'outline'; // Example, adjust as needed
+        return 'outline';
       case 'dataAnalyst':
-        return 'outline'; // Example
+        return 'outline';
       default:
         return 'secondary';
     }
   };
 
-  // UI visibility flags based on role
   const showQuickModeration = canModerateContent;
-  // const showFullUserManagement = canPerformActions; // For Job Seekers & Platform Users tabs management
   const showPlatformUsersTab =
     user?.role === 'admin' ||
     user?.role === 'superAdmin' ||
-    user?.role === 'dataAnalyst'; // Data analysts can view
+    user?.role === 'dataAnalyst';
+  const showLegalContentTab = user?.role === 'superAdmin';
+
+  const tabsConfig = [
+    { value: 'companies', label: 'Companies', condition: true },
+    { value: 'allJobs', label: 'All Jobs', condition: true },
+    { value: 'jobSeekers', label: 'Job Seekers', condition: true },
+    {
+      value: 'platformUsers',
+      label: 'Platform Users',
+      condition: showPlatformUsersTab,
+    },
+    {
+      value: 'legalContent',
+      label: 'Legal Content',
+      condition: showLegalContentTab,
+    },
+  ];
+
+  const visibleTabs = tabsConfig.filter((tab) => tab.condition);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -1171,15 +1284,12 @@ export default function AdminPage() {
       )}
 
       <Tabs defaultValue="companies">
-        <TabsList
-          className={`grid w-full ${showPlatformUsersTab ? 'grid-cols-4' : 'grid-cols-3'}`}
-        >
-          <TabsTrigger value="companies">Companies</TabsTrigger>
-          <TabsTrigger value="allJobs">All Jobs</TabsTrigger>
-          <TabsTrigger value="jobSeekers">Job Seekers</TabsTrigger>
-          {showPlatformUsersTab && (
-            <TabsTrigger value="platformUsers">Platform Users</TabsTrigger>
-          )}
+        <TabsList className={`grid w-full grid-cols-${visibleTabs.length}`}>
+          {visibleTabs.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="companies">
@@ -1643,7 +1753,7 @@ export default function AdminPage() {
                                   }
                                   disabled={
                                     specificActionLoading === `job-${job.id}` ||
-                                    user?.role === 'moderator' || // Moderators can't suspend
+                                    user?.role === 'moderator' ||
                                     user?.role === 'supportAgent' ||
                                     user?.role === 'dataAnalyst'
                                   }
@@ -2192,13 +2302,13 @@ export default function AdminPage() {
                         {paginatedPlatformUsers.map((u) => {
                           const canLoggedInUserManageTarget = () => {
                             if (!user) return false;
-                            if (user.uid === u.uid) return false; // Cannot manage self
+                            if (user.uid === u.uid) return false;
 
                             if (user.role === 'superAdmin') return true;
                             if (user.role === 'admin') {
-                              return !['admin', 'superAdmin'].includes(u.role); // Admins can manage non-admin/superAdmin roles
+                              return !['admin', 'superAdmin'].includes(u.role);
                             }
-                            return false; // Moderators, Support Agents, Data Analysts cannot manage other platform users
+                            return false;
                           };
                           const isActionDisabled =
                             specificActionLoading === `user-${u.uid}` ||
@@ -2347,6 +2457,95 @@ export default function AdminPage() {
                     )}
                   </>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+        {showLegalContentTab && (
+          <TabsContent value="legalContent">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gavel /> Manage Legal Content
+                </CardTitle>
+                <CardDescription>
+                  Edit the Privacy Policy and Terms of Service. Changes are live
+                  immediately.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3 p-4 border rounded-md">
+                  <h3 className="text-lg font-semibold">Privacy Policy</h3>
+                  {!isLegalContentLoaded.privacy ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading Privacy Policy...
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={privacyPolicyContent}
+                      onChange={(e) => setPrivacyPolicyContent(e.target.value)}
+                      rows={15}
+                      className="font-mono text-sm"
+                      placeholder="Enter Privacy Policy content in Markdown..."
+                    />
+                  )}
+                  <Button
+                    onClick={() =>
+                      handleSaveLegalDocument(
+                        'privacyPolicy',
+                        privacyPolicyContent
+                      )
+                    }
+                    disabled={
+                      isSavingLegal === 'privacy' ||
+                      !isLegalContentLoaded.privacy
+                    }
+                  >
+                    {isSavingLegal === 'privacy' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Privacy Policy
+                  </Button>
+                </div>
+
+                <div className="space-y-3 p-4 border rounded-md">
+                  <h3 className="text-lg font-semibold">Terms of Service</h3>
+                  {!isLegalContentLoaded.terms ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading Terms of Service...
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={termsOfServiceContent}
+                      onChange={(e) => setTermsOfServiceContent(e.target.value)}
+                      rows={15}
+                      className="font-mono text-sm"
+                      placeholder="Enter Terms of Service content in Markdown..."
+                    />
+                  )}
+                  <Button
+                    onClick={() =>
+                      handleSaveLegalDocument(
+                        'termsOfService',
+                        termsOfServiceContent
+                      )
+                    }
+                    disabled={
+                      isSavingLegal === 'terms' || !isLegalContentLoaded.terms
+                    }
+                  >
+                    {isSavingLegal === 'terms' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Terms of Service
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
