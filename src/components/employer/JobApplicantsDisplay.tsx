@@ -3,7 +3,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployerActions } from '@/contexts/EmployerActionsContext';
-import type { Job, Application, ApplicationStatus } from '@/types';
+import type {
+  Job,
+  Application,
+  ApplicationStatus,
+  ApplicationAnswer,
+} from '@/types';
 import { EmployerManagedApplicationStatuses } from '@/types';
 import {
   AlertCircle,
@@ -12,6 +17,7 @@ import {
   Edit2,
   Filter,
   Ban,
+  MessageSquareQuote,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { db } from '@/lib/firebase';
@@ -155,7 +161,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
           setAllApplications([]);
           setFilteredApplications([]);
           setIsLoading(false);
-          return; // Don't fetch applicants if job is suspended
+          return;
         }
 
         const appsQuery = query(
@@ -316,6 +322,16 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
   const startEditingNotes = (app: Application) => {
     setEditingNotesFor(app.id);
     setCurrentNotes(app.employerNotes || '');
+  };
+
+  const formatAnswer = (answer: ApplicationAnswer['answer']): string => {
+    if (typeof answer === 'boolean') {
+      return answer ? 'Yes' : 'No';
+    }
+    if (Array.isArray(answer)) {
+      return answer.join(', ');
+    }
+    return answer || 'N/A';
   };
 
   if (isLoading) {
@@ -496,7 +512,7 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
                       {app.status}
                     </Badge>
                   </CardHeader>
-                  <CardContent className="pb-4">
+                  <CardContent className="pb-4 space-y-4">
                     {editingNotesFor === app.id ? (
                       <div className="space-y-2">
                         <Textarea
@@ -529,6 +545,30 @@ export function JobApplicantsDisplay({ jobId }: JobApplicantsDisplayProps) {
                           </p>
                         )}
                       </>
+                    )}
+
+                    {app.answers && app.answers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <h4 className="text-md font-semibold mb-2 flex items-center gap-2">
+                          <MessageSquareQuote className="h-5 w-5 text-primary" />{' '}
+                          Screening Question Answers
+                        </h4>
+                        <div className="space-y-3">
+                          {app.answers.map((answerItem) => (
+                            <div
+                              key={answerItem.questionId}
+                              className="text-sm"
+                            >
+                              <p className="font-medium text-foreground/90">
+                                {answerItem.questionText}
+                              </p>
+                              <p className="text-muted-foreground pl-2">
+                                - {formatAnswer(answerItem.answer)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                   <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-3 border-t pt-4">
