@@ -564,6 +564,7 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended' | 'deleted'
   ) => {
+    // Initial permission check for the logged-in admin
     if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
       toast({
         title: 'Permission Denied',
@@ -572,6 +573,18 @@ export default function AdminPage() {
       });
       return;
     }
+
+    // Prevent admin from changing their own status
+    if (user.uid === userId) {
+      toast({
+        title: 'Action Denied',
+        description: 'You cannot change your own status.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Find the target user details from local state
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
       (u) => u.uid === userId
     );
@@ -585,27 +598,30 @@ export default function AdminPage() {
       return;
     }
 
-    if (user.uid === userId) {
-      toast({
-        title: 'Action Denied',
-        description: 'You cannot change your own status.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (
-      user.role === 'admin' &&
-      (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
-    ) {
-      toast({
-        title: 'Action Denied',
-        description:
-          'Admins cannot suspend or delete other Admins or SuperAdmins. This can only be done by a SuperAdmin.',
-        variant: 'destructive',
-      });
-      return;
+    // Specific permission check for regular admins modifying other admins/superAdmins
+    const isTargetDefinitelyJobSeeker = allJobSeekers.some(
+      (js) => js.uid === userId
+    );
+
+    if (user.role === 'admin') {
+      // If the current user is a regular admin
+      // And the target is NOT a job seeker (i.e., they are a platform user)
+      // And the target's role IS admin or superAdmin
+      if (
+        !isTargetDefinitelyJobSeeker &&
+        (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
+      ) {
+        toast({
+          title: 'Action Denied',
+          description:
+            'Admins cannot suspend or delete other Admins or SuperAdmins. This can only be done by a SuperAdmin.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
+    // If all checks pass, proceed with the update
     setSpecificActionLoading(`user-${userId}`);
     try {
       const userDocRef = doc(db, 'users', userId);
@@ -614,11 +630,12 @@ export default function AdminPage() {
         updatedAt: serverTimestamp(),
       });
 
+      const updatedTime = new Date().toISOString();
       if (targetUser.role === 'jobSeeker') {
         setAllJobSeekers((prev) =>
           prev.map((u) =>
             u.uid === userId
-              ? { ...u, status: newStatus, updatedAt: new Date().toISOString() }
+              ? { ...u, status: newStatus, updatedAt: updatedTime }
               : u
           )
         );
@@ -626,7 +643,7 @@ export default function AdminPage() {
         setAllPlatformUsers((prev) =>
           prev.map((u) =>
             u.uid === userId
-              ? { ...u, status: newStatus, updatedAt: new Date().toISOString() }
+              ? { ...u, status: newStatus, updatedAt: updatedTime }
               : u
           )
         );
