@@ -17,7 +17,6 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building, AlertCircle, ExternalLink } from 'lucide-react';
@@ -25,7 +24,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2 } from 'lucide-react';
 
 // Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
@@ -105,25 +103,25 @@ export default function CompaniesListPage() {
     currentPage * COMPANIES_PER_PAGE
   );
 
-  const CompanySkeletonCard = () => (
-    <Card className="shadow-sm flex flex-col">
-      <CardHeader className="flex-row items-center gap-4 p-4">
-        <Skeleton className="h-16 w-16 rounded-md" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-6 w-3/4 rounded" />
-          <Skeleton className="h-4 w-1/2 rounded" />
-        </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-2 flex-grow">
-        <Skeleton className="h-4 w-full rounded" />
-        <Skeleton className="h-4 w-5/6 rounded" />
-      </CardContent>
-      <CardFooter className="p-4 border-t">
-        {' '}
-        <Skeleton className="h-9 w-full rounded-md" />
-      </CardFooter>
-    </Card>
-  );
+  // const CompanySkeletonCard = () => (
+  //   <Card className="shadow-sm flex flex-col">
+  //     <CardHeader className="flex-row items-center gap-4 p-4">
+  //       <Skeleton className="h-16 w-16 rounded-md" />
+  //       <div className="space-y-2 flex-1">
+  //         <Skeleton className="h-6 w-3/4 rounded" />
+  //         <Skeleton className="h-4 w-1/2 rounded" />
+  //       </div>
+  //     </CardHeader>
+  //     <CardContent className="p-4 pt-0 space-y-2 flex-grow">
+  //       <Skeleton className="h-4 w-full rounded" />
+  //       <Skeleton className="h-4 w-5/6 rounded" />
+  //     </CardContent>
+  //     <CardFooter className="p-4 border-t">
+  //       {' '}
+  //       <Skeleton className="h-9 w-full rounded-md" />
+  //     </CardFooter>
+  //   </Card>
+  // );
 
   return (
     <div className="container mx-auto py-8">
