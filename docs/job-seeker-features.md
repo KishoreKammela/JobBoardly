@@ -61,29 +61,35 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 - **Dynamic Job Detail Pages (`/jobs/[jobId]`)**:
   - View complete details for each job: description, responsibilities, qualifications, skills, salary, company info.
   - **Share Functionality**: Copy a direct link to the job posting.
+  - Screening questions are _not_ visible on the public job detail page.
 - **Company Profile Pages (`/companies/[companyId]`)**:
   - View details about companies, including their open positions.
 
 ### 2.4. Application & Job Management
 
 - **Apply for Jobs**:
-  - Submit applications directly through the platform.
-  - If a job has **Screening Questions** (defined by the employer), you'll answer them during the application process.
-  - _Note_: Disabled if your account is 'suspended'.
-- **Save Jobs**: Bookmark jobs you're interested in for later review or application.
+  - Submit applications directly through the platform (only for 'approved' jobs).
+  - If a job has **Screening Questions** (defined by the employer), you'll answer them (text, yes/no supported) during the application process via a modal. Answers are final once submitted with the application.
+  - Once an application is submitted (even if later withdrawn or rejected by the company), you cannot re-apply for the same job. The "Apply Now" button will be disabled or show the current application status.
+  - _Note_: Applying is disabled if your account is 'suspended'.
+- **Withdraw Application**:
+  - From the "My Jobs" page or the job detail page (if applied and status is 'Applied'), you can withdraw an active application. This action requires confirmation.
+  - Withdrawn applications change status to 'Withdrawn by Applicant' and cannot be re-submitted.
+  - _Note_: Withdrawing is disabled if your account is 'suspended'.
+- **Save Jobs**: Bookmark 'approved' jobs you're interested in for later review or application.
   - _Note_: Disabled if your account is 'suspended'.
 - **My Jobs Page (`/my-jobs`)**:
   - A centralized dashboard to view and manage:
     - **Saved Jobs**: Jobs you've bookmarked.
-    - **Applied Jobs**: Jobs you've submitted applications for.
-  - Filter jobs by status (All, Applied, Saved).
+    - **Applied Jobs**: Jobs you've submitted applications for, showing their current status (e.g., Applied, Reviewed, Withdrawn by Applicant, Rejected By Company). The option to withdraw an 'Applied' application is available here.
+  - Filter jobs by status (All, Applied, Saved, Withdrawn).
 
 ### 2.5. AI-Powered Job Matching (`/ai-match`)
 
 - Input or review your comprehensive profile summary (editable for the session).
 - The AI matches your profile (including detailed work experience, education, skills, languages, preferences like salary and location, and total experience) against all available approved job postings.
 - Receive a list of relevant job IDs and a detailed reasoning for the matches.
-- _Note_: Disabled if your account is 'suspended'.
+- _Note_: Disabled if your account is 'suspended'. Jobs for which you have an active, withdrawn, or rejected application might still appear in AI match results, but the "Apply" button on the job detail page will be disabled for them.
 
 ### 2.6. User Settings (`/settings`)
 
@@ -126,70 +132,55 @@ graph TD
     K_Save -- No --> L
     L[View Job Details: /jobs/jobId]
     L --> M{Interested?}
-    M -- Yes --> N[Apply for Job - Disabled if Suspended]
-    N --> O[Answer Screening Questions if any]
-    O --> P[Application Submitted!]
-    P --> Q[View in My Jobs Applied: /my-jobs]
-    M -- Save for Later --> S[Save Job - Disabled if Suspended]
+    M -- Yes --> CheckExistingApp{Check if already applied/rejected/withdrawn}
+    CheckExistingApp -- No --> N_Pre[Initiate Apply - Disabled if Suspended or Job not Approved]
+    N_Pre --> HasSQ{Job has Screening Questions?}
+    HasSQ -- Yes --> SQ_Modal[Show Screening Questions Modal]
+    SQ_Modal --> SQ_Submit[Submit Answers]
+    SQ_Submit --> N[Application Submitted with Answers!]
+    HasSQ -- No --> N[Application Submitted!]
+    CheckExistingApp -- Yes --> N_Disabled[Show "Cannot Re-apply" / Current App Status]
+    N_Disabled --> L
+    N --> P[View in My Jobs Applied: /my-jobs]
+    P --> Q{Application Status 'Applied'?}
+    Q -- Yes --> Withdraw_Option{Withdraw?}
+    Withdraw_Option -- Yes --> Withdraw_Confirm[Confirm Withdraw]
+    Withdraw_Confirm -- Yes --> Withdraw_Action[Application Withdrawn]
+    Withdraw_Action --> P
+    Withdraw_Confirm -- No --> P
+    Withdraw_Option -- No --> P
+    Q -- No --> P_ViewOnly[View Non-Applied Status]
+    P_ViewOnly --> P
+    M -- Save for Later --> S[Save Job - Disabled if Suspended or Job not Approved]
     S --> T[View in My Jobs Saved: /my-jobs]
-    Q --> U[Await Employer Response]
     T --> L
 
     G_suspended --> J
 ```
 
-### Journey 2: AI Job Matching
+### Journey 2: AI Job Matching (As before, re-application check on Job Detail Page)
 
-```mermaid
-graph TD
-    A[Logged-in Job Seeker] --> A_check_status{Account Status OK?}
-    A_check_status -- Suspended/Deleted --> A_disabled[Feature Unavailable, Show Alert]
-    A_check_status -- Active --> B[Navigate to AI Job Matcher: /ai-match]
-    B --> C[Review/Edit Profile Summary for Session]
-    C --> D[Initiate AI Matching]
-    D --> E[AI Processes Profile vs. All Jobs]
-    E --> F[View Matched Job IDs & Reasoning]
-    F --> G{Explore Matched Job?}
-    G -- Yes --> H[Click Job -> View Details: /jobs/jobId]
-    H --> I[Apply or Save Job - Disabled if Suspended]
-    G -- No --> J[Refine Profile Summary or Search Manually]
-```
-
-### Journey 3: Managing Saved Searches
-
-```mermaid
-graph TD
-    X[Logged-in Job Seeker] --> X_check_status{Account Status OK?}
-    X_check_status -- Suspended/Deleted --> X_disabled[Feature Unavailable/Limited, Show Alert]
-    X_check_status -- Active --> Y[Navigate to Settings: /settings]
-    Y --> Z[View 'My Saved Searches' Section]
-    Z --> AA{Select Action on a Saved Search}
-    AA -- Apply --> AB[Click 'Apply' -> Redirect to /jobs with Filters]
-    AA -- Delete --> AC[Click 'Delete' -> Confirmation Modal]
-    AC -- Confirm --> AD[Search Deleted]
-    AD --> Y
-    AC -- Cancel --> Z
-```
+### Journey 3: Managing Saved Searches (As before)
 
 ## 4. Page Routes
 
-| Route                    | Description                                                                                               | Access Level |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------- | :----------- |
-| `/`                      | Home page, redirects to `/jobs` if logged in as job seeker.                                               | Public       |
-| `/auth/login`            | Job seeker login page. If account is 'deleted', login may fail post-auth check.                           | Public       |
-| `/auth/register`         | Job seeker registration page.                                                                             | Public       |
-| `/auth/change-password`  | Page to change account password. (Accessible if suspended). Requires confirmation.                        | Job Seeker   |
-| `/profile`               | Manage profile. Editing restricted if account 'suspended'. Profile save requires confirmation.            | Job Seeker   |
-| `/profile/preview`       | Preview profile. (Accessible if suspended).                                                               | Job Seeker   |
-| `/jobs`                  | Browse, filter, and save job searches. (Saving search disabled if suspended).                             | Public       |
-| `/jobs/[jobId]`          | View job details. Apply/Save actions disabled if account 'suspended'.                                     | Public       |
-| `/companies`             | Browse company listings.                                                                                  | Public       |
-| `/companies/[companyId]` | View company details.                                                                                     | Public       |
-| `/my-jobs`               | Dashboard for saved/applied jobs. Viewing allowed if 'suspended', interactions on cards may be limited.   | Job Seeker   |
-| `/ai-match`              | AI job matching tool. Disabled if account 'suspended'.                                                    | Job Seeker   |
-| `/settings`              | Manage settings. Most disabled if account 'suspended', except theme. Deleting saved search needs confirm. | Job Seeker   |
-| `/privacy-policy`        | Platform's privacy policy.                                                                                | Public       |
-| `/terms-of-service`      | Platform's terms of service.                                                                              | Public       |
+| Route                    | Description                                                                                                                                                                                          | Access Level |
+| :----------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
+| `/`                      | Home page, redirects to `/jobs` if logged in as job seeker.                                                                                                                                          | Public       |
+| `/auth/login`            | Job seeker login page. If account is 'deleted', login may fail post-auth check.                                                                                                                      | Public       |
+| `/auth/register`         | Job seeker registration page.                                                                                                                                                                        | Public       |
+| `/auth/change-password`  | Page to change account password. (Accessible if suspended). Requires confirmation.                                                                                                                   | Job Seeker   |
+| `/profile`               | Manage profile. Editing restricted if account 'suspended'. Profile save requires confirmation.                                                                                                       | Job Seeker   |
+| `/profile/preview`       | Preview profile. (Accessible if suspended).                                                                                                                                                          | Job Seeker   |
+| `/jobs`                  | Browse, filter, and save job searches. (Saving search disabled if suspended).                                                                                                                        | Public       |
+| `/jobs/[jobId]`          | View job details. Apply/Save actions disabled if account 'suspended' or job not 'approved'. Re-application prevented. Screening questions not shown to public. Withdraw option available if applied. | Public       |
+| `/companies`             | Browse company listings.                                                                                                                                                                             | Public       |
+| `/companies/[companyId]` | View company details.                                                                                                                                                                                | Public       |
+| `/my-jobs`               | Dashboard for saved/applied jobs. Includes withdraw option. Viewing allowed if 'suspended'.                                                                                                          | Job Seeker   |
+| `/ai-match`              | AI job matching tool. Disabled if account 'suspended'.                                                                                                                                               | Job Seeker   |
+| `/settings`              | Manage settings. Most disabled if account 'suspended', except theme. Deleting saved search needs confirm.                                                                                            | Job Seeker   |
+| `/privacy-policy`        | Platform's privacy policy.                                                                                                                                                                           | Public       |
+| `/terms-of-service`      | Platform's terms of service.                                                                                                                                                                         | Public       |
 
 ## 5. Key "API" Interactions (Data Flows with Genkit & Firebase)
 
@@ -197,34 +188,16 @@ Job seekers interact with AI features via Genkit flows and their profile data is
 
 - **Resume Parsing (`parseResumeFlow`):** (As before)
 - **AI-Powered Job Matching (`aiPoweredJobMatching`):** (As before, but UI access restricted if account suspended)
-- **AI Dynamic Summary Generation (`generateProfileSummaryFlow`):**
-  - **Action**: Job seeker inputs target role/company on `/profile` and clicks "Generate Summary with AI".
-  - **Input Data**: Condensed string of job seeker's profile data (experiences, skills, etc.), target role/company string.
-  - **Interaction**: Calls Genkit flow `generateProfileSummaryFlow`.
-    - AI generates a tailored professional summary.
-  - **Output/Effect**: Displays the generated summary. User can then choose to copy it to their main profile summary field.
+- **AI Dynamic Summary Generation (`generateProfileSummaryFlow`):** (As before)
 - **Profile & Application Data (Firebase Firestore):**
 
   - **User Profile**: All details entered in `/profile` are stored in the `users` collection. Profile updates require confirmation. Editing restricted if account 'suspended'.
-  - **Job Application**: An `application` document is created in the `applications` collection. Disabled if account 'suspended'.
+  - **Job Application**: An `application` document is created in the `applications` collection, now including `answers` to screening questions. Disabled if account 'suspended'. Re-application to the same job by the same user is prevented by checking existing application status.
+  - **Withdraw Application**: Updates the `status` of an existing `application` document to `'Withdrawn by Applicant'`. Requires confirmation.
   - **Saved Jobs/Searches**: Stored in the user's profile document (`savedJobIds` as string array, `savedSearches` as array of SavedSearch objects). Saving/unsaving jobs and saving/deleting searches disabled if account 'suspended'. Deleting saved searches requires confirmation.
 
-- **Saving a Search:**
-
-  - **Action**: User clicks "Save Current Search" in filter sidebar, names the search, confirms.
-  - **Input Data**: Search name (string), current Filters object.
-  - **Interaction**: Calls `saveSearch` in `AuthContext`.
-    - Creates a `SavedSearch` object (with unique ID, name, filters, `createdAt` timestamp).
-    - Updates the `users` document in Firestore by adding the new `SavedSearch` object to the `savedSearches` array (using `arrayUnion`).
-  - **Effect**: Search criteria saved to user's profile.
-
-- **Deleting a Saved Search:**
-  - **Action**: User clicks "Delete" on a saved search in settings, confirms.
-  - **Input Data**: `searchId` (string).
-  - **Interaction**: Calls `deleteSearch` in `AuthContext`.
-    - Finds the `SavedSearch` object by `searchId` in the user's local state.
-    - Updates the `users` document in Firestore by removing the `SavedSearch` object from the `savedSearches` array (using `arrayRemove`).
-  - **Effect**: Saved search removed from user's profile.
+- **Saving a Search:** (As before)
+- **Deleting a Saved Search:** (As before)
 
 ## 6. Future Updates (Potential Enhancements)
 
@@ -239,8 +212,10 @@ Job seekers interact with AI features via Genkit flows and their profile data is
 - **Gamification**: Points or badges for profile completion, applications, etc.
 - **Networking Features**: Ability to connect with other professionals or mentors on the platform.
 - **Clearer guidance for suspended users** on how to resolve their account status.
-- Extensive AI-powered enhancements are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-roadmap.md` for the full AI vision.
+- **Filter out withdrawn/rejected jobs from main job feed (`/jobs`)**: This requires more complex data fetching and is a potential future improvement.
+- **Support for Multiple Choice & Checkbox Screening Questions**: Enhance the UI for job seekers to answer these types.
 - For a broader look at upcoming platform features, refer to the [Enhanced Feature Recommendations](./enhanced-feature-recommendations.md).
+- Extensive AI-powered enhancements are planned, including AI Career Path Advisor and AI Job Concierge. See `docs/ai-roadmap.md` for the full AI vision.
 
 ---
 

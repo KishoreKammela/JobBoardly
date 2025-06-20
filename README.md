@@ -1,6 +1,6 @@
 # JobBoardly - AI-Powered Job Portal
 
-JobBoardly is a modern, AI-enhanced job board platform designed to connect job seekers with employers efficiently. It leverages cutting-edge technologies to provide features like resume parsing, AI-driven job matching, and a seamless application process. Our vision is to create the most intelligent and automated job marketplace, where AI guides careers and optimizes hiring success.
+JobBoardly is a modern, AI-enhanced job board platform designed to connect job seekers with employers efficiently. It leverages cutting-edge technologies to provide features like resume parsing, AI-driven job matching, screening questions, and a seamless application process. Our vision is to create the most intelligent and automated job marketplace, where AI guides careers and optimizes hiring success.
 
 ## Tech Stack
 
@@ -30,16 +30,16 @@ JobBoardly is built with a modern, robust, and scalable technology stack:
 
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
-- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering, job saving, one-click applications, AI-powered job matching, and personalized settings.
+- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering, job saving, application submission with screening question support, application withdrawal, AI-powered job matching, and personalized settings.
   - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
-- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents), screening questions, applicant tracking and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
+- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), screening questions management, applicant tracking (including viewing screening question answers) and status management, candidate search with boolean logic and advanced filters, and AI-powered candidate matching.
   - [Detailed Employer Features](./docs/employer-features.md)
-- **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator > Support Agent/Data Analyst with restricted views).
+- **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), and platform users (suspend/activate admins/superAdmins/moderators). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role (SuperAdmin > Admin > Moderator > Support Agent/Data Analyst with restricted views). Includes a placeholder for AI Feature Toggle Management.
   - [Detailed Admin Features](./docs/admin-features.md)
 - **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, robust Firebase integration, accessibility considerations, and basic privacy/terms pages.
 - **Future Vision & Roadmaps**:
-  - See our ambitious [AI Features Roadmap](./docs/ai-roadmap.md) to understand how we're building the future of job searching and hiring with AI.
-  - Explore our broader [Platform Enhancement Roadmap](./docs/enhanced-feature-recommendations.md) for a comprehensive look at planned features and long-term vision.
+  - See our ambitious **[AI Features Roadmap](./docs/ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
+  - Explore our broader **[Platform Enhancement Roadmap](./docs/enhanced-feature-recommendations.md)** for a comprehensive look at planned features and long-term vision.
 
 ## Folder Structure
 
@@ -80,7 +80,7 @@ A high-level overview of the project's directory structure:
 │   ├── employer-features.md
 │   ├── job-seeker-features.md
 │   ├── routes-documentation.md
-│   ├── ai-roadmap.md
+│   ├── ai-features-roadmap.md  # New AI Roadmap
 │   └── enhanced-feature-recommendations.md # New General Roadmap
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)

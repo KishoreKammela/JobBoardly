@@ -1,13 +1,18 @@
 # JobBoardly: Enhanced Feature Recommendations
 
+**Important Note:** All features listed below are planned for future development. Their availability to users (Job Seekers, Employers) will be contingent upon a **Platform Feature Toggle Management** system within the Admin Panel. This system will allow administrators (SuperAdmins/Admins) to enable or disable specific features globally or for specific user groups, ensuring controlled deployment and that new features are not available to all users by default.
+
 ## Analysis of Current Platform Strengths
 
-- Strong AI integration across user journeys
-- Comprehensive profile management with resume parsing
+- Strong AI integration across user journeys (Genkit for resume/JD parsing, AI Job/Candidate Matcher, AI Summary Generator)
+- Comprehensive profile management with resume parsing and AI summary generation
 - Advanced filtering and search capabilities
-- Multi-role admin system with proper permissions
+- Multi-role admin system with foundational permissions and role-based UI restrictions
 - Account status management (active/suspended/deleted)
 - Profile visibility controls
+- Job Posting with Screening Questions (Text, Yes/No)
+- Application Withdrawal for Job Seekers
+- Re-application prevention
 
 ## Basic Features (High Priority - Foundation)
 
@@ -54,6 +59,7 @@
 - **Job Performance Analytics**: Views, applications, source of applicants
 - **A/B Testing for Job Posts**: Test different versions of job descriptions
 - **Referral Program Integration**: Built-in employee referral tracking
+- **Enhanced Screening Questions**: Support for Multiple Choice & Checkbox Group question types.
 
 #### Application Management System
 
@@ -62,6 +68,7 @@
 - **Collaborative Hiring**: Multiple team members can review and comment on candidates
 - **Automated Email Sequences**: Drip campaigns for nurturing candidates
 - **Offer Management**: Track offer details, negotiations, and acceptance rates
+- **UI for Viewing Screening Question Answers**: Display applicant's answers clearly in the applicant management view (Currently text/yes-no implemented, expand for other types).
 
 ## Needed Features (Medium Priority - Competitive Advantage)
 
@@ -79,7 +86,7 @@
 - **Industry Trends Dashboard**: Job market trends, in-demand skills
 - **Personal Career Analytics**: Career progression insights for job seekers
 - **Diversity & Inclusion Metrics**: DE&I reporting for employers
-- **Predictive Analytics**: Forecast hiring needs, candidate success probability
+- **Predictive Analytics**: Forecast hiring needs, candidate success probability (Ties into AI Roadmap)
 
 ### Mobile Experience
 
@@ -174,10 +181,8 @@
 
 ## Implementation Priority Matrix (Suggested)
 
-This matrix outlines a potential phasing for implementing the enhanced features. Each phase builds upon the previous, progressively adding value and sophistication to the JobBoardly platform.
-
 **Prerequisite: Admin Feature Control System**
-Before rolling out most of the features below, a robust **Platform Feature Toggle Management** system needs to be implemented in the Admin Panel. This allows administrators to enable/disable specific features globally or for specific user groups, ensuring controlled deployment and that new features are not available to all users by default.
+Before rolling out most of the features below, a robust **Platform Feature Toggle Management** system needs to be implemented in the Admin Panel. This allows administrators to enable/disable specific features globally or for specific user groups, ensuring controlled deployment and that new features are not available to all users by default. (This is noted as a high-priority item in `docs/admin-features.md`).
 
 ### Phase 1: Core Enhancements (Focus: User Experience & Foundational Improvements, post-admin-controls)
 
@@ -189,6 +194,7 @@ Before rolling out most of the features below, a robust **Platform Feature Toggl
 6.  **In-Platform Messaging (Core)**: Enable direct, secure communication between recruiters and candidates post-application.
 7.  **Job Templates (Employer)**: Save and reuse job posting templates.
 8.  **Talent Pool Creation (Employer - Basic)**: Allow employers to create and manage custom candidate pools.
+9.  **Enhanced Screening Questions (Employer/Job Seeker):** Full support for Multiple Choice & Checkbox Group question types, including UI for employers to create and job seekers to answer. (Partially implemented with Text/YesNo).
 
 ### Phase 2: Mobile & Analytics (Focus: Accessibility & Insights)
 
