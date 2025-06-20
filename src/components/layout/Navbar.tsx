@@ -22,6 +22,8 @@ import {
   Eye,
   AlertTriangle,
   Ban,
+  Database,
+  Headset,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,8 +49,18 @@ interface NavLinkConfig {
   publicAccess?: boolean;
   employerOnly?: boolean;
   jobSeekerOnly?: boolean;
-  adminOnly?: boolean; // Includes admin, superAdmin, moderator
+  adminOnly?: boolean; // Includes admin, superAdmin, moderator, supportAgent, dataAnalyst
 }
+
+const ADMIN_LIKE_ROLES: UserRole[] = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+  'complianceOfficer',
+  'systemMonitor',
+];
 
 const mainNavLinksConfig: NavLinkConfig[] = [
   {
@@ -57,7 +69,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     icon: <Search className="h-4 w-4" />,
     authRequired: false,
     publicAccess: true,
-    roles: ['jobSeeker', 'admin', 'superAdmin', 'moderator'],
+    roles: ['jobSeeker', ...ADMIN_LIKE_ROLES],
   },
   {
     href: '/companies',
@@ -65,7 +77,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     icon: <Columns className="h-4 w-4" />,
     authRequired: false,
     publicAccess: true,
-    roles: ['jobSeeker', 'employer', 'admin', 'superAdmin', 'moderator'],
+    roles: ['jobSeeker', 'employer', ...ADMIN_LIKE_ROLES],
   },
   {
     href: '/employer',
@@ -112,7 +124,7 @@ const mainNavLinksConfig: NavLinkConfig[] = [
     label: 'Admin Panel',
     icon: <Shield className="h-4 w-4" />,
     authRequired: true,
-    roles: ['admin', 'superAdmin', 'moderator'],
+    roles: ADMIN_LIKE_ROLES,
     adminOnly: true,
   },
 ];
@@ -223,6 +235,76 @@ const userAccountDropdownLinksConfig = {
       icon: <Settings className="h-4 w-4" />,
     },
   ],
+  supportAgent: [
+    {
+      href: '/profile',
+      label: 'My Profile',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      href: '/auth/change-password',
+      label: 'Change Password',
+      icon: <KeyRound className="h-4 w-4" />,
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ],
+  dataAnalyst: [
+    {
+      href: '/profile',
+      label: 'My Profile',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      href: '/auth/change-password',
+      label: 'Change Password',
+      icon: <KeyRound className="h-4 w-4" />,
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ],
+  complianceOfficer: [
+    // Placeholder, same as others for now
+    {
+      href: '/profile',
+      label: 'My Profile',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      href: '/auth/change-password',
+      label: 'Change Password',
+      icon: <KeyRound className="h-4 w-4" />,
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ],
+  systemMonitor: [
+    // Placeholder, same as others for now
+    {
+      href: '/profile',
+      label: 'My Profile',
+      icon: <User className="h-4 w-4" />,
+    },
+    {
+      href: '/auth/change-password',
+      label: 'Change Password',
+      icon: <KeyRound className="h-4 w-4" />,
+    },
+    {
+      href: '/settings',
+      label: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+    },
+  ],
 };
 
 export function Navbar() {
@@ -255,6 +337,10 @@ export function Navbar() {
     if (role === 'admin') return 'Platform Admin';
     if (role === 'superAdmin') return 'Super Admin';
     if (role === 'moderator') return 'Moderator';
+    if (role === 'supportAgent') return 'Support Agent';
+    if (role === 'dataAnalyst') return 'Data Analyst';
+    if (role === 'complianceOfficer') return 'Compliance Officer';
+    if (role === 'systemMonitor') return 'System Monitor';
     return '';
   };
 
@@ -282,11 +368,10 @@ export function Navbar() {
       )
         return false;
 
-      if (link.roles.includes(user.role)) return true;
+      if (user.role && link.roles.includes(user.role)) return true;
       if (
-        (user.role === 'admin' ||
-          user.role === 'superAdmin' ||
-          user.role === 'moderator') &&
+        user.role &&
+        ADMIN_LIKE_ROLES.includes(user.role) &&
         link.publicAccess &&
         (link.href === '/jobs' || link.href === '/companies')
       ) {
@@ -305,9 +390,8 @@ export function Navbar() {
   };
 
   const renderedMainNavLinks = getRenderedMainNavLinks();
-  const currentAccountDropdownLinks = user
-    ? userAccountDropdownLinksConfig[user.role] || []
-    : [];
+  const currentAccountDropdownLinks =
+    user && user.role ? userAccountDropdownLinksConfig[user.role] || [] : [];
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-50">

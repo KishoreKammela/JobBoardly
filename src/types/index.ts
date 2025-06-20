@@ -5,7 +5,11 @@ export type UserRole =
   | 'employer'
   | 'admin'
   | 'superAdmin'
-  | 'moderator'; // Added moderator
+  | 'moderator'
+  | 'supportAgent' // Added new role
+  | 'dataAnalyst' // Added new role
+  | 'complianceOfficer' // Added new role
+  | 'systemMonitor'; // Added new role
 
 export interface ScreeningQuestion {
   id: string;

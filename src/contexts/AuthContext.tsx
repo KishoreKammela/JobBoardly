@@ -297,9 +297,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (
               (profileData.role === 'employer' ||
-                profileData.role === 'admin' || // Admins/Mods might be associated with a "platform" company if needed
+                profileData.role === 'admin' ||
                 profileData.role === 'moderator' ||
-                profileData.role === 'superAdmin') &&
+                profileData.role === 'superAdmin' ||
+                profileData.role === 'supportAgent' ||
+                profileData.role === 'dataAnalyst' ||
+                profileData.role === 'complianceOfficer' ||
+                profileData.role === 'systemMonitor') &&
               profileData.companyId
             ) {
               const companyDocRef = doc(db, 'companies', profileData.companyId);
@@ -404,17 +408,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompany({ id: newCompanyRef.id, ...newCompanyData } as Company);
     }
 
+    let defaultName = 'New User';
+    if (role === 'employer') defaultName = 'Recruiter';
+    else if (
+      [
+        'admin',
+        'superAdmin',
+        'moderator',
+        'supportAgent',
+        'dataAnalyst',
+        'complianceOfficer',
+        'systemMonitor',
+      ].includes(role)
+    )
+      defaultName = 'Platform Staff';
+
     const userProfileData: Partial<UserProfile> = {
       uid: fbUser.uid,
       email: fbUser.email,
-      name:
-        name ||
-        fbUser.displayName ||
-        (role === 'employer'
-          ? 'Recruiter'
-          : role === 'admin' || role === 'superAdmin' || role === 'moderator'
-            ? 'Platform Staff'
-            : 'New User'),
+      name: name || fbUser.displayName || defaultName,
       role: role,
       avatarUrl: fbUser.photoURL || '',
       createdAt: serverTimestamp() as Timestamp,
@@ -460,13 +472,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userProfileData.totalYearsExperience = 0;
       userProfileData.totalMonthsExperience = 0;
     } else if (
-      role === 'admin' ||
-      role === 'superAdmin' ||
-      role === 'moderator'
+      [
+        'admin',
+        'superAdmin',
+        'moderator',
+        'supportAgent',
+        'dataAnalyst',
+        'complianceOfficer',
+        'systemMonitor',
+      ].includes(role)
     ) {
-      // Admin/SuperAdmin/Moderator specific fields (if any)
-      // For example, they might not have job seeker specific fields
-      // or might be associated with a default "platform" company for organizational purposes.
+      // Admin-like roles specific fields (if any)
       // For now, they'll have basic profile + role.
     }
 
@@ -503,9 +519,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (
           (role === 'employer' ||
-            role === 'admin' ||
-            role === 'superAdmin' ||
-            role === 'moderator') &&
+            [
+              'admin',
+              'superAdmin',
+              'moderator',
+              'supportAgent',
+              'dataAnalyst',
+              'complianceOfficer',
+              'systemMonitor',
+            ].includes(role)) &&
           typedKey === 'avatarUrl'
         ) {
           finalProfileDataForFirestore[key] = null;
@@ -668,10 +690,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
+        let defaultName = 'New User';
+        if (role === 'employer') defaultName = 'Recruiter';
+        else if (
+          [
+            'admin',
+            'superAdmin',
+            'moderator',
+            'supportAgent',
+            'dataAnalyst',
+            'complianceOfficer',
+            'systemMonitor',
+          ].includes(role)
+        )
+          defaultName = 'Platform Staff';
+
         await createUserProfileInFirestore(
           fbUser,
-          fbUser.displayName ||
-            (role === 'employer' ? 'Recruiter' : 'New User'),
+          fbUser.displayName || defaultName,
           role,
           companyName
         );
@@ -903,9 +939,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (existingProfile.theme) applyTheme(existingProfile.theme);
           if (
             (existingProfile.role === 'employer' ||
-              existingProfile.role === 'admin' ||
-              existingProfile.role === 'moderator' ||
-              existingProfile.role === 'superAdmin') &&
+              [
+                'admin',
+                'moderator',
+                'superAdmin',
+                'supportAgent',
+                'dataAnalyst',
+                'complianceOfficer',
+                'systemMonitor',
+              ].includes(existingProfile.role)) &&
             existingProfile.companyId
           ) {
             const companyDocRef = doc(

@@ -18,6 +18,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
 
+const ADMIN_ROLES: string[] = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+  'complianceOfficer',
+  'systemMonitor',
+];
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,17 +38,16 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading) {
+      setIsLoading(true); // Ensure loading spinner is shown while auth state resolves
+      return;
+    }
 
     if (user) {
       const redirectPath = searchParams.get('redirect');
-      if (
-        user.role === 'admin' ||
-        user.role === 'superAdmin' ||
-        user.role === 'moderator'
-      ) {
+      if (user.role && ADMIN_ROLES.includes(user.role)) {
         toast({
-          title: 'Admin Login Successful',
+          title: 'Platform Management Login Successful',
           description: 'Redirecting to dashboard...',
         });
         router.replace(redirectPath || '/admin');
@@ -46,7 +55,7 @@ export default function AdminLoginPage() {
         toast({
           title: 'Access Denied',
           description:
-            'This login is for administrators, super administrators, or moderators only. Your account does not have these privileges.',
+            'This login is for authorized platform staff only. Your account does not have these privileges.',
           variant: 'destructive',
         });
         if (user.role === 'jobSeeker') router.replace('/jobs');
@@ -55,9 +64,8 @@ export default function AdminLoginPage() {
         else router.replace('/');
       }
     }
-    if (!authLoading) {
-      setIsLoading(false); // Stop main form loading spinner if it was active
-    }
+    // Only set isLoading to false after auth state is resolved and user presence checked
+    setIsLoading(false);
   }, [user, authLoading, router, searchParams, toast]);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -82,17 +90,22 @@ export default function AdminLoginPage() {
         description: friendlyMessage,
         variant: 'destructive',
       });
-      setIsLoading(false);
+      setIsLoading(false); // Set loading to false only on error in submit
     }
   };
 
-  if (authLoading && !user) {
+  if (isLoading && !user) {
+    // Show loader if actively loading OR if authLoading is true and user isn't set yet
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
+
+  // If user is already logged in and is an admin, useEffect will redirect.
+  // If user is logged in but not admin, useEffect will also handle it.
+  // This form should only render if no user is logged in OR if loading is complete and user is not admin (before redirect).
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)] py-12">
