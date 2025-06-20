@@ -1,11 +1,11 @@
 'use client'; // This component handles client-side logic
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation'; // useParams can be used here or params passed as prop
+import { useParams } from 'next/navigation';
 import {
   doc,
   getDoc,
   collection,
-  query,
+  query as firestoreQuery, // Renamed to avoid conflict with React.query
   where,
   getDocs,
   Timestamp,
@@ -37,6 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Props = {
   params: { companyId: string };
@@ -48,113 +49,175 @@ export default function CompanyDetailClientPage({ params }: Props) {
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const [isCompanyDataLoading, setIsCompanyDataLoading] = useState(true);
+  const [areRecruitersLoading, setAreRecruitersLoading] = useState(true);
+  const [areJobsLoading, setAreJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (companyId) {
-      const fetchCompanyData = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const companyDocRef = doc(db, 'companies', companyId);
-          const companyDocSnap = await getDoc(companyDocRef);
+    if (!companyId) {
+      setError('No Company ID provided.');
+      setIsCompanyDataLoading(false);
+      setAreRecruitersLoading(false);
+      setAreJobsLoading(false);
+      return;
+    }
 
-          if (!companyDocSnap.exists()) {
-            setError('Company not found or is not currently visible.');
-            setIsLoading(false);
-            setCompany(null);
-            return;
-          }
-          const companyData = {
-            id: companyDocSnap.id,
-            ...companyDocSnap.data(),
-          } as Company;
+    const fetchCompanyCoreDetails = async () => {
+      setIsCompanyDataLoading(true);
+      setError(null);
+      setCompany(null);
+      setRecruiters([]);
+      setJobs([]);
+      setAreRecruitersLoading(true); // Reset dependent loading states
+      setAreJobsLoading(true); // Reset dependent loading states
 
-          if (companyData.status !== 'approved') {
+      try {
+        const companyDocRef = doc(db, 'companies', companyId);
+        const companyDocSnap = await getDoc(companyDocRef);
+
+        if (!companyDocSnap.exists()) {
+          setError('Company not found or is not currently visible.');
+          setCompany(null);
+        } else {
+          const companyDataFromDb = companyDocSnap.data() as Omit<
+            Company,
+            'id'
+          >;
+          if (companyDataFromDb.status !== 'approved') {
             setError(
               'This company profile is currently under review or not publicly visible.'
             );
             setCompany(null);
-            setIsLoading(false);
-            return;
-          }
-          setCompany(companyData);
-
-          if (
-            companyData.recruiterUids &&
-            companyData.recruiterUids.length > 0
-          ) {
-            const recruitersQueryLimit = 30;
-            const fetchedRecruiters: UserProfile[] = [];
-            for (
-              let i = 0;
-              i < companyData.recruiterUids.length;
-              i += recruitersQueryLimit
-            ) {
-              const batchUids = companyData.recruiterUids.slice(
-                i,
-                i + recruitersQueryLimit
-              );
-              if (batchUids.length > 0) {
-                const recruitersQuery = query(
-                  collection(db, 'users'),
-                  where('__name__', 'in', batchUids)
-                );
-                const recruitersSnap = await getDocs(recruitersQuery);
-                recruitersSnap.docs.forEach((d) =>
-                  fetchedRecruiters.push({
-                    uid: d.id,
-                    ...d.data(),
-                  } as UserProfile)
-                );
-              }
-            }
-            setRecruiters(fetchedRecruiters);
-          }
-
-          const jobsQuery = query(
-            collection(db, 'jobs'),
-            where('companyId', '==', companyId),
-            where('status', '==', 'approved'),
-            orderBy('postedDate', 'desc')
-          );
-          const jobsSnap = await getDocs(jobsQuery);
-          const fetchedJobs = jobsSnap.docs.map((d) => {
-            const jobData = d.data();
-            return {
-              id: d.id,
-              ...jobData,
-              postedDate:
-                jobData.postedDate instanceof Timestamp
-                  ? jobData.postedDate.toDate().toISOString().split('T')[0]
-                  : jobData.postedDate,
+          } else {
+            const processedCompanyData: Company = {
+              id: companyDocSnap.id,
+              ...companyDataFromDb,
               createdAt:
-                jobData.createdAt instanceof Timestamp
-                  ? jobData.createdAt.toDate().toISOString()
-                  : jobData.createdAt,
+                companyDataFromDb.createdAt instanceof Timestamp
+                  ? companyDataFromDb.createdAt.toDate().toISOString()
+                  : companyDataFromDb.createdAt,
               updatedAt:
-                jobData.updatedAt instanceof Timestamp
-                  ? jobData.updatedAt.toDate().toISOString()
-                  : jobData.updatedAt,
-            } as Job;
-          });
-          setJobs(fetchedJobs);
-        } catch (e: unknown) {
-          console.error('Error fetching company details:', e);
-          setError(
-            `Failed to load company details. Error: ${(e as Error).message}`
-          );
-          setCompany(null);
-        } finally {
-          setIsLoading(false);
+                companyDataFromDb.updatedAt instanceof Timestamp
+                  ? companyDataFromDb.updatedAt.toDate().toISOString()
+                  : companyDataFromDb.updatedAt,
+            };
+            setCompany(processedCompanyData);
+          }
         }
-      };
-      fetchCompanyData();
-    }
+      } catch (e: unknown) {
+        console.error('Error fetching company core details:', e);
+        setError(
+          `Failed to load company details. Error: ${(e as Error).message}`
+        );
+        setCompany(null);
+      } finally {
+        setIsCompanyDataLoading(false);
+      }
+    };
+
+    fetchCompanyCoreDetails();
   }, [companyId]);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (
+      !company ||
+      !company.id ||
+      !company.recruiterUids ||
+      company.recruiterUids.length === 0
+    ) {
+      setRecruiters([]);
+      setAreRecruitersLoading(false);
+      return;
+    }
+
+    const fetchRecruitersForCompany = async () => {
+      setAreRecruitersLoading(true);
+      try {
+        const recruitersQueryLimit = 30;
+        const fetchedRecruiters: UserProfile[] = [];
+        for (
+          let i = 0;
+          i < company.recruiterUids.length;
+          i += recruitersQueryLimit
+        ) {
+          const batchUids = company.recruiterUids.slice(
+            i,
+            i + recruitersQueryLimit
+          );
+          if (batchUids.length > 0) {
+            const recruitersQuery = firestoreQuery(
+              collection(db, 'users'),
+              where('__name__', 'in', batchUids)
+            );
+            const recruitersSnap = await getDocs(recruitersQuery);
+            recruitersSnap.docs.forEach((d) =>
+              fetchedRecruiters.push({ uid: d.id, ...d.data() } as UserProfile)
+            );
+          }
+        }
+        setRecruiters(fetchedRecruiters);
+      } catch (e: unknown) {
+        console.error('Error fetching recruiters for company:', e);
+        setRecruiters([]);
+      } finally {
+        setAreRecruitersLoading(false);
+      }
+    };
+
+    fetchRecruitersForCompany();
+  }, [company]);
+
+  useEffect(() => {
+    if (!company || !company.id) {
+      setJobs([]);
+      setAreJobsLoading(false);
+      return;
+    }
+
+    const fetchJobsForCompany = async () => {
+      setAreJobsLoading(true);
+      try {
+        const jobsQuery = firestoreQuery(
+          collection(db, 'jobs'),
+          where('companyId', '==', company.id),
+          where('status', '==', 'approved'),
+          orderBy('postedDate', 'desc')
+        );
+        const jobsSnap = await getDocs(jobsQuery);
+        const fetchedJobs = jobsSnap.docs.map((d) => {
+          const jobData = d.data();
+          return {
+            id: d.id,
+            ...jobData,
+            postedDate:
+              jobData.postedDate instanceof Timestamp
+                ? jobData.postedDate.toDate().toISOString().split('T')[0]
+                : jobData.postedDate,
+            createdAt:
+              jobData.createdAt instanceof Timestamp
+                ? jobData.createdAt.toDate().toISOString()
+                : jobData.createdAt,
+            updatedAt:
+              jobData.updatedAt instanceof Timestamp
+                ? jobData.updatedAt.toDate().toISOString()
+                : jobData.updatedAt,
+          } as Job;
+        });
+        setJobs(fetchedJobs);
+      } catch (e: unknown) {
+        console.error('Error fetching jobs for company:', e);
+        setJobs([]);
+      } finally {
+        setAreJobsLoading(false);
+      }
+    };
+
+    fetchJobsForCompany();
+  }, [company]);
+
+  if (isCompanyDataLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -262,7 +325,17 @@ export default function CompanyDetailClientPage({ params }: Props) {
             <h2 className="text-2xl font-semibold mb-4 font-headline text-center md:text-left">
               Our Recruiters
             </h2>
-            {recruiters.length > 0 ? (
+            {areRecruitersLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((idx) => (
+                  <Card key={idx} className="text-center p-4 shadow-sm">
+                    <Skeleton className="h-20 w-20 rounded-full mx-auto mb-3" />
+                    <Skeleton className="h-5 w-3/4 mx-auto mb-1" />
+                    <Skeleton className="h-4 w-1/2 mx-auto" />
+                  </Card>
+                ))}
+              </div>
+            ) : recruiters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recruiters.map((recruiter) => (
                   <Card
@@ -309,9 +382,35 @@ export default function CompanyDetailClientPage({ params }: Props) {
 
           <section>
             <h2 className="text-2xl font-semibold mb-6 font-headline text-center md:text-left">
-              Open Positions at {company.name} ({jobs.length})
+              Open Positions at {company.name}
             </h2>
-            {jobs.length > 0 ? (
+            {areJobsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2].map((idx) => (
+                  <Card key={idx} className="shadow-sm flex flex-col h-full">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="h-12 w-12 rounded-md" />
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-5 w-3/4 rounded" />
+                          <Skeleton className="h-4 w-1/2 rounded" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pb-4 flex-grow">
+                      <Skeleton className="h-4 w-full rounded" />
+                      <Skeleton className="h-4 w-5/6 rounded" />
+                    </CardContent>
+                    <CardFooter className="pt-4 border-t">
+                      <div className="flex justify-between items-center w-full">
+                        <Skeleton className="h-4 w-24 rounded" />
+                        <Skeleton className="h-8 w-20 rounded-md" />
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : jobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {jobs.map((job) => (
                   <JobCard key={job.id} job={job} />
