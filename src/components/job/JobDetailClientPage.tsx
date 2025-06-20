@@ -48,10 +48,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-type Props = {
-  routeParams?: { jobId?: string };
-};
-
 const ADMIN_LIKE_ROLES = [
   'admin',
   'superAdmin',
@@ -62,8 +58,13 @@ const ADMIN_LIKE_ROLES = [
   'systemMonitor',
 ];
 
-export default function JobDetailClientPage({ routeParams }: Props) {
-  const jobIdFromProps = routeParams?.jobId;
+// Props now directly accept jobId
+type Props = {
+  jobId?: string; // Make it optional to handle initial undefined state if necessary
+};
+
+export default function JobDetailClientPage({ jobId }: Props) {
+  const jobIdFromProps = jobId; // Use the direct prop
 
   const [jobData, setJobData] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,10 +105,10 @@ export default function JobDetailClientPage({ routeParams }: Props) {
       return;
     }
 
-    setError(null); // Clear previous errors if ID is now present
+    setError(null);
     setAccessDeniedReason(null);
     setIsLoading(true);
-    setJobData(null); // Reset jobData before fetching new
+    setJobData(null);
 
     const fetchJobDetails = async () => {
       try {
@@ -383,6 +384,7 @@ export default function JobDetailClientPage({ routeParams }: Props) {
   };
 
   if (!jobIdFromProps && !isLoading) {
+    // Check jobIdFromProps before useEffect runs
     return (
       <div className="container mx-auto py-10">
         <Alert variant="destructive">
@@ -430,6 +432,8 @@ export default function JobDetailClientPage({ routeParams }: Props) {
   }
 
   if (!jobData) {
+    // This case handles if fetchJobDetails completed but found no job or set jobData to null
+    // It should ideally be covered by the error state or accessDeniedReason state.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">

@@ -39,12 +39,13 @@ import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Props now directly accept companyId
 type Props = {
-  routeParams?: { companyId?: string };
+  companyId?: string; // Make it optional to handle initial undefined state if necessary
 };
 
-export default function CompanyDetailClientPage({ routeParams }: Props) {
-  const companyIdFromProps = routeParams?.companyId;
+export default function CompanyDetailClientPage({ companyId }: Props) {
+  const companyIdFromProps = companyId; // Use the direct prop
 
   const [company, setCompany] = useState<Company | null>(null);
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
@@ -65,9 +66,9 @@ export default function CompanyDetailClientPage({ routeParams }: Props) {
       return;
     }
 
-    setError(null); // Clear previous errors
+    setError(null);
     setIsCompanyDataLoading(true);
-    setCompany(null); // Reset before fetching
+    setCompany(null);
     setRecruiters([]);
     setJobs([]);
     setAreRecruitersLoading(true);
