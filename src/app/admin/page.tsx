@@ -424,7 +424,7 @@ export default function AdminPage() {
     }
     if (
       (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') &&
-      newStatus !== 'pending'
+      newStatus !== 'pending' // Assuming they can't change from pending either.
     ) {
       toast({
         title: 'Permission Denied',
@@ -489,7 +489,12 @@ export default function AdminPage() {
 
   const handleCompanyStatusUpdate = async (
     companyId: string,
-    newStatus: 'approved' | 'rejected' | 'suspended' | 'active' | 'deleted',
+    intendedStatus:
+      | 'approved'
+      | 'rejected'
+      | 'suspended'
+      | 'active'
+      | 'deleted',
     reason?: string
   ) => {
     if (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') {
@@ -501,21 +506,27 @@ export default function AdminPage() {
       return;
     }
     setSpecificActionLoading(`company-${companyId}`);
+
+    let finalStatus: Company['status'] = intendedStatus;
+    if (intendedStatus === 'active') {
+      finalStatus = 'approved'; // 'active' intent means 'approved' for public visibility
+    }
+
     try {
       const companyDocRef = doc(db, 'companies', companyId);
       const updateData: Record<string, unknown> = {
-        status: newStatus,
+        status: finalStatus,
         updatedAt: serverTimestamp(),
       };
       if (
-        newStatus === 'rejected' ||
-        newStatus === 'suspended' ||
-        newStatus === 'deleted' ||
-        (newStatus === 'approved' && reason)
+        finalStatus === 'rejected' ||
+        finalStatus === 'suspended' ||
+        finalStatus === 'deleted' ||
+        (finalStatus === 'approved' && reason)
       ) {
         updateData.moderationReason =
           reason ||
-          `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
+          `${finalStatus.charAt(0).toUpperCase() + finalStatus.slice(1)} by admin`;
       } else {
         updateData.moderationReason = null;
       }
@@ -527,26 +538,26 @@ export default function AdminPage() {
           c.id === companyId
             ? {
                 ...c,
-                status: newStatus,
+                status: finalStatus,
                 moderationReason: updateData.moderationReason as string | null,
                 updatedAt: new Date().toISOString(),
               }
             : c
         )
       );
-      if (newStatus !== 'pending') {
+      if (finalStatus !== 'pending') {
         setPendingCompanies((prev) => prev.filter((c) => c.id !== companyId));
       }
 
       toast({
         title: 'Success',
-        description: `Company ${companyId} status updated to ${newStatus}.`,
+        description: `Company ${companyId} status updated to ${finalStatus}.`,
       });
 
-      if (newStatus === 'suspended' || newStatus === 'deleted') {
+      if (finalStatus === 'suspended' || finalStatus === 'deleted') {
         toast({
           title: 'Note',
-          description: `Associated recruiters' access will be limited based on the new company status ('${newStatus}').`,
+          description: `Associated recruiters' access will be limited based on the new company status ('${finalStatus}').`,
           duration: 7000,
         });
       }
@@ -773,7 +784,7 @@ export default function AdminPage() {
   const showPlatformUsersTab =
     user?.role === 'admin' ||
     user?.role === 'superAdmin' ||
-    user?.role === 'dataAnalyst';
+    user?.role === 'dataAnalyst'; // Moderators cannot manage other platform users
   const showLegalContentTab = user?.role === 'superAdmin';
 
   const tabsConfig = [
