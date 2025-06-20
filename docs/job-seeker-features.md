@@ -111,50 +111,48 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 graph TD
     A[Start: Needs a Job] --> B[Visit JobBoardly]
     B --> C{Has Account?}
-    C -- No --> D[Register: /auth/register]
+    C -->|No| D[Register: /auth/register]
     D --> E[Complete Basic Info]
     E --> F[Login: /auth/login]
-    C -- Yes --> F
+    C -->|Yes| F
     F --> F_check_status{Account Status OK?}
-    F_check_status -- Deleted --> F_deleted[Show Account Deactivated Message, Logout]
-    F_check_status -- Suspended --> G_suspended[Go to Profile, Limited Actions & Alert]
-    F_check_status -- Active --> G[Navigate to Profile: /profile]
-
-    G --> H[Upload/Paste Resume & Complete Profile (Confirm resume process, confirm profile save)]
-    H -- Optional --> H_AISummary[Use AI Summary Generator]
+    F_check_status -->|Deleted| F_deleted[Show Account Deactivated Message, Logout]
+    F_check_status -->|Suspended| G_suspended[Go to Profile, Limited Actions & Alert]
+    F_check_status -->|Active| G[Navigate to Profile: /profile]
+    G --> H[Upload/Paste Resume & Complete Profile Confirm resume process, confirm profile save]
+    H -->|Optional| H_AISummary[Use AI Summary Generator]
     H_AISummary --> I
     H --> I[Set Profile Visibility]
     I --> J[Search for Jobs: /jobs]
     J --> K[Filter Jobs]
     K --> K_Save{Want to Save Search?}
-    K_Save -- Yes --> K_Save_Action[Click 'Save Search', Name it, Confirm]
+    K_Save -->|Yes| K_Save_Action[Click Save Search, Name it, Confirm]
     K_Save_Action --> K
-    K_Save -- No --> L
+    K_Save -->|No| L
     L[View Job Details: /jobs/jobId]
     L --> M{Interested?}
-    M -- Yes --> CheckExistingApp{Check if already applied/rejected/withdrawn}
-    CheckExistingApp -- No --> N_Pre[Initiate Apply - Disabled if Suspended or Job not Approved]
+    M -->|Yes| CheckExistingApp{Check if already applied/rejected/withdrawn}
+    CheckExistingApp -->|No| N_Pre[Initiate Apply - Disabled if Suspended or Job not Approved]
     N_Pre --> HasSQ{Job has Screening Questions?}
-    HasSQ -- Yes --> SQ_Modal[Show Screening Questions Modal]
+    HasSQ -->|Yes| SQ_Modal[Show Screening Questions Modal]
     SQ_Modal --> SQ_Submit[Submit Answers]
     SQ_Submit --> N[Application Submitted with Answers!]
-    HasSQ -- No --> N[Application Submitted!]
-    CheckExistingApp -- Yes --> N_Disabled[Show "Cannot Re-apply" / Current App Status]
+    HasSQ -->|No| N[Application Submitted!]
+    CheckExistingApp -->|Yes| N_Disabled[Show Cannot Re-apply / Current App Status]
     N_Disabled --> L
     N --> P[View in My Jobs Applied: /my-jobs]
-    P --> Q{Application Status 'Applied'?}
-    Q -- Yes --> Withdraw_Option{Withdraw?}
-    Withdraw_Option -- Yes --> Withdraw_Confirm[Confirm Withdraw]
-    Withdraw_Confirm -- Yes --> Withdraw_Action[Application Withdrawn]
+    P --> Q{Application Status Applied?}
+    Q -->|Yes| Withdraw_Option{Withdraw?}
+    Withdraw_Option -->|Yes| Withdraw_Confirm[Confirm Withdraw]
+    Withdraw_Confirm -->|Yes| Withdraw_Action[Application Withdrawn]
     Withdraw_Action --> P
-    Withdraw_Confirm -- No --> P
-    Withdraw_Option -- No --> P
-    Q -- No --> P_ViewOnly[View Non-Applied Status]
+    Withdraw_Confirm -->|No| P
+    Withdraw_Option -->|No| P
+    Q -->|No| P_ViewOnly[View Non-Applied Status]
     P_ViewOnly --> P
-    M -- Save for Later --> S[Save Job - Disabled if Suspended or Job not Approved]
+    M -->|Save for Later| S[Save Job - Disabled if Suspended or Job not Approved]
     S --> T[View in My Jobs Saved: /my-jobs]
     T --> L
-
     G_suspended --> J
 ```
 
