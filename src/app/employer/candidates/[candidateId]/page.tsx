@@ -8,6 +8,7 @@ import type {
   ExperienceEntry,
   EducationEntry,
   LanguageEntry,
+  UserRole,
 } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +51,7 @@ import { Button } from '@/components/ui/button';
 export default function CandidateDetailPage() {
   const params = useParams();
   const candidateId = params.candidateId as string;
-  const { user: currentUser, loading: authLoading } = useAuth();
+  const { user: currentUser, company, loading: authLoading } = useAuth(); // Added company
   const router = useRouter();
   const currentPathname = usePathname();
 
@@ -77,13 +78,27 @@ export default function CandidateDetailPage() {
     if (
       currentUser.role !== 'employer' &&
       currentUser.role !== 'admin' &&
-      currentUser.role !== 'superAdmin'
+      currentUser.role !== 'superAdmin' &&
+      currentUser.role !== 'moderator'
     ) {
-      setError('Access Denied. This page is for employers and administrators.');
+      setError('Access Denied. This page is for employers and platform staff.');
       setIsLoading(false);
       return;
     }
-  }, [currentUser, authLoading, router, currentPathname]);
+
+    // Prevent employer from viewing if their company account is restricted
+    if (
+      currentUser.role === 'employer' &&
+      company &&
+      (company.status === 'suspended' || company.status === 'deleted')
+    ) {
+      setError(
+        'Your company account is restricted, and you cannot view candidate profiles at this time.'
+      );
+      setIsLoading(false);
+      return;
+    }
+  }, [currentUser, company, authLoading, router, currentPathname]);
 
   useEffect(() => {
     if (
@@ -91,7 +106,8 @@ export default function CandidateDetailPage() {
       currentUser &&
       (currentUser.role === 'employer' ||
         currentUser.role === 'admin' ||
-        currentUser.role === 'superAdmin')
+        currentUser.role === 'superAdmin' ||
+        currentUser.role === 'moderator')
     ) {
       const fetchCandidate = async () => {
         setIsLoading(true);
@@ -99,66 +115,105 @@ export default function CandidateDetailPage() {
         try {
           const candidateDocRef = doc(db, 'users', candidateId);
           const candidateDocSnap = await getDoc(candidateDocRef);
-          if (candidateDocSnap.exists()) {
-            const data = candidateDocSnap.data();
-            if (data.role === 'jobSeeker') {
-              let dobString: string | undefined = undefined;
-              if (data.dateOfBirth) {
-                if (
-                  typeof data.dateOfBirth === 'string' &&
-                  isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
-                ) {
-                  dobString = data.dateOfBirth;
-                } else if (data.dateOfBirth instanceof Timestamp) {
-                  dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
-                } else if (
-                  data.dateOfBirth instanceof Date &&
-                  isValid(data.dateOfBirth)
-                ) {
-                  dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
-                } else {
-                  dobString = undefined;
-                }
-              } else {
-                dobString = undefined;
-              }
 
-              setCandidate({
-                uid: candidateDocSnap.id,
-                ...data,
-                dateOfBirth: dobString,
-                createdAt:
-                  data.createdAt instanceof Timestamp
-                    ? data.createdAt.toDate().toISOString()
-                    : data.createdAt,
-                updatedAt:
-                  data.updatedAt instanceof Timestamp
-                    ? data.updatedAt.toDate().toISOString()
-                    : data.updatedAt,
-                lastActive:
-                  data.lastActive instanceof Timestamp
-                    ? data.lastActive.toDate().toISOString()
-                    : data.lastActive,
-                totalYearsExperience:
-                  data.totalYearsExperience === null
-                    ? undefined
-                    : data.totalYearsExperience,
-                totalMonthsExperience:
-                  data.totalMonthsExperience === null
-                    ? undefined
-                    : data.totalMonthsExperience,
-              } as UserProfile);
+          if (!candidateDocSnap.exists()) {
+            setError('User profile not found.');
+            setIsLoading(false);
+            return;
+          }
+
+          const data = candidateDocSnap.data();
+          const targetUserRole = data.role as UserRole;
+          let allowProfileLoad = false;
+
+          if (currentUser.role === 'employer') {
+            if (targetUserRole === 'jobSeeker') {
+              allowProfileLoad = true;
             } else {
               setError('This profile does not belong to a job seeker.');
             }
+          } else if (
+            currentUser.role === 'admin' ||
+            currentUser.role === 'superAdmin' ||
+            currentUser.role === 'moderator'
+          ) {
+            // Platform staff can view any user profile type via this page.
+            allowProfileLoad = true;
           } else {
-            setError('Candidate not found.');
+            // This case should ideally not be reached if the initial useEffect guard works.
+            setError(
+              'You do not have permission to view this type of profile.'
+            );
+          }
+
+          if (allowProfileLoad) {
+            let dobString: string | undefined = undefined;
+            if (data.dateOfBirth) {
+              if (
+                typeof data.dateOfBirth === 'string' &&
+                isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
+              ) {
+                dobString = data.dateOfBirth;
+              } else if (data.dateOfBirth instanceof Timestamp) {
+                dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
+              } else if (
+                data.dateOfBirth instanceof Date &&
+                isValid(data.dateOfBirth)
+              ) {
+                dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
+              } else {
+                dobString = undefined;
+              }
+            } else {
+              dobString = undefined;
+            }
+
+            setCandidate({
+              uid: candidateDocSnap.id,
+              ...data,
+              dateOfBirth: dobString,
+              createdAt:
+                data.createdAt instanceof Timestamp
+                  ? data.createdAt.toDate().toISOString()
+                  : data.createdAt,
+              updatedAt:
+                data.updatedAt instanceof Timestamp
+                  ? data.updatedAt.toDate().toISOString()
+                  : data.updatedAt,
+              lastActive:
+                data.lastActive instanceof Timestamp
+                  ? data.lastActive.toDate().toISOString()
+                  : data.lastActive,
+              totalYearsExperience:
+                data.totalYearsExperience === null ||
+                data.totalYearsExperience === undefined
+                  ? undefined
+                  : data.totalYearsExperience,
+              totalMonthsExperience:
+                data.totalMonthsExperience === null ||
+                data.totalMonthsExperience === undefined
+                  ? undefined
+                  : data.totalMonthsExperience,
+              // Ensure job-seeker specific fields default if not present,
+              // or other fields specific to platform users
+              skills: data.skills || [],
+              experiences: data.experiences || [],
+              educations: data.educations || [],
+              languages: data.languages || [],
+              appliedJobIds: data.appliedJobIds || [],
+              savedJobIds: data.savedJobIds || [],
+              savedSearches: data.savedSearches || [],
+              preferredLocations: data.preferredLocations || [],
+              companyId: data.companyId || undefined,
+              isCompanyAdmin: data.isCompanyAdmin || false,
+              savedCandidateSearches: data.savedCandidateSearches || [],
+            } as UserProfile);
           }
         } catch (e: unknown) {
-          console.error('Error fetching candidate details:', e);
-          let message = 'Failed to load candidate details. Please try again.';
+          console.error('Error fetching user/candidate details:', e);
+          let message = 'Failed to load user profile. Please try again.';
           if (e instanceof Error) {
-            message = `Failed to load candidate details: ${e.message}`;
+            message = `Failed to load user profile: ${e.message}`;
           }
           setError(message);
         } finally {
@@ -167,33 +222,26 @@ export default function CandidateDetailPage() {
       };
       fetchCandidate();
     } else if (
-      currentUser &&
-      currentUser.role !== 'employer' &&
-      currentUser.role !== 'admin' &&
-      currentUser.role !== 'superAdmin'
+      currentUser && // Check currentUser to prevent running if not yet set
+      !(
+        currentUser.role === 'employer' ||
+        currentUser.role === 'admin' ||
+        currentUser.role === 'superAdmin' ||
+        currentUser.role === 'moderator'
+      )
     ) {
+      // Handled by initial useEffect, this is a safeguard
       setIsLoading(false);
     }
-  }, [candidateId, currentUser]);
+  }, [candidateId, currentUser, company]); // Removed currentPathname as it's used in the other effect
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-3 text-lg">Loading candidate profile...</p>
+        <p className="ml-3 text-lg">Loading user profile...</p>
       </div>
     );
-  }
-
-  if (
-    currentUser &&
-    currentUser.role !== 'employer' &&
-    currentUser.role !== 'admin' &&
-    currentUser.role !== 'superAdmin' &&
-    !error &&
-    !isLoading
-  ) {
-    setError('Access Denied. This page is for employers and administrators.');
   }
 
   if (error) {
@@ -212,17 +260,19 @@ export default function CandidateDetailPage() {
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
-          Candidate profile not found or access denied.
+          User profile not found or access denied.
         </p>
       </div>
     );
   }
 
-  const getAvatarFallback = () => candidate.name?.[0]?.toUpperCase() || 'C';
+  const getAvatarFallback = () => candidate.name?.[0]?.toUpperCase() || 'U';
+  const isJobSeekerProfile = candidate.role === 'jobSeeker';
   const hasProfessionalInfo =
-    candidate.experiences?.length ||
-    candidate.educations?.length ||
-    candidate.parsedResumeText;
+    isJobSeekerProfile &&
+    (candidate.experiences?.length ||
+      candidate.educations?.length ||
+      candidate.parsedResumeText);
 
   const totalExperienceString = () => {
     const years = candidate.totalYearsExperience || 0;
@@ -236,7 +286,9 @@ export default function CandidateDetailPage() {
     }
     return str;
   };
-  const totalExperienceDisplay = totalExperienceString();
+  const totalExperienceDisplay = isJobSeekerProfile
+    ? totalExperienceString()
+    : null;
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
@@ -246,8 +298,8 @@ export default function CandidateDetailPage() {
             <Avatar className="h-28 w-28 border-4 border-background shadow-md">
               <AvatarImage
                 src={candidate.avatarUrl || `https://placehold.co/128x128.png`}
-                alt={candidate.name || 'Candidate'}
-                data-ai-hint="candidate photo"
+                alt={candidate.name || 'User'}
+                data-ai-hint="user photo"
               />
               <AvatarFallback className="text-4xl">
                 {getAvatarFallback()}
@@ -258,7 +310,10 @@ export default function CandidateDetailPage() {
                 {candidate.name}
               </h1>
               <p className="text-lg text-foreground mb-2">
-                {candidate.headline}
+                {candidate.headline ||
+                  candidate.role
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, (str) => str.toUpperCase())}
               </p>
               <div className="space-y-1 text-sm text-muted-foreground">
                 {candidate.email && (
@@ -272,7 +327,7 @@ export default function CandidateDetailPage() {
                     </a>
                   </div>
                 )}
-                {candidate.mobileNumber && (
+                {candidate.mobileNumber && isJobSeekerProfile && (
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <Phone className="h-4 w-4" />{' '}
                     <a
@@ -283,17 +338,21 @@ export default function CandidateDetailPage() {
                     </a>
                   </div>
                 )}
-                {(candidate.homeCity || candidate.homeState) && (
-                  <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <Home className="h-4 w-4" />{' '}
-                    {candidate.homeCity && <span>{candidate.homeCity}</span>}
-                    {candidate.homeCity && candidate.homeState && (
-                      <span>, </span>
-                    )}
-                    {candidate.homeState && <span>{candidate.homeState}</span>}
-                  </div>
-                )}
+                {(candidate.homeCity || candidate.homeState) &&
+                  isJobSeekerProfile && (
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <Home className="h-4 w-4" />{' '}
+                      {candidate.homeCity && <span>{candidate.homeCity}</span>}
+                      {candidate.homeCity && candidate.homeState && (
+                        <span>, </span>
+                      )}
+                      {candidate.homeState && (
+                        <span>{candidate.homeState}</span>
+                      )}
+                    </div>
+                  )}
                 {candidate.dateOfBirth &&
+                  isJobSeekerProfile &&
                   isValid(
                     parse(candidate.dateOfBirth, 'yyyy-MM-dd', new Date())
                   ) && (
@@ -306,6 +365,7 @@ export default function CandidateDetailPage() {
                     </div>
                   )}
                 {candidate.gender &&
+                  isJobSeekerProfile &&
                   candidate.gender !== 'Prefer not to say' && (
                     <div className="flex items-center justify-center sm:justify-start gap-2">
                       <Users className="h-4 w-4" /> Gender: {candidate.gender}
@@ -313,32 +373,36 @@ export default function CandidateDetailPage() {
                   )}
               </div>
             </div>
-            <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
-              <button
-                onClick={handlePrintProfile}
-                type="button"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  border: '1px solid #ccc',
-                  borderRadius: '0.375rem',
-                  cursor: 'pointer',
-                }}
-                aria-label="Download candidate profile as PDF"
-              >
-                <Download
-                  style={{
-                    marginRight: '0.5rem',
-                    height: '1rem',
-                    width: '1rem',
-                  }}
-                />{' '}
-                Download PDF
-              </button>
-            </div>
+            {currentUser.role === 'employer' &&
+              isJobSeekerProfile &&
+              candidate.isProfileSearchable !== false && (
+                <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={handlePrintProfile}
+                    type="button"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0.5rem 1rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      border: '1px solid #ccc',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                    aria-label="Download candidate profile as PDF"
+                  >
+                    <Download
+                      style={{
+                        marginRight: '0.5rem',
+                        height: '1rem',
+                        width: '1rem',
+                      }}
+                    />{' '}
+                    Download PDF
+                  </button>
+                </div>
+              )}
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-8">
@@ -353,7 +417,7 @@ export default function CandidateDetailPage() {
             </section>
           )}
 
-          {candidate.parsedResumeText && (
+          {candidate.parsedResumeText && isJobSeekerProfile && (
             <section>
               {totalExperienceDisplay && <Separator className="my-6" />}
               <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
@@ -365,296 +429,346 @@ export default function CandidateDetailPage() {
             </section>
           )}
 
-          {candidate.experiences && candidate.experiences.length > 0 && (
-            <section>
-              {(totalExperienceDisplay || candidate.parsedResumeText) && (
-                <Separator className="my-6" />
-              )}
-              <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
-                <Briefcase className="text-primary" /> Work Experience
-              </h2>
-              <div className="space-y-6">
-                {candidate.experiences.map((exp: ExperienceEntry) => (
-                  <div
-                    key={exp.id}
-                    className="pl-4 border-l-2 border-primary/30"
-                  >
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {exp.jobRole || 'N/A'}
-                    </h3>
-                    <p className="text-md font-medium text-primary">
-                      {exp.companyName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {exp.startDate &&
-                      isValid(parse(exp.startDate, 'yyyy-MM-dd', new Date()))
-                        ? format(
-                            parse(exp.startDate, 'yyyy-MM-dd', new Date()),
-                            'PPP'
-                          )
-                        : 'N/A'}{' '}
-                      -{' '}
-                      {exp.currentlyWorking
-                        ? 'Present'
-                        : exp.endDate &&
-                            isValid(
-                              parse(exp.endDate, 'yyyy-MM-dd', new Date())
-                            )
+          {candidate.experiences &&
+            candidate.experiences.length > 0 &&
+            isJobSeekerProfile && (
+              <section>
+                {(totalExperienceDisplay ||
+                  (candidate.parsedResumeText && isJobSeekerProfile)) && (
+                  <Separator className="my-6" />
+                )}
+                <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
+                  <Briefcase className="text-primary" /> Work Experience
+                </h2>
+                <div className="space-y-6">
+                  {candidate.experiences.map((exp: ExperienceEntry) => (
+                    <div
+                      key={exp.id}
+                      className="pl-4 border-l-2 border-primary/30"
+                    >
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {exp.jobRole || 'N/A'}
+                      </h3>
+                      <p className="text-md font-medium text-primary">
+                        {exp.companyName || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {exp.startDate &&
+                        isValid(parse(exp.startDate, 'yyyy-MM-dd', new Date()))
                           ? format(
-                              parse(exp.endDate, 'yyyy-MM-dd', new Date()),
+                              parse(exp.startDate, 'yyyy-MM-dd', new Date()),
                               'PPP'
                             )
-                          : 'N/A'}
-                      {exp.annualCTC &&
-                        ` | CTC: ${formatCurrencyINR(exp.annualCTC)}`}
-                    </p>
-                    {exp.description && (
-                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
-                        {exp.description}
+                          : 'N/A'}{' '}
+                        -{' '}
+                        {exp.currentlyWorking
+                          ? 'Present'
+                          : exp.endDate &&
+                              isValid(
+                                parse(exp.endDate, 'yyyy-MM-dd', new Date())
+                              )
+                            ? format(
+                                parse(exp.endDate, 'yyyy-MM-dd', new Date()),
+                                'PPP'
+                              )
+                            : 'N/A'}
+                        {exp.annualCTC &&
+                          ` | CTC: ${formatCurrencyINR(exp.annualCTC)}`}
                       </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {candidate.educations && candidate.educations.length > 0 && (
-            <section>
-              {(totalExperienceDisplay ||
-                candidate.parsedResumeText ||
-                (candidate.experiences &&
-                  candidate.experiences.length > 0)) && (
-                <Separator className="my-6" />
-              )}
-              <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
-                <GraduationCap className="text-primary" /> Education
-              </h2>
-              <div className="space-y-6">
-                {candidate.educations.map((edu: EducationEntry) => (
-                  <div
-                    key={edu.id}
-                    className={`pl-4 border-l-2 ${edu.isMostRelevant ? 'border-accent' : 'border-primary/30'}`}
-                  >
-                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                      {edu.degreeName || 'N/A'}
-                      {edu.isMostRelevant && (
-                        <Badge
-                          variant="default"
-                          className="bg-accent text-accent-foreground text-xs"
-                        >
-                          Most Relevant
-                        </Badge>
+                      {exp.description && (
+                        <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                          {exp.description}
+                        </p>
                       )}
-                    </h3>
-                    <p className="text-md font-medium text-primary">
-                      {edu.instituteName || 'N/A'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {edu.level || 'N/A'}{' '}
-                      {edu.specialization && ` - ${edu.specialization}`}
-                      {edu.startYear &&
-                        edu.endYear &&
-                        ` | ${edu.startYear} - ${edu.endYear}`}
-                      {edu.courseType && ` (${edu.courseType})`}
-                    </p>
-                    {edu.description && (
-                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">
-                        {edu.description}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+          {candidate.educations &&
+            candidate.educations.length > 0 &&
+            isJobSeekerProfile && (
+              <section>
+                {(totalExperienceDisplay ||
+                  (candidate.parsedResumeText && isJobSeekerProfile) ||
+                  (candidate.experiences &&
+                    candidate.experiences.length > 0 &&
+                    isJobSeekerProfile)) && <Separator className="my-6" />}
+                <h2 className="text-xl font-semibold mb-4 font-headline flex items-center gap-2">
+                  <GraduationCap className="text-primary" /> Education
+                </h2>
+                <div className="space-y-6">
+                  {candidate.educations.map((edu: EducationEntry) => (
+                    <div
+                      key={edu.id}
+                      className={`pl-4 border-l-2 ${edu.isMostRelevant ? 'border-accent' : 'border-primary/30'}`}
+                    >
+                      <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                        {edu.degreeName || 'N/A'}
+                        {edu.isMostRelevant && (
+                          <Badge
+                            variant="default"
+                            className="bg-accent text-accent-foreground text-xs"
+                          >
+                            Most Relevant
+                          </Badge>
+                        )}
+                      </h3>
+                      <p className="text-md font-medium text-primary">
+                        {edu.instituteName || 'N/A'}
                       </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {!hasProfessionalInfo && !totalExperienceDisplay && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Profile Information Limited</AlertTitle>
-              <AlertDescription>
-                This candidate has not yet provided detailed summary,
-                experience, or education.
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {edu.level || 'N/A'}{' '}
+                        {edu.specialization && ` - ${edu.specialization}`}
+                        {edu.startYear &&
+                          edu.endYear &&
+                          ` | ${edu.startYear} - ${edu.endYear}`}
+                        {edu.courseType && ` (${edu.courseType})`}
+                      </p>
+                      {edu.description && (
+                        <p className="text-sm text-foreground/80 whitespace-pre-wrap">
+                          {edu.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          {!hasProfessionalInfo &&
+            !totalExperienceDisplay &&
+            isJobSeekerProfile && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Profile Information Limited</AlertTitle>
+                <AlertDescription>
+                  This candidate has not yet provided detailed summary,
+                  experience, or education.
+                </AlertDescription>
+              </Alert>
+            )}
+          {!isJobSeekerProfile &&
+            (currentUser.role === 'admin' ||
+              currentUser.role === 'superAdmin' ||
+              currentUser.role === 'moderator') && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Platform User Profile</AlertTitle>
+                <AlertDescription>
+                  Viewing basic profile information for a platform{' '}
+                  {candidate.role
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, (str) => str.toUpperCase())}
+                  . Job seeker specific sections (experience, education, skills
+                  etc.) are not applicable.
+                </AlertDescription>
+              </Alert>
+            )}
+
+          {(candidate.skills &&
+            candidate.skills.length > 0 &&
+            isJobSeekerProfile) ||
+          (currentUser.role !== 'employer' &&
+            candidate.skills &&
+            candidate.skills.length > 0) ? (
             <section>
               <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                 <Award className="text-primary" /> Skills
               </h2>
-              {candidate.skills && candidate.skills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {candidate.skills.map((skill) => (
-                    <Badge
-                      key={skill}
-                      variant="secondary"
-                      className="text-sm px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No skills listed.
-                </p>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {candidate.skills.map((skill) => (
+                  <Badge
+                    key={skill}
+                    variant="secondary"
+                    className="text-sm px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
+                  >
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
             </section>
+          ) : isJobSeekerProfile ? (
+            <section>
+              <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                <Award className="text-primary" /> Skills
+              </h2>
+              <p className="text-sm text-muted-foreground">No skills listed.</p>
+            </section>
+          ) : null}
 
+          {(candidate.languages &&
+            candidate.languages.length > 0 &&
+            isJobSeekerProfile) ||
+          (currentUser.role !== 'employer' &&
+            candidate.languages &&
+            candidate.languages.length > 0) ? (
             <section>
               <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                 <LanguagesIcon className="text-primary" /> Languages
               </h2>
-              {candidate.languages && candidate.languages.length > 0 ? (
-                <ul className="space-y-1">
-                  {candidate.languages.map((lang: LanguageEntry) => (
-                    <li
-                      key={lang.id || lang.languageName}
-                      className="text-sm text-foreground/90"
-                    >
-                      <span className="font-medium">
-                        {lang.languageName || 'N/A'}
-                      </span>
-                      : {lang.proficiency || 'N/A'}
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (Read: {lang.canRead ? 'Yes' : 'No'}, Write:{' '}
-                        {lang.canWrite ? 'Yes' : 'No'}, Speak:{' '}
-                        {lang.canSpeak ? 'Yes' : 'No'})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No languages listed.
-                </p>
-              )}
+              <ul className="space-y-1">
+                {candidate.languages.map((lang: LanguageEntry) => (
+                  <li
+                    key={lang.id || lang.languageName}
+                    className="text-sm text-foreground/90"
+                  >
+                    <span className="font-medium">
+                      {lang.languageName || 'N/A'}
+                    </span>
+                    : {lang.proficiency || 'N/A'}
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (Read: {lang.canRead ? 'Yes' : 'No'}, Write:{' '}
+                      {lang.canWrite ? 'Yes' : 'No'}, Speak:{' '}
+                      {lang.canSpeak ? 'Yes' : 'No'})
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </section>
-          </div>
+          ) : isJobSeekerProfile ? (
+            <section>
+              <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                <LanguagesIcon className="text-primary" /> Languages
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                No languages listed.
+              </p>
+            </section>
+          ) : null}
 
-          <Separator className="my-6" />
-          <section>
-            <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-              <DollarSign className="text-primary" /> Compensation
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {candidate.currentCTCValue !== undefined && (
-                <p>
-                  <strong className="text-foreground/80">Current CTC:</strong>{' '}
-                  {candidate.currentCTCConfidential
-                    ? 'Confidential'
-                    : `${formatCurrencyINR(candidate.currentCTCValue)}/year`}
-                </p>
-              )}
-              {candidate.expectedCTCValue !== undefined && (
-                <p>
-                  <strong className="text-foreground/80">Expected CTC:</strong>{' '}
-                  {formatCurrencyINR(candidate.expectedCTCValue)}/year{' '}
-                  {candidate.expectedCTCNegotiable && '(Negotiable)'}
-                </p>
-              )}
-              {candidate.currentCTCValue === undefined &&
-                candidate.expectedCTCValue === undefined && (
-                  <p className="text-sm text-muted-foreground">
-                    Compensation details not provided.
-                  </p>
-                )}
-            </div>
-          </section>
+          {isJobSeekerProfile && (
+            <>
+              <Separator className="my-6" />
+              <section>
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <DollarSign className="text-primary" /> Compensation
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  {candidate.currentCTCValue !== undefined && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Current CTC:
+                      </strong>{' '}
+                      {candidate.currentCTCConfidential
+                        ? 'Confidential'
+                        : `${formatCurrencyINR(candidate.currentCTCValue)}/year`}
+                    </p>
+                  )}
+                  {candidate.expectedCTCValue !== undefined && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Expected CTC:
+                      </strong>{' '}
+                      {formatCurrencyINR(candidate.expectedCTCValue)}/year{' '}
+                      {candidate.expectedCTCNegotiable && '(Negotiable)'}
+                    </p>
+                  )}
+                  {candidate.currentCTCValue === undefined &&
+                    candidate.expectedCTCValue === undefined && (
+                      <p className="text-sm text-muted-foreground">
+                        Compensation details not provided.
+                      </p>
+                    )}
+                </div>
+              </section>
 
-          <Separator className="my-6" />
-          <section>
-            <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-              <Briefcase className="text-primary" /> Job Preferences
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {candidate.preferredLocations &&
-                candidate.preferredLocations.length > 0 && (
-                  <p>
-                    <strong className="text-foreground/80">
-                      Preferred Locations:
-                    </strong>{' '}
-                    {candidate.preferredLocations.join(', ')}
-                  </p>
-                )}
-              {candidate.jobSearchStatus && (
-                <p>
-                  <strong className="text-foreground/80">
-                    Job Search Status:
-                  </strong>{' '}
-                  {candidate.jobSearchStatus
-                    .replace(/([A-Z])/g, ' $1')
-                    .replace(/^./, (str) => str.toUpperCase())}
-                </p>
-              )}
-              {candidate.availability && (
-                <p>
-                  <strong className="text-foreground/80">Availability:</strong>{' '}
-                  {candidate.availability}
-                </p>
-              )}
-            </div>
-            {(!candidate.preferredLocations ||
-              candidate.preferredLocations.length === 0) &&
-              !candidate.jobSearchStatus &&
-              !candidate.availability && (
-                <p className="text-sm text-muted-foreground">
-                  Job preferences not specified.
-                </p>
-              )}
-          </section>
+              <Separator className="my-6" />
+              <section>
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <Briefcase className="text-primary" /> Job Preferences
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  {candidate.preferredLocations &&
+                    candidate.preferredLocations.length > 0 && (
+                      <p>
+                        <strong className="text-foreground/80">
+                          Preferred Locations:
+                        </strong>{' '}
+                        {candidate.preferredLocations.join(', ')}
+                      </p>
+                    )}
+                  {candidate.jobSearchStatus && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Job Search Status:
+                      </strong>{' '}
+                      {candidate.jobSearchStatus
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^./, (str) => str.toUpperCase())}
+                    </p>
+                  )}
+                  {candidate.availability && (
+                    <p>
+                      <strong className="text-foreground/80">
+                        Availability:
+                      </strong>{' '}
+                      {candidate.availability}
+                    </p>
+                  )}
+                </div>
+                {(!candidate.preferredLocations ||
+                  candidate.preferredLocations.length === 0) &&
+                  !candidate.jobSearchStatus &&
+                  !candidate.availability && (
+                    <p className="text-sm text-muted-foreground">
+                      Job preferences not specified.
+                    </p>
+                  )}
+              </section>
 
-          <Separator className="my-6" />
-          <section>
-            <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
-              <BookOpen className="text-primary" /> Links & Resume
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {candidate.linkedinUrl && (
-                <Button variant="outline" asChild>
-                  <a
-                    href={candidate.linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Linkedin className="mr-2 h-4 w-4" /> LinkedIn
-                  </a>
-                </Button>
-              )}
-              {candidate.portfolioUrl && (
-                <Button variant="outline" asChild>
-                  <a
-                    href={candidate.portfolioUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Globe className="mr-2 h-4 w-4" /> Portfolio
-                  </a>
-                </Button>
-              )}
-              {candidate.resumeUrl && candidate.resumeFileName && (
-                <Button variant="outline" asChild>
-                  <a
-                    href={candidate.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={candidate.resumeFileName}
-                  >
-                    <FileText className="mr-2 h-4 w-4" /> Download Stored Resume
-                    ({candidate.resumeFileName})
-                  </a>
-                </Button>
-              )}
-              {!candidate.linkedinUrl &&
-                !candidate.portfolioUrl &&
-                !candidate.resumeUrl && (
-                  <p className="text-sm text-muted-foreground">
-                    No external links or stored resume provided.
-                  </p>
-                )}
-            </div>
-          </section>
+              <Separator className="my-6" />
+              <section>
+                <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
+                  <BookOpen className="text-primary" /> Links & Resume
+                </h2>
+                <div className="flex flex-wrap gap-3">
+                  {candidate.linkedinUrl && (
+                    <Button variant="outline" asChild>
+                      <a
+                        href={candidate.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Linkedin className="mr-2 h-4 w-4" /> LinkedIn
+                      </a>
+                    </Button>
+                  )}
+                  {candidate.portfolioUrl && (
+                    <Button variant="outline" asChild>
+                      <a
+                        href={candidate.portfolioUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Globe className="mr-2 h-4 w-4" /> Portfolio
+                      </a>
+                    </Button>
+                  )}
+                  {candidate.resumeUrl && candidate.resumeFileName && (
+                    <Button variant="outline" asChild>
+                      <a
+                        href={candidate.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={candidate.resumeFileName}
+                      >
+                        <FileText className="mr-2 h-4 w-4" /> Download Stored
+                        Resume ({candidate.resumeFileName})
+                      </a>
+                    </Button>
+                  )}
+                  {!candidate.linkedinUrl &&
+                    !candidate.portfolioUrl &&
+                    !candidate.resumeUrl && (
+                      <p className="text-sm text-muted-foreground">
+                        No external links or stored resume provided.
+                      </p>
+                    )}
+                </div>
+              </section>
+            </>
+          )}
         </CardContent>
         <CardFooter className="p-6 border-t bg-muted/20 rounded-b-lg">
           <p className="text-xs text-muted-foreground">
@@ -674,13 +788,19 @@ export default function CandidateDetailPage() {
                       (candidate.updatedAt as Timestamp)?.seconds * 1000
                     ).toLocaleDateString()
               }`}
+            {candidate.status && ` | Status: ${candidate.status.toUpperCase()}`}
           </p>
         </CardFooter>
       </Card>
       {/* Hidden component for printing */}
-      <div style={{ display: 'none' }}>
-        <PrintableProfileComponent ref={printableProfileRef} user={candidate} />
-      </div>
+      {isJobSeekerProfile && (
+        <div style={{ display: 'none' }}>
+          <PrintableProfileComponent
+            ref={printableProfileRef}
+            user={candidate}
+          />
+        </div>
+      )}
     </div>
   );
 }
