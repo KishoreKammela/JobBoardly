@@ -47,6 +47,16 @@ import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
+
+const ADMIN_LIKE_ROLES_CANDIDATE_PAGE: UserRole[] = [
+  'admin',
+  'superAdmin',
+  'moderator',
+  'supportAgent',
+  'dataAnalyst',
+];
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -54,6 +64,7 @@ export default function CandidateDetailPage() {
   const { user: currentUser, company, loading: authLoading } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
+  const { toast } = useToast();
 
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,14 +88,18 @@ export default function CandidateDetailPage() {
     }
     if (
       currentUser.role !== 'employer' &&
-      currentUser.role !== 'admin' &&
-      currentUser.role !== 'superAdmin' &&
-      currentUser.role !== 'moderator' &&
-      currentUser.role !== 'supportAgent' &&
-      currentUser.role !== 'dataAnalyst'
+      !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole) // Explicitly cast as UserRole if confident it fits
     ) {
-      setError('Access Denied. This page is for employers and platform staff.');
-      setIsLoading(false);
+      toast({
+        title: 'Access Denied',
+        description: 'This page is for employers and platform staff only.',
+        variant: 'destructive',
+      });
+      if (currentUser.role === 'jobSeeker') {
+        router.replace('/jobs');
+      } else {
+        router.replace('/');
+      }
       return;
     }
 
@@ -93,145 +108,159 @@ export default function CandidateDetailPage() {
       company &&
       (company.status === 'suspended' || company.status === 'deleted')
     ) {
-      setError(
-        'Your company account is restricted, and you cannot view candidate profiles at this time.'
-      );
-      setIsLoading(false);
+      toast({
+        title: 'Company Account Restricted',
+        description: `Your company account is ${company.status}. Candidate profile viewing is restricted.`,
+        variant: 'destructive',
+      });
+      router.replace('/employer/posted-jobs');
       return;
     }
-  }, [currentUser, company, authLoading, router, currentPathname]);
+    // If initial checks pass, proceed to fetch candidate (handled in next useEffect)
+  }, [currentUser, company, authLoading, router, currentPathname, toast]);
 
   useEffect(() => {
     if (
-      candidateId &&
-      currentUser &&
-      (currentUser.role === 'employer' ||
-        currentUser.role === 'admin' ||
-        currentUser.role === 'superAdmin' ||
-        currentUser.role === 'moderator' ||
-        currentUser.role === 'supportAgent' ||
-        currentUser.role === 'dataAnalyst')
+      !candidateId ||
+      !currentUser ||
+      (currentUser.role !== 'employer' &&
+        !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole))
     ) {
-      const fetchCandidate = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const candidateDocRef = doc(db, 'users', candidateId);
-          const candidateDocSnap = await getDoc(candidateDocRef);
+      // If current user is not an employer or admin, or no candidateId, don't fetch.
+      // This check is partly redundant due to the first useEffect but good for safety.
+      if (
+        currentUser &&
+        currentUser.role !== 'employer' &&
+        !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole)
+      ) {
+        // This specific condition should have been caught by the first useEffect.
+        // If it reaches here, it's an edge case or logic error.
+      } else if (!candidateId) {
+        setError('No candidate ID specified.');
+        setIsLoading(false);
+      }
+      return;
+    }
 
-          if (!candidateDocSnap.exists()) {
-            setError('User profile not found.');
-            setIsLoading(false);
-            return;
-          }
+    const fetchCandidate = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const candidateDocRef = doc(db, 'users', candidateId);
+        const candidateDocSnap = await getDoc(candidateDocRef);
 
-          const data = candidateDocSnap.data();
-          const targetUserRole = data.role as UserRole;
-          let allowProfileLoad = false;
+        if (!candidateDocSnap.exists()) {
+          setError('User profile not found.');
+          setIsLoading(false);
+          return;
+        }
 
-          if (currentUser.role === 'employer') {
-            if (targetUserRole === 'jobSeeker') {
-              allowProfileLoad = true;
-            } else {
-              setError('This profile does not belong to a job seeker.');
-            }
-          } else if (
-            currentUser.role === 'admin' ||
-            currentUser.role === 'superAdmin' ||
-            currentUser.role === 'moderator' ||
-            currentUser.role === 'supportAgent' ||
-            currentUser.role === 'dataAnalyst'
-          ) {
+        const data = candidateDocSnap.data();
+        const targetUserRole = data.role as UserRole;
+        let allowProfileLoad = false;
+        let accessDeniedMessage = '';
+        let redirectPath = '/';
+
+        if (currentUser.role === 'employer') {
+          if (targetUserRole === 'jobSeeker') {
             allowProfileLoad = true;
           } else {
-            setError(
-              'You do not have permission to view this type of profile.'
-            );
+            accessDeniedMessage =
+              'Employers can only view job seeker profiles.';
+            redirectPath = '/employer/find-candidates';
           }
-
-          if (allowProfileLoad) {
-            let dobString: string | undefined = undefined;
-            if (data.dateOfBirth) {
-              if (
-                typeof data.dateOfBirth === 'string' &&
-                isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
-              ) {
-                dobString = data.dateOfBirth;
-              } else if (data.dateOfBirth instanceof Timestamp) {
-                dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
-              } else if (
-                data.dateOfBirth instanceof Date &&
-                isValid(data.dateOfBirth)
-              ) {
-                dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
-              }
-            }
-
-            setCandidate({
-              uid: candidateDocSnap.id,
-              ...data,
-              dateOfBirth: dobString,
-              createdAt:
-                data.createdAt instanceof Timestamp
-                  ? data.createdAt.toDate().toISOString()
-                  : data.createdAt,
-              updatedAt:
-                data.updatedAt instanceof Timestamp
-                  ? data.updatedAt.toDate().toISOString()
-                  : data.updatedAt,
-              lastActive:
-                data.lastActive instanceof Timestamp
-                  ? data.lastActive.toDate().toISOString()
-                  : data.lastActive,
-              totalYearsExperience:
-                data.totalYearsExperience === null ||
-                data.totalYearsExperience === undefined
-                  ? undefined
-                  : data.totalYearsExperience,
-              totalMonthsExperience:
-                data.totalMonthsExperience === null ||
-                data.totalMonthsExperience === undefined
-                  ? undefined
-                  : data.totalMonthsExperience,
-              skills: data.skills || [],
-              experiences: data.experiences || [],
-              educations: data.educations || [],
-              languages: data.languages || [],
-              appliedJobIds: data.appliedJobIds || [],
-              savedJobIds: data.savedJobIds || [],
-              savedSearches: data.savedSearches || [],
-              preferredLocations: data.preferredLocations || [],
-              companyId: data.companyId || undefined,
-              isCompanyAdmin: data.isCompanyAdmin || false,
-              savedCandidateSearches: data.savedCandidateSearches || [],
-            } as UserProfile);
-          }
-        } catch (e: unknown) {
-          console.error('Error fetching user/candidate details:', e);
-          let message = 'Failed to load user profile. Please try again.';
-          if (e instanceof Error) {
-            message = `Failed to load user profile: ${e.message}`;
-          }
-          setError(message);
-        } finally {
-          setIsLoading(false);
+        } else if (
+          ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole)
+        ) {
+          allowProfileLoad = true;
+        } else {
+          accessDeniedMessage =
+            'You do not have permission to view this type of profile.';
+          if (currentUser.role === 'jobSeeker') redirectPath = '/jobs';
         }
-      };
+
+        if (!allowProfileLoad) {
+          toast({
+            title: 'Access Denied',
+            description: accessDeniedMessage,
+            variant: 'destructive',
+          });
+          router.replace(redirectPath);
+          setIsLoading(false);
+          return;
+        }
+
+        let dobString: string | undefined = undefined;
+        if (data.dateOfBirth) {
+          if (
+            typeof data.dateOfBirth === 'string' &&
+            isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
+          ) {
+            dobString = data.dateOfBirth;
+          } else if (data.dateOfBirth instanceof Timestamp) {
+            dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
+          } else if (
+            data.dateOfBirth instanceof Date &&
+            isValid(data.dateOfBirth)
+          ) {
+            dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
+          }
+        }
+
+        setCandidate({
+          uid: candidateDocSnap.id,
+          ...data,
+          dateOfBirth: dobString,
+          createdAt:
+            data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate().toISOString()
+              : data.createdAt,
+          updatedAt:
+            data.updatedAt instanceof Timestamp
+              ? data.updatedAt.toDate().toISOString()
+              : data.updatedAt,
+          lastActive:
+            data.lastActive instanceof Timestamp
+              ? data.lastActive.toDate().toISOString()
+              : data.lastActive,
+          totalYearsExperience:
+            data.totalYearsExperience === null ||
+            data.totalYearsExperience === undefined
+              ? undefined
+              : data.totalYearsExperience,
+          totalMonthsExperience:
+            data.totalMonthsExperience === null ||
+            data.totalMonthsExperience === undefined
+              ? undefined
+              : data.totalMonthsExperience,
+          skills: data.skills || [],
+          experiences: data.experiences || [],
+          educations: data.educations || [],
+          languages: data.languages || [],
+          appliedJobIds: data.appliedJobIds || [],
+          savedJobIds: data.savedJobIds || [],
+          savedSearches: data.savedSearches || [],
+          preferredLocations: data.preferredLocations || [],
+          companyId: data.companyId || undefined,
+          isCompanyAdmin: data.isCompanyAdmin || false,
+          savedCandidateSearches: data.savedCandidateSearches || [],
+        } as UserProfile);
+      } catch (e: unknown) {
+        console.error('Error fetching user/candidate details:', e);
+        let message = 'Failed to load user profile. Please try again.';
+        if (e instanceof Error) {
+          message = `Failed to load user profile: ${e.message}`;
+        }
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (candidateId && currentUser) {
       fetchCandidate();
-    } else if (
-      currentUser &&
-      !(
-        currentUser.role === 'employer' ||
-        currentUser.role === 'admin' ||
-        currentUser.role === 'superAdmin' ||
-        currentUser.role === 'moderator' ||
-        currentUser.role === 'supportAgent' ||
-        currentUser.role === 'dataAnalyst'
-      )
-    ) {
-      setIsLoading(false);
     }
-  }, [candidateId, currentUser, company]);
+  }, [candidateId, currentUser, toast, router]); // Removed company from deps as it's handled in first useEffect
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
@@ -255,10 +284,12 @@ export default function CandidateDetailPage() {
   }
 
   if (!candidate) {
+    // This state should ideally be hit less often due to redirects.
+    // It would now mean the profile genuinely doesn't exist or a non-access error occurred.
     return (
       <div className="container mx-auto py-10 text-center">
         <p className="text-xl text-muted-foreground">
-          User profile not found or access denied.
+          User profile not found or there was an issue loading the data.
         </p>
       </div>
     );
@@ -371,7 +402,7 @@ export default function CandidateDetailPage() {
                   )}
               </div>
             </div>
-            {currentUser.role === 'employer' &&
+            {currentUser?.role === 'employer' &&
               isJobSeekerProfile &&
               candidate.isProfileSearchable !== false && (
                 <div className="flex flex-col items-center sm:items-end gap-2 w-full sm:w-auto">
@@ -547,11 +578,10 @@ export default function CandidateDetailPage() {
               </Alert>
             )}
           {!isJobSeekerProfile &&
-            (currentUser.role === 'admin' ||
-              currentUser.role === 'superAdmin' ||
-              currentUser.role === 'moderator' ||
-              currentUser.role === 'supportAgent' ||
-              currentUser.role === 'dataAnalyst') && (
+            currentUser &&
+            ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(
+              currentUser.role as UserRole
+            ) && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Platform User Profile</AlertTitle>
@@ -569,7 +599,10 @@ export default function CandidateDetailPage() {
           {(candidate.skills &&
             candidate.skills.length > 0 &&
             isJobSeekerProfile) ||
-          (currentUser.role !== 'employer' &&
+          (currentUser &&
+            ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(
+              currentUser.role as UserRole
+            ) &&
             candidate.skills &&
             candidate.skills.length > 0) ? (
             <section>
@@ -600,7 +633,10 @@ export default function CandidateDetailPage() {
           {(candidate.languages &&
             candidate.languages.length > 0 &&
             isJobSeekerProfile) ||
-          (currentUser.role !== 'employer' &&
+          (currentUser &&
+            ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(
+              currentUser.role as UserRole
+            ) &&
             candidate.languages &&
             candidate.languages.length > 0) ? (
             <section>
