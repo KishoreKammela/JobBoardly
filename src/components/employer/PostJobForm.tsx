@@ -5,7 +5,13 @@ import React, {
   type FormEvent,
   useEffect,
 } from 'react';
-import type { Job, ParsedJobData, Company } from '@/types';
+import type {
+  Job,
+  ParsedJobData,
+  Company,
+  ScreeningQuestion,
+  ScreeningQuestionType,
+} from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +33,15 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Sparkles, Send, Edit } from 'lucide-react';
+import {
+  Loader2,
+  UploadCloud,
+  Sparkles,
+  Send,
+  Edit,
+  PlusCircle,
+  Trash2,
+} from 'lucide-react';
 import { parseJobDescriptionFlow } from '@/ai/flows/parse-job-description-flow';
 import { db } from '@/lib/firebase';
 import {
@@ -52,6 +66,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { v4 as uuidv4 } from 'uuid';
 
 const initialJobDataState: Partial<Job> = {
   type: 'Full-time',
@@ -59,6 +74,7 @@ const initialJobDataState: Partial<Job> = {
   status: 'pending',
   salaryMin: undefined,
   salaryMax: undefined,
+  screeningQuestions: [],
 };
 
 interface ModalState {
@@ -168,6 +184,9 @@ export function PostJobForm() {
               existingJob.salaryMax === undefined
                 ? undefined
                 : existingJob.salaryMax,
+            screeningQuestions: (existingJob.screeningQuestions || []).map(
+              (q) => ({ ...q, id: q.id || uuidv4() })
+            ),
           });
           setSkillsInput((existingJob.skills || []).join(', '));
         } else {
@@ -182,7 +201,8 @@ export function PostJobForm() {
       } else {
         setJobData((prev) => ({
           ...initialJobDataState,
-          ...prev, // Keep company details if already set
+          ...prev,
+          screeningQuestions: [],
           status: 'pending',
         }));
       }
@@ -380,6 +400,9 @@ export function PostJobForm() {
         updatedAt: serverTimestamp(),
         status: 'pending',
         moderationReason: null,
+        screeningQuestions: (jobData.screeningQuestions || []).filter(
+          (q) => q.questionText.trim() !== ''
+        ),
       };
 
       if (editingJobId) {
@@ -409,6 +432,7 @@ export function PostJobForm() {
           companyId: user.companyId,
           companyLogoUrl: currentCompanyDetails.logoUrl,
           postedById: user.uid,
+          screeningQuestions: [],
         });
         setSkillsInput('');
         setFile(null);
@@ -424,6 +448,39 @@ export function PostJobForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAddScreeningQuestion = () => {
+    setJobData((prev) => ({
+      ...prev,
+      screeningQuestions: [
+        ...(prev.screeningQuestions || []),
+        { id: uuidv4(), questionText: '', type: 'text', isRequired: false },
+      ],
+    }));
+  };
+
+  const handleScreeningQuestionChange = (
+    index: number,
+    field: keyof ScreeningQuestion,
+    value: string | boolean
+  ) => {
+    setJobData((prev) => {
+      const updatedQuestions = [...(prev.screeningQuestions || [])];
+      if (updatedQuestions[index]) {
+        (updatedQuestions[index] as any)[field] = value;
+      }
+      return { ...prev, screeningQuestions: updatedQuestions };
+    });
+  };
+
+  const handleRemoveScreeningQuestion = (id: string) => {
+    setJobData((prev) => ({
+      ...prev,
+      screeningQuestions: (prev.screeningQuestions || []).filter(
+        (q) => q.id !== id
+      ),
+    }));
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -735,6 +792,117 @@ export function PostJobForm() {
                 required
                 aria-label="Job Description"
               />
+            </div>
+
+            {/* Screening Questions Section */}
+            <div className="space-y-4 p-4 border rounded-md bg-muted/20">
+              <h3 className="text-lg font-semibold">
+                Screening Questions (Optional)
+              </h3>
+              {(jobData.screeningQuestions || []).map((q, index) => (
+                <Card key={q.id} className="p-3 bg-background">
+                  <div className="space-y-2">
+                    <Label htmlFor={`sq-text-${q.id}`}>
+                      Question {index + 1}
+                    </Label>
+                    <Input
+                      id={`sq-text-${q.id}`}
+                      value={q.questionText}
+                      onChange={(e) =>
+                        handleScreeningQuestionChange(
+                          index,
+                          'questionText',
+                          e.target.value
+                        )
+                      }
+                      placeholder="Enter question text"
+                    />
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                      <div>
+                        <Label htmlFor={`sq-type-${q.id}`}>Type</Label>
+                        <Select
+                          value={q.type}
+                          onValueChange={(value) =>
+                            handleScreeningQuestionChange(
+                              index,
+                              'type',
+                              value as ScreeningQuestionType
+                            )
+                          }
+                        >
+                          <SelectTrigger id={`sq-type-${q.id}`}>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="text">Text Input</SelectItem>
+                            <SelectItem value="yesNo">Yes/No</SelectItem>
+                            {/* TODO: Add UI for options for these types */}
+                            {/* <SelectItem value="multipleChoice">Multiple Choice</SelectItem> */}
+                            {/* <SelectItem value="checkboxGroup">Checkbox Group</SelectItem> */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-6">
+                        <Checkbox
+                          id={`sq-required-${q.id}`}
+                          checked={q.isRequired}
+                          onCheckedChange={(checked) =>
+                            handleScreeningQuestionChange(
+                              index,
+                              'isRequired',
+                              Boolean(checked)
+                            )
+                          }
+                        />
+                        <Label htmlFor={`sq-required-${q.id}`}>Required</Label>
+                      </div>
+                    </div>
+                    {/* Placeholder for options input if type is multipleChoice or checkboxGroup */}
+                    {(q.type === 'multipleChoice' ||
+                      q.type === 'checkboxGroup') && (
+                      <div className="mt-2">
+                        <Label htmlFor={`sq-options-${q.id}`}>
+                          Options (comma-separated)
+                        </Label>
+                        <Input
+                          id={`sq-options-${q.id}`}
+                          value={(q.options || []).join(', ')}
+                          onChange={(e) =>
+                            handleScreeningQuestionChange(
+                              index,
+                              'options',
+                              e.target.value.split(',').map((opt) => opt.trim())
+                            )
+                          }
+                          placeholder="e.g., Option 1, Option 2, Option 3"
+                          disabled // TODO: Enable when MC/Checkbox UI is fully implemented
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Multiple Choice/Checkbox options UI is not yet fully
+                          implemented.
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveScreeningQuestion(q.id)}
+                      className="text-destructive hover:text-destructive flex items-center gap-1 text-xs mt-1"
+                    >
+                      <Trash2 className="h-3 w-3" /> Remove
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddScreeningQuestion}
+                className="text-sm"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Screening Question
+              </Button>
             </div>
 
             <Button

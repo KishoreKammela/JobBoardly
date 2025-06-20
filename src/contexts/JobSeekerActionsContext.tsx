@@ -1,10 +1,18 @@
 'use client';
-import type { Filters, SavedSearch, Application, Job } from '@/types';
+import type {
+  Filters,
+  SavedSearch,
+  Application,
+  Job,
+  ApplicationAnswer,
+} from '@/types';
 import React, {
   createContext,
   useContext,
   type ReactNode,
   useCallback,
+  useState,
+  useEffect,
 } from 'react';
 import { db } from '@/lib/firebase';
 import {
@@ -15,19 +23,26 @@ import {
   arrayUnion,
   arrayRemove,
   Timestamp,
+  query as firestoreQuery,
+  where,
+  getDocs,
+  updateDoc, // Added missing import
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
 interface JobSeekerActionsContextType {
-  applyForJob: (job: Job) => Promise<void>;
+  applyForJob: (job: Job, answers?: ApplicationAnswer[]) => Promise<void>;
   hasAppliedForJob: (jobId: string) => boolean;
+  getApplicationStatus: (jobId: string) => string | null;
+  withdrawApplication: (jobId: string) => Promise<void>;
   saveJob: (jobId: string) => Promise<void>;
   unsaveJob: (jobId: string) => Promise<void>;
   isJobSaved: (jobId: string) => boolean;
   saveSearch: (searchName: string, filters: Filters) => Promise<void>;
   deleteSearch: (searchId: string) => Promise<void>;
+  userApplications: Map<string, Application>; // Map<jobId, Application>
 }
 
 const JobSeekerActionsContext = createContext<
@@ -40,69 +55,202 @@ export function JobSeekerActionsProvider({
   children: ReactNode;
 }) {
   const { user, updateUserProfile } = useAuth();
+  const [userApplications, setUserApplications] = useState<
+    Map<string, Application>
+  >(new Map());
+  const [isAppsLoading, setIsAppsLoading] = useState(true);
 
-  const applyForJob = useCallback(
-    async (job: Job) => {
-      if (user && user.uid && user.role === 'jobSeeker') {
-        if (user.status === 'suspended') {
-          toast({
-            title: 'Account Suspended',
-            description:
-              'Your account is currently suspended. You cannot apply for jobs.',
-            variant: 'destructive',
+  useEffect(() => {
+    const fetchUserApplications = async () => {
+      if (user && user.role === 'jobSeeker' && user.uid) {
+        setIsAppsLoading(true);
+        try {
+          const appsQuery = firestoreQuery(
+            collection(db, 'applications'),
+            where('applicantId', '==', user.uid)
+          );
+          const snapshot = await getDocs(appsQuery);
+          const appsMap = new Map<string, Application>();
+          snapshot.forEach((docSnap) => {
+            const appData = {
+              id: docSnap.id,
+              ...docSnap.data(),
+            } as Application;
+            appsMap.set(appData.jobId, appData);
           });
-          return;
-        }
-        const currentAppliedJobIds = user.appliedJobIds || [];
-        if (!currentAppliedJobIds.includes(job.id)) {
-          const applicationRef = doc(collection(db, 'applications'));
-          const newApplication: Omit<Application, 'id'> = {
-            jobId: job.id,
-            jobTitle: job.title,
-            applicantId: user.uid,
-            applicantName: user.name,
-            applicantAvatarUrl: user.avatarUrl || '',
-            applicantHeadline: user.headline || '',
-            companyId: job.companyId,
-            postedById: job.postedById,
-            status: 'Applied',
-            appliedAt: serverTimestamp() as Timestamp,
-            updatedAt: serverTimestamp() as Timestamp,
-          };
-
-          try {
-            await setDoc(
-              applicationRef,
-              newApplication as Record<string, unknown>
-            );
-            await updateUserProfile({
-              appliedJobIds: arrayUnion(job.id) as unknown as string[],
-            });
-          } catch (error: unknown) {
-            console.error('JobSeekerActionsContext: applyForJob error', error);
-            throw error;
-          }
+          setUserApplications(appsMap);
+        } catch (error) {
+          console.error('Failed to fetch user applications:', error);
+          // Optionally show a toast or handle error
+        } finally {
+          setIsAppsLoading(false);
         }
       } else {
-        console.warn('User must be a logged-in job seeker to apply for a job.');
+        setUserApplications(new Map());
+        setIsAppsLoading(false);
+      }
+    };
+    fetchUserApplications();
+  }, [user]);
+
+  const applyForJob = useCallback(
+    async (job: Job, answers?: ApplicationAnswer[]) => {
+      if (!user || !user.uid || user.role !== 'jobSeeker') {
         toast({
           title: 'Login Required',
           description: 'Please log in as a job seeker to apply.',
           variant: 'destructive',
         });
+        throw new Error('User not logged in as job seeker.');
+      }
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Your account is currently suspended. You cannot apply for jobs.',
+          variant: 'destructive',
+        });
+        throw new Error('Account suspended.');
+      }
+
+      // Check if an application already exists for this job by this user
+      const existingApplication = userApplications.get(job.id);
+      if (existingApplication) {
+        toast({
+          title: 'Application Exists',
+          description: `You have already an application process for this job (Status: ${existingApplication.status}). You cannot re-apply.`,
+          variant: 'default',
+        });
+        throw new Error('Already applied or application process started.');
+      }
+
+      const applicationRef = doc(collection(db, 'applications'));
+      const newApplicationData: Omit<Application, 'id'> = {
+        jobId: job.id,
+        jobTitle: job.title,
+        applicantId: user.uid,
+        applicantName: user.name,
+        applicantAvatarUrl: user.avatarUrl || '',
+        applicantHeadline: user.headline || '',
+        companyId: job.companyId,
+        postedById: job.postedById,
+        status: 'Applied',
+        appliedAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp,
+        answers: answers || [],
+      };
+
+      try {
+        await setDoc(
+          applicationRef,
+          newApplicationData as Record<string, unknown>
+        );
+        const fullNewApplication: Application = {
+          id: applicationRef.id,
+          ...newApplicationData,
+          appliedAt: new Date().toISOString(), // Approximate client time for immediate UI update
+          updatedAt: new Date().toISOString(),
+        };
+        setUserApplications((prev) =>
+          new Map(prev).set(job.id, fullNewApplication)
+        );
+
+        // Also update appliedJobIds in user profile (optional, as applications collection is source of truth)
+        await updateUserProfile({
+          appliedJobIds: arrayUnion(job.id) as unknown as string[],
+        });
+      } catch (error: unknown) {
+        console.error('JobSeekerActionsContext: applyForJob error', error);
+        throw error; // Re-throw for the component to handle
       }
     },
-    [user, updateUserProfile]
+    [user, updateUserProfile, userApplications]
+  );
+
+  const getApplicationStatus = useCallback(
+    (jobId: string): string | null => {
+      if (isAppsLoading) return 'Loading...'; // Or some other indicator
+      return userApplications.get(jobId)?.status || null;
+    },
+    [userApplications, isAppsLoading]
   );
 
   const hasAppliedForJob = useCallback(
     (jobId: string): boolean => {
-      if (user && user.role === 'jobSeeker' && user.appliedJobIds) {
-        return user.appliedJobIds.includes(jobId);
-      }
-      return false;
+      if (isAppsLoading) return false; // Or handle loading state appropriately
+      return userApplications.has(jobId);
     },
-    [user]
+    [userApplications, isAppsLoading]
+  );
+
+  const withdrawApplication = useCallback(
+    async (jobIdToWithdraw: string) => {
+      if (!user || user.role !== 'jobSeeker' || !user.uid) {
+        toast({
+          title: 'Error',
+          description: 'You must be logged in as a job seeker.',
+          variant: 'destructive',
+        });
+        throw new Error('Not logged in as job seeker');
+      }
+      if (user.status === 'suspended') {
+        toast({
+          title: 'Account Suspended',
+          description:
+            'Cannot withdraw application while account is suspended.',
+          variant: 'destructive',
+        });
+        throw new Error('Account suspended');
+      }
+
+      const application = userApplications.get(jobIdToWithdraw);
+
+      if (!application || !application.id) {
+        toast({
+          title: 'Error',
+          description: 'Application not found for this job.',
+          variant: 'destructive',
+        });
+        throw new Error('Application not found');
+      }
+
+      if (application.status !== 'Applied') {
+        toast({
+          title: 'Action Not Allowed',
+          description: `Cannot withdraw application with status: ${application.status}.`,
+          variant: 'default',
+        });
+        throw new Error(
+          `Cannot withdraw application with status: ${application.status}`
+        );
+      }
+
+      const appDocRef = doc(db, 'applications', application.id);
+      try {
+        await updateDoc(appDocRef, {
+          status: 'Withdrawn by Applicant',
+          updatedAt: serverTimestamp(),
+        });
+        // Update local state
+        const updatedApp = {
+          ...application,
+          status: 'Withdrawn by Applicant',
+          updatedAt: new Date().toISOString(),
+        } as Application;
+        setUserApplications((prev) =>
+          new Map(prev).set(jobIdToWithdraw, updatedApp)
+        );
+      } catch (error) {
+        console.error('Failed to withdraw application:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to withdraw application. Please try again.',
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    [user, userApplications]
   );
 
   const saveJob = useCallback(
@@ -282,11 +430,14 @@ export function JobSeekerActionsProvider({
       value={{
         applyForJob,
         hasAppliedForJob,
+        getApplicationStatus,
+        withdrawApplication,
         saveJob,
         unsaveJob,
         isJobSaved,
         saveSearch,
         deleteSearch,
+        userApplications,
       }}
     >
       {children}

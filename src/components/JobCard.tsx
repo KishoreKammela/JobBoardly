@@ -1,5 +1,5 @@
 'use client';
-import type { Job } from '@/types';
+import type { Job, ApplicationStatus } from '@/types';
 import {
   Card,
   CardContent,
@@ -18,6 +18,8 @@ import {
   ExternalLink,
   Building,
   CheckCircle,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
@@ -30,41 +32,40 @@ import type { Timestamp } from 'firebase/firestore';
 
 interface JobCardProps {
   job: Job;
-  showApplyButton?: boolean;
-  isApplied?: boolean;
+  applicationStatus?: ApplicationStatus | null; // Explicitly pass status
   isSavedProp?: boolean;
+  onWithdraw?: (jobId: string) => void; // Callback for withdraw action
 }
 
 export function JobCard({
   job,
-  showApplyButton = true,
-  isApplied,
+  applicationStatus,
   isSavedProp,
+  onWithdraw,
 }: JobCardProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { applyForJob, hasAppliedForJob, saveJob, unsaveJob, isJobSaved } =
-    useJobSeekerActions();
+  const {
+    saveJob,
+    unsaveJob,
+    isJobSaved: checkIsJobSavedContext,
+  } = useJobSeekerActions();
 
-  const [applied, setApplied] = useState(
-    isApplied !== undefined ? isApplied : false
-  );
   const [saved, setSaved] = useState(
     isSavedProp !== undefined ? isSavedProp : false
   );
+
   const isJobSeekerSuspended =
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
-    if (user && user.role === 'jobSeeker') {
-      if (isApplied === undefined) {
-        setApplied(hasAppliedForJob(job.id));
-      }
-      if (isSavedProp === undefined) {
-        setSaved(isJobSaved(job.id));
-      }
+    // Sync saved state if isSavedProp is not initially provided or user changes
+    if (isSavedProp === undefined && user && user.role === 'jobSeeker') {
+      setSaved(checkIsJobSavedContext(job.id));
+    } else if (isSavedProp !== undefined) {
+      setSaved(isSavedProp);
     }
-  }, [user, job.id, hasAppliedForJob, isJobSaved, isApplied, isSavedProp]);
+  }, [user, job.id, checkIsJobSavedContext, isSavedProp]);
 
   const handleSaveToggle = async () => {
     if (isJobSeekerSuspended) {
@@ -101,39 +102,19 @@ export function JobCard({
     }
   };
 
-  const handleApply = async () => {
+  const handleWithdraw = () => {
     if (isJobSeekerSuspended) {
       toast({
         title: 'Account Suspended',
         description:
-          'Your account is currently suspended. You cannot apply for jobs.',
+          'Your account is currently suspended. You cannot withdraw applications.',
         variant: 'destructive',
       });
       return;
     }
-    if (!user || user.role !== 'jobSeeker') {
-      toast({
-        title: 'Login Required',
-        description: 'Please log in as a job seeker to apply.',
-        variant: 'destructive',
-      });
-      return;
+    if (onWithdraw) {
+      onWithdraw(job.id);
     }
-    if (user.role === 'employer') {
-      toast({
-        title: 'Action Not Allowed',
-        description: 'Employers cannot apply for jobs.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    await applyForJob(job);
-    setApplied(true);
-    toast({
-      title: 'Applied!',
-      description: `You've applied for ${job.title} at ${job.company}.`,
-    });
   };
 
   const companyLogo =
@@ -147,6 +128,17 @@ export function JobCard({
         : job.salaryMax
           ? `${formatCurrencyINR(job.salaryMax)} p.a.`
           : 'Not Disclosed';
+
+  const canApply =
+    !applicationStatus ||
+    (applicationStatus !== 'Hired' &&
+      !applicationStatus.startsWith('Rejected') &&
+      applicationStatus !== 'Withdrawn by Applicant');
+  const showAppliedBadge =
+    applicationStatus &&
+    applicationStatus !== 'Applied' &&
+    applicationStatus !== 'Withdrawn by Applicant';
+  const showWithdrawnBadge = applicationStatus === 'Withdrawn by Applicant';
 
   return (
     <Card className="hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
@@ -220,7 +212,7 @@ export function JobCard({
               : (job.postedDate as Timestamp).toDate().toLocaleDateString()
             : 'N/A'}
         </p>
-        {showApplyButton && user?.role === 'jobSeeker' && (
+        {user?.role === 'jobSeeker' && (
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
@@ -229,42 +221,65 @@ export function JobCard({
               aria-pressed={saved}
               aria-label={saved ? 'Unsave job' : 'Save job'}
               disabled={isJobSeekerSuspended}
+              title={saved ? 'Unsave Job' : 'Save Job'}
             >
               <Bookmark
                 className={`h-4 w-4 ${saved ? 'fill-primary text-primary' : ''}`}
               />
             </Button>
-            {applied ? (
+            {applicationStatus === 'Applied' ? (
               <Button
-                size="sm"
-                disabled
                 variant="outline"
-                className="text-green-600 border-green-600"
+                size="sm"
+                onClick={handleWithdraw}
+                disabled={isJobSeekerSuspended}
+                title="Withdraw Application"
               >
-                <CheckCircle className="mr-1.5 h-4 w-4" /> Applied
+                <RotateCcw className="h-4 w-4 mr-1.5" /> Withdraw
               </Button>
-            ) : (
+            ) : showAppliedBadge ? (
+              <Badge
+                variant="outline"
+                className="text-green-600 border-green-500 py-1.5 px-2.5"
+              >
+                <CheckCircle className="mr-1.5 h-4 w-4" /> {applicationStatus}
+              </Badge>
+            ) : showWithdrawnBadge ? (
+              <Badge
+                variant="outline"
+                className="text-orange-600 border-orange-500 py-1.5 px-2.5"
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" /> {applicationStatus}
+              </Badge>
+            ) : canApply ? (
               <Button
                 size="sm"
-                onClick={handleApply}
+                asChild
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isJobSeekerSuspended}
               >
-                Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
+                <Link href={`/jobs/${job.id}`}>
+                  Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
+                </Link>
               </Button>
+            ) : (
+              <Badge variant="destructive" className="py-1.5 px-2.5">
+                <AlertTriangle className="mr-1.5 h-4 w-4" /> Cannot Re-apply
+              </Badge>
             )}
           </div>
         )}
-        {showApplyButton && !user && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleApply}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
+        {/* For logged-out users, show Apply Now button linking to job detail page */}
+        {!user && (
+          <Button
+            size="sm"
+            asChild
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+          >
+            <Link href={`/jobs/${job.id}`}>
               Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
-            </Button>
-          </div>
+            </Link>
+          </Button>
         )}
       </CardFooter>
     </Card>

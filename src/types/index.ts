@@ -6,22 +6,29 @@ export type UserRole =
   | 'admin'
   | 'superAdmin'
   | 'moderator'
-  | 'supportAgent' // Added new role
-  | 'dataAnalyst' // Added new role
-  | 'complianceOfficer' // Added new role
-  | 'systemMonitor'; // Added new role
+  | 'supportAgent'
+  | 'dataAnalyst'
+  | 'complianceOfficer'
+  | 'systemMonitor';
+
+export type ScreeningQuestionType =
+  | 'text'
+  | 'yesNo'
+  | 'multipleChoice'
+  | 'checkboxGroup';
 
 export interface ScreeningQuestion {
   id: string;
-  question: string;
-  type: 'text' | 'yesNo';
+  questionText: string;
+  type: ScreeningQuestionType;
+  options?: string[]; // For multipleChoice and checkboxGroup
   isRequired: boolean;
 }
 
 export interface ApplicationAnswer {
   questionId: string;
-  questionText: string;
-  answer: string;
+  questionText: string; // Store question text for easier display
+  answer: string | boolean | string[]; // string for text, boolean for yesNo, string[] for checkboxGroup/multipleChoice
 }
 
 export interface Filters {
@@ -166,7 +173,7 @@ export interface Application {
   applicantAvatarUrl?: string;
   applicantHeadline?: string;
   companyId: string;
-  postedById: string;
+  postedById: string; // UID of the employer who posted the job
   status: ApplicationStatus;
   appliedAt: Timestamp | Date | string;
   updatedAt: Timestamp | Date | string;
@@ -221,21 +228,24 @@ export interface UserProfile {
   resumeUrl?: string;
   resumeFileName?: string;
 
-  appliedJobIds?: string[];
-  savedJobIds?: string[];
+  appliedJobIds?: string[]; // IDs of jobs the user has applied to
+  savedJobIds?: string[]; // IDs of jobs the user has saved
   savedSearches?: SavedSearch[];
 
-  savedCandidateSearches?: SavedCandidateSearch[];
+  savedCandidateSearches?: SavedCandidateSearch[]; // For employers
 
-  companyId?: string;
-  isCompanyAdmin?: boolean;
+  companyId?: string; // For employers
+  isCompanyAdmin?: boolean; // For employers
 
-  jobsAppliedCount?: number;
+  // For Admin Dashboard display
+  jobsAppliedCount?: number; // Denormalized for JobSeeker table
   lastActive?: Timestamp | Date | string;
 
-  desiredSalary?: number;
+  // Denormalized, primarily for employer search for candidates
+  desiredSalary?: number; // Used to store expectedCTCValue if set, for filtering.
 }
 
+// For AI Parsing outputs - more flexible before strict Job/UserProfile mapping
 export interface ParsedResumeData {
   name?: string;
   email?: string;
@@ -257,4 +267,5 @@ export interface ParsedJobData {
   jobType?: 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
   salaryMin?: number;
   salaryMax?: number;
+  // companyName?: string; // Potentially extractable
 }

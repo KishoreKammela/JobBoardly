@@ -17,19 +17,42 @@ import {
   query as firestoreQuery,
   where,
   documentId,
-} from 'firebase/firestore'; // Added documentId
+} from 'firebase/firestore';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-type JobFilterType = 'all' | 'applied' | 'saved';
+type JobFilterType = 'all' | 'applied' | 'saved' | 'withdrawn';
 
 export function MyJobsDisplay() {
   const { user } = useAuth();
-  const [allFetchedJobs, setAllFetchedJobs] = useState<Map<string, Job>>(
-    new Map()
-  );
+  const {
+    userApplications,
+    withdrawApplication: withdrawAppFromContext,
+    isJobSaved,
+  } = useJobSeekerActions();
+  const { toast } = useToast();
+
+  const [allFetchedJobsDetails, setAllFetchedJobsDetails] = useState<
+    Map<string, Job>
+  >(new Map());
   const [displayedJobs, setDisplayedJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<JobFilterType>('all');
+
+  const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
+  const [jobToWithdraw, setJobToWithdraw] = useState<Job | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
     const fetchJobsData = async () => {
@@ -42,34 +65,30 @@ export function MyJobsDisplay() {
       setIsLoading(true);
       setError(null);
 
-      const appliedIds = user.appliedJobIds || [];
-      const savedIds = user.savedJobIds || [];
-      const allUniqueIds = Array.from(new Set([...appliedIds, ...savedIds]));
+      const appliedJobIds = Array.from(userApplications.keys());
+      const savedJobIds = user.savedJobIds || [];
+      const allUniqueJobIds = Array.from(
+        new Set([...appliedJobIds, ...savedJobIds])
+      );
 
-      if (allUniqueIds.length === 0) {
-        setAllFetchedJobs(new Map());
+      if (allUniqueJobIds.length === 0) {
+        setAllFetchedJobsDetails(new Map());
         setDisplayedJobs([]);
         setIsLoading(false);
         return;
       }
 
       try {
-        // Firestore 'in' query limitation: max 30 elements.
-        // If more IDs, split into multiple queries. For simplicity, assuming <30 for now.
-        // A more robust solution would batch these requests.
-        const jobsRef = collection(db, 'jobs');
         const jobsMap = new Map<string, Job>();
-
-        // Batching requests to handle Firestore 'in' query limit of 30 elements.
         const batchSize = 30;
-        for (let i = 0; i < allUniqueIds.length; i += batchSize) {
-          const batchIds = allUniqueIds.slice(i, i + batchSize);
+        for (let i = 0; i < allUniqueJobIds.length; i += batchSize) {
+          const batchIds = allUniqueJobIds.slice(i, i + batchSize);
           if (batchIds.length > 0) {
             const q = firestoreQuery(
-              jobsRef,
+              collection(db, 'jobs'),
               where(documentId(), 'in', batchIds)
             );
-            const querySnapshot = await getDocs(q); // Changed from db.getDocs(q)
+            const querySnapshot = await getDocs(q);
             querySnapshot.forEach((docSnap) => {
               if (docSnap.exists()) {
                 const data = docSnap.data();
@@ -93,7 +112,7 @@ export function MyJobsDisplay() {
             });
           }
         }
-        setAllFetchedJobs(jobsMap);
+        setAllFetchedJobsDetails(jobsMap);
       } catch (e) {
         console.error('Error fetching jobs details:', e);
         setError('Failed to load your jobs. Please try again.');
@@ -103,43 +122,88 @@ export function MyJobsDisplay() {
     };
 
     fetchJobsData();
-  }, [user]);
+  }, [user, userApplications]); // Depend on userApplications to refetch if they change
 
   useEffect(() => {
-    // Apply filter when allFetchedJobs or filter changes
-    if (!user || !allFetchedJobs.size) {
+    if (!user || !allFetchedJobsDetails.size) {
       setDisplayedJobs([]);
       return;
     }
 
     let jobsToShow: Job[] = [];
-    const appliedIds = new Set(user.appliedJobIds || []);
-    const savedIds = new Set(user.savedJobIds || []);
+    const savedJobIdsSet = new Set(user.savedJobIds || []);
 
     switch (filter) {
       case 'applied':
-        jobsToShow = Array.from(allFetchedJobs.values()).filter((job) =>
-          appliedIds.has(job.id)
+        jobsToShow = Array.from(allFetchedJobsDetails.values()).filter(
+          (job) =>
+            userApplications.has(job.id) &&
+            userApplications.get(job.id)?.status === 'Applied'
         );
         break;
       case 'saved':
-        jobsToShow = Array.from(allFetchedJobs.values()).filter((job) =>
-          savedIds.has(job.id)
+        jobsToShow = Array.from(allFetchedJobsDetails.values()).filter((job) =>
+          savedJobIdsSet.has(job.id)
+        );
+        break;
+      case 'withdrawn':
+        jobsToShow = Array.from(allFetchedJobsDetails.values()).filter(
+          (job) =>
+            userApplications.has(job.id) &&
+            userApplications.get(job.id)?.status === 'Withdrawn by Applicant'
         );
         break;
       case 'all':
       default:
-        jobsToShow = Array.from(allFetchedJobs.values());
+        jobsToShow = Array.from(allFetchedJobsDetails.values());
         break;
     }
-    // Sort by most recently created (descending)
+
     jobsToShow.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt as string).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt as string).getTime() : 0;
+      const appA = userApplications.get(a.id);
+      const appB = userApplications.get(b.id);
+      const dateA = appA?.appliedAt
+        ? new Date(appA.appliedAt as string).getTime()
+        : a.createdAt
+          ? new Date(a.createdAt as string).getTime()
+          : 0;
+      const dateB = appB?.appliedAt
+        ? new Date(appB.appliedAt as string).getTime()
+        : b.createdAt
+          ? new Date(b.createdAt as string).getTime()
+          : 0;
       return dateB - dateA;
     });
     setDisplayedJobs(jobsToShow);
-  }, [allFetchedJobs, filter, user]);
+  }, [allFetchedJobsDetails, filter, user, userApplications]);
+
+  const handleWithdrawClick = (job: Job) => {
+    setJobToWithdraw(job);
+    setShowWithdrawConfirm(true);
+  };
+
+  const confirmWithdrawApplication = async () => {
+    if (!jobToWithdraw || !user) return;
+    setIsWithdrawing(true);
+    try {
+      await withdrawAppFromContext(jobToWithdraw.id);
+      toast({
+        title: 'Application Withdrawn',
+        description: `Your application for ${jobToWithdraw.title} has been withdrawn.`,
+      });
+      // userApplications in context will update, triggering re-filter
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to withdraw application.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsWithdrawing(false);
+      setShowWithdrawConfirm(false);
+      setJobToWithdraw(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -173,12 +237,12 @@ export function MyJobsDisplay() {
   }
 
   const noJobsBasedOnFilter =
-    displayedJobs.length === 0 && allFetchedJobs.size > 0;
+    displayedJobs.length === 0 && allFetchedJobsDetails.size > 0;
   const noJobsAtAll =
     displayedJobs.length === 0 &&
-    allFetchedJobs.size === 0 &&
-    user.appliedJobIds?.length === 0 &&
-    user.savedJobIds?.length === 0;
+    allFetchedJobsDetails.size === 0 &&
+    userApplications.size === 0 &&
+    (user.savedJobIds || []).length === 0;
 
   return (
     <div>
@@ -190,18 +254,36 @@ export function MyJobsDisplay() {
         >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="all" id="filter-all" />
-            <Label htmlFor="filter-all">All My Jobs</Label>
+            <Label htmlFor="filter-all">All My Interaction</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="applied" id="filter-applied" />
             <Label htmlFor="filter-applied">
-              Applied ({user.appliedJobIds?.length || 0})
+              Applied (
+              {
+                Array.from(userApplications.values()).filter(
+                  (app) => app.status === 'Applied'
+                ).length
+              }
+              )
             </Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="saved" id="filter-saved" />
             <Label htmlFor="filter-saved">
-              Saved ({user.savedJobIds?.length || 0})
+              Saved ({(user.savedJobIds || []).length})
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="withdrawn" id="filter-withdrawn" />
+            <Label htmlFor="filter-withdrawn">
+              Withdrawn (
+              {
+                Array.from(userApplications.values()).filter(
+                  (app) => app.status === 'Withdrawn by Applicant'
+                ).length
+              }
+              )
             </Label>
           </div>
         </RadioGroup>
@@ -230,17 +312,50 @@ export function MyJobsDisplay() {
         </Alert>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedJobs.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              showApplyButton={user.role === 'jobSeeker'} // Only show if seeker
-              isApplied={user.appliedJobIds?.includes(job.id)}
-              isSavedProp={user.savedJobIds?.includes(job.id)}
-            />
-          ))}
+          {displayedJobs.map((job) => {
+            const application = userApplications.get(job.id);
+            return (
+              <JobCard
+                key={job.id}
+                job={job}
+                applicationStatus={application?.status || null}
+                isSavedProp={isJobSaved(job.id)}
+                onWithdraw={() => handleWithdrawClick(job)}
+              />
+            );
+          })}
         </div>
       )}
+      <AlertDialog
+        open={showWithdrawConfirm}
+        onOpenChange={setShowWithdrawConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Application Withdrawal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to withdraw your application for &quot;
+              {jobToWithdraw?.title}&quot;? This action cannot be undone, and
+              you will not be able to re-apply for this position.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isWithdrawing}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmWithdrawApplication}
+              disabled={isWithdrawing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isWithdrawing && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Yes, Withdraw
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
