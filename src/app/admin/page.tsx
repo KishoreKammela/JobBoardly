@@ -127,11 +127,7 @@ function getSortableValue<T>(
 }
 
 export default function AdminPage() {
-  const {
-    user,
-    loading,
-    updateUserProfile: updateUserProfileInAuthContext,
-  } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -566,7 +562,14 @@ export default function AdminPage() {
     userId: string,
     newStatus: 'active' | 'suspended' | 'deleted'
   ) => {
-    if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return;
+    if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
+      toast({
+        title: 'Permission Denied',
+        description: 'You do not have permission to perform this action.',
+        variant: 'destructive',
+      });
+      return;
+    }
     const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
       (u) => u.uid === userId
     );
@@ -603,14 +606,27 @@ export default function AdminPage() {
 
     setSpecificActionLoading(`user-${userId}`);
     try {
-      await updateUserProfileInAuthContext({ uid: userId, status: newStatus });
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      });
+
       if (targetUser.role === 'jobSeeker') {
         setAllJobSeekers((prev) =>
-          prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
+          prev.map((u) =>
+            u.uid === userId
+              ? { ...u, status: newStatus, updatedAt: new Date().toISOString() }
+              : u
+          )
         );
       } else {
         setAllPlatformUsers((prev) =>
-          prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
+          prev.map((u) =>
+            u.uid === userId
+              ? { ...u, status: newStatus, updatedAt: new Date().toISOString() }
+              : u
+          )
         );
       }
       toast({
@@ -1722,13 +1738,12 @@ export default function AdminPage() {
                                       : 'secondary'
                                 }
                                 className={
-                                  isUserEffectivelyActive &&
-                                  u.status === 'active'
+                                  isUserEffectivelyActive
                                     ? 'bg-green-100 text-green-800'
                                     : u.status === 'deleted' ||
                                         u.status === 'suspended'
                                       ? 'bg-red-100 text-red-800'
-                                      : '' // Let variant handle undefined or other statuses
+                                      : ''
                                 }
                               >
                                 {(u.status || 'ACTIVE').toUpperCase()}
@@ -1773,14 +1788,12 @@ export default function AdminPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => {
-                                      const currentStatusForAction =
-                                        u.status === undefined
-                                          ? 'active'
-                                          : u.status;
-                                      const newStatus =
-                                        currentStatusForAction === 'active'
-                                          ? 'suspended'
-                                          : 'active';
+                                      const currentStatusIsActive =
+                                        u.status === 'active' ||
+                                        u.status === undefined;
+                                      const newStatus = currentStatusIsActive
+                                        ? 'suspended'
+                                        : 'active';
                                       showConfirmationModal(
                                         `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
                                         `Are you sure you want to ${newStatus} this user account?`,
@@ -1798,14 +1811,14 @@ export default function AdminPage() {
                                     disabled={
                                       specificActionLoading === `user-${u.uid}`
                                     }
-                                    aria-label={`${isUserEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                    aria-label={`${currentStatusIsActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
                                     className={
-                                      isUserEffectivelyActive
+                                      currentStatusIsActive
                                         ? 'text-orange-600'
                                         : 'text-blue-600'
                                     }
                                   >
-                                    {isUserEffectivelyActive ? (
+                                    {currentStatusIsActive ? (
                                       <Ban className="h-5 w-5" />
                                     ) : (
                                       <CheckSquare className="h-5 w-5" />
