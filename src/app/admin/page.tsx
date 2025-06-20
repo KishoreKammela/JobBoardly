@@ -1702,136 +1702,145 @@ export default function AdminPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedJobSeekers.map((u) => (
-                        <TableRow key={u.uid}>
-                          <TableCell className="font-medium">
-                            {u.name || 'N/A'}
-                          </TableCell>
-                          <TableCell>{u.email}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                u.status === 'active'
-                                  ? 'secondary'
-                                  : u.status === 'deleted' ||
-                                      u.status === 'suspended'
-                                    ? 'destructive'
-                                    : 'default'
-                              }
-                              className={
-                                u.status === 'active'
-                                  ? 'bg-green-100 text-green-800'
-                                  : u.status === 'deleted' ||
-                                      u.status === 'suspended'
-                                    ? 'bg-red-100 text-red-800'
-                                    : ''
-                              }
-                            >
-                              {(u.status || 'ACTIVE').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {u.isProfileSearchable ? (
-                              <CheckCircle2 className="text-green-500 h-5 w-5" />
-                            ) : (
-                              <XCircle className="text-red-500 h-5 w-5" />
-                            )}
-                          </TableCell>
-                          <TableCell>{u.jobsAppliedCount ?? 'N/A'}</TableCell>
-                          <TableCell>
-                            {u.lastActive
-                              ? new Date(
-                                  u.lastActive as string
-                                ).toLocaleString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {u.createdAt
-                              ? new Date(
-                                  u.createdAt as string
-                                ).toLocaleDateString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-right space-x-1">
-                            <Button variant="ghost" size="icon" asChild>
-                              <Link
-                                href={`/employer/candidates/${u.uid}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`View profile of ${u.name || 'user'}`}
+                      {paginatedJobSeekers.map((u) => {
+                        const isUserEffectivelyActive =
+                          u.status === 'active' || u.status === undefined;
+                        return (
+                          <TableRow key={u.uid}>
+                            <TableCell className="font-medium">
+                              {u.name || 'N/A'}
+                            </TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  isUserEffectivelyActive
+                                    ? 'default'
+                                    : u.status === 'deleted' ||
+                                        u.status === 'suspended'
+                                      ? 'destructive'
+                                      : 'secondary'
+                                }
+                                className={
+                                  isUserEffectivelyActive &&
+                                  u.status === 'active'
+                                    ? 'bg-green-100 text-green-800'
+                                    : u.status === 'deleted' ||
+                                        u.status === 'suspended'
+                                      ? 'bg-red-100 text-red-800'
+                                      : '' // Let variant handle undefined or other statuses
+                                }
                               >
-                                <Eye className="h-5 w-5" />
-                              </Link>
-                            </Button>
-                            {u.status !== 'deleted' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    const newStatus =
-                                      u.status === 'active'
-                                        ? 'suspended'
-                                        : 'active';
-                                    showConfirmationModal(
-                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
-                                      `Are you sure you want to ${newStatus} this user account?`,
-                                      async () =>
-                                        handleUserStatusUpdate(
-                                          u.uid,
-                                          newStatus
-                                        ),
-                                      `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                                      newStatus === 'suspended'
-                                        ? 'destructive'
-                                        : 'default'
-                                    );
-                                  }}
-                                  disabled={
-                                    specificActionLoading === `user-${u.uid}`
-                                  }
-                                  aria-label={`${u.status === 'active' ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
-                                  className={
-                                    u.status === 'active'
-                                      ? 'text-orange-600'
-                                      : 'text-blue-600'
-                                  }
+                                {(u.status || 'ACTIVE').toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {u.isProfileSearchable ? (
+                                <CheckCircle2 className="text-green-500 h-5 w-5" />
+                              ) : (
+                                <XCircle className="text-red-500 h-5 w-5" />
+                              )}
+                            </TableCell>
+                            <TableCell>{u.jobsAppliedCount ?? 'N/A'}</TableCell>
+                            <TableCell>
+                              {u.lastActive
+                                ? new Date(
+                                    u.lastActive as string
+                                  ).toLocaleString()
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              {u.createdAt
+                                ? new Date(
+                                    u.createdAt as string
+                                  ).toLocaleDateString()
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right space-x-1">
+                              <Button variant="ghost" size="icon" asChild>
+                                <Link
+                                  href={`/employer/candidates/${u.uid}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`View profile of ${u.name || 'user'}`}
                                 >
-                                  {u.status === 'active' ? (
-                                    <Ban className="h-5 w-5" />
-                                  ) : (
-                                    <CheckSquare className="h-5 w-5" />
-                                  )}
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    showConfirmationModal(
-                                      `Delete User "${u.name || u.email}"?`,
-                                      'Are you sure you want to delete this user account? They will not be able to log in. This action cannot be easily undone.',
-                                      async () =>
-                                        handleUserStatusUpdate(
-                                          u.uid,
-                                          'deleted'
-                                        ),
-                                      'Delete User',
-                                      'destructive'
-                                    )
-                                  }
-                                  disabled={
-                                    specificActionLoading === `user-${u.uid}`
-                                  }
-                                  aria-label={`Delete user ${u.name || 'user'}`}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </Button>
-                              </>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                  <Eye className="h-5 w-5" />
+                                </Link>
+                              </Button>
+                              {u.status !== 'deleted' && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => {
+                                      const currentStatusForAction =
+                                        u.status === undefined
+                                          ? 'active'
+                                          : u.status;
+                                      const newStatus =
+                                        currentStatusForAction === 'active'
+                                          ? 'suspended'
+                                          : 'active';
+                                      showConfirmationModal(
+                                        `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
+                                        `Are you sure you want to ${newStatus} this user account?`,
+                                        async () =>
+                                          handleUserStatusUpdate(
+                                            u.uid,
+                                            newStatus
+                                          ),
+                                        `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                        newStatus === 'suspended'
+                                          ? 'destructive'
+                                          : 'default'
+                                      );
+                                    }}
+                                    disabled={
+                                      specificActionLoading === `user-${u.uid}`
+                                    }
+                                    aria-label={`${isUserEffectivelyActive ? 'Suspend' : 'Activate'} user ${u.name || 'user'}`}
+                                    className={
+                                      isUserEffectivelyActive
+                                        ? 'text-orange-600'
+                                        : 'text-blue-600'
+                                    }
+                                  >
+                                    {isUserEffectivelyActive ? (
+                                      <Ban className="h-5 w-5" />
+                                    ) : (
+                                      <CheckSquare className="h-5 w-5" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      showConfirmationModal(
+                                        `Delete User "${u.name || u.email}"?`,
+                                        'Are you sure you want to delete this user account? They will not be able to log in. This action cannot be easily undone.',
+                                        async () =>
+                                          handleUserStatusUpdate(
+                                            u.uid,
+                                            'deleted'
+                                          ),
+                                        'Delete User',
+                                        'destructive'
+                                      )
+                                    }
+                                    disabled={
+                                      specificActionLoading === `user-${u.uid}`
+                                    }
+                                    aria-label={`Delete user ${u.name || 'user'}`}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                  </Button>
+                                </>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   {totalJobSeekersPages > 1 && (
