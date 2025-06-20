@@ -2,8 +2,9 @@ import type { Metadata, ResolvingMetadata } from 'next';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Job } from '@/types';
-import JobDetailClientPage from '@/components/job/JobDetailClientPage'; // New import
+import JobDetailClientPage from '@/components/job/JobDetailClientPage';
 
+// Props type is still useful for clarity
 type Props = {
   params: { jobId: string };
 };
@@ -15,7 +16,6 @@ async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
     const jobDocSnap = await getDoc(jobDocRef);
     if (jobDocSnap.exists()) {
       const data = jobDocSnap.data();
-      // Basic transformation for metadata, more complex date handling might be needed if directly used
       return {
         id: jobDocSnap.id,
         ...data,
@@ -23,7 +23,6 @@ async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
           data.postedDate instanceof Timestamp
             ? data.postedDate.toDate().toISOString()
             : data.postedDate,
-        // Ensure other Timestamp fields are handled if used in metadata context
         createdAt:
           data.createdAt instanceof Timestamp
             ? data.createdAt.toDate().toISOString()
@@ -42,10 +41,10 @@ async function fetchJobForMetadata(jobId: string): Promise<Job | null> {
 }
 
 export async function generateMetadata(
-  { params }: Props,
+  props: Props, // Changed from { params } to props
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const jobId = params.jobId;
+  const jobId = props.params.jobId; // Access via props.params
   const job = await fetchJobForMetadata(jobId);
   const previousImages = (await parent).openGraph?.images || [];
 
@@ -104,7 +103,6 @@ export async function generateMetadata(
   };
 }
 
-// This is now a Server Component
 export default function JobDetailPage({ params }: Props) {
   return <JobDetailClientPage params={params} />;
 }

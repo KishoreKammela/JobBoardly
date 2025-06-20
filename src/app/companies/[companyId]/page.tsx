@@ -2,8 +2,9 @@ import type { Metadata, ResolvingMetadata } from 'next';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
-import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage'; // New import
+import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
 
+// Props type is still useful for clarity, even if not directly destructured in signature
 type Props = {
   params: { companyId: string };
 };
@@ -38,10 +39,10 @@ async function fetchCompanyForMetadata(
 }
 
 export async function generateMetadata(
-  { params }: Props,
+  props: Props, // Changed from { params } to props
   parent: ResolvingMetadata
 ): Promise<Metadata> {
-  const companyId = params.companyId;
+  const companyId = props.params.companyId; // Access via props.params
   const company = await fetchCompanyForMetadata(companyId);
   const previousImages = (await parent).openGraph?.images || [];
 
@@ -102,7 +103,6 @@ export async function generateMetadata(
   };
 }
 
-// This is now a Server Component
 export default function CompanyDetailPage({ params }: Props) {
   return <CompanyDetailClientPage params={params} />;
 }
