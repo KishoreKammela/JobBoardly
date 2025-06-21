@@ -149,12 +149,6 @@ export default function FindCandidatesPage() {
     );
   }
 
-  const handleSidebarFilterChange = (
-    newFilters: Omit<CandidateFilters, 'searchTerm'>
-  ) => {
-    setSidebarFilters(newFilters);
-  };
-
   const handleGlobalSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setGlobalSearchTerm(e.target.value);
   };
@@ -163,8 +157,8 @@ export default function FindCandidatesPage() {
     <div className="flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-1/4 lg:w-1/5">
         <CandidateFilterSidebar
-          onFilterChange={handleSidebarFilterChange}
-          initialFilters={sidebarFilters}
+          filters={sidebarFilters}
+          onFilterChange={setSidebarFilters}
           currentGlobalSearchTerm={globalSearchTerm}
         />
       </aside>

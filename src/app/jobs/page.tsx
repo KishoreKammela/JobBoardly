@@ -307,8 +307,8 @@ export default function JobsPage() {
     <div className="flex flex-col md:flex-row gap-8">
       <aside className="w-full md:w-1/4 lg:w-1/5">
         <FilterSidebar
+          filters={sidebarFilters}
           onFilterChange={setSidebarFilters}
-          initialFilters={sidebarFilters}
           currentGlobalSearchTerm={globalSearchTerm}
         />
       </aside>

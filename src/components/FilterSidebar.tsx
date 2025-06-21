@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Save } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Filters, JobExperienceLevel } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
@@ -29,8 +29,8 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface FilterSidebarProps {
+  filters: Omit<Filters, 'searchTerm'>;
   onFilterChange: (filters: Omit<Filters, 'searchTerm'>) => void;
-  initialFilters?: Partial<Omit<Filters, 'searchTerm'>>;
   currentGlobalSearchTerm?: string;
 }
 
@@ -45,69 +45,40 @@ const experienceLevelOptions: (JobExperienceLevel | 'all')[] = [
 ];
 
 export function FilterSidebar({
+  filters,
   onFilterChange,
-  initialFilters,
   currentGlobalSearchTerm = '',
 }: FilterSidebarProps) {
-  const [filters, setFilters] = useState<Omit<Filters, 'searchTerm'>>({
-    location: initialFilters?.location || '',
-    roleType: initialFilters?.roleType || 'all',
-    isRemote: initialFilters?.isRemote || false,
-    recentActivity: initialFilters?.recentActivity || 'any',
-    industry: initialFilters?.industry || '',
-    experienceLevel: initialFilters?.experienceLevel || 'all',
-    salaryMin: initialFilters?.salaryMin,
-    salaryMax: initialFilters?.salaryMax,
-    minExperienceYears: initialFilters?.minExperienceYears,
-  });
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user } = useAuth();
   const { saveSearch } = useJobSeekerActions();
   const { toast } = useToast();
 
-  useEffect(() => {
-    setFilters({
-      location: initialFilters?.location || '',
-      roleType: initialFilters?.roleType || 'all',
-      isRemote: initialFilters?.isRemote || false,
-      recentActivity: initialFilters?.recentActivity || 'any',
-      industry: initialFilters?.industry || '',
-      experienceLevel: initialFilters?.experienceLevel || 'all',
-      salaryMin: initialFilters?.salaryMin,
-      salaryMax: initialFilters?.salaryMax,
-      minExperienceYears: initialFilters?.minExperienceYears,
-    });
-  }, [initialFilters]);
-
-  useEffect(() => {
-    onFilterChange(filters);
-  }, [filters, onFilterChange]);
-
   const handleCheckboxChange = (
     name: keyof Omit<Filters, 'searchTerm'>,
     checked: boolean | 'indeterminate'
   ) => {
-    setFilters((prev) => ({
-      ...prev,
+    onFilterChange({
+      ...filters,
       [name]: checked === true,
-    }));
+    });
   };
 
   const handleSelectChange = (
     name: keyof Omit<Filters, 'searchTerm'>,
     value: string
   ) => {
-    setFilters((prev) => ({
-      ...prev,
+    onFilterChange({
+      ...filters,
       [name]: value,
-    }));
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({
-      ...prev,
+    onFilterChange({
+      ...filters,
       [name]:
         name === 'salaryMin' ||
         name === 'salaryMax' ||
@@ -116,11 +87,11 @@ export function FilterSidebar({
             ? undefined
             : parseFloat(value)
           : value,
-    }));
+    });
   };
 
   const handleReset = () => {
-    setFilters({
+    onFilterChange({
       location: '',
       roleType: 'all',
       isRemote: false,

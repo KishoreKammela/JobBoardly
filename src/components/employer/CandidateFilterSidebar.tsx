@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Briefcase, Save } from 'lucide-react';
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { CandidateFilters, NoticePeriod } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployerActions } from '@/contexts/EmployerActionsContext';
@@ -29,8 +29,8 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface CandidateFilterSidebarProps {
+  filters: Omit<CandidateFilters, 'searchTerm'>;
   onFilterChange: (filters: Omit<CandidateFilters, 'searchTerm'>) => void;
-  initialFilters?: Partial<Omit<CandidateFilters, 'searchTerm'>>;
   currentGlobalSearchTerm?: string;
 }
 
@@ -48,38 +48,20 @@ const noticePeriodOptions: (NoticePeriod | 'all')[] = [
 ];
 
 export function CandidateFilterSidebar({
+  filters,
   onFilterChange,
-  initialFilters,
   currentGlobalSearchTerm = '',
 }: CandidateFilterSidebarProps) {
-  const defaultSidebarFilters: Omit<CandidateFilters, 'searchTerm'> = {
-    location: '',
-    noticePeriod: 'all',
-    jobSearchStatus: 'all',
-    desiredSalaryMin: undefined,
-    desiredSalaryMax: undefined,
-    recentActivity: 'any',
-    minExperienceYears: undefined,
-    ...initialFilters,
-  };
-
-  const [filters, setFilters] = useState<Omit<CandidateFilters, 'searchTerm'>>(
-    defaultSidebarFilters
-  );
   const [searchName, setSearchName] = useState('');
   const [isSaveSearchAlertOpen, setIsSaveSearchAlertOpen] = useState(false);
   const { user, company } = useAuth();
   const { saveCandidateSearch } = useEmployerActions();
   const { toast } = useToast();
 
-  useEffect(() => {
-    onFilterChange(filters);
-  }, [filters, onFilterChange]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFilters((prev) => ({
-      ...prev,
+    onFilterChange({
+      ...filters,
       [name]:
         name === 'desiredSalaryMin' ||
         name === 'desiredSalaryMax' ||
@@ -88,21 +70,29 @@ export function CandidateFilterSidebar({
             ? parseFloat(value)
             : undefined
           : value,
-    }));
+    });
   };
 
   const handleSelectChange = (
     name: keyof Omit<CandidateFilters, 'searchTerm'>,
     value: string
   ) => {
-    setFilters((prev) => ({
-      ...prev,
+    onFilterChange({
+      ...filters,
       [name]: value,
-    }));
+    });
   };
 
   const handleReset = () => {
-    setFilters(defaultSidebarFilters);
+    onFilterChange({
+      location: '',
+      noticePeriod: 'all',
+      jobSearchStatus: 'all',
+      desiredSalaryMin: undefined,
+      desiredSalaryMax: undefined,
+      recentActivity: 'any',
+      minExperienceYears: undefined,
+    });
   };
 
   const isSaveDisabled = () => {
@@ -212,7 +202,7 @@ export function CandidateFilterSidebar({
             <Label htmlFor="noticePeriod">Notice Period</Label>
             <Select
               name="noticePeriod"
-              value={filters.noticePeriod}
+              value={filters.noticePeriod || 'all'}
               onValueChange={(value) =>
                 handleSelectChange('noticePeriod', value)
               }
