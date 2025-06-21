@@ -53,17 +53,17 @@ The visual identity of JobBoardly is designed to be modern, clear, and innovativ
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
 - **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering (including saving searches), job saving, application submission with screening question support, application withdrawal, AI-powered job matching, and personalized settings. Re-application to the same job is prevented.
-  - [Detailed Job Seeker Features](./docs/job-seeker-features.md)
+  - [Detailed Job Seeker Guide](./docs/guides/01-job-seeker-guide.md)
 - **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), applicant tracking (including viewing screening question answers), and candidate search with boolean logic, advanced filters, and saved search capabilities. AI-powered candidate matching helps find relevant talent.
-  - [Detailed Employer Features](./docs/employer-features.md)
+  - [Detailed Employer Guide](./docs/guides/02-employer-guide.md)
 - **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), platform users (suspend/activate admins/superAdmins/moderators), and legal content (Privacy Policy, Terms of Service - SuperAdmin only). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role.
-  - [Detailed Admin Features](./docs/admin-features.md)
+  - [Detailed Admin Guide](./docs/guides/03-admin-guide.md)
 - **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, basic in-app notification UI shell (backend triggers pending), robust Firebase integration, accessibility considerations, and basic privacy/terms pages (content editable by SuperAdmins). SEO enhancements including dynamic XML sitemap and HTML sitemap.
-- **For a complete breakdown of all currently implemented features, see our [Platform Features Overview](./docs/platform-features-overview.md).**
+- **For a complete breakdown of all currently implemented features, see our [Platform Features Overview](./docs/reference/01-platform-features-overview.md).**
 - **Future Vision & Roadmaps**:
-  - See our ambitious **[AI Features Roadmap](./docs/ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
-  - Explore our **[Comprehensive Notification & Email System Plan](./docs/notification-system-plan.md)** for engaging user communication.
-  - Review our **[Future Development Roadmap](./docs/future-development-roadmap.md)** for a holistic view of planned enhancements, new features, and technology considerations. This includes our previous **[Platform Enhancement Recommendations](./docs/enhanced-feature-recommendations.md)**.
+  - See our ambitious **[AI Features Roadmap](./docs/planning/02-ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
+  - Explore our **[Comprehensive Notification & Email System Plan](./docs/planning/03-notification-system-plan.md)** for engaging user communication.
+  - Review our **[Future Development Roadmap](./docs/planning/01-future-development-roadmap.md)** for a holistic view of planned enhancements, new features, and technology considerations.
 
 ## Folder Structure
 
@@ -105,17 +105,20 @@ A high-level overview of the project's directory structure:
 │   ├── hooks/                  # Custom React hooks (useAuth, useDebounce, useToast, useIsMobile)
 │   ├── lib/                    # Utility functions, Firebase config
 │   └── types/                  # TypeScript type definitions
-├── docs/                       # Detailed feature documentation
-│   ├── admin-features.md
-│   ├── employer-features.md
-│   ├── job-seeker-features.md
-│   ├── routes-documentation.md
-│   ├── ai-features-roadmap.md
-│   ├── notification-system-plan.md # Notification System Plan
-│   ├── seo-ranking-plan.md         # SEO Plan
-│   ├── platform-features-overview.md # Overview of All Implemented Features
-│   ├── future-development-roadmap.md # Future Development Roadmap (includes enhanced-feature-recommendations)
-│   └── enhanced-feature-recommendations.md # (Content moved to future-development-roadmap.md)
+├── docs/                       # Detailed documentation
+│   ├── guides/
+│   │   ├── 01-job-seeker-guide.md
+│   │   ├── 02-employer-guide.md
+│   │   └── 03-admin-guide.md
+│   ├── planning/
+│   │   ├── 01-future-development-roadmap.md
+│   │   ├── 02-ai-features-roadmap.md
+│   │   ├── 03-notification-system-plan.md
+│   │   └── 04-seo-ranking-plan.md
+│   └── reference/
+│       ├── 01-platform-features-overview.md
+│       ├── 02-routes-documentation.md
+│       └── 03-backend-api-specification.md
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -132,7 +135,7 @@ A high-level overview of the project's directory structure:
 
 For a comprehensive list and description of all application routes, please see:
 
-- [Application Routes Documentation](./docs/routes-documentation.md)
+- [Application Routes Documentation](./docs/reference/02-routes-documentation.md)
 
 ## Configuration & Setup
 

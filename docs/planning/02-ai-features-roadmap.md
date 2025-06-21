@@ -2,6 +2,8 @@
 
 _Transforming JobBoardly into the leading AI-driven job marketplace_
 
+**Important Note:** All AI features listed below, except for the foundational _Resume Parsing_, _Job Description Parsing_, _AI-Powered Job Matching (for Job Seekers)_, _AI-Powered Candidate Matching (for Employers)_, and the initial version of the _Dynamic Summary Generator (for Job Seeker Profiles)_, are planned for future development. Their availability to users (Job Seekers, Employers) will be contingent upon a **Platform Feature Toggle Management** system within the Admin Panel. This system will allow administrators (SuperAdmins/Admins) to enable or disable specific AI features globally or for specific user groups, ensuring controlled deployment and that new features are not available to all users by default.
+
 ## 🎯 Core AI Value Propositions
 
 1. **Intelligent Career Guidance** - AI as a career mentor
@@ -14,16 +16,16 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ## 🔍 For Job Seekers
 
-### **Phase 1: Enhanced Profile Intelligence**
+### **Phase 1: Enhanced Profile Intelligence (Current and Near-Term)**
 
-#### **AI Career Path Advisor**
+#### **AI Career Path Advisor (Future)**
 
 - **Smart Career Trajectory Analysis**: Analyze user's background and suggest 3-5 realistic career paths with probability scores
 - **Skill Gap Analysis**: Identify missing skills for target roles and recommend learning resources
 - **Market Positioning Score**: Rate profile competitiveness (1-100) with specific improvement suggestions
 - **Industry Transition Advisor**: For career switchers, map transferable skills and highlight relevant experience
 
-#### **Intelligent Profile Optimization**
+#### **Intelligent Profile Optimization (Future)**
 
 - **ATS Score Predictor**: Real-time scoring of how well profile will perform with ATS systems
 - **Dynamic Profile Suggestions**: AI continuously suggests profile improvements based on successful profiles in similar roles
@@ -32,12 +34,12 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 #### **AI Resume Builder & Optimizer**
 
-- **Dynamic Summary Generator**: Create compelling professional summaries based on target role and company _(Initial version implemented for profile page; full user control & admin toggle pending)_
-- **Role-Specific Resume Generation**: Generate different resume versions optimized for specific job types
-- **Bullet Point Optimizer**: Transform weak bullet points into impact-driven statements
-- **Format Optimizer**: Suggest best resume format based on industry and career level
+- **Dynamic Summary Generator (Initial Version Implemented)**: Create compelling professional summaries based on target role and company. (Full functionality, user ability to trigger for different targets, and admin toggle pending).
+- **Role-Specific Resume Generation (Future)**: Generate different resume versions optimized for specific job types
+- **Bullet Point Optimizer (Future)**: Transform weak bullet points into impact-driven statements
+- **Format Optimizer (Future)**: Suggest best resume format based on industry and career level
 
-### **Phase 2: Intelligent Job Discovery**
+### **Phase 2: Intelligent Job Discovery (Future)**
 
 #### **AI Job Concierge**
 
@@ -59,7 +61,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 - **Behavioral Question Bank**: Personalized STAR method responses based on your experience
 - **Salary Negotiation Coach**: AI-powered negotiation strategies and practice scenarios
 
-### **Phase 3: Career Growth Intelligence**
+### **Phase 3: Career Growth Intelligence (Future)**
 
 #### **AI Career Coach**
 
@@ -78,31 +80,31 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ## 🏢 For Employers/Recruiters
 
-### **Phase 1: Intelligent Candidate Sourcing**
+### **Phase 1: Intelligent Candidate Sourcing (Current and Near-Term)**
 
-#### **AI Recruiter Assistant**
+#### **AI Recruiter Assistant (Future)**
 
 - **Conversational Candidate Search**: "Find senior developers with React experience who are open to relocate to Bangalore"
 - **Passive Candidate Identifier**: Identify candidates not actively job searching but likely open to opportunities
 - **Diversity Hiring Assistant**: Ensure diverse candidate pools while maintaining quality standards
 - **Cultural Fit Predictor**: Analyze candidate communication style and work preferences vs company culture
 
-#### **Smart Job Description Optimizer**
+#### **Smart Job Description Optimizer (AI Parsing Implemented)**
 
-- **AI Job Description Parsing (Implemented)**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill the form fields for job posting.
-- **Bias Detection & Removal**: Identify and suggest alternatives for biased language
-- **Performance Predictor**: Predict job posting performance before publishing
-- **Optimal Requirements Generator**: Suggest must-have vs nice-to-have requirements based on market data
-- **Salary Band Optimizer**: Recommend competitive salary ranges based on real-time market data
+- **AI Job Description Parsing (Implemented)**: Upload a job description document (PDF, DOCX, TXT). The AI attempts to parse it and pre-fill form fields including `title`, `responsibilities`, `requirements`, `skills`, `salary`, `industry`, `experienceLevel`, and more.
+- **Bias Detection & Removal (Future)**: Identify and suggest alternatives for biased language
+- **Performance Predictor (Future)**: Predict job posting performance before publishing
+- **Optimal Requirements Generator (Future)**: Suggest must-have vs nice-to-have requirements based on market data
+- **Salary Band Optimizer (Future)**: Recommend competitive salary ranges based on real-time market data
 
-#### **Candidate Quality Scoring**
+#### **Candidate Quality Scoring (Future)**
 
 - **Multi-dimensional Candidate Scoring**: Technical skills, cultural fit, career progression, stability
 - **Success Prediction Model**: Predict likelihood of candidate success in specific role
 - **Flight Risk Assessment**: Predict likelihood of candidate accepting offer and staying long-term
 - **Reference Predictor**: Predict likely reference feedback based on profile analysis
 
-### **Phase 2: Automated Screening & Assessment**
+### **Phase 2: Automated Screening & Assessment (Future)**
 
 #### **AI-Powered Initial Screening**
 
@@ -118,7 +120,7 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 - **Rejection Letter Personalizer**: Generate constructive, personalized rejection feedback
 - **Offer Letter Optimizer**: Suggest optimal offer terms based on candidate analysis
 
-### **Phase 3: Hiring Intelligence & Optimization**
+### **Phase 3: Hiring Intelligence & Optimization (Future)**
 
 #### **Recruitment Analytics AI**
 
@@ -138,54 +140,75 @@ _Transforming JobBoardly into the leading AI-driven job marketplace_
 
 ## 🤖 Cross-Platform AI Features
 
-### **AI-Powered Matching Engine 2.0**
+### **AI-Powered Matching Engine (Implemented for Job Seekers & Employers)**
 
-- **Job Matching for Job Seekers (Implemented)**: Matches job seeker profile against available job postings.
-- **Candidate Matching for Employers (Implemented)**: Matches job description against searchable candidate profiles.
-- **Behavioral Matching**: Match based on work style, career motivations, and cultural preferences
-- **Success Pattern Recognition**: Learn from successful hires to improve future matching
-- **Dynamic Matching**: Continuously refine matches based on user feedback and outcomes
-- **Explainable AI**: Clear explanations for why specific matches were suggested
+- **Job Matching for Job Seekers (Implemented)**: Matches job seeker profile (including skills, experience, and `noticePeriod`) against available job postings (including `responsibilities`, `requirements`, `industry`, `experienceLevel`, etc.).
+- **Candidate Matching for Employers (Implemented)**: Matches a detailed job description (including all new fields) against searchable candidate profiles.
+- **Behavioral Matching (Future)**: Match based on work style, career motivations, and cultural preferences
+- **Success Pattern Recognition (Future)**: Learn from successful hires to improve future matching
+- **Dynamic Matching (Future)**: Continuously refine matches based on user feedback and outcomes
+- **Explainable AI (Future)**: Clear explanations for why specific matches were suggested
 
-### **Conversational AI Assistant ("JobBot")**
+### **Conversational AI Assistant ("JobBot") (Future)**
 
 - **24/7 Platform Support**: Answer questions about features, guide users through processes
 - **Career Guidance**: Provide instant career advice and platform recommendations
 - **Application Status Updates**: Proactive updates on application progress
 - **Interview Preparation**: Quick practice sessions and tips
 
-### **Predictive Analytics Dashboard**
+### **Predictive Analytics Dashboard (Future)**
 
 - **Market Trend Predictions**: Industry hiring trends, salary movements, skill demands
 - **Personal Analytics**: For job seekers - application success trends, profile performance
 - **Recruitment Analytics**: For employers - hiring success rates, candidate quality trends
 - **Platform Health Metrics**: Overall matching success, user satisfaction predictions
 
-### **AI-Driven Content Generation**
+### **AI-Driven Content Generation (Future)**
 
-- **Dynamic Email Templates**: Personalized email communications based on user context
+- **Dynamic Email Templates**: Personalized email communications based on user context (relies on Notification System)
 - **Blog Content Generator**: AI-generated career advice and industry insights
 - **Social Media Content**: Auto-generate platform promotion content for users to share
 - **Help Documentation**: Auto-updated help content based on common user queries
 
 ---
 
-## 🚀 Implementation Roadmap (Conceptual - see also `docs/future-development-roadmap.md`)
+## 🚀 Implementation Roadmap (Conceptual)
 
-### **Implemented / Foundational**
+### **Implemented / In Progress (Foundational AI)**
 
-- Resume Parsing
-- Job Description Parsing (for employers)
-- AI-Powered Job Matching (for job seekers)
-- AI-Powered Candidate Matching (for employers)
-- Dynamic Summary Generator (Initial version for job seeker profiles)
+- **Resume Parsing (Implemented)**: Genkit flow to extract data from resumes, including `noticePeriod`.
+- **Job Description Parsing (Implemented)**: Genkit flow for employers to parse JDs, now extracting richer details like `responsibilities`, `requirements`, `industry`, and `experienceLevel`.
+- **AI-Powered Job Matching (Implemented)**: Genkit flow for job seekers, enhanced with richer job data.
+- **AI-Powered Candidate Matching (Implemented)**: Genkit flow for employers, enhanced with richer job data.
+- **Dynamic Summary Generator (Initial Version Implemented for Profile Page)**: AI generates professional summaries for job seekers. Full user control and admin toggle pending.
 
-### **Future Phases (High-Level - refer to `docs/future-development-roadmap.md` for detailed phasing)**
+### **Phase 1 (Future - Months 1-6 post foundational): Enhance Core AI & User Experience**
 
-- **Phase 1 (Future):** Focus on completing user controls for existing AI (like summary generator), basic conversational search, initial application success predictors, and early-stage job description optimizers.
-- **Phase 2 (Future):** Introduce AI interview prep tools, more advanced candidate scoring, initial automated screening features, and basic predictive analytics dashboards.
-- **Phase 3 (Future):** Roll out a more complete "JobBot", deeper automation in communication and outreach, advanced market intelligence, and initial behavioral matching.
-- **Phase 4 & Beyond (Future):** Explore cutting-edge AI like video analysis, voice interactions, advanced predictive models, and full AI career coaching.
+- Full User-Controllable Dynamic Summary Generator with admin toggle.
+- Basic Conversational Search (initial version of AI Job Concierge / AI Recruiter Assistant).
+- Application Success Predictor (basic version for job seekers).
+- Job Description Optimizer (initial version - e.g., bias detection).
+
+### **Phase 2 (Future - Months 7-12): Intelligence & Automation**
+
+- AI Interview Preparation Tools (initial mock interview, question bank).
+- Advanced Candidate Scoring (initial multi-dimensional model).
+- Automated Screening Features (e.g., AI-generated dynamic screening questions).
+- Predictive Analytics Dashboard (initial version with key metrics).
+
+### **Phase 3 (Future - Months 13-18): Deeper Automation & Personalization**
+
+- Full Conversational AI Assistant ("JobBot").
+- Automated Outreach and Communication features.
+- Advanced Market Intelligence tools.
+- Initial Behavioral Matching capabilities.
+
+### **Phase 4 (Future - Months 19+): Innovation & Market Leadership**
+
+- Video Interview Analysis.
+- Voice-based Interactions for AI assistants.
+- Predictive Hiring Success Models.
+- AI Career Path Advisor (full version).
 
 ---
 
