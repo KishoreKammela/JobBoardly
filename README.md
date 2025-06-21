@@ -75,50 +75,17 @@ A high-level overview of the project's directory structure:
 ├── src/
 │   ├── ai/                     # Genkit AI flows and configuration
 │   ├── app/                    # Next.js App Router
-│   │   ├── (auth)/             # Route group for auth pages
-│   │   │   ├── admin/login/    # Login for SuperAdmins, Admins, Moderators, etc.
-│   │   │   └── change-password/
-│   │   ├── admin/              # Admin specific pages
-│   │   ├── employer/           # Employer specific pages
-│   │   ├── jobs/
-│   │   │   └── [jobId]/        # Dynamic job detail page
-│   │   ├── companies/
-│   │   │   └── [companyId]/    # Dynamic company detail page
-│   │   ├── profile/
-│   │   │   └── preview/        # Job seeker profile preview page
-│   │   ├── privacy-policy/
-│   │   ├── terms-of-service/
-│   │   ├── sitemap/            # HTML Sitemap page
-│   │   ├── sitemap.xml/        # Dynamic XML Sitemap route
-│   │   ├── globals.css         # Global styles and ShadCN theme
-│   │   ├── layout.tsx          # Root layout
-│   │   └── page.tsx            # Home page
 │   ├── components/             # Reusable UI components
-│   │   ├── admin/              # Admin-specific sub-components
-│   │   ├── employer/
-│   │   ├── job/
-│   │   ├── company/
-│   │   ├── layout/
-│   │   ├── profile/            # Profile form sub-components
-│   │   └── ui/                 # ShadCN UI components
-│   ├── contexts/               # React Context providers (AuthContext, JobSeekerActionsContext, EmployerActionsContext)
-│   ├── hooks/                  # Custom React hooks (useAuth, useDebounce, useToast, useIsMobile)
+│   ├── contexts/               # React Context providers
+│   ├── hooks/                  # Custom React hooks
 │   ├── lib/                    # Utility functions, Firebase config
 │   └── types/                  # TypeScript type definitions
 ├── docs/                       # Detailed documentation
-│   ├── guides/
-│   │   ├── 01-job-seeker-guide.md
-│   │   ├── 02-employer-guide.md
-│   │   └── 03-admin-guide.md
-│   ├── planning/
-│   │   ├── 01-future-development-roadmap.md
-│   │   ├── 02-ai-features-roadmap.md
-│   │   ├── 03-notification-system-plan.md
-│   │   └── 04-seo-ranking-plan.md
-│   └── reference/
-│       ├── 01-platform-features-overview.md
-│       ├── 02-routes-documentation.md
-│       └── 03-backend-api-specification.md
+│   ├── api/                    # NEW: Detailed backend API documentation
+│   │   └── v1/
+│   ├── guides/                 # User-facing guides
+│   ├── planning/               # Future development roadmaps
+│   └── reference/              # Technical reference documents
 ├── .husky/
 ├── .env                        # Environment variables (GITIGNORED)
 ├── apphosting.yaml
@@ -131,11 +98,10 @@ A high-level overview of the project's directory structure:
 └── tsconfig.json
 ```
 
-## Detailed Routes
+## Detailed Documentation & API Specification
 
-For a comprehensive list and description of all application routes, please see:
-
-- [Application Routes Documentation](./docs/reference/02-routes-documentation.md)
+- For a comprehensive list and description of all application routes, please see: [**Application Routes Documentation**](./docs/reference/02-routes-documentation.md)
+- For a detailed specification of the backend API, including endpoints, request/response schemas, and mock data, please see the [**API Documentation**](./docs/api/v1/README.md).
 
 ## Configuration & Setup
 
