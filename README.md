@@ -58,7 +58,6 @@ JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Em
   - [Detailed Employer Guide](./docs/guides/02-employer-guide.md)
 - **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), platform users (suspend/activate admins/superAdmins/moderators), and legal content (Privacy Policy, Terms of Service - SuperAdmin only). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role.
   - [Detailed Admin Guide](./docs/guides/03-admin-guide.md)
-- **General Platform Features**: Responsive design, intelligent redirection, dynamic routing, toast notifications, basic in-app notification UI shell (backend triggers pending), robust Firebase integration, accessibility considerations, and basic privacy/terms pages (content editable by SuperAdmins). SEO enhancements including dynamic XML sitemap and HTML sitemap.
 - **For a complete breakdown of all currently implemented features, see our [Platform Features Overview](./docs/reference/01-platform-features-overview.md).**
 - **Future Vision & Roadmaps**:
   - See our ambitious **[AI Features Roadmap](./docs/planning/02-ai-features-roadmap.md)** to understand how we're building the future of job searching and hiring with AI.
@@ -81,7 +80,7 @@ A high-level overview of the project's directory structure:
 │   ├── lib/                    # Utility functions, Firebase config
 │   └── types/                  # TypeScript type definitions
 ├── docs/                       # Detailed documentation
-│   ├── api/                    # NEW: Detailed backend API documentation
+│   ├── api/                    # Detailed backend API documentation
 │   │   └── v1/
 │   ├── guides/                 # User-facing guides
 │   ├── planning/               # Future development roadmaps
@@ -98,9 +97,12 @@ A high-level overview of the project's directory structure:
 └── tsconfig.json
 ```
 
+For a more detailed explanation of each file and folder, see the [Folder Structure Deep Dive](./docs/reference/04-folder-structure-deep-dive.md).
+
 ## Detailed Documentation & API Specification
 
 - For a comprehensive list and description of all application routes, please see: [**Application Routes Documentation**](./docs/reference/02-routes-documentation.md)
+- For a detailed breakdown of the project's files and folders, please see: [**Folder Structure Deep Dive**](./docs/reference/04-folder-structure-deep-dive.md)
 - For a detailed specification of the backend API, including endpoints, request/response schemas, and mock data, please see the [**API Documentation**](./docs/api/v1/README.md).
 
 ## Configuration & Setup
