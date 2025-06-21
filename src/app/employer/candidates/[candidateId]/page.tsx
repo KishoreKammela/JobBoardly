@@ -48,6 +48,7 @@ import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const ADMIN_LIKE_ROLES_CANDIDATE_PAGE: UserRole[] = [
   'admin',
@@ -80,8 +81,13 @@ export default function CandidateDetailPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!currentUser) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in as an employer or admin to view this page.',
+        variant: 'destructive',
+      });
       router.replace(
-        `/auth/login?redirect=${encodeURIComponent(currentPathname)}`
+        `/employer/login?redirect=${encodeURIComponent(currentPathname)}`
       );
       return;
     }

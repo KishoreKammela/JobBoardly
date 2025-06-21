@@ -8,20 +8,32 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MyJobsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in as a job seeker to view your jobs.',
+        variant: 'destructive',
+      });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     } else if (user.role !== 'jobSeeker') {
+      toast({
+        title: 'Access Denied',
+        description: 'This page is for job seekers only.',
+        variant: 'destructive',
+      });
       router.replace(user.role === 'employer' ? '/employer/posted-jobs' : '/');
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, toast]);
 
   if (loading || !user) {
     return (

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export default function JobApplicantsPage() {
   const params = useParams();
@@ -11,17 +12,28 @@ export default function JobApplicantsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in as an employer to view job applicants.',
+        variant: 'destructive',
+      });
       router.replace(
-        `/auth/login?redirect=${encodeURIComponent(currentPathname)}`
+        `/employer/login?redirect=${encodeURIComponent(currentPathname)}`
       );
     } else if (user.role !== 'employer') {
+      toast({
+        title: 'Access Denied',
+        description: 'This page is for employers only.',
+        variant: 'destructive',
+      });
       router.replace('/');
     }
-  }, [user, loading, router, currentPathname]);
+  }, [user, loading, router, currentPathname, toast]);
 
   if (loading || !user || user.role !== 'employer') {
     return (

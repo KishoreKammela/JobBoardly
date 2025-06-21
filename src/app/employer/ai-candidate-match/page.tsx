@@ -105,11 +105,24 @@ export default function AiCandidateMatchPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+      toast({
+        title: 'Authentication Required',
+        description:
+          'Please log in as an employer to use the AI Candidate Matcher.',
+        variant: 'destructive',
+      });
+      router.replace(
+        `/employer/login?redirect=${encodeURIComponent(pathname)}`
+      );
     } else if (user.role !== 'employer') {
+      toast({
+        title: 'Access Denied',
+        description: 'The AI Candidate Matcher is for employers only.',
+        variant: 'destructive',
+      });
       router.replace('/');
     }
-  }, [user, authLoading, router, pathname]);
+  }, [user, authLoading, router, pathname, toast]);
 
   useEffect(() => {
     if (user && user.role === 'employer') {

@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { NoticePeriod } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FindCandidatesPage() {
   const { user, company, loading } = useAuth();
@@ -29,6 +30,7 @@ export default function FindCandidatesPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -79,11 +81,23 @@ export default function FindCandidatesPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in as an employer to find candidates.',
+        variant: 'destructive',
+      });
+      router.replace(
+        `/employer/login?redirect=${encodeURIComponent(pathname)}`
+      );
     } else if (user.role !== 'employer') {
+      toast({
+        title: 'Access Denied',
+        description: 'This page is for employers only.',
+        variant: 'destructive',
+      });
       router.replace('/');
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, toast]);
 
   useEffect(() => {
     setActiveCombinedFilters({

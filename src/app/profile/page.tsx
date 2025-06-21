@@ -11,12 +11,14 @@ import { useReactToPrint } from 'react-to-print';
 import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { user, company, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const printableProfileRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const handlePrintProfile = useReactToPrint({
     content: () => printableProfileRef.current,
@@ -28,9 +30,14 @@ export default function ProfilePage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to view your profile.',
+        variant: 'destructive',
+      });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, toast]);
 
   if (loading || !user) {
     return (

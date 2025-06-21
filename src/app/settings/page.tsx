@@ -61,9 +61,14 @@ export default function SettingsPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please log in to manage your settings.',
+        variant: 'destructive',
+      });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname]);
+  }, [user, loading, router, pathname, toast]);
 
   const showConfirmationModal = (
     title: string,
