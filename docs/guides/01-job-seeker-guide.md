@@ -208,9 +208,30 @@ graph TD
 
 Job seekers interact with AI features via Genkit flows and their profile data is stored in Firebase Firestore. Key actions like profile updates, resume processing, and managing saved searches require user confirmation.
 
-- **Resume Parsing (`parseResumeFlow`):** (As before)
-- **AI-Powered Job Matching (`aiPoweredJobMatching`):** (As before, but UI access restricted if account suspended)
-- **AI Dynamic Summary Generation (`generateProfileSummaryFlow`):** (As before)
+- **Resume Parsing (`parseResumeFlow`):**
+
+  - **Trigger**: User uploads a resume file (PDF, DOCX, TXT) or pastes resume text in `/profile` and confirms processing.
+  - **Action**: A `POST` request is sent to an internal endpoint that invokes the `parseResumeFlow` Genkit flow. This flow takes the resume data URI as input.
+  - **Backend**: The Genkit flow uses a Gemini model to analyze the document/text, extracting structured data like name, headline, skills, experience, and education.
+  - **Response**: The flow returns a JSON object with the parsed data.
+  - **Frontend**: The frontend receives the parsed data and uses it to pre-fill the corresponding fields in the profile form, which the user can then review and save.
+
+- **AI-Powered Job Matching (`aiPoweredJobMatching`):**
+
+  - **Trigger**: User navigates to `/ai-match` and clicks the "Get Matches" button. This is disabled if the user's account is suspended.
+  - **Action**: The frontend compiles a comprehensive string representation of the user's profile (including experience, education, skills, salary preferences, notice period, etc.) and all available 'approved' job postings. This data is sent to the `aiPoweredJobMatching` Genkit flow.
+  - **Backend**: The Genkit flow uses a Gemini model to perform a semantic match between the user's profile and the job postings. It considers a holistic view of skills, experience alignment, and preferences.
+  - **Response**: The flow returns a JSON object containing an array of `relevantJobIDs` and a detailed `reasoning` string explaining why the matches were suggested.
+  - **Frontend**: The UI displays the reasoning and a list of `JobCard` components for each matched job ID, allowing the user to view and interact with them.
+
+- **AI Dynamic Summary Generation (`generateProfileSummaryFlow`):**
+
+  - **Trigger**: User inputs a target role/company on the `/profile` page and clicks "Generate Summary with AI".
+  - **Action**: The frontend sends the user's core profile data and the optional target role to the `generateProfileSummaryFlow` Genkit flow.
+  - **Backend**: The Genkit flow instructs a Gemini model to act as a career coach and write a professional, tailored summary.
+  - **Response**: The flow returns a JSON object with the `generatedSummary` string.
+  - **Frontend**: The generated summary is displayed in a textarea. The user has an option to click "Use This Summary", which copies the text into their main profile summary field for them to save.
+
 - **Profile & Application Data (Firebase Firestore):**
 
   - **User Profile**: All details entered in `/profile` are stored in the `users` collection. Profile updates require confirmation. Editing restricted if account 'suspended'.
@@ -218,8 +239,18 @@ Job seekers interact with AI features via Genkit flows and their profile data is
   - **Withdraw Application**: Updates the `status` of an existing `application` document to `'Withdrawn by Applicant'`. Requires confirmation.
   - **Saved Jobs/Searches**: Stored in the user's profile document (`savedJobIds` as string array, `savedSearches` as array of SavedSearch objects). Saving/unsaving jobs and saving/deleting searches disabled if account 'suspended' or job already applied for. Deleting saved searches requires confirmation.
 
-- **Saving a Search:** (As before)
-- **Deleting a Saved Search:** (As before)
+- **Saving a Search:**
+
+  - **Trigger**: User is on the `/jobs` page, has applied filters, and clicks the "Save Current Search" button in the sidebar. This is disabled if the user's account is suspended.
+  - **Action**: A confirmation dialog prompts for a name for the search. Upon confirmation, a request is made to update the user's profile in Firestore.
+  - **Backend (Firebase)**: The user's document in the `users` collection is updated. The new `SavedSearch` object (containing a unique ID, the user-defined name, the current filter state, and a timestamp) is added to the `savedSearches` array field using `arrayUnion`.
+  - **Frontend**: A success toast is displayed. The new saved search becomes visible on the `/settings` page.
+
+- **Deleting a Saved Search:**
+  - **Trigger**: User is on the `/settings` page and clicks the delete icon next to a saved search. This is disabled if the user's account is suspended.
+  - **Action**: A confirmation dialog asks the user to confirm the deletion. Upon confirmation, a request is made to update the user's profile in Firestore.
+  - **Backend (Firebase)**: The user's document in the `users` collection is updated. The specific `SavedSearch` object to be deleted is removed from the `savedSearches` array field using `arrayRemove`.
+  - **Frontend**: The UI updates to remove the deleted search from the list, and a success toast is shown.
 
 ## 6. Future Updates (Potential Enhancements)
 
