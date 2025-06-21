@@ -570,21 +570,18 @@ _(Triggers and notifications largely covered in 4.3.3)_
 - System reliability and uptime for notification services.
 - User feedback sentiment regarding notification relevance and frequency.
 
-## 11. Privacy & Compliance
+### 10.4. Privacy & Compliance
 
-### 11.1. Data Protection
+- **Data Protection**: Adherence to GDPR, CCPA, and other relevant data privacy regulations.
+- **Encryption**: For sensitive data transmitted or stored in notifications.
+- **User Consent**: Clear user consent management for different types of notifications.
+- **Data Minimization**: Only necessary data used for notifications.
 
-- Adherence to GDPR, CCPA, and other relevant data privacy regulations.
-- Encryption for sensitive data transmitted or stored in notifications.
-- Clear user consent management for different types of notifications (especially marketing/promotional).
-- Data minimization: only necessary data used for notifications.
+### 10.5. User Control
 
-### 11.2. User Control
-
-- Granular opt-in/opt-out options for all non-critical notification categories.
-- Easy access to manage notification preferences.
-- Clear information on how data is used for personalizing notifications.
-- _Future_: Transparency reporting on notification system effectiveness and data usage.
+- **Opt-in/Opt-out**: Granular options for all non-critical notification categories.
+- **Preference Management**: Easy access to manage notification preferences.
+- **Transparency**: Clear information on how data is used for personalizing notifications.
 
 ---
 

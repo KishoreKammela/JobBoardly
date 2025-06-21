@@ -141,4 +141,4 @@ These features are foundational to the JobBoardly experience.
 
 ---
 
-This overview reflects the features implemented up to the current point. For planned future developments, please refer to the `docs/planning/01-future-development-roadmap.md`.
+This overview reflects the features implemented up to the current point. For planned future developments, please refer to the `../planning/01-future-development-roadmap.md`.
