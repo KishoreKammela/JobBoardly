@@ -146,8 +146,9 @@ export default function JobsPage() {
     const newFilteredJobs = allJobs.filter((job) => {
       const searchTermMatch =
         currentGlobalTerm === '' ||
-        job.title.toLowerCase().includes(currentGlobalTerm) ||
-        job.company.toLowerCase().includes(currentGlobalTerm) ||
+        (job.title && job.title.toLowerCase().includes(currentGlobalTerm)) ||
+        (job.company &&
+          job.company.toLowerCase().includes(currentGlobalTerm)) ||
         (job.skills &&
           job.skills.some((skill) =>
             skill.toLowerCase().includes(currentGlobalTerm)
@@ -156,8 +157,10 @@ export default function JobsPage() {
           job.responsibilities.toLowerCase().includes(currentGlobalTerm)) ||
         (job.requirements &&
           job.requirements.toLowerCase().includes(currentGlobalTerm)) ||
-        job.industry.toLowerCase().includes(currentGlobalTerm) ||
-        job.department.toLowerCase().includes(currentGlobalTerm) ||
+        (job.industry &&
+          job.industry.toLowerCase().includes(currentGlobalTerm)) ||
+        (job.department &&
+          job.department.toLowerCase().includes(currentGlobalTerm)) ||
         (job.roleDesignation &&
           job.roleDesignation.toLowerCase().includes(currentGlobalTerm)) ||
         (job.educationQualification &&
@@ -170,28 +173,32 @@ export default function JobsPage() {
 
       const locationMatch =
         debouncedSidebarFilters.location.toLowerCase() === '' ||
-        job.location
-          .toLowerCase()
-          .includes(debouncedSidebarFilters.location.toLowerCase());
+        (job.location &&
+          job.location
+            .toLowerCase()
+            .includes(debouncedSidebarFilters.location.toLowerCase()));
 
       const roleTypeMatch =
         debouncedSidebarFilters.roleType === 'all' ||
-        job.type.toLowerCase() ===
-          debouncedSidebarFilters.roleType.toLowerCase();
+        (job.type &&
+          job.type.toLowerCase() ===
+            debouncedSidebarFilters.roleType.toLowerCase());
 
       const remoteMatch = !debouncedSidebarFilters.isRemote || job.isRemote;
 
       const industryMatch =
         !debouncedSidebarFilters.industry ||
-        job.industry
-          .toLowerCase()
-          .includes(debouncedSidebarFilters.industry.toLowerCase());
+        (job.industry &&
+          job.industry
+            .toLowerCase()
+            .includes(debouncedSidebarFilters.industry.toLowerCase()));
 
       const experienceLevelMatch =
         !debouncedSidebarFilters.experienceLevel ||
         debouncedSidebarFilters.experienceLevel === 'all' ||
-        job.experienceLevel.toLowerCase() ===
-          debouncedSidebarFilters.experienceLevel.toLowerCase();
+        (job.experienceLevel &&
+          job.experienceLevel.toLowerCase() ===
+            debouncedSidebarFilters.experienceLevel.toLowerCase());
 
       let recentActivityMatch = true;
       if (
