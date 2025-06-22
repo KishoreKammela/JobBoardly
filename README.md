@@ -52,9 +52,9 @@ The visual identity of JobBoardly is designed to be modern, clear, and innovativ
 
 JobBoardly offers a comprehensive suite of features tailored for Job Seekers, Employers, and Administrators.
 
-- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering (including saving searches), job saving, application submission with screening question support, application withdrawal, AI-powered job matching, and personalized settings. Re-application to the same job is prevented.
+- **For Job Seekers**: User authentication, advanced profile management with resume parsing and AI summary generation, downloadable PDF profiles, robust job search and filtering (including saving searches), job saving, application submission with screening question support, application withdrawal at any active stage, AI-powered job matching, and personalized settings. Re-application to the same job is prevented.
   - [Detailed Job Seeker Guide](./docs/guides/01-job-seeker-guide.md)
-- **For Employers**: Secure authentication, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), applicant tracking (including viewing screening question answers), and candidate search with boolean logic, advanced filters, and saved search capabilities. AI-powered candidate matching helps find relevant talent.
+- **For Employers**: Secure authentication, multi-recruiter support with a designated company admin, company profile management with admin approval, AI-assisted job posting (including parsing job description documents and adding screening questions), applicant tracking (including viewing screening question answers), and candidate search with boolean logic, advanced filters, and saved search capabilities. AI-powered candidate matching helps find relevant talent.
   - [Detailed Employer Guide](./docs/guides/02-employer-guide.md)
 - **For Platform Staff (Administrators, Super Administrators, Moderators, Support Agents, Data Analysts)**: A comprehensive admin dashboard with tabs for managing companies (approve/reject/suspend), all jobs (approve/reject/suspend/edit - including viewing screening questions), job seekers (suspend/activate), platform users (suspend/activate admins/superAdmins/moderators), and legal content (Privacy Policy, Terms of Service - SuperAdmin only). Features quick moderation cards and robust search/sort/pagination for all managed entities. Permissions vary by role.
   - [Detailed Admin Guide](./docs/guides/03-admin-guide.md)
@@ -78,6 +78,7 @@ A high-level overview of the project's directory structure:
 │   ├── contexts/               # React Context providers
 │   ├── hooks/                  # Custom React hooks
 │   ├── lib/                    # Utility functions, Firebase config
+│   ├── services/               # Data services (database interactions)
 │   └── types/                  # TypeScript type definitions
 ├── docs/                       # Detailed documentation
 │   ├── api/                    # Detailed backend API documentation
@@ -103,6 +104,7 @@ For a more detailed explanation of each file and folder, see the [Folder Structu
 
 - For a comprehensive list and description of all application routes, please see: [**Application Routes Documentation**](./docs/reference/02-routes-documentation.md)
 - For a detailed breakdown of the project's files and folders, please see: [**Folder Structure Deep Dive**](./docs/reference/04-folder-structure-deep-dive.md)
+- For the architectural principles and development patterns, refer to the [**Development Strategy & Architecture**](./docs/reference/05-code-cleaning-strategies.md).
 - For a detailed specification of the backend API, including endpoints, request/response schemas, and mock data, please see the [**API Documentation**](./docs/api/v1/README.md).
 
 ## Configuration & Setup
@@ -146,33 +148,33 @@ Ensure Firebase Authentication (Email/Pass, Google, GitHub, Microsoft), Firestor
 
 ## Local Development Setup
 
-1.  **Install Dependencies**:
-    ```bash
-    npm install
-    # or
-    yarn install
-    ```
-2.  **Run Next.js Dev Server**:
-    ```bash
-    npm run dev
-    # or
-    yarn dev
-    ```
-    This usually starts the app on `http://localhost:9002`.
-3.  **Run Genkit Dev Server (in a separate terminal)**:
-    ```bash
-    npm run genkit:dev
-    # or (for auto-reloading on AI file changes)
-    npm run genkit:watch
-    ```
-    This typically starts the Genkit server on `http://localhost:3400`.
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+2. **Run Next.js Dev Server**:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+   This usually starts the app on `http://localhost:9002`.
+3. **Run Genkit Dev Server (in a separate terminal)**:
+   ```bash
+   npm run genkit:dev
+   # or (for auto-reloading on AI file changes)
+   npm run genkit:watch
+   ```
+   This typically starts the Genkit server on `http://localhost:3400`.
 
 ## Platform Staff User Creation (Admin/SuperAdmin/Moderator/SupportAgent/DataAnalyst)
 
-1.  A user registers normally (e.g., as a job seeker or employer).
-2.  Manually access your Firebase Firestore database.
-3.  Navigate to the `users` collection, find the user's document by their UID.
-4.  Edit the `role` field to `"admin"`, `"superAdmin"`, `"moderator"`, `"supportAgent"`, or `"dataAnalyst"`.
-5.  Ensure their `status` field is set to `"active"`.
+1. A user registers normally (e.g., as a job seeker or employer).
+2. Manually access your Firebase Firestore database.
+3. Navigate to the `users` collection, find the user's document by their UID.
+4. Edit the `role` field to `"admin"`, `"superAdmin"`, `"moderator"`, `"supportAgent"`, or `"dataAnalyst"`.
+5. Ensure their `status` field is set to `"active"`.
 
 This README provides a high-level overview and setup guide for JobBoardly. For detailed feature descriptions, please refer to the documents in the `/docs` directory.

@@ -11,10 +11,10 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 ### 2.1. Authentication & Account Management
 
 - **Secure Registration**: Sign up using Email/Password or social providers (Google, GitHub, Microsoft). Includes password strength indicators.
-- **Login**: Access your account securely.
+- **Login**: Access your account securely. Post-login, you are correctly redirected to the appropriate page.
 - **Change Password**: A dedicated page to update your account password. This action requires confirmation.
 - **Account Status**: Your account can be 'active', 'suspended', or 'deleted' (by an admin).
-  - **Suspended Accounts**: Can log in but have limited functionality. Cannot apply for jobs, edit main profile sections (like experience, education, skills), save jobs, or use AI job matcher. Can view jobs, change password, and adjust some settings (like theme, view saved searches, but cannot create new or delete saved searches). An alert will be displayed on relevant pages.
+  - **Suspended Accounts**: Can log in but have limited functionality. Cannot apply for jobs, edit main profile sections (like experience, education, skills), save jobs, or use AI job matcher. An alert will be displayed on relevant pages.
   - **Deleted Accounts**: Cannot log in. If Firebase Authentication succeeds, the application will immediately log the user out and display a message indicating the account is deactivated.
 
 ### 2.2. Profile Management (`/profile`)
@@ -43,7 +43,7 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
   - Option to copy the generated summary to your main profile summary field.
 - **Profile Visibility**: Control whether your profile is searchable by employers or kept private.
 - **Downloadable PDF Profile**: Download a clean, ATS-friendly PDF version of your profile (`/profile`).
-- **Profile Preview (`/profile/preview`)**: See how your profile might appear to employers.
+- **Profile Preview (`/profile/preview`)**: See how your profile might appear to employers, with data reflecting your latest saved changes.
 - **Saving Profile Changes**: Requires confirmation before updates are saved.
 - _Note_: If your account is 'suspended', most profile editing features will be disabled, and saving changes will be blocked.
 
@@ -72,12 +72,12 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
   - Submit applications directly through the platform (only for 'approved' jobs).
   - If a job has **Screening Questions** (defined by the employer), you'll answer them (text, yes/no supported) during the application process via a modal. Answers are final once submitted with the application.
 - **Re-application Prevention**: Once an application is submitted (even if later withdrawn or rejected by the company), you cannot re-apply for the same job. The "Apply Now" button will be disabled or show the current application status.
-- **Withdraw Application**: From the "My Jobs" page or the job detail page (if applied and status is 'Applied'), you can withdraw an active application. This action requires confirmation. Withdrawn applications change status to 'Withdrawn by Applicant' and cannot be re-submitted.
+- **Withdraw Application**: From the "My Jobs" page or the job detail page, you can withdraw an active application at any stage before a final decision (e.g., 'Hired' or 'Rejected By Company') is made. This action requires confirmation. Withdrawn applications change status to 'Withdrawn by Applicant' and cannot be re-submitted.
 - **Save Jobs**: Bookmark 'approved' jobs you're interested in for later review or application. This action is disabled if you have already applied for the job.
 - **My Jobs Page (`/my-jobs`)**:
   - A centralized dashboard to view and manage:
     - **Saved Jobs**: Jobs you've bookmarked.
-    - **Applied Jobs**: Jobs you've submitted applications for, showing their current status (e.g., Applied, Reviewed, Withdrawn by Applicant, Rejected By Company). The option to withdraw an 'Applied' application is available here.
+    - **Applied Jobs**: Jobs you've submitted applications for, showing their current status (e.g., Applied, Reviewed, Interviewing, Withdrawn by Applicant, Rejected By Company). The option to withdraw an active application is available here.
   - Filter jobs by status (All, Applied, Saved, Withdrawn).
 
 ### 2.5. AI-Powered Job Matching (`/ai-match`)
@@ -133,14 +133,14 @@ graph TD
     CheckExistingApp -->|Yes| N_Disabled[Show Cannot Re-apply / Current App Status]
     N_Disabled --> L
     N --> P[View in My Jobs Applied: /my-jobs]
-    P --> Q{Application Status Applied?}
+    P --> Q{Application Status is active (e.g., Applied, Reviewed)?}
     Q -->|Yes| Withdraw_Option{Withdraw?}
     Withdraw_Option -->|Yes| Withdraw_Confirm[Confirm Withdraw]
     Withdraw_Confirm -->|Yes| Withdraw_Action[Application Withdrawn]
     Withdraw_Action --> P
     Withdraw_Confirm -->|No| P
     Withdraw_Option -->|No| P
-    Q -->|No| P_ViewOnly[View Non-Applied Status]
+    Q -->|No| P_ViewOnly[View Final Status (Hired, Rejected)]
     P_ViewOnly --> P
     M -->|Save for Later| S[Save Job - Disabled if Suspended or Job not Approved or Already Applied]
     S --> T[View in My Jobs Saved: /my-jobs]
@@ -192,7 +192,7 @@ graph TD
 | `/auth/login`            | Job seeker login page. If account is 'deleted', login may fail post-auth check.                                                                                                               | Public       |
 | `/auth/register`         | Job seeker registration page.                                                                                                                                                                 | Public       |
 | `/auth/change-password`  | Page to change account password. (Accessible if suspended). Requires confirmation.                                                                                                            | Job Seeker   |
-| `/profile`               | Manage profile. Editing restricted if account 'suspended'. Profile save requires confirmation.                                                                                                | Job Seeker   |
+| `/profile`               | Manage profile. Editing restricted if account 'suspended'. Profile save requires confirmation. Resume processing/removal requires confirmation. AI Summary Generator available.               | Job Seeker   |
 | `/profile/preview`       | Preview profile. (Accessible if suspended).                                                                                                                                                   | Job Seeker   |
 | `/jobs`                  | Browse, filter, and save job searches. (Saving search disabled if suspended).                                                                                                                 | Public       |
 | `/jobs/[jobId]`          | View job details, including company info header. Apply/Save actions disabled if account 'suspended', job not 'approved', or application already exists. Withdraw option available if applied. | Public       |

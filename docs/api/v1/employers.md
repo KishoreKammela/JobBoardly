@@ -43,6 +43,29 @@ These endpoints are for employer-specific actions, including company management,
 
 ---
 
+### Invite Recruiter to Company
+
+- **`POST /api/v1/me/company/invite-recruiter`**
+- **Description**: Allows a company admin to invite a new recruiter to their company.
+- **Authorization**: `employer` with `isCompanyAdmin: true`.
+- **Request Body**:
+  | Field | Type | Rules | Description |
+  |---|---|---|---|
+  | `name` | `string` | `required` | The full name of the recruiter being invited. |
+  | `email`| `string` | `required`, `email format` | The email address of the recruiter to invite. |
+- **Mock Request Body**:
+  ```json
+  {
+    "name": "Sarah Recruiter",
+    "email": "sarah.r@example.com"
+  }
+  ```
+- **Success Response** (`204 No Content`): Indicates the invitation was successfully recorded. The system will handle associating the new user upon their registration.
+- **Error Response** (`400 Bad Request`): If the recruiter limit is reached or the email is already associated with the company.
+- **Error Response** (`403 Forbidden`): If the requesting user is not a company admin.
+
+---
+
 ### Find Candidates
 
 - **`GET /api/v1/candidates`**

@@ -74,11 +74,9 @@ This is where all React components are stored.
   - `JobCard.tsx`: Displays a summary of a single job in listings.
   - `FilterSidebar.tsx`: The sidebar used on the `/jobs` page for filtering.
   - `UserProfileForm.tsx`: The main form for editing a user's profile.
-- **Component Groups**: Components are often grouped into subdirectories based on their feature area.
-  - `layout/`: Components related to the overall page structure, like `Navbar.tsx` and `Footer.tsx`.
-  - `profile/`: Components specifically used on the profile management page.
-  - `employer/`: Components used in the employer-facing sections of the app.
-  - `admin/`: Components for the admin dashboard tables and editors.
+- **Component Groups & Co-location**: Components are often grouped into subdirectories based on their feature area. For complex components, we use a co-location strategy:
+  - `my-jobs-display/`: A directory for the `MyJobsDisplay` component.
+  - `my-jobs-display/_lib/`: A private folder (not routed by Next.js) containing `actions.ts`, `constants.ts`, and `interfaces.ts` specific to the `MyJobsDisplay` component, keeping the main component file clean.
 
 ### `src/contexts` - React Context Providers
 
@@ -111,7 +109,19 @@ A folder for helper functions and third-party library configurations.
 
 - `firebase.ts`: Initializes the Firebase app and exports instances of `auth`, `db` (Firestore), and `storage`.
 - `utils.ts`: Contains utility functions, most notably the `cn` function for merging Tailwind CSS classes. Also includes helper functions like `formatCurrencyINR` and `checkPasswordStrength`.
-- `mockData.ts`: (If present) Would contain mock data used for development or testing purposes.
+- `constants.ts`: Stores truly global constants, like the `ADMIN_LIKE_ROLES` array.
+
+### `src/services` - Data Services Layer
+
+This directory is central to our architecture. It abstracts all direct database interactions.
+
+- **Purpose**: To decouple the application logic from the database (Firebase). Components and contexts call functions from this layer instead of directly interacting with Firestore.
+- **Structure**: Files are organized by resource.
+  - `user.services.ts`: Functions for creating, reading, and updating user profiles.
+  - `job.services.ts`: Functions for fetching and saving job data.
+  - `company.services.ts`: Functions for managing company profiles and recruiters.
+  - `application.services.ts`: Functions for managing job applications.
+  - `admin.services.ts`: Functions specific to the admin dashboard for fetching platform-wide data.
 
 ### `src/types` - TypeScript Definitions
 

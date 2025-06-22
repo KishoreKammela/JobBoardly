@@ -4,11 +4,9 @@ This document provides a detailed overview of all features currently implemented
 
 ## 1. Core Platform Features
 
-These features are foundational to the JobBoardly experience.
-
 - **Responsive Design**: The platform is designed to work across various devices (desktops, tablets, mobile).
 - **Dynamic Routing**: Next.js App Router is used for efficient page navigation and loading.
-- **User Authentication**: Secure login and registration via Email/Password and social providers (Google, GitHub, Microsoft).
+- **User Authentication**: Secure login and registration via Email/Password and social providers (Google, GitHub, Microsoft). Includes robust redirection and personalized welcome messages.
 - **Account Status Management**: User and company accounts can have statuses like `active`, `pending`, `approved`, `rejected`, `suspended`, or `deleted`, which control access and visibility.
 - **Toast Notifications**: Used for providing feedback on user actions (e.g., success messages, error alerts).
 - **Basic In-App Notification System (UI Shell)**: A notification bell icon in the navbar and a dropdown to display recent notifications. Includes functionality to mark notifications as read/all read. (Backend triggers for creating notifications are pending future development).
@@ -20,6 +18,7 @@ These features are foundational to the JobBoardly experience.
   - User-friendly HTML sitemap page (`/sitemap`).
   - Proper use of H1 tags and `next/image` for image optimization on key public pages.
 - **Legal Pages**: Dynamically rendered Privacy Policy and Terms of Service pages, with content editable by SuperAdmins.
+- **Services Layer Architecture**: Data interactions with Firebase are abstracted into a dedicated services layer (`src/services`) for maintainability and scalability.
 
 ## 2. Job Seeker Features
 
@@ -60,7 +59,7 @@ These features are foundational to the JobBoardly experience.
   - Apply directly for 'approved' jobs.
   - If a job has screening questions, a modal appears to answer them (text, yes/no supported).
 - **Re-application Prevention**: Cannot re-apply for a job once an application is submitted, withdrawn, or rejected.
-- **Withdraw Application**: Withdraw an active application (status 'Applied') via the "My Jobs" page or job detail page.
+- **Withdraw Application**: Withdraw an active application at any stage before a final decision (e.g., 'Hired' or 'Rejected By Company') is made.
 - **Save Jobs**: Bookmark 'approved' jobs. This is disabled if an application for the job already exists.
 - **My Jobs Page (`/my-jobs`)**:
   - Dashboard to view and manage Saved Jobs and Applied Jobs.
@@ -81,21 +80,24 @@ These features are foundational to the JobBoardly experience.
 
 ## 3. Employer Features
 
-### 3.1. Account & Company Management
+### 3.1. Multi-Recruiter System
 
-- **Registration & Login**: Secure account creation (associating with a new or existing company) and login.
-- **Company Profile**: New company profiles are set to 'pending' and require admin approval.
-- **Change Password**: Ability to change account password.
+- **Company Admin Role**: The first user to register a company becomes its admin.
+- **Recruiter Invitation**: Company Admins can invite new recruiters to their company via email (up to a limit of 3 total recruiters).
+- **Automated Linking**: New users registering with an invited email are automatically linked to the company as a standard recruiter.
 
-### 3.2. Company Profile Management (`/profile` - for Company Admins)
+### 3.2. Company Profile Management
 
-- **Manage Company Details**: Update company name, description (Markdown), website, logo, banner URL.
-- **Profile Preview (`/employer/profile/preview`)**: Preview the public company page.
+- **Admin-Only Editing (`/employer/company/edit`)**: A dedicated, protected page for Company Admins to edit company details.
+- **Re-Approval Workflow**: Submitting company profile edits sets the company status to 'pending' for admin review.
+- **Recruiter Management (`/profile`)**: Company Admins can view current recruiters, see pending invitations, and send new invites.
+- **Profile Preview (`/employer/profile/preview`)**: Company Admins can preview the public company page.
 
 ### 3.3. Job Posting & Management
 
+- **Collaborative Posting**: All recruiters in a company can create, edit, and manage job postings for that company.
 - **Create/Edit Job Postings (`/employer/post-job`)**:
-  - Form for comprehensive job details, including `responsibilities`, `requirements`, `benefits` (string), salary range with a `payTransparency` toggle, `industry`, `department`, `experienceLevel`, and an `applicationDeadline` picker.
+  - Form for comprehensive job details, including `responsibilities`, `requirements`, `benefits`, salary, and an `applicationDeadline`.
   - **AI Job Description Parsing**: Upload a document, and AI (`parseJobDescriptionFlow`) attempts to pre-fill these fields.
   - **Screening Questions**: Add custom screening questions (text, yes/no) to job postings.
 - **Job Status**: New jobs are 'pending' approval. Edits resubmit job as 'pending'.
