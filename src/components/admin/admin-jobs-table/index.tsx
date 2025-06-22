@@ -1,5 +1,7 @@
+// src/components/admin/admin-jobs-table/index.tsx
+'use client';
 import React, { useState, useMemo } from 'react';
-import type { Job, UserRole } from '@/types';
+import type { UserRole } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +25,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Timestamp } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -31,33 +32,9 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-
-const ITEMS_PER_PAGE = 10;
-type SortDirection = 'asc' | 'desc';
-
-interface SortConfig<T> {
-  key: keyof T | null;
-  direction: SortDirection;
-}
-
-interface JobWithApplicantCount extends Job {
-  applicantCount: number;
-}
-
-function getSortableValue<T>(
-  item: T,
-  key: keyof T | null
-): string | number | null | boolean | undefined {
-  if (!key) return null;
-  const value = item[key as keyof T];
-  if (value instanceof Timestamp) {
-    return value.toMillis();
-  }
-  if (typeof value === 'string') {
-    return value.toLowerCase();
-  }
-  return value as string | number | null | boolean | undefined;
-}
+import { ITEMS_PER_PAGE } from './_lib/constants';
+import type { JobWithApplicantCount, SortConfig } from './_lib/interfaces';
+import { getSortableValue } from './_lib/utils';
 
 interface AdminJobsTableProps {
   jobs: JobWithApplicantCount[];
@@ -79,7 +56,7 @@ interface AdminJobsTableProps {
   canModerateContent: boolean;
 }
 
-const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
+export const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
   jobs,
   isLoading,
   currentUserRole,
@@ -99,7 +76,7 @@ const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
   });
 
   const requestSort = (key: keyof JobWithApplicantCount) => {
-    let direction: SortDirection = 'asc';
+    let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
@@ -371,5 +348,3 @@ const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
     </Card>
   );
 };
-
-export default AdminJobsTable;

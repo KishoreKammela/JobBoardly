@@ -1,3 +1,5 @@
+// src/components/admin/admin-companies-table/index.tsx
+'use client';
 import React, { useState, useMemo } from 'react';
 import type { Company } from '@/types';
 import { Input } from '@/components/ui/input';
@@ -25,30 +27,10 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const ITEMS_PER_PAGE = 10;
-type SortDirection = 'asc' | 'desc';
-interface SortConfig<T> {
-  key: keyof T | null;
-  direction: SortDirection;
-}
-
-function getSortableValue<T>(
-  item: T,
-  key: keyof T | null
-): string | number | null | boolean | undefined {
-  if (!key) return null;
-  const value = item[key as keyof T];
-  if (value instanceof Timestamp) {
-    return value.toMillis();
-  }
-  if (typeof value === 'string') {
-    return value.toLowerCase();
-  }
-  return value as string | number | null | boolean | undefined;
-}
+import { ITEMS_PER_PAGE } from './_lib/constants';
+import type { SortConfig } from './_lib/interfaces';
+import { getSortableValue } from './_lib/utils';
 
 interface AdminCompaniesTableProps {
   companies: Company[];
@@ -69,7 +51,7 @@ interface AdminCompaniesTableProps {
   canModerateContent: boolean;
 }
 
-const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
+export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
   companies,
   isLoading,
   showConfirmationModal,
@@ -86,7 +68,7 @@ const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
   });
 
   const requestSort = (key: keyof Company) => {
-    let direction: SortDirection = 'asc';
+    let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
@@ -400,5 +382,3 @@ const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
     </Card>
   );
 };
-
-export default AdminCompaniesTable;

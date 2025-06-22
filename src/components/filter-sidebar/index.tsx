@@ -1,3 +1,4 @@
+// src/components/filter-sidebar/index.tsx
 'use client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,22 +28,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { experienceLevelOptions } from './_lib/constants';
 
 interface FilterSidebarProps {
   filters: Omit<Filters, 'searchTerm'>;
   onFilterChange: (filters: Omit<Filters, 'searchTerm'>) => void;
   currentGlobalSearchTerm?: string;
 }
-
-const experienceLevelOptions: (JobExperienceLevel | 'all')[] = [
-  'all',
-  'Entry-Level',
-  'Mid-Level',
-  'Senior-Level',
-  'Lead',
-  'Manager',
-  'Executive',
-];
 
 export function FilterSidebar({
   filters,

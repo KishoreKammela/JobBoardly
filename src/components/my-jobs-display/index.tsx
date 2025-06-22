@@ -1,3 +1,4 @@
+// src/components/my-jobs-display/index.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/Auth/AuthContext';
@@ -30,8 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-type JobFilterType = 'all' | 'applied' | 'saved' | 'withdrawn';
+import type { JobFilterType } from './_lib/interfaces';
 
 export function MyJobsDisplay() {
   const { user } = useAuth();

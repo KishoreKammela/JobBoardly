@@ -1,3 +1,4 @@
+// src/components/printable-profile/index.tsx
 import React from 'react';
 import type {
   UserProfile,
@@ -7,22 +8,18 @@ import type {
 } from '@/types';
 import { formatCurrencyINR } from '@/lib/utils';
 import { format, parse, isValid } from 'date-fns';
+import {
+  MAX_SUMMARY_LENGTH,
+  MAX_EXPERIENCE_DESC_LENGTH,
+  MAX_EDUCATION_DESC_LENGTH,
+} from './_lib/constants';
+import { truncateText } from './_lib/utils';
 
 interface PrintableProfileProps {
   user: UserProfile;
 }
 
-const MAX_SUMMARY_LENGTH = 800;
-const MAX_EXPERIENCE_DESC_LENGTH = 300;
-const MAX_EDUCATION_DESC_LENGTH = 250;
-
-const truncateText = (text: string | undefined, maxLength: number): string => {
-  if (!text) return 'N/A';
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
-};
-
-const PrintableProfileComponent = React.forwardRef<
+export const PrintableProfile = React.forwardRef<
   HTMLDivElement,
   PrintableProfileProps
 >(({ user }, ref) => {
@@ -334,5 +331,4 @@ const PrintableProfileComponent = React.forwardRef<
   );
 });
 
-PrintableProfileComponent.displayName = 'PrintableProfileComponent';
-export { PrintableProfileComponent };
+PrintableProfile.displayName = 'PrintableProfile';

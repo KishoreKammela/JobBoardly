@@ -1,5 +1,7 @@
+// src/components/admin/admin-job-seekers-table/index.tsx
+'use client';
 import React, { useState, useMemo } from 'react';
-import type { UserProfile, UserRole } from '@/types';
+import type { UserProfile } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,38 +14,26 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, ChevronsUpDown, Ban, CheckSquare, Loader2 } from 'lucide-react';
+import {
+  Eye,
+  ChevronsUpDown,
+  Ban,
+  CheckCircle2,
+  XCircle,
+  CheckSquare,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/use-debounce';
-import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ITEMS_PER_PAGE } from './_lib/constants';
+import type { SortConfig } from './_lib/interfaces';
+import { getSortableValue } from './_lib/utils';
 
-const ITEMS_PER_PAGE = 10;
-type SortDirection = 'asc' | 'desc';
-interface SortConfig<T> {
-  key: keyof T | null;
-  direction: SortDirection;
-}
-
-function getSortableValue<T>(
-  item: T,
-  key: keyof T | null
-): string | number | null | boolean | undefined {
-  if (!key) return null;
-  const value = item[key as keyof T];
-  if (value instanceof Timestamp) {
-    return value.toMillis();
-  }
-  if (typeof value === 'string') {
-    return value.toLowerCase();
-  }
-  return value as string | number | null | boolean | undefined;
-}
-
-interface AdminPlatformUsersTableProps {
-  platformUsers: UserProfile[];
+interface AdminJobSeekersTableProps {
+  jobSeekers: UserProfile[];
   isLoading: boolean;
-  currentUser?: UserProfile | null;
   showConfirmationModal: (
     title: string,
     description: React.ReactNode,
@@ -56,21 +46,16 @@ interface AdminPlatformUsersTableProps {
     newStatus: 'active' | 'suspended' | 'deleted'
   ) => Promise<void>;
   specificActionLoading: string | null;
-  getRoleDisplayName: (role: UserRole) => string;
-  getRoleBadgeVariant: (
-    role: UserRole
-  ) => 'default' | 'secondary' | 'destructive' | 'outline' | null | undefined;
+  canPerformUserActions: boolean;
 }
 
-const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
-  platformUsers,
+export const AdminJobSeekersTable: React.FC<AdminJobSeekersTableProps> = ({
+  jobSeekers,
   isLoading,
-  currentUser,
   showConfirmationModal,
   handleUserStatusUpdate,
   specificActionLoading,
-  getRoleDisplayName,
-  getRoleBadgeVariant,
+  canPerformUserActions,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -81,7 +66,7 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
   });
 
   const requestSort = (key: keyof UserProfile) => {
-    let direction: SortDirection = 'asc';
+    let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
@@ -89,8 +74,8 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
     setCurrentPage(1);
   };
 
-  const sortedAndFilteredUsers = useMemo(() => {
-    let sortableItems = [...platformUsers];
+  const sortedAndFilteredJobSeekers = useMemo(() => {
+    let sortableItems = [...jobSeekers];
     if (debouncedSearchTerm) {
       const lowerSearchTerm = debouncedSearchTerm.toLowerCase();
       sortableItems = sortableItems.filter(
@@ -111,17 +96,19 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
       });
     }
     return sortableItems;
-  }, [platformUsers, sortConfig, debouncedSearchTerm]);
+  }, [jobSeekers, sortConfig, debouncedSearchTerm]);
 
-  const paginatedUsers = useMemo(() => {
+  const paginatedJobSeekers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return sortedAndFilteredUsers.slice(
+    return sortedAndFilteredJobSeekers.slice(
       startIndex,
       startIndex + ITEMS_PER_PAGE
     );
-  }, [sortedAndFilteredUsers, currentPage]);
+  }, [sortedAndFilteredJobSeekers, currentPage]);
 
-  const totalPages = Math.ceil(sortedAndFilteredUsers.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(
+    sortedAndFilteredJobSeekers.length / ITEMS_PER_PAGE
+  );
 
   const renderSortIcon = (key: keyof UserProfile) => {
     if (sortConfig.key !== key)
@@ -133,33 +120,30 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
     <Card>
       <CardHeader>
         <CardTitle>
-          Manage Platform Users ({sortedAndFilteredUsers.length})
+          Manage Job Seekers ({sortedAndFilteredJobSeekers.length})
         </CardTitle>
         <Input
-          placeholder="Search platform users by name or email..."
+          placeholder="Search job seekers by name or email..."
           value={searchTerm}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setSearchTerm(e.target.value)
           }
           className="max-w-sm mt-2"
-          aria-label="Search platform users"
+          aria-label="Search job seekers"
         />
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center items-center py-6">
             <Loader2 className="h-8 w-8 animate-spin text-primary" /> Loading
-            platform users...
+            job seekers...
           </div>
-        ) : paginatedUsers.length === 0 ? (
-          <p className="text-muted-foreground">No platform users found.</p>
+        ) : paginatedJobSeekers.length === 0 ? (
+          <p className="text-muted-foreground">No job seekers found.</p>
         ) : (
           <>
             <Table>
-              <TableCaption>
-                A list of platform administrators, moderators, and other staff
-                roles.
-              </TableCaption>
+              <TableCaption>A list of all job seeker users.</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead
@@ -175,17 +159,13 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
                     Email {renderSortIcon('email')}
                   </TableHead>
                   <TableHead
-                    onClick={() => requestSort('role')}
-                    className="cursor-pointer"
-                  >
-                    Role {renderSortIcon('role')}
-                  </TableHead>
-                  <TableHead
                     onClick={() => requestSort('status')}
                     className="cursor-pointer"
                   >
                     Status {renderSortIcon('status')}
                   </TableHead>
+                  <TableHead>Profile Searchable</TableHead>
+                  <TableHead>Jobs Applied</TableHead>
                   <TableHead
                     onClick={() => requestSort('lastActive')}
                     className="cursor-pointer"
@@ -202,22 +182,9 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((u) => {
-                  const canLoggedInUserManageTarget = () => {
-                    if (!currentUser) return false;
-                    if (currentUser.uid === u.uid) return false;
-                    if (currentUser.role === 'superAdmin') return true;
-                    if (currentUser.role === 'admin') {
-                      return !['admin', 'superAdmin'].includes(u.role);
-                    }
-                    return false;
-                  };
-                  const isActionDisabled =
-                    specificActionLoading === `user-${u.uid}` ||
-                    !canLoggedInUserManageTarget();
-                  const platformUserIsEffectivelyActive =
+                {paginatedJobSeekers.map((u) => {
+                  const isUserEffectivelyActive =
                     u.status === 'active' || u.status === undefined;
-
                   return (
                     <TableRow key={u.uid}>
                       <TableCell className="font-medium">
@@ -226,36 +193,34 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={getRoleBadgeVariant(u.role)}
-                          className={
-                            u.role === 'moderator'
-                              ? 'border-primary/50 text-primary/90'
-                              : u.role === 'supportAgent'
-                                ? 'border-blue-500 text-blue-600'
-                                : u.role === 'dataAnalyst'
-                                  ? 'border-purple-500 text-purple-600'
-                                  : ''
-                          }
-                        >
-                          {getRoleDisplayName(u.role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
                           variant={
-                            platformUserIsEffectivelyActive
-                              ? 'secondary'
-                              : 'destructive'
+                            isUserEffectivelyActive
+                              ? 'default'
+                              : u.status === 'deleted' ||
+                                  u.status === 'suspended'
+                                ? 'destructive'
+                                : 'secondary'
                           }
                           className={
-                            platformUserIsEffectivelyActive
+                            isUserEffectivelyActive
                               ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              : u.status === 'deleted' ||
+                                  u.status === 'suspended'
+                                ? 'bg-red-100 text-red-800'
+                                : ''
                           }
                         >
                           {(u.status || 'ACTIVE').toUpperCase()}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {u.isProfileSearchable ? (
+                          <CheckCircle2 className="text-green-500 h-5 w-5" />
+                        ) : (
+                          <XCircle className="text-red-500 h-5 w-5" />
+                        )}
+                      </TableCell>
+                      <TableCell>{u.jobsAppliedCount ?? 'N/A'}</TableCell>
                       <TableCell>
                         {u.lastActive
                           ? new Date(u.lastActive as string).toLocaleString()
@@ -276,37 +241,87 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
                             <Eye className="h-5 w-5" />
                           </Link>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const newStatus = platformUserIsEffectivelyActive
-                              ? 'suspended'
-                              : 'active';
-                            showConfirmationModal(
-                              `${newStatus === 'active' ? 'Activate' : 'Suspend'} Platform User "${u.name || u.email}"?`,
-                              `Are you sure you want to ${newStatus} this platform user account?`,
-                              async () =>
-                                handleUserStatusUpdate(u.uid, newStatus),
-                              `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
-                              newStatus === 'suspended'
-                                ? 'destructive'
-                                : 'default'
-                            );
-                          }}
-                          disabled={isActionDisabled}
-                          className={
-                            platformUserIsEffectivelyActive
-                              ? 'text-orange-600'
-                              : 'text-blue-600'
-                          }
-                        >
-                          {platformUserIsEffectivelyActive ? (
-                            <Ban className="h-5 w-5" />
-                          ) : (
-                            <CheckSquare className="h-5 w-5" />
-                          )}
-                        </Button>
+                        {u.status === 'deleted' ? (
+                          canPerformUserActions && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                showConfirmationModal(
+                                  `Re-Activate User "${u.name || u.email}"?`,
+                                  `Are you sure you want to re-activate this previously deleted user account? Their status will be set to 'active'.`,
+                                  async () =>
+                                    handleUserStatusUpdate(u.uid, 'active'),
+                                  'Re-Activate User'
+                                )
+                              }
+                              disabled={
+                                specificActionLoading === `user-${u.uid}`
+                              }
+                              className="text-green-600"
+                            >
+                              <CheckSquare className="h-5 w-5" />
+                            </Button>
+                          )
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newStatus = isUserEffectivelyActive
+                                  ? 'suspended'
+                                  : 'active';
+                                showConfirmationModal(
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User "${u.name || u.email}"?`,
+                                  `Are you sure you want to ${newStatus} this user account?`,
+                                  async () =>
+                                    handleUserStatusUpdate(u.uid, newStatus),
+                                  `${newStatus === 'active' ? 'Activate' : 'Suspend'} User`,
+                                  newStatus === 'suspended'
+                                    ? 'destructive'
+                                    : 'default'
+                                );
+                              }}
+                              disabled={
+                                specificActionLoading === `user-${u.uid}` ||
+                                !canPerformUserActions
+                              }
+                              className={
+                                isUserEffectivelyActive
+                                  ? 'text-orange-600'
+                                  : 'text-blue-600'
+                              }
+                            >
+                              {isUserEffectivelyActive ? (
+                                <Ban className="h-5 w-5" />
+                              ) : (
+                                <CheckSquare className="h-5 w-5" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                showConfirmationModal(
+                                  `Delete User "${u.name || u.email}"?`,
+                                  'Are you sure you want to delete this user account? They will not be able to log in. This action can be undone by re-activating.',
+                                  async () =>
+                                    handleUserStatusUpdate(u.uid, 'deleted'),
+                                  'Delete User',
+                                  'destructive'
+                                )
+                              }
+                              disabled={
+                                specificActionLoading === `user-${u.uid}` ||
+                                !canPerformUserActions
+                              }
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -342,5 +357,3 @@ const AdminPlatformUsersTable: React.FC<AdminPlatformUsersTableProps> = ({
     </Card>
   );
 };
-
-export default AdminPlatformUsersTable;

@@ -1,3 +1,4 @@
+// src/components/change-password-form/index.tsx
 'use client';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -18,22 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-interface ModalState {
-  isOpen: boolean;
-  title: string;
-  description: React.ReactNode;
-  onConfirmAction: (() => Promise<void>) | null;
-  confirmText: string;
-}
-
-const defaultModalState: ModalState = {
-  isOpen: false,
-  title: '',
-  description: '',
-  onConfirmAction: null,
-  confirmText: 'Confirm',
-};
+import type { ModalState } from './_lib/interfaces';
+import { defaultModalState } from './_lib/interfaces';
 
 export function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -85,7 +72,7 @@ export function ChangePasswordForm() {
   };
 
   const performPasswordChange = async () => {
-    setIsLoading(true); // Set this for the main form submission state
+    setIsLoading(true);
     try {
       await changeUserPassword(currentPassword, newPassword);
       toast({

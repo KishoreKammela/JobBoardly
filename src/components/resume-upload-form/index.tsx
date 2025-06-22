@@ -1,3 +1,4 @@
+// src/components/resume-upload-form/index.tsx
 'use client';
 import React, { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -29,24 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-interface ModalState {
-  isOpen: boolean;
-  title: string;
-  description: React.ReactNode;
-  onConfirmAction: (() => Promise<void>) | null;
-  confirmText: string;
-  confirmVariant: 'default' | 'destructive';
-}
-
-const defaultModalState: ModalState = {
-  isOpen: false,
-  title: '',
-  description: '',
-  onConfirmAction: null,
-  confirmText: 'Confirm',
-  confirmVariant: 'default',
-};
+import type { ModalState } from './_lib/interfaces';
+import { defaultModalState } from './_lib/interfaces';
 
 export function ResumeUploadForm() {
   const { user, updateUserProfile } = useAuth();
@@ -167,14 +152,11 @@ export function ResumeUploadForm() {
         }
       }
 
-      // File handling for resumeUrl and resumeFileName will be managed by updateUserProfile logic.
-      // We only set resumeFileName if a file was processed, or a placeholder for pasted text.
       if (file) {
         profileUpdates.resumeFileName = file.name;
-        // Do not set resumeUrl here, it's handled by updateUserProfile's file upload logic
       } else if (pastedResume) {
         profileUpdates.resumeFileName = 'Pasted Resume Text';
-        profileUpdates.resumeUrl = undefined; // Ensure no old URL remains if pasting text
+        profileUpdates.resumeUrl = undefined;
       }
 
       if (!parsedData.errorMessage) {

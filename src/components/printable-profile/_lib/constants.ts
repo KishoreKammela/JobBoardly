@@ -1,0 +1,3 @@
+export const MAX_SUMMARY_LENGTH = 800;
+export const MAX_EXPERIENCE_DESC_LENGTH = 300;
+export const MAX_EDUCATION_DESC_LENGTH = 250;

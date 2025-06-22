@@ -1,6 +1,7 @@
+// src/app/profile/page.tsx
 'use client';
-import { UserProfileForm } from '@/components/UserProfileForm';
-import { ResumeUploadForm } from '@/components/ResumeUploadForm';
+import { UserProfileForm } from '@/components/user-profile-form';
+import { ResumeUploadForm } from '@/components/resume-upload-form';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, Download, Eye, AlertTriangle } from 'lucide-react';
@@ -8,7 +9,7 @@ import React, { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
-import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import { PrintableProfile } from '@/components/printable-profile';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
@@ -163,7 +164,7 @@ export default function ProfilePage() {
 
       {user.role === 'jobSeeker' && (
         <div style={{ display: 'none' }}>
-          <PrintableProfileComponent ref={printableProfileRef} user={user} />
+          <PrintableProfile ref={printableProfileRef} user={user} />
         </div>
       )}
     </div>

@@ -1,8 +1,9 @@
+// src/app/jobs/page.tsx
 'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { JobCard } from '@/components/JobCard';
-import { FilterSidebar } from '@/components/FilterSidebar';
+import { FilterSidebar } from '@/components/filter-sidebar';
 import type { Job, Filters } from '@/types';
 import { Button } from '@/components/ui/button';
 import {

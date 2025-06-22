@@ -1,4 +1,4 @@
-// src/components/company/CompanyDetailClientPage.tsx
+// src/components/company/company-detail-client-page/index.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, UserProfile, Job, UserRole } from '@/types';
+import type { Company, UserProfile, Job } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -40,20 +40,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { ADMIN_LIKE_ROLES_COMPANY_PAGE } from './_lib/constants';
 
 type Props = {
   companyId?: string;
 };
-
-const ADMIN_LIKE_ROLES_COMPANY_PAGE: UserRole[] = [
-  'admin',
-  'superAdmin',
-  'moderator',
-  'supportAgent',
-  'dataAnalyst',
-  'complianceOfficer',
-  'systemMonitor',
-];
 
 export default function CompanyDetailClientPage({ companyId }: Props) {
   const companyIdFromProps = companyId;
@@ -152,7 +143,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
         if (user.role === 'jobSeeker') router.replace('/companies');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
-        else if (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role as UserRole))
+        else if (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role))
           router.replace('/admin');
         else router.replace('/');
       } else {

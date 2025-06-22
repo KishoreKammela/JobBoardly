@@ -1,3 +1,4 @@
+// src/app/admin/page.tsx
 'use client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -16,13 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import type {
-  Company,
-  Job,
-  LegalDocument,
-  UserProfile,
-  UserRole,
-} from '@/types';
+import type { Company, LegalDocument, UserProfile, UserRole } from '@/types';
 import {
   collection,
   doc,
@@ -41,19 +36,19 @@ import { AlertCircle, Cpu, Gavel, Loader2, ShieldCheck } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import AdminAiFeatures from '@/components/admin/AdminAiFeatures';
-import AdminCompaniesTable from '@/components/admin/AdminCompaniesTable';
 import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
-import AdminJobSeekersTable from '@/components/admin/AdminJobSeekersTable';
-import AdminJobsTable from '@/components/admin/AdminJobsTable';
 import AdminLegalEditor from '@/components/admin/AdminLegalEditor';
-import AdminPlatformUsersTable from '@/components/admin/AdminPlatformUsersTable';
+import { AdminCompaniesTable } from '@/components/admin/admin-companies-table';
+import { AdminJobSeekersTable } from '@/components/admin/admin-job-seekers-table';
+import { AdminJobsTable } from '@/components/admin/admin-jobs-table';
+import { AdminPlatformUsersTable } from '@/components/admin/admin-platform-users-table';
 import { ADMIN_LIKE_ROLES } from './_lib/constants';
-import {
-  initialModalState,
-  type JobWithApplicantCount,
-  type ModalState,
-  type PlatformStats,
+import type {
+  JobWithApplicantCount,
+  ModalState,
+  PlatformStats,
 } from './_lib/interfaces';
+import { initialModalState } from './_lib/interfaces';
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -61,7 +56,7 @@ export default function AdminPage() {
   const pathname = usePathname();
   const { toast } = useToast();
 
-  const [pendingJobs, setPendingJobs] = useState<Job[]>([]);
+  const [pendingJobs, setPendingJobs] = useState<JobWithApplicantCount[]>([]);
   const [pendingCompanies, setPendingCompanies] = useState<Company[]>([]);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
   const [allJobSeekers, setAllJobSeekers] = useState<UserProfile[]>([]);
@@ -173,7 +168,7 @@ export default function AdminPage() {
             ...data,
             id: d.id,
             createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-          } as Job;
+          } as JobWithApplicantCount;
         })
       );
       setIsPendingJobsLoading(false);
@@ -285,18 +280,16 @@ export default function AdminPage() {
           const job = {
             ...jobData,
             id: jobDoc.id,
-          } as Job;
+          } as JobWithApplicantCount;
           const appCountQuery = query(
             collection(db, 'applications'),
             where('jobId', '==', job.id)
           );
           const applicantCountSnap = await getCountFromServer(appCountQuery);
-          return {
-            ...job,
-            applicantCount: applicantCountSnap.data().count,
-            createdAt: (job.createdAt as Timestamp)?.toDate().toISOString(),
-            updatedAt: (job.updatedAt as Timestamp)?.toDate().toISOString(),
-          } as JobWithApplicantCount;
+          job.applicantCount = applicantCountSnap.data().count;
+          job.createdAt = (job.createdAt as Timestamp)?.toDate().toISOString();
+          job.updatedAt = (job.updatedAt as Timestamp)?.toDate().toISOString();
+          return job;
         })
       );
       setAllJobs(jobsData);
@@ -390,7 +383,7 @@ export default function AdminPage() {
     }
     if (
       (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') &&
-      newStatus !== 'pending' // Assuming they can't change from pending either.
+      newStatus !== 'pending'
     ) {
       toast({
         title: 'Permission Denied',
@@ -475,7 +468,7 @@ export default function AdminPage() {
 
     let finalStatus: Company['status'] = intendedStatus;
     if (intendedStatus === 'active') {
-      finalStatus = 'approved'; // 'active' intent means 'approved' for public visibility
+      finalStatus = 'approved';
     }
 
     try {
@@ -750,7 +743,7 @@ export default function AdminPage() {
   const showPlatformUsersTab =
     user?.role === 'admin' ||
     user?.role === 'superAdmin' ||
-    user?.role === 'dataAnalyst'; // Moderators cannot manage other platform users
+    user?.role === 'dataAnalyst';
   const showLegalContentTab = user?.role === 'superAdmin';
 
   const tabsConfig = [
