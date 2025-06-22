@@ -55,20 +55,16 @@ export default function EmployerLoginPage() {
     }
   }, [user, authLoading, router, searchParams]);
 
-  const handleLoginSuccess = (userName: string) => {
-    toast({
-      title: 'Login Successful',
-      description: `Welcome back, ${userName}! Redirecting...`,
-    });
-    setLoginSuccess(true);
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const userProfile = await loginUser(email, password);
-      handleLoginSuccess(userProfile.name);
+      toast({
+        title: 'Login Successful',
+        description: `Welcome back, ${userProfile.name}! Redirecting...`,
+      });
+      setLoginSuccess(true);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error('Login error:', firebaseError.message);
@@ -101,8 +97,11 @@ export default function EmployerLoginPage() {
       else return;
 
       const userProfile = await signInWithSocial(authProvider, 'employer');
-      handleLoginSuccess(userProfile.name);
-      // Redirection is handled by the useEffect hook
+      toast({
+        title: 'Login Successful',
+        description: `Welcome back, ${userProfile.name}! Redirecting...`,
+      });
+      setLoginSuccess(true);
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
