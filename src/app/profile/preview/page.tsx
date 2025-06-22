@@ -1,6 +1,7 @@
+// src/app/profile/preview/page.tsx
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext'; // Corrected import
 import type {
   UserProfile,
   ExperienceEntry,
@@ -51,7 +52,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePreviewPage() {
-  const { user: currentUser, loading: authLoading } = useAuth();
+  const { user: currentUser, loading: authLoading } = useUserProfile(); // Corrected hook
   const router = useRouter();
   const { toast } = useToast();
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
