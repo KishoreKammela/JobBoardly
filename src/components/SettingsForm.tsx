@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
-import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import {
@@ -57,7 +57,7 @@ const defaultModalState: ModalState = {
 };
 
 export function SettingsForm() {
-  const { user, updateUserProfile, loading: authLoading } = useAuth();
+  const { user, updateUserProfile, loading: authLoading } = useUserProfile();
   const [settings, setSettings] = useState<Partial<UserProfile>>({
     theme: 'system',
     jobBoardDisplay: 'list',
@@ -222,23 +222,6 @@ export function SettingsForm() {
     }
   };
 
-  // const showConfirmationModal = (
-  //   title: string,
-  //   description: React.ReactNode,
-  //   action: () => Promise<void>,
-  //   confirmText = 'Confirm',
-  //   confirmVariant: 'default' | 'destructive' = 'default'
-  // ) => {
-  //   setModalState({
-  //     isOpen: true,
-  //     title,
-  //     description,
-  //     onConfirmAction: action,
-  //     confirmText,
-  //     confirmVariant,
-  //   });
-  // };
-
   const executeConfirmedAction = async () => {
     if (modalState.onConfirmAction) {
       setIsModalActionLoading(true);
@@ -257,49 +240,6 @@ export function SettingsForm() {
       }
     }
   };
-
-  // const performDeleteSearch = async (searchId: string) => {
-  //   if (!user || user.role !== 'jobSeeker') return;
-  //   if (user.status === 'suspended') {
-  //     toast({
-  //       title: 'Account Suspended',
-  //       description: 'Cannot delete searches while account is suspended.',
-  //       variant: 'destructive',
-  //     });
-  //     return;
-  //   }
-  //   try {
-  //     await deleteSearch(searchId);
-  //     toast({
-  //       title: 'Search Deleted',
-  //       description: 'The saved search has been removed.',
-  //     });
-  //   } catch (error: unknown) {
-  //     toast({
-  //       title: 'Error',
-  //       description: 'Could not delete the search. Please try again.',
-  //       variant: 'destructive',
-  //     });
-  //   }
-  // };
-
-  // const handleDeleteSearch = (searchId: string, searchName: string) => {
-  //   if (user?.status === 'suspended' && user.role === 'jobSeeker') {
-  //     toast({
-  //       title: 'Account Suspended',
-  //       description: 'Cannot delete searches while account is suspended.',
-  //       variant: 'destructive',
-  //     });
-  //     return;
-  //   }
-  //   showConfirmationModal(
-  //     `Delete Saved Search "${searchName}"?`,
-  //     'Are you sure you want to delete this saved search? This action cannot be undone.',
-  //     () => performDeleteSearch(searchId),
-  //     'Delete Search',
-  //     'destructive'
-  //   );
-  // };
 
   if (authLoading || !user) {
     return (
