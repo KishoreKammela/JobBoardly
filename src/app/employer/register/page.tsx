@@ -1,5 +1,5 @@
 'use client';
-import { EmployerRegisterForm } from '@/components/employer/employer-register-form';
+import { EmployerRegisterForm } from '@/components/employer/EmployerRegisterForm';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';

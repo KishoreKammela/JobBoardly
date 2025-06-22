@@ -1,5 +1,5 @@
 'use client';
-import { PostJobForm } from '@/components/employer/post-job-form';
+import { PostJobForm } from '@/components/employer/PostJobForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';

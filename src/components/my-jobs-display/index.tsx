@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import type { Job } from '@/types';
-import { JobCard } from '@/components/job-card';
+import { JobCard } from '@/components/JobCard';
 import { AlertCircle, Loader2, Search } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

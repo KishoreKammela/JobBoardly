@@ -1,6 +1,6 @@
 // src/app/profile/page.tsx
 'use client';
-import { UserProfileForm } from '@/components/user-profile-form';
+import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/resume-upload-form';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';

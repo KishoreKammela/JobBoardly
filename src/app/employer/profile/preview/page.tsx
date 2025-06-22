@@ -26,7 +26,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { JobCard } from '@/components/job-card';
+import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
