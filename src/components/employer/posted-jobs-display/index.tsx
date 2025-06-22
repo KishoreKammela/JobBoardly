@@ -24,16 +24,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  Timestamp,
-  orderBy,
-  getCountFromServer,
-} from 'firebase/firestore';
+import { getJobsByPosterId } from '@/services/job.services';
 
 interface JobWithApplicantCount extends Job {
   applicantCount: number;
@@ -55,51 +46,7 @@ export function PostedJobsDisplay() {
       setIsLoading(true);
       setError(null);
       try {
-        const jobsCollectionRef = collection(db, 'jobs');
-        const q = query(
-          jobsCollectionRef,
-          where('postedById', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-
-        const jobsDataPromises = querySnapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          let applicantCount = 0;
-          try {
-            const applicationsQuery = query(
-              collection(db, 'applications'),
-              where('jobId', '==', doc.id)
-            );
-            const snapshot = await getCountFromServer(applicationsQuery);
-            applicantCount = snapshot.data().count;
-          } catch (countError) {
-            console.error(
-              `Error fetching applicant count for job ${doc.id}:`,
-              countError
-            );
-          }
-
-          return {
-            id: doc.id,
-            ...data,
-            postedDate:
-              data.postedDate instanceof Timestamp
-                ? data.postedDate.toDate().toISOString().split('T')[0]
-                : data.postedDate,
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
-                : data.createdAt,
-            updatedAt:
-              data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate().toISOString()
-                : data.updatedAt,
-            applicantCount: applicantCount,
-          } as JobWithApplicantCount;
-        });
-
-        const jobsData = await Promise.all(jobsDataPromises);
+        const jobsData = await getJobsByPosterId(user.uid);
         setPostedJobs(jobsData);
       } catch (e: unknown) {
         console.error('Error fetching posted jobs:', e);
@@ -188,11 +135,7 @@ export function PostedJobsDisplay() {
                 <CardDescription>
                   Posted:{' '}
                   {job.postedDate
-                    ? typeof job.postedDate === 'string'
-                      ? job.postedDate.split('T')[0]
-                      : (job.postedDate as Timestamp)
-                          .toDate()
-                          .toLocaleDateString()
+                    ? new Date(job.postedDate as string).toLocaleDateString()
                     : 'N/A'}{' '}
                   - {job.location} ({job.type})
                   <Badge

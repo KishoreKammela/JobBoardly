@@ -1,14 +1,5 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query as firestoreQuery,
-  Timestamp,
-  where,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Company } from '@/types';
 import Link from 'next/link';
 import {
@@ -26,8 +17,9 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
 import { COMPANIES_PER_PAGE } from './_lib/constants';
+import { fetchCompanies } from './_lib/actions';
 
-// Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
+// Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server wrapper).
 // For a page like this which is client-rendered, the root layout.tsx's metadata or a specific server wrapper would set the primary metadata.
 // We can add dynamic title updates via useEffect if needed.
 
@@ -44,44 +36,12 @@ export default function CompaniesListPage() {
   }, []);
 
   useEffect(() => {
-    const fetchCompanies = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const companiesCollectionRef = collection(db, 'companies');
-        const q = firestoreQuery(
-          companiesCollectionRef,
-          where('status', '==', 'approved'),
-          orderBy('name', 'asc')
-        );
-        const querySnapshot = await getDocs(q);
-        const companiesData = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
-                : data.createdAt,
-            updatedAt:
-              data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate().toISOString()
-                : data.updatedAt,
-          } as Company;
-        });
-        setAllCompanies(companiesData);
-        setFilteredCompanies(companiesData);
-      } catch (e: unknown) {
-        console.error('Error fetching companies:', e);
-        setError(
-          `Failed to load companies. Please try again later. Error: ${(e as Error).message}`
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchCompanies();
+    fetchCompanies(
+      setAllCompanies,
+      setFilteredCompanies,
+      setError,
+      setIsLoading
+    );
   }, []);
 
   useEffect(() => {

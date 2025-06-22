@@ -2,11 +2,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import type { LegalDocument } from '@/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Gavel } from 'lucide-react';
+import { getLegalDocument } from '@/services/legal.services';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - How JobBoardly Protects Your Data',
@@ -29,34 +27,6 @@ export const metadata: Metadata = {
     follow: true,
   },
 };
-
-async function getLegalDocument(docId: string): Promise<LegalDocument | null> {
-  if (!db) {
-    console.warn(
-      `Firestore 'db' instance not available. Cannot fetch legal document: ${docId}`
-    );
-    return null;
-  }
-  try {
-    const docRef = doc(db, 'legalContent', docId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return {
-        id: docSnap.id,
-        content: data.content || '',
-        lastUpdated:
-          data.lastUpdated instanceof Timestamp
-            ? data.lastUpdated.toDate().toISOString()
-            : new Date().toISOString(),
-      } as LegalDocument;
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error fetching legal document ${docId}:`, error);
-    return null;
-  }
-}
 
 export default async function PrivacyPolicyPage() {
   const legalDoc = await getLegalDocument('privacyPolicy');

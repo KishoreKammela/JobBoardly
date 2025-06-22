@@ -115,7 +115,10 @@ export const getJobsByIds = async (
   for (let i = 0; i < jobIds.length; i += batchSize) {
     const batchIds = jobIds.slice(i, i + batchSize);
     if (batchIds.length > 0) {
-      const q = query(collection(db, 'jobs'), where(doc.name, 'in', batchIds));
+      const q = query(
+        collection(db, 'jobs'),
+        where(doc(db, 'jobs', 'dummy').id, 'in', batchIds)
+      );
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((docSnap) => {
         if (docSnap.exists()) {
