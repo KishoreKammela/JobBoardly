@@ -20,21 +20,16 @@ import {
   Loader2,
   UserPlus,
   Building,
-  Github,
-  Shell,
-  Chrome,
   CheckCircle,
   XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
-import {
-  googleProvider,
-  githubProvider,
-  microsoftProvider,
-} from '@/lib/firebase';
-import { Separator } from '@/components/ui/separator';
 import { checkPasswordStrength, type PasswordStrength } from '@/lib/utils';
 import { ADMIN_LIKE_ROLES } from '@/lib/constants';
+import type { RecruiterInvitation } from '@/types';
+import { getInvitationDetails } from '@/services/company.services';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function EmployerRegisterPage() {
   const [recruiterName, setRecruiterName] = useState('');
@@ -42,13 +37,8 @@ export default function EmployerRegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
-  const {
-    user,
-    loading: authLoading,
-    registerUser,
-    signInWithSocial,
-  } = useAuth();
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const { user, loading: authLoading, registerUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -56,9 +46,36 @@ export default function EmployerRegisterPage() {
     checkPasswordStrength('')
   );
 
+  const invitationId = searchParams.get('invitation');
+  const [invitation, setInvitation] = useState<RecruiterInvitation | null>(
+    null
+  );
+  const [invitationLoading, setInvitationLoading] = useState(!!invitationId);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+
   useEffect(() => {
     document.title = 'Employer Registration - Join JobBoardly | JobBoardly';
-  }, []);
+    if (invitationId) {
+      setInvitationLoading(true);
+      getInvitationDetails(invitationId)
+        .then((inv) => {
+          if (inv && inv.status === 'pending') {
+            setInvitation(inv);
+            setCompanyName(inv.companyName);
+            setRecruiterName(inv.recruiterName);
+            setEmail(inv.recruiterEmail);
+          } else if (inv) {
+            setInvitationError(
+              'This invitation has already been accepted or is invalid.'
+            );
+          } else {
+            setInvitationError('Invalid invitation link.');
+          }
+        })
+        .catch(() => setInvitationError('Failed to verify invitation link.'))
+        .finally(() => setInvitationLoading(false));
+    }
+  }, [invitationId]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -88,13 +105,22 @@ export default function EmployerRegisterPage() {
   const handleRegisterSuccess = (recName: string, compName: string) => {
     toast({
       title: 'Registration Successful',
-      description: `Welcome, ${recName || 'Recruiter'} from ${compName || 'your company'}! Your company profile is pending admin approval.`,
+      description: `Welcome, ${recName || 'Recruiter'} from ${compName || 'your company'}! ${invitationId ? 'You have successfully joined the team.' : 'Your company profile is pending admin approval.'}`,
     });
+    setRegistrationSuccess(true);
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!companyName.trim()) {
+    if (invitationId && invitationError) {
+      toast({
+        title: 'Invalid Invitation',
+        description: invitationError,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (!invitationId && !companyName.trim()) {
       toast({
         title: 'Company Name Required',
         description: 'Please enter the name of your company.',
@@ -117,7 +143,8 @@ export default function EmployerRegisterPage() {
         password,
         recruiterName,
         'employer',
-        companyName
+        companyName,
+        invitationId || undefined
       );
       handleRegisterSuccess(recruiterName, companyName);
     } catch (error: unknown) {
@@ -135,52 +162,33 @@ export default function EmployerRegisterPage() {
         description: friendlyMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const handleSocialSignUp = async (
-    providerName: 'google' | 'github' | 'microsoft'
-  ) => {
-    if (!companyName.trim() && providerName) {
-      toast({
-        title: 'Company Name Required',
-        description:
-          'Please enter the company name before signing up with a social provider for a new company.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsSocialLoading(providerName);
-    try {
-      let authProvider;
-      if (providerName === 'google') authProvider = googleProvider;
-      else if (providerName === 'github') authProvider = githubProvider;
-      else if (providerName === 'microsoft') authProvider = microsoftProvider;
-      else return;
-
-      const userProfile = await signInWithSocial(
-        authProvider,
-        'employer',
-        companyName
-      );
-      handleRegisterSuccess(userProfile.name, companyName);
-    } catch (error: unknown) {
-      const firebaseError = error as FirebaseError;
-      console.error(`${providerName} sign up error:`, firebaseError);
-      toast({
-        title: 'Social Sign Up Failed',
-        description: `Could not sign up with ${providerName}. ${firebaseError.message}`,
-        variant: 'destructive',
-      });
-    }
-    setIsSocialLoading(null);
-  };
-
-  if (authLoading) {
+  if (authLoading || invitationLoading || registrationSuccess) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-2">
+          {invitationLoading
+            ? 'Verifying invitation...'
+            : registrationSuccess
+              ? 'Registration complete. Redirecting...'
+              : 'Loading...'}
+        </p>
+      </div>
+    );
+  }
+
+  if (invitationError) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Invitation Error</AlertTitle>
+          <AlertDescription>{invitationError}</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -191,10 +199,13 @@ export default function EmployerRegisterPage() {
       <Card className="w-full max-w-lg shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline flex items-center justify-center gap-2">
-            <Building className="h-6 w-6" /> Register Your Company
+            <Building className="h-6 w-6" />{' '}
+            {invitationId ? 'Join Your Team' : 'Register Your Company'}
           </CardTitle>
           <CardDescription>
-            Join JobBoardly to find the best talent for your team.
+            {invitationId
+              ? `You've been invited to join ${companyName} on JobBoardly. Set your password to get started.`
+              : 'Join JobBoardly to find the best talent for your team.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -208,11 +219,13 @@ export default function EmployerRegisterPage() {
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 required
+                disabled={!!invitationId}
+                className={invitationId ? 'bg-muted/50' : ''}
                 aria-label="Company name for registration"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="recruiterName">Your Full Name (Recruiter)</Label>
+              <Label htmlFor="recruiterName">Your Full Name</Label>
               <Input
                 id="recruiterName"
                 type="text"
@@ -220,6 +233,8 @@ export default function EmployerRegisterPage() {
                 value={recruiterName}
                 onChange={(e) => setRecruiterName(e.target.value)}
                 required
+                disabled={!!invitationId}
+                className={invitationId ? 'bg-muted/50' : ''}
                 aria-label="Recruiter's full name"
               />
             </div>
@@ -232,6 +247,8 @@ export default function EmployerRegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={!!invitationId}
+                className={invitationId ? 'bg-muted/50' : ''}
                 aria-label="Your email address for registration"
               />
             </div>
@@ -265,62 +282,18 @@ export default function EmployerRegisterPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !!isSocialLoading}
+              disabled={isLoading || invitationLoading}
             >
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <UserPlus className="mr-2 h-4 w-4" />
               )}
-              Register Company & Account
+              {invitationId
+                ? 'Create Your Account'
+                : 'Register Company & Account'}
             </Button>
           </form>
-          <Separator className="my-6" />
-          <p className="text-sm text-center text-muted-foreground mb-3">
-            Or sign up with your company account (ensure Company Name above is
-            filled if new):
-          </p>
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleSocialSignUp('google')}
-              disabled={isLoading || !!isSocialLoading}
-            >
-              {isSocialLoading === 'google' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Chrome className="mr-2 h-4 w-4" />
-              )}{' '}
-              Sign up with Google
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleSocialSignUp('github')}
-              disabled={isLoading || !!isSocialLoading}
-            >
-              {isSocialLoading === 'github' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Github className="mr-2 h-4 w-4" />
-              )}{' '}
-              Sign up with GitHub
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleSocialSignUp('microsoft')}
-              disabled={isLoading || !!isSocialLoading}
-            >
-              {isSocialLoading === 'microsoft' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Shell className="mr-2 h-4 w-4" />
-              )}{' '}
-              Sign up with Microsoft
-            </Button>
-          </div>
         </CardContent>
         <CardFooter className="text-sm flex flex-col items-center space-y-2">
           <p className="w-full text-center">

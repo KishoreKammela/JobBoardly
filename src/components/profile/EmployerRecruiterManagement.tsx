@@ -1,7 +1,7 @@
 // src/components/profile/EmployerRecruiterManagement.tsx
 'use client';
-import React, { useState } from 'react';
-import type { Company, UserProfile } from '@/types';
+import React, { useState, useEffect } from 'react';
+import type { Company, RecruiterInvitation, UserProfile } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +21,14 @@ import {
   Shield,
   Loader2,
   AlertTriangle,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { inviteRecruiterToCompany } from '@/services/company.services';
+import {
+  createRecruiterInvitation,
+  getCompanyInvitations,
+} from '@/services/company.services';
 import { useCompany } from '@/contexts/Company/CompanyContext';
 
 interface EmployerRecruiterManagementProps {
@@ -39,16 +44,21 @@ export function EmployerRecruiterManagement({
 }: EmployerRecruiterManagementProps) {
   const { toast } = useToast();
   const { recruiters, loading: companyLoading } = useCompany();
+  const [invitations, setInvitations] = useState<RecruiterInvitation[]>([]);
   const [newRecruiterName, setNewRecruiterName] = useState('');
   const [newRecruiterEmail, setNewRecruiterEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  if (!company) {
-    return null;
-  }
+  useEffect(() => {
+    if (company) {
+      getCompanyInvitations(company.id).then(setInvitations);
+    }
+  }, [company]);
 
   const handleInviteRecruiter = async () => {
-    if (isInviting || isDisabled) return;
+    if (isInviting || isDisabled || !company) return;
 
     if (!newRecruiterName.trim() || !newRecruiterEmail.trim()) {
       toast({
@@ -70,8 +80,10 @@ export function EmployerRecruiterManagement({
     }
 
     if (
-      (company.invitations || []).some(
-        (inv) => inv.email === newRecruiterEmail && inv.status === 'pending'
+      invitations.some(
+        (inv) =>
+          inv.recruiterEmail === newRecruiterEmail.toLowerCase() &&
+          inv.status === 'pending'
       )
     ) {
       toast({
@@ -84,23 +96,29 @@ export function EmployerRecruiterManagement({
     }
 
     setIsInviting(true);
+    setGeneratedLink(null);
     try {
-      await inviteRecruiterToCompany(
+      const invitationId = await createRecruiterInvitation(
         company.id,
+        company.name,
         newRecruiterName,
         newRecruiterEmail
       );
+      const link = `${window.location.origin}/employer/register?invitation=${invitationId}`;
+      setGeneratedLink(link);
       toast({
-        title: 'Invitation Sent!',
-        description: `${newRecruiterName} has been invited to join your company. They will need to register with the email ${newRecruiterEmail}.`,
+        title: 'Invitation Link Generated!',
+        description: 'Share this link with the new recruiter to join.',
       });
+      // Refetch invitations to update the list
+      getCompanyInvitations(company.id).then(setInvitations);
       setNewRecruiterName('');
       setNewRecruiterEmail('');
     } catch (error) {
       console.error('Error inviting recruiter:', error);
       toast({
         title: 'Invitation Failed',
-        description: 'Could not send the invitation. Please try again.',
+        description: 'Could not create the invitation link. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -108,7 +126,33 @@ export function EmployerRecruiterManagement({
     }
   };
 
+  const copyToClipboard = () => {
+    if (generatedLink) {
+      navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const getAvatarFallback = (name: string) => name?.[0]?.toUpperCase() || 'R';
+
+  if (!company) {
+    return (
+      <Card className="w-full shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline flex items-center gap-2">
+            <Users /> Manage Recruiters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="animate-spin h-4 w-4" />
+            <span>Loading company details...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full shadow-lg">
@@ -150,7 +194,7 @@ export function EmployerRecruiterManagement({
                     <div>
                       <p className="font-medium flex items-center gap-1.5">
                         {recruiter.name || 'N/A'}
-                        {company.adminUids.includes(recruiter.uid) && (
+                        {company?.adminUids.includes(recruiter.uid) && (
                           <Shield
                             className="h-4 w-4 text-primary"
                             title="Company Admin"
@@ -172,26 +216,32 @@ export function EmployerRecruiterManagement({
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-3">Pending Invitations</h3>
-            {(company.invitations || []).filter((i) => i.status === 'pending')
-              .length > 0 ? (
+            <h3 className="text-lg font-semibold mb-3">Invitations</h3>
+            {invitations.length > 0 ? (
               <div className="space-y-2">
-                {(company.invitations || [])
-                  .filter((i) => i.status === 'pending')
-                  .map((inv) => (
-                    <div
-                      key={inv.email}
-                      className="flex items-center gap-3 p-2 border border-dashed rounded-md bg-muted/30"
-                    >
-                      <Mail className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{inv.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {inv.email}
-                        </p>
-                      </div>
+                {invitations.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center gap-3 p-2 border border-dashed rounded-md bg-muted/30"
+                  >
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{inv.recruiterName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {inv.recruiterEmail} -{' '}
+                        <span
+                          className={
+                            inv.status === 'pending'
+                              ? 'text-yellow-600'
+                              : 'text-green-600'
+                          }
+                        >
+                          {inv.status}
+                        </span>
+                      </p>
                     </div>
-                  ))}
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
@@ -243,12 +293,35 @@ export function EmployerRecruiterManagement({
                   ) : (
                     <UserPlus className="mr-2 h-4 w-4" />
                   )}
-                  Send Invitation
+                  Generate Invitation Link
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  The new recruiter will need to sign up using this exact email
-                  address to join your company.
-                </p>
+
+                {generatedLink && (
+                  <div className="p-3 border rounded-md bg-green-50 border-green-200 space-y-2">
+                    <Label>Share this link with the new recruiter:</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        readOnly
+                        value={generatedLink}
+                        className="bg-white"
+                      />
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        type="button"
+                        onClick={copyToClipboard}
+                        aria-label="Copy invitation link"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           ) : (

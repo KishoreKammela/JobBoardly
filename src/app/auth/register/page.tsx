@@ -41,6 +41,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const {
     user,
     loading: authLoading,
@@ -84,6 +85,7 @@ export default function RegisterPage() {
       title: 'Registration Successful',
       description: `Welcome to JobBoardly, ${userName}! Complete your profile to get started.`,
     });
+    setRegistrationSuccess(true);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -120,8 +122,8 @@ export default function RegisterPage() {
         description: friendlyMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSocialSignUp = async (
@@ -145,14 +147,19 @@ export default function RegisterPage() {
         description: `Could not sign up with ${providerName}. ${firebaseError.message}`,
         variant: 'destructive',
       });
+      setIsSocialLoading(null);
     }
-    setIsSocialLoading(null);
   };
 
-  if (authLoading) {
+  if (authLoading || registrationSuccess) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="ml-2">
+          {registrationSuccess
+            ? 'Registration complete. Redirecting...'
+            : 'Loading...'}
+        </p>
       </div>
     );
   }

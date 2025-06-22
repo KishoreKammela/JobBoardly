@@ -38,7 +38,8 @@ interface AuthContextType {
     pass: string,
     name: string,
     role: UserRole,
-    companyName?: string
+    companyName?: string,
+    invitationId?: string
   ) => Promise<UserProfile>;
   loginUser: (email: string, pass: string) => Promise<UserProfile>;
   signInWithSocial: (
@@ -110,7 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     pass: string,
     name: string,
     role: UserRole,
-    companyName?: string
+    companyName?: string,
+    invitationId?: string
   ): Promise<UserProfile> => {
     if (!auth) throw new Error('Firebase Authentication is not configured.');
     const userCredential = await createUserWithEmailAndPassword(
@@ -122,7 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       userCredential.user,
       name,
       role,
-      companyName
+      companyName,
+      invitationId
     );
     const fullProfile = {
       ...profile,

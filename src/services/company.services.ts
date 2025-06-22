@@ -11,13 +11,15 @@ import {
   Timestamp,
   updateDoc,
   where,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, UserProfile } from '@/types';
+import type { Company, RecruiterInvitation } from '@/types';
 
 export const getCompanyProfile = async (
   companyId: string
 ): Promise<Company | null> => {
+  if (!db) return null;
   const companyDocRef = doc(db, 'companies', companyId);
   const companyDocSnap = await getDoc(companyDocRef);
   if (companyDocSnap.exists()) {
@@ -39,6 +41,7 @@ export const getCompanyProfile = async (
 };
 
 export const getApprovedCompanies = async (): Promise<Company[]> => {
+  if (!db) return [];
   const companiesCollectionRef = collection(db, 'companies');
   const q = query(
     companiesCollectionRef,
@@ -79,7 +82,7 @@ export const updateCompanyProfileAndSetPending = async (
 export const getCompanyRecruiters = async (
   recruiterUids: string[]
 ): Promise<UserProfile[]> => {
-  if (recruiterUids.length === 0) return [];
+  if (!db || recruiterUids.length === 0) return [];
   const recruitersQueryLimit = 30;
   const fetchedRecruiters: UserProfile[] = [];
   for (let i = 0; i < recruiterUids.length; i += recruitersQueryLimit) {
@@ -98,20 +101,65 @@ export const getCompanyRecruiters = async (
   return fetchedRecruiters;
 };
 
-export const inviteRecruiterToCompany = async (
+export const createRecruiterInvitation = async (
   companyId: string,
+  companyName: string,
   recruiterName: string,
   recruiterEmail: string
-) => {
+): Promise<string> => {
   if (!db) throw new Error('Firestore db instance not available.');
-  const companyRef = doc(db, 'companies', companyId);
+  const invitationsRef = collection(db, 'invitations');
   const newInvitation = {
-    email: recruiterEmail,
-    name: recruiterName,
+    companyId,
+    companyName,
+    recruiterEmail: recruiterEmail.toLowerCase(),
+    recruiterName,
     status: 'pending' as const,
+    createdAt: serverTimestamp(),
   };
-  await updateDoc(companyRef, {
-    invitations: arrayUnion(newInvitation),
-    pendingInvitationEmails: arrayUnion(recruiterEmail.toLowerCase()),
+  const docRef = await addDoc(invitationsRef, newInvitation);
+  return docRef.id;
+};
+
+export const getInvitationDetails = async (
+  invitationId: string
+): Promise<RecruiterInvitation | null> => {
+  if (!db) return null;
+  const invitationRef = doc(db, 'invitations', invitationId);
+  const invitationSnap = await getDoc(invitationRef);
+  if (invitationSnap.exists()) {
+    const data = invitationSnap.data();
+    return {
+      id: invitationSnap.id,
+      ...data,
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+    } as RecruiterInvitation;
+  }
+  return null;
+};
+
+export const getCompanyInvitations = async (
+  companyId: string
+): Promise<RecruiterInvitation[]> => {
+  if (!db) return [];
+  const invitationsQuery = query(
+    collection(db, 'invitations'),
+    where('companyId', '==', companyId),
+    orderBy('createdAt', 'desc')
+  );
+  const invitationsSnap = await getDocs(invitationsQuery);
+  return invitationsSnap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+    } as RecruiterInvitation;
   });
 };
