@@ -1,13 +1,6 @@
 // src/app/admin/_lib/actions.ts
 import {
-  getAllCompaniesForAdmin,
-  getAllJobsForAdmin,
-  getAllJobSeekersForAdmin,
-  getAllPlatformUsersForAdmin,
   getLegalDocumentContent,
-  getPendingCompanies,
-  getPendingJobs,
-  getPlatformStats,
   saveLegalDocumentInDb,
   updateCompanyStatusInDb,
   updateJobStatusInDb,
@@ -16,62 +9,8 @@ import {
 import { toast } from '@/hooks/use-toast';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Company, Job, UserProfile } from '@/types';
-import type { PlatformStats } from './interfaces';
 
 type JobWithApplicantCount = Job & { applicantCount: number };
-
-export const fetchDataForAdminPage = async (
-  setPlatformStats: Dispatch<SetStateAction<PlatformStats | null>>,
-  setPendingJobs: Dispatch<SetStateAction<JobWithApplicantCount[]>>,
-  setPendingCompanies: Dispatch<SetStateAction<Company[]>>,
-  setAllCompanies: Dispatch<SetStateAction<Company[]>>,
-  setAllJobSeekers: Dispatch<SetStateAction<UserProfile[]>>,
-  setAllPlatformUsers: Dispatch<SetStateAction<UserProfile[]>>,
-  setAllJobs: Dispatch<SetStateAction<JobWithApplicantCount[]>>,
-  setIsLoading: (section: string, value: boolean) => void
-) => {
-  try {
-    const [
-      stats,
-      pendingJobsData,
-      pendingCompaniesData,
-      allCompaniesData,
-      jobSeekersData,
-      platformUsersData,
-      allJobsData,
-    ] = await Promise.all([
-      getPlatformStats(),
-      getPendingJobs(),
-      getPendingCompanies(),
-      getAllCompaniesForAdmin(),
-      getAllJobSeekersForAdmin(),
-      getAllPlatformUsersForAdmin(),
-      getAllJobsForAdmin(),
-    ]);
-
-    setPlatformStats(stats);
-    setPendingJobs(pendingJobsData);
-    setPendingCompanies(pendingCompaniesData);
-    setAllCompanies(allCompaniesData);
-    setAllJobSeekers(jobSeekersData);
-    setAllPlatformUsers(platformUsersData);
-    setAllJobs(allJobsData);
-  } catch (error: unknown) {
-    console.error('Error fetching admin data:', error);
-    toast({
-      title: 'Error',
-      description: `Failed to load admin dashboard data. ${(error as Error).message}`,
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoading('stats', false);
-    setIsLoading('pendingJobs', false);
-    setIsLoading('pendingCompanies', false);
-    setIsLoading('allCompanies', false);
-    setIsLoading('users', false);
-    setIsLoading('allJobs', false);
-  }
-};
 
 export const fetchLegalContentForAdmin = async (
   setPrivacyPolicyContent: Dispatch<SetStateAction<string>>,

@@ -27,6 +27,15 @@ import { AdminCompaniesTable } from '@/components/admin/admin-companies-table';
 import { AdminJobSeekersTable } from '@/components/admin/admin-job-seekers-table';
 import { AdminJobsTable } from '@/components/admin/admin-jobs-table';
 import { AdminPlatformUsersTable } from '@/components/admin/admin-platform-users-table';
+import {
+  getAllCompaniesForAdmin,
+  getAllJobsForAdmin,
+  getAllJobSeekersForAdmin,
+  getAllPlatformUsersForAdmin,
+  getPendingCompanies,
+  getPendingJobs,
+  getPlatformStats,
+} from '@/services/admin.services';
 import { ADMIN_LIKE_ROLES } from './_lib/constants';
 import type {
   JobWithApplicantCount,
@@ -35,7 +44,6 @@ import type {
 } from './_lib/interfaces';
 import { initialModalState } from './_lib/interfaces';
 import {
-  fetchDataForAdminPage,
   fetchLegalContentForAdmin,
   handleCompanyStatusUpdateAction,
   handleJobStatusUpdateAction,
@@ -69,13 +77,6 @@ export default function AdminPage() {
     allJobs: true,
   });
 
-  const setIsLoading = (
-    section: keyof typeof loadingStates,
-    value: boolean
-  ) => {
-    setLoadingStates((prev) => ({ ...prev, [section]: value }));
-  };
-
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
   >(null);
@@ -106,16 +107,53 @@ export default function AdminPage() {
             : '/'
       );
     } else {
-      fetchDataForAdminPage(
-        setPlatformStats,
-        setPendingJobs,
-        setPendingCompanies,
-        setAllCompanies,
-        setAllJobSeekers,
-        setAllPlatformUsers,
-        setAllJobs,
-        setIsLoading
-      );
+      const loadAdminData = async () => {
+        try {
+          const [
+            stats,
+            pendingJobsData,
+            pendingCompaniesData,
+            allCompaniesData,
+            jobSeekersData,
+            platformUsersData,
+            allJobsData,
+          ] = await Promise.all([
+            getPlatformStats(),
+            getPendingJobs(),
+            getPendingCompanies(),
+            getAllCompaniesForAdmin(),
+            getAllJobSeekersForAdmin(),
+            getAllPlatformUsersForAdmin(),
+            getAllJobsForAdmin(),
+          ]);
+
+          setPlatformStats(stats);
+          setPendingJobs(pendingJobsData);
+          setPendingCompanies(pendingCompaniesData);
+          setAllCompanies(allCompaniesData);
+          setAllJobSeekers(jobSeekersData);
+          setAllPlatformUsers(platformUsersData);
+          setAllJobs(allJobsData);
+        } catch (error: unknown) {
+          console.error('Error fetching admin data:', error);
+          toast({
+            title: 'Error',
+            description: `Failed to load admin dashboard data. ${(error as Error).message}`,
+            variant: 'destructive',
+          });
+        } finally {
+          setLoadingStates({
+            stats: false,
+            pendingJobs: false,
+            pendingCompanies: false,
+            allCompanies: false,
+            users: false,
+            allJobs: false,
+          });
+        }
+      };
+
+      loadAdminData();
       if (user.role === 'superAdmin') {
         fetchLegalContentForAdmin(
           setPrivacyPolicyContent,
@@ -124,7 +162,7 @@ export default function AdminPage() {
         );
       }
     }
-  }, [user, loading, router, pathname, isLoggingOut]);
+  }, [user, loading, router, pathname, isLoggingOut, toast]);
 
   const showConfirmationModal = useCallback(
     (
