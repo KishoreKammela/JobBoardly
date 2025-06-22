@@ -48,14 +48,7 @@ import { PrintableProfileComponent } from '@/components/PrintableProfile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-
-const ADMIN_LIKE_ROLES_CANDIDATE_PAGE: UserRole[] = [
-  'admin',
-  'superAdmin',
-  'moderator',
-  'supportAgent',
-  'dataAnalyst',
-];
+import { ADMIN_LIKE_ROLES_CANDIDATE_PAGE } from './_lib/constants';
 
 export default function CandidateDetailPage() {
   const params = useParams();

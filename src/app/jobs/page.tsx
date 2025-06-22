@@ -32,8 +32,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-const JOBS_PER_PAGE = 9;
+import { JOBS_PER_PAGE } from './_lib/constants';
 
 export default function JobsPage() {
   const searchParams = useSearchParams();

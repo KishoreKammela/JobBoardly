@@ -25,12 +25,11 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
+import { COMPANIES_PER_PAGE } from './_lib/constants';
 
 // Note: Metadata for client components is typically handled by the nearest server component parent (e.g., layout.tsx or a specific server page.tsx).
 // For a page like this which is client-rendered, the root layout.tsx's metadata or a specific server wrapper would set the primary metadata.
 // We can add dynamic title updates via useEffect if needed.
-
-const COMPANIES_PER_PAGE = 9;
 
 export default function CompaniesListPage() {
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
@@ -102,26 +101,6 @@ export default function CompaniesListPage() {
     (currentPage - 1) * COMPANIES_PER_PAGE,
     currentPage * COMPANIES_PER_PAGE
   );
-
-  // const CompanySkeletonCard = () => (
-  //   <Card className="shadow-sm flex flex-col">
-  //     <CardHeader className="flex-row items-center gap-4 p-4">
-  //       <Skeleton className="h-16 w-16 rounded-md" />
-  //       <div className="space-y-2 flex-1">
-  //         <Skeleton className="h-6 w-3/4 rounded" />
-  //         <Skeleton className="h-4 w-1/2 rounded" />
-  //       </div>
-  //     </CardHeader>
-  //     <CardContent className="p-4 pt-0 space-y-2 flex-grow">
-  //       <Skeleton className="h-4 w-full rounded" />
-  //       <Skeleton className="h-4 w-5/6 rounded" />
-  //     </CardContent>
-  //     <CardFooter className="p-4 border-t">
-  //       {' '}
-  //       <Skeleton className="h-9 w-full rounded-md" />
-  //     </CardFooter>
-  //   </Card>
-  // );
 
   return (
     <div className="container mx-auto py-8">

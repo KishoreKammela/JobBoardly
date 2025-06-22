@@ -16,19 +16,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
+import { ADMIN_ROLES } from './_lib/constants';
 
 // Metadata for this page should be set in a server component or root layout
 // For client components, we can update document.title dynamically if needed.
-
-const ADMIN_ROLES: string[] = [
-  'admin',
-  'superAdmin',
-  'moderator',
-  'supportAgent',
-  'dataAnalyst',
-  'complianceOfficer',
-  'systemMonitor',
-];
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
