@@ -3,7 +3,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -173,24 +172,28 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                   {pendingJobs.map((job) => (
-                    <Card key={job.id} className="shadow-sm">
-                      <CardHeader className="pb-2">
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
                         <Link
                           href={`/jobs/${job.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline"
+                          className="font-semibold hover:underline"
+                          title={job.title}
                         >
-                          <CardTitle className="text-md">{job.title}</CardTitle>
+                          {job.title}
                         </Link>
-                        <CardDescription className="text-xs">
-                          Company: {job.company} | Posted:{' '}
+                        <p className="text-xs text-muted-foreground">
+                          {job.company} - Posted:{' '}
                           {new Date(
                             job.createdAt as string
                           ).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardFooter className="flex justify-end gap-2 pt-2">
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -234,8 +237,8 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                         >
                           <CheckCircle2 className="h-5 w-5" />
                         </Button>
-                      </CardFooter>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -269,22 +272,26 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                   {pendingCompanies.map((c) => (
-                    <Card key={c.id} className="shadow-sm">
-                      <CardHeader className="pb-2">
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors"
+                    >
+                      <div>
                         <Link
                           href={`/companies/${c.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline"
+                          className="font-semibold hover:underline"
+                          title={c.name}
                         >
-                          <CardTitle className="text-md">{c.name}</CardTitle>
+                          {c.name}
                         </Link>
-                        <CardDescription className="text-xs">
+                        <p className="text-xs text-muted-foreground">
                           Registered:{' '}
                           {new Date(c.createdAt as string).toLocaleDateString()}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardFooter className="flex justify-end gap-2 pt-2">
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -328,8 +335,8 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                         >
                           <CheckCircle2 className="h-5 w-5" />
                         </Button>
-                      </CardFooter>
-                    </Card>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
