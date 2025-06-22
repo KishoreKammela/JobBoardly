@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';

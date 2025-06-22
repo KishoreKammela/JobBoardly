@@ -31,6 +31,8 @@ import React, {
 import { auth, db } from '@/lib/firebase';
 import type { Company, UserProfile, UserRole } from '@/types';
 import { toast as globalToast } from '@/hooks/use-toast';
+import { useJobSeekerActions } from '../JobSeekerActionsContext/JobSeekerActionsContext';
+import { useEmployerActions } from '../EmployerActionsContext/EmployerActionsContext';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -53,6 +55,16 @@ interface AuthContextType {
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
+  user: UserProfile | null;
+  company: Company | null;
+  notifications: Notification[];
+  unreadNotificationCount: number;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
+  jobSeekerActions: ReturnType<typeof useJobSeekerActions>;
+  employerActions: ReturnType<typeof useEmployerActions>;
+  pendingJobsCount?: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

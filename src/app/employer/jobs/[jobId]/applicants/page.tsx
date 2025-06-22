@@ -1,6 +1,6 @@
 'use client';
 import { JobApplicantsDisplay } from '@/components/employer/JobApplicantsDisplay';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';

@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import type { Company, UserProfile, Job } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
@@ -40,7 +41,6 @@ import {
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-
 export default function CompanyProfilePreviewPage() {
   const { user, company: authCompany, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -326,7 +326,17 @@ export default function CompanyProfilePreviewPage() {
             <h2 className="text-2xl font-semibold mb-4 font-headline text-center md:text-left">
               Our Recruiters ({recruiters.length})
             </h2>
-            {recruiters.length > 0 ? (
+            {isFetchingRecruiters ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((idx) => (
+                  <Card key={idx} className="text-center p-4 shadow-sm">
+                    <Skeleton className="h-20 w-20 rounded-full mx-auto mb-3" />
+                    <Skeleton className="h-5 w-3/4 mx-auto mb-1" />
+                    <Skeleton className="h-4 w-1/2 mx-auto" />
+                  </Card>
+                ))}
+              </div>
+            ) : recruiters.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recruiters.map((recruiter) => (
                   <Card
@@ -375,7 +385,33 @@ export default function CompanyProfilePreviewPage() {
             <h2 className="text-2xl font-semibold mb-6 font-headline text-center md:text-left">
               Open Positions ({jobs.length})
             </h2>
-            {jobs.length > 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2].map((idx) => (
+                  <Card key={idx} className="shadow-sm flex flex-col h-full">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="h-12 w-12 rounded-md" />
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-5 w-3/4 rounded" />
+                          <Skeleton className="h-4 w-1/2 rounded" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pb-4 flex-grow">
+                      <Skeleton className="h-4 w-full rounded" />
+                      <Skeleton className="h-4 w-5/6 rounded" />
+                    </CardContent>
+                    <CardFooter className="pt-4 border-t">
+                      <div className="flex justify-between items-center w-full">
+                        <Skeleton className="h-4 w-24 rounded" />
+                        <Skeleton className="h-8 w-20 rounded-md" />
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : jobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {jobs.map((job) => (
                   <JobCard key={job.id} job={job} />

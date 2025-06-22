@@ -27,8 +27,8 @@ import {
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import type { Timestamp } from 'firebase/firestore';

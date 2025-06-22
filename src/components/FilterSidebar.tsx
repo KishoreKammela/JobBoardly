@@ -14,8 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Filter, RotateCcw, Save } from 'lucide-react';
 import { useState } from 'react';
 import type { Filters, JobExperienceLevel } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,

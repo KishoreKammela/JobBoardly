@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEmployerActions } from '@/contexts/EmployerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext/EmployerActionsContext';
 import type {
   Job,
   Application,

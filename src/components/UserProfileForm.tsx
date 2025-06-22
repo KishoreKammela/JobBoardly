@@ -2,7 +2,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import type { UserProfile, Company } from '@/types';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import {

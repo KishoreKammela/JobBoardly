@@ -9,8 +9,8 @@ import type {
   UserRole,
   ApplicationStatus,
 } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

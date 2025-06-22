@@ -19,7 +19,7 @@ import {
   type AIPoweredJobMatchingOutput,
 } from '@/ai/flows/ai-powered-job-matching';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import type {
   Job,
   ExperienceEntry,

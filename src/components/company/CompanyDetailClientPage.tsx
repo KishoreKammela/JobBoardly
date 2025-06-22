@@ -37,9 +37,9 @@ import { Separator } from '@/components/ui/separator';
 import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 type Props = {
   companyId?: string;

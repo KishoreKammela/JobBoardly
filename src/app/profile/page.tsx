@@ -2,7 +2,7 @@
 import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/ResumeUploadForm';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, Download, Eye, AlertTriangle } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';

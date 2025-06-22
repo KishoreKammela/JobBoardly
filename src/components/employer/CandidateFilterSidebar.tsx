@@ -14,8 +14,8 @@ import { Filter, RotateCcw, Briefcase, Save } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import type { CandidateFilters, NoticePeriod } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { useEmployerActions } from '@/contexts/EmployerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext/EmployerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,

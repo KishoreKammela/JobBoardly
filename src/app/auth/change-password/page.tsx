@@ -1,6 +1,6 @@
 'use client';
 import { ChangePasswordForm } from '@/components/ChangePasswordForm';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';

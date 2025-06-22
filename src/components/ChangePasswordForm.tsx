@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, KeyRound, CheckCircle, XCircle } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';

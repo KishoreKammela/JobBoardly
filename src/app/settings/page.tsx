@@ -1,9 +1,9 @@
 'use client';
 import { SettingsForm } from '@/components/SettingsForm';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
-import { useEmployerActions } from '@/contexts/EmployerActionsContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
+import { useEmployerActions } from '@/contexts/EmployerActionsContext/EmployerActionsContext';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';

@@ -1,6 +1,6 @@
 'use client';
 import { EmployerLoginForm } from '@/components/employer/EmployerLoginForm';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';

@@ -14,7 +14,7 @@ import {
   Search as SearchIcon,
   AlertTriangle,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/use-debounce';

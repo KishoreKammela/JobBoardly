@@ -22,7 +22,7 @@ import {
   type ParseJobDescriptionOutput,
 } from '@/ai/flows/parse-job-description-flow';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import type {
   UserProfile,
   ExperienceEntry,

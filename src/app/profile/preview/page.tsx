@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import type {
   UserProfile,
   ExperienceEntry,
@@ -522,17 +522,17 @@ export default function ProfilePreviewPage() {
                     .replace(/^./, (str) => str.toUpperCase())}
                 </p>
               )}
-              {candidate.availability && (
+              {candidate.noticePeriod && (
                 <p>
-                  <strong className="text-foreground/80">Availability:</strong>{' '}
-                  {candidate.availability}
+                  <strong className="text-foreground/80">Notice Period:</strong>{' '}
+                  {candidate.noticePeriod}
                 </p>
               )}
             </div>
             {(!candidate.preferredLocations ||
               candidate.preferredLocations.length === 0) &&
               !candidate.jobSearchStatus &&
-              !candidate.availability && (
+              !candidate.noticePeriod && (
                 <p className="text-sm text-muted-foreground">
                   Job preferences not specified.
                 </p>

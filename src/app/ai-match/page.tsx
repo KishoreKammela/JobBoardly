@@ -1,6 +1,6 @@
 'use client';
 import { AiJobMatcher } from '@/components/AiJobMatcher';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';

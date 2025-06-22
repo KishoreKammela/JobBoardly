@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import type { Job } from '@/types';
 import { JobCard } from '@/components/JobCard';
 import { AlertCircle, Loader2, Search } from 'lucide-react';
@@ -18,7 +18,7 @@ import {
   where,
   documentId,
 } from 'firebase/firestore';
-import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext';
+import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
