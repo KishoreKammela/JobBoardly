@@ -66,10 +66,15 @@ export default function EmployerRegisterPage() {
       if (redirectPath) {
         router.replace(redirectPath);
       } else {
-        if (user.role === 'employer') router.replace('/employer/posted-jobs');
-        else if (user.role === 'jobSeeker') router.replace('/jobs');
-        else if (ADMIN_LIKE_ROLES.includes(user.role)) router.replace('/admin');
-        else router.replace('/');
+        if (user.role === 'employer') {
+          router.replace('/profile');
+        } else if (user.role === 'jobSeeker') {
+          router.replace('/jobs');
+        } else if (ADMIN_LIKE_ROLES.includes(user.role)) {
+          router.replace('/admin');
+        } else {
+          router.replace('/');
+        }
       }
     }
   }, [user, authLoading, router, searchParams]);
