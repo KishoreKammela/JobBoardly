@@ -1,14 +1,6 @@
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Job, Company } from '@/types';
-import { MAX_ITEMS_PER_TYPE, staticPages } from './_lib/constants';
+import { staticPages } from './_lib/constants';
 import { generateSiteMap } from './_lib/utils';
 import { getApprovedJobs } from '@/services/job.services';
 import { getApprovedCompanies } from '@/services/company.services';
