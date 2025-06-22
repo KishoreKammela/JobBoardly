@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useEffect } from 'react';
 import { NotificationItem } from './NotificationItem';
 import { ScrollArea } from '../ui/scroll-area';

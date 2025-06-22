@@ -1,26 +1,28 @@
 'use client';
-import type {
-  CandidateFilters,
-  SavedCandidateSearch,
-  ApplicationStatus,
-} from '@/types';
-import React, {
-  createContext,
-  useContext,
-  type ReactNode,
-  useCallback,
-} from 'react';
-import { db } from '@/lib/firebase';
 import {
-  doc,
-  updateDoc,
-  serverTimestamp,
   arrayUnion,
   arrayRemove,
+  doc,
+  serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  type ReactNode,
+} from 'react';
 import { v4 as uuidv4 } from 'uuid';
+
+import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from './AuthContext';
+import type {
+  ApplicationStatus,
+  CandidateFilters,
+  SavedCandidateSearch,
+} from '@/types';
+import { useUserProfile } from '../UserProfile/UserProfileContext';
+import { useCompany } from '../Company/CompanyContext';
 
 interface EmployerActionsContextType {
   saveCandidateSearch: (
@@ -40,7 +42,8 @@ const EmployerActionsContext = createContext<
 >(undefined);
 
 export function EmployerActionsProvider({ children }: { children: ReactNode }) {
-  const { user, company, updateUserProfile } = useAuth();
+  const { user, updateUserProfile } = useUserProfile();
+  const { company } = useCompany();
 
   const saveCandidateSearch = useCallback(
     async (searchName: string, filters: CandidateFilters) => {
@@ -65,32 +68,15 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
       const newSearchObject: SavedCandidateSearch = {
         id: uuidv4(),
         name: searchName,
-        filters: {
-          searchTerm: filters.searchTerm,
-          location: filters.location,
-          availability: filters.availability,
-          jobSearchStatus: filters.jobSearchStatus ?? null,
-          desiredSalaryMin: filters.desiredSalaryMin ?? null,
-          desiredSalaryMax: filters.desiredSalaryMax ?? null,
-          recentActivity: filters.recentActivity ?? null,
-          minExperienceYears: filters.minExperienceYears ?? null,
-        },
+        filters,
         createdAt: new Date(),
       };
 
-      try {
-        await updateUserProfile({
-          savedCandidateSearches: arrayUnion(
-            newSearchObject
-          ) as unknown as SavedCandidateSearch[],
-        });
-      } catch (error: unknown) {
-        console.error(
-          'EmployerActionsContext: saveCandidateSearch error',
-          error
-        );
-        throw error;
-      }
+      await updateUserProfile({
+        savedCandidateSearches: arrayUnion(
+          newSearchObject
+        ) as unknown as SavedCandidateSearch[],
+      });
     },
     [user, company, updateUserProfile]
   );
@@ -131,31 +117,12 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
             searchToDelete.createdAt instanceof Date
               ? searchToDelete.createdAt
               : new Date(searchToDelete.createdAt as string),
-          filters: {
-            searchTerm: searchToDelete.filters.searchTerm,
-            location: searchToDelete.filters.location,
-            availability: searchToDelete.filters.availability,
-            jobSearchStatus: searchToDelete.filters.jobSearchStatus ?? null,
-            desiredSalaryMin: searchToDelete.filters.desiredSalaryMin ?? null,
-            desiredSalaryMax: searchToDelete.filters.desiredSalaryMax ?? null,
-            recentActivity: searchToDelete.filters.recentActivity ?? null,
-            minExperienceYears:
-              searchToDelete.filters.minExperienceYears ?? null,
-          },
         };
-        try {
-          await updateUserProfile({
-            savedCandidateSearches: arrayRemove(
-              searchToDeleteForFirestore
-            ) as unknown as SavedCandidateSearch[],
-          });
-        } catch (error: unknown) {
-          console.error(
-            'EmployerActionsContext: deleteCandidateSearch error',
-            error
-          );
-          throw error;
-        }
+        await updateUserProfile({
+          savedCandidateSearches: arrayRemove(
+            searchToDeleteForFirestore
+          ) as unknown as SavedCandidateSearch[],
+        });
       }
     },
     [user, company, updateUserProfile]
@@ -188,19 +155,9 @@ export function EmployerActionsProvider({ children }: { children: ReactNode }) {
       };
       if (employerNotes !== undefined) {
         updates.employerNotes = employerNotes;
-      } else if (employerNotes === '') {
-        updates.employerNotes = null;
       }
 
-      try {
-        await updateDoc(applicationDocRef, updates);
-      } catch (error: unknown) {
-        console.error(
-          'EmployerActionsContext: updateApplicationStatus error',
-          error
-        );
-        throw error;
-      }
+      await updateDoc(applicationDocRef, updates);
     },
     [user, company]
   );

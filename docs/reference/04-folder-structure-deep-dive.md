@@ -52,7 +52,7 @@ This directory contains all AI-related logic, powered by Google's Genkit.
 
 This directory manages all application routes and pages.
 
-- `layout.tsx`: The root layout of the application, wrapping all pages. It includes the `<html>` and `<body>` tags, sets up fonts, and wraps children with context providers.
+- `layout.tsx`: The root layout of the application, wrapping all pages. It includes the `<html>` and `<body>` tags, sets up fonts, and wraps children with all the global context providers.
 - `globals.css`: Global CSS file, including Tailwind CSS directives and the HSL color variable definitions for the ShadCN theme.
 - `page.tsx`: The main landing page of the application (`/`).
 - **Route Directories**: Each sub-folder represents a route segment.
@@ -82,11 +82,20 @@ This is where all React components are stored.
 
 ### `src/contexts` - React Context Providers
 
-These files provide global or section-specific state management.
+This directory is organized by feature or domain, providing global and section-specific state management.
 
-- `AuthContext.tsx`: The most critical context. It manages user authentication state, fetches the user's profile from Firestore upon login, and provides functions for login, logout, registration, and profile updates.
-- `JobSeekerActionsContext.tsx`: Encapsulates actions specific to job seekers (applying, saving jobs).
-- `EmployerActionsContext.tsx`: Encapsulates actions specific to employers (managing applicants, saving searches).
+- `Auth/`: Manages core Firebase authentication state.
+  - `AuthContext.tsx`: Provides the `firebaseUser` object, `loading` state, and functions like `loginUser`, `registerUser`, `logout`.
+- `UserProfile/`: Manages the detailed profile of the logged-in user.
+  - `UserProfileContext.tsx`: Depends on `AuthContext`. Fetches and provides the `user` object from Firestore and the `updateUserProfile` function.
+- `Company/`: Manages the company data for logged-in employers.
+  - `CompanyContext.tsx`: Depends on `UserProfileContext`. Fetches and provides the `company` object from Firestore and the `updateCompanyProfile` function.
+- `Notification/`: Manages user notifications.
+  - `NotificationContext.tsx`: Depends on `AuthContext`. Fetches and provides user `notifications` and related actions.
+- `JobSeekerActions/`: Encapsulates actions specific to job seekers.
+  - `JobSeekerActionsContext.tsx`: Provides functions for applying to jobs, saving/unsaving jobs, managing saved searches, etc.
+- `EmployerActions/`: Encapsulates actions specific to employers.
+  - `EmployerActionsContext.tsx`: Provides functions for managing applicants, saving candidate searches, etc.
 
 ### `src/hooks` - Custom React Hooks
 
@@ -106,9 +115,14 @@ A folder for helper functions and third-party library configurations.
 
 ### `src/types` - TypeScript Definitions
 
-This directory centralizes all custom TypeScript types and interfaces used throughout the application.
+This directory centralizes all custom TypeScript types and interfaces, organized by data model.
 
-- `index.ts`: The single source of truth for data structures like `UserProfile`, `Job`, `Company`, `Application`, and various enums and type aliases.
+- `user.ts`: Contains `UserProfile`, `UserRole`, `ExperienceEntry`, etc.
+- `company.ts`: Contains `Company`.
+- `job.ts`: Contains `Job`, `Filters`, `SavedSearch`, etc.
+- `application.ts`: Contains `Application`, `ScreeningQuestion`, etc.
+- `notification.ts`: Contains `Notification` and related types.
+- `index.ts`: A central file that re-exports all types from the other files in this directory, allowing for easy importing from `@/types`.
 
 ---
 
@@ -120,3 +134,4 @@ This directory contains all non-code documentation for the project, organized fo
 - `guides/`: Contains user-centric guides explaining how to use the platform's features from the perspective of different roles (Job Seeker, Employer, Admin).
 - `planning/`: Contains forward-looking documents like roadmaps and system plans.
 - `reference/`: Contains technical reference documents, such as this folder structure deep dive.
+- `index.md`: An index page that serves as a table of contents for the entire documentation.

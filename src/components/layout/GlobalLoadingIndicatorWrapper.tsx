@@ -1,6 +1,6 @@
 // src/components/layout/GlobalLoadingIndicatorWrapper.tsx
 'use client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 

@@ -3,9 +3,12 @@ import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { JobSeekerActionsProvider } from '@/contexts/JobSeekerActionsContext';
-import { EmployerActionsProvider } from '@/contexts/EmployerActionsContext';
+import { AuthProvider } from '@/contexts/Auth/AuthContext';
+import { UserProfileProvider } from '@/contexts/UserProfile/UserProfileContext';
+import { CompanyProvider } from '@/contexts/Company/CompanyContext';
+import { NotificationProvider } from '@/contexts/Notification/NotificationContext';
+import { JobSeekerActionsProvider } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
+import { EmployerActionsProvider } from '@/contexts/EmployerActionsContext/EmployerActionsContext';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Inter } from 'next/font/google';
@@ -107,21 +110,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable}`} suppressHydrationWarning>
-      {/* Removed explicit <head /> tag. Next.js handles this. */}
       <body className="font-body antialiased flex flex-col min-h-screen bg-background text-foreground">
         <AuthProvider>
-          <JobSeekerActionsProvider>
-            <EmployerActionsProvider>
-              <Navbar />
-              <main className="flex flex-col flex-grow container mx-auto px-4 py-8">
-                <GlobalLoadingIndicatorWrapper>
-                  {children}
-                </GlobalLoadingIndicatorWrapper>
-              </main>
-              <Footer />
-              <Toaster />
-            </EmployerActionsProvider>
-          </JobSeekerActionsProvider>
+          <UserProfileProvider>
+            <CompanyProvider>
+              <NotificationProvider>
+                <JobSeekerActionsProvider>
+                  <EmployerActionsProvider>
+                    <Navbar />
+                    <main className="flex flex-col flex-grow container mx-auto px-4 py-8">
+                      <GlobalLoadingIndicatorWrapper>
+                        {children}
+                      </GlobalLoadingIndicatorWrapper>
+                    </main>
+                    <Footer />
+                    <Toaster />
+                  </EmployerActionsProvider>
+                </JobSeekerActionsProvider>
+              </NotificationProvider>
+            </CompanyProvider>
+          </UserProfileProvider>
         </AuthProvider>
         <Analytics />
         <SpeedInsights />
