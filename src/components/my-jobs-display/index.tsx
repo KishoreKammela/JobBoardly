@@ -32,6 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { JobFilterType } from './_lib/interfaces';
+import { withdrawJobApplication } from './_lib/actions';
 
 export function MyJobsDisplay() {
   const { user } = useAuth();
@@ -185,23 +186,15 @@ export function MyJobsDisplay() {
   const confirmWithdrawApplication = async () => {
     if (!jobToWithdraw || !user) return;
     setIsWithdrawing(true);
-    try {
-      await withdrawAppFromContext(jobToWithdraw.id);
-      toast({
-        title: 'Application Withdrawn',
-        description: `Your application for ${jobToWithdraw.title} has been withdrawn.`,
-      });
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to withdraw application.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsWithdrawing(false);
-      setShowWithdrawConfirm(false);
-      setJobToWithdraw(null);
-    }
+    await withdrawJobApplication({
+      job: jobToWithdraw,
+      user,
+      withdrawAppFromContext,
+      toast,
+    });
+    setIsWithdrawing(false);
+    setShowWithdrawConfirm(false);
+    setJobToWithdraw(null);
   };
 
   if (isLoading) {

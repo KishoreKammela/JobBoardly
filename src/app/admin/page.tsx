@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import type { Company, LegalDocument, UserProfile, UserRole } from '@/types';
+import type { Company, LegalDocument, UserProfile } from '@/types';
 import {
   collection,
   doc,
@@ -26,10 +26,7 @@ import {
   getDocs,
   orderBy,
   query,
-  serverTimestamp,
-  setDoc,
   Timestamp,
-  updateDoc,
   where,
 } from 'firebase/firestore';
 import { AlertCircle, Cpu, Gavel, Loader2, ShieldCheck } from 'lucide-react';
@@ -49,6 +46,13 @@ import type {
   PlatformStats,
 } from './_lib/interfaces';
 import { initialModalState } from './_lib/interfaces';
+import {
+  saveLegalDocumentInDb,
+  updateCompanyStatusInDb,
+  updateJobStatusInDb,
+  updateUserStatusInDb,
+} from './_lib/services';
+import { getRoleBadgeVariant, getRoleDisplayName } from './_lib/utils';
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -395,23 +399,11 @@ export default function AdminPage() {
 
     setSpecificActionLoading(`job-${jobId}`);
     try {
-      const jobUpdates: Record<string, unknown> = {
-        status: newStatus,
-        updatedAt: serverTimestamp(),
-      };
-      if (
-        newStatus === 'rejected' ||
-        newStatus === 'suspended' ||
-        (newStatus === 'approved' && reason)
-      ) {
-        jobUpdates.moderationReason =
-          reason ||
-          `${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)} by admin`;
-      } else {
-        jobUpdates.moderationReason = null;
-      }
-
-      await updateDoc(doc(db, 'jobs', jobId), jobUpdates);
+      const { moderationReason } = await updateJobStatusInDb(
+        jobId,
+        newStatus,
+        reason
+      );
 
       if (newStatus !== 'pending') {
         setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
@@ -423,7 +415,7 @@ export default function AdminPage() {
             ? {
                 ...j,
                 status: newStatus,
-                moderationReason: jobUpdates.moderationReason as string | null,
+                moderationReason,
                 updatedAt: new Date().toISOString(),
               }
             : j
@@ -466,31 +458,12 @@ export default function AdminPage() {
     }
     setSpecificActionLoading(`company-${companyId}`);
 
-    let finalStatus: Company['status'] = intendedStatus;
-    if (intendedStatus === 'active') {
-      finalStatus = 'approved';
-    }
-
     try {
-      const companyDocRef = doc(db, 'companies', companyId);
-      const updateData: Record<string, unknown> = {
-        status: finalStatus,
-        updatedAt: serverTimestamp(),
-      };
-      if (
-        finalStatus === 'rejected' ||
-        finalStatus === 'suspended' ||
-        finalStatus === 'deleted' ||
-        (finalStatus === 'approved' && reason)
-      ) {
-        updateData.moderationReason =
-          reason ||
-          `${finalStatus.charAt(0).toUpperCase() + finalStatus.slice(1)} by admin`;
-      } else {
-        updateData.moderationReason = null;
-      }
-
-      await updateDoc(companyDocRef, updateData);
+      const { finalStatus, moderationReason } = await updateCompanyStatusInDb(
+        companyId,
+        intendedStatus,
+        reason
+      );
 
       setAllCompanies((prev) =>
         prev.map((c) =>
@@ -498,7 +471,7 @@ export default function AdminPage() {
             ? {
                 ...c,
                 status: finalStatus,
-                moderationReason: updateData.moderationReason as string | null,
+                moderationReason,
                 updatedAt: new Date().toISOString(),
               }
             : c
@@ -605,12 +578,7 @@ export default function AdminPage() {
 
     setSpecificActionLoading(`user-${userId}`);
     try {
-      const userDocRef = doc(db, 'users', userId);
-      await updateDoc(userDocRef, {
-        status: newStatus,
-        updatedAt: serverTimestamp(),
-      });
-
+      await updateUserStatusInDb(userId, newStatus);
       const updatedTime = new Date().toISOString();
       if (isTargetListedAsJobSeeker) {
         setAllJobSeekers((prev) =>
@@ -659,11 +627,7 @@ export default function AdminPage() {
     }
     setIsSavingLegal(docId);
     try {
-      const legalDocRef = doc(db, 'legalContent', docId);
-      await setDoc(legalDocRef, {
-        content: content,
-        lastUpdated: serverTimestamp(),
-      });
+      await saveLegalDocumentInDb(docId, content);
       toast({
         title: 'Success',
         description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
@@ -700,40 +664,6 @@ export default function AdminPage() {
       </div>
     );
   }
-
-  const getRoleDisplayName = (role: UserRole) => {
-    switch (role) {
-      case 'superAdmin':
-        return 'Super Admin';
-      case 'supportAgent':
-        return 'Support Agent';
-      case 'dataAnalyst':
-        return 'Data Analyst';
-      case 'complianceOfficer':
-        return 'Compliance Officer';
-      case 'systemMonitor':
-        return 'System Monitor';
-      default:
-        return role.charAt(0).toUpperCase() + role.slice(1);
-    }
-  };
-
-  const getRoleBadgeVariant = (role: UserRole) => {
-    switch (role) {
-      case 'superAdmin':
-        return 'destructive';
-      case 'admin':
-        return 'default';
-      case 'moderator':
-        return 'secondary';
-      case 'supportAgent':
-        return 'outline';
-      case 'dataAnalyst':
-        return 'outline';
-      default:
-        return 'secondary';
-    }
-  };
 
   const canPerformUserActions =
     user?.role === 'admin' || user?.role === 'superAdmin';

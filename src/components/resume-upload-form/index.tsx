@@ -16,11 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { UploadCloud, FileText, Loader2, Trash2, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  parseResumeFlow,
-  type ParseResumeOutput,
-} from '@/ai/flows/parse-resume-flow';
-import type { UserProfile } from '@/types';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -32,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { ModalState } from './_lib/interfaces';
 import { defaultModalState } from './_lib/interfaces';
+import { processResume, removeResume } from './_lib/actions';
 
 export function ResumeUploadForm() {
   const { user, updateUserProfile } = useAuth();
@@ -85,116 +81,26 @@ export function ResumeUploadForm() {
     }
   };
 
-  const processResumeData = async (dataUri: string, sourceName: string) => {
-    if (!user) return;
+  const performResumeProcessing = async () => {
     setIsProcessing(true);
-    try {
-      const parsedData: ParseResumeOutput = await parseResumeFlow({
-        resumeDataUri: dataUri,
-      });
-
-      if (parsedData.errorMessage) {
-        toast({
-          title: 'Resume Parsing Error',
-          description: parsedData.errorMessage,
-          variant: 'destructive',
-          duration: 10000,
-        });
-        setIsProcessing(false);
-        if (parsedData.errorMessage.includes('Server-side error')) {
-          return;
-        }
-      }
-
-      const profileUpdates: Partial<UserProfile> = {};
-
-      if (
-        parsedData.experience &&
-        parsedData.experience.startsWith('Parsing Error:')
-      ) {
-        toast({
-          title: 'Resume Parsing Issue',
-          description: parsedData.experience,
-          variant: 'destructive',
-          duration: 9000,
-        });
-      } else if (parsedData.experience) {
-        let summaryText = `Experience Summary:\n${parsedData.experience}\n\n`;
-        if (parsedData.education) {
-          summaryText += `Education Summary:\n${parsedData.education}\n\n`;
-        }
-        profileUpdates.parsedResumeText = summaryText.trim();
-      }
-
-      if (parsedData.name && !user.name) profileUpdates.name = parsedData.name;
-      if (parsedData.headline) profileUpdates.headline = parsedData.headline;
-      if (parsedData.skills && parsedData.skills.length > 0)
-        profileUpdates.skills = parsedData.skills;
-
-      if (parsedData.portfolioUrl)
-        profileUpdates.portfolioUrl = parsedData.portfolioUrl;
-      if (parsedData.linkedinUrl)
-        profileUpdates.linkedinUrl = parsedData.linkedinUrl;
-      if (parsedData.mobileNumber && !user.mobileNumber)
-        profileUpdates.mobileNumber = parsedData.mobileNumber;
-
-      if (
-        parsedData.totalYearsExperience !== undefined &&
-        (user.totalYearsExperience === undefined ||
-          user.totalYearsExperience === 0)
-      ) {
-        profileUpdates.totalYearsExperience = parsedData.totalYearsExperience;
-        if (
-          user.totalMonthsExperience === undefined ||
-          user.totalMonthsExperience === 0
-        ) {
-          profileUpdates.totalMonthsExperience = 0;
-        }
-      }
-
-      if (file) {
-        profileUpdates.resumeFileName = file.name;
-      } else if (pastedResume) {
-        profileUpdates.resumeFileName = 'Pasted Resume Text';
-        profileUpdates.resumeUrl = undefined;
-      }
-
-      if (!parsedData.errorMessage) {
-        toast({
-          title: 'Resume Processed',
-          description: `${sourceName} has been parsed. Review and complete your profile details.`,
-        });
-      }
-
-      if (Object.keys(profileUpdates).length > 0) {
-        await updateUserProfile(profileUpdates);
-      }
-      setFile(null);
-      setPastedResume('');
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'An unknown error occurred during parsing.';
-      console.error('Error processing resume in component:', error);
-      toast({
-        title: 'Resume Processing Error',
-        description: `Failed to parse resume and update profile. ${errorMessage}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!user) return;
-
+    let success = false;
     if (file) {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () =>
-        processResumeData(reader.result as string, file.name);
+      reader.onload = async () => {
+        const result = await processResume({
+          dataUri: reader.result as string,
+          sourceName: file.name,
+          user,
+          updateUserProfile,
+          toast,
+          file,
+        });
+        if (result) {
+          setFile(null);
+          setPastedResume('');
+        }
+        setIsProcessing(false);
+      };
       reader.onerror = (errorReading: ProgressEvent<FileReader>) => {
         console.error('File reading error:', errorReading);
         toast({
@@ -204,19 +110,26 @@ export function ResumeUploadForm() {
         });
         setIsProcessing(false);
       };
+      reader.readAsDataURL(file);
     } else if (pastedResume.trim()) {
       const plainTextDataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(pastedResume.trim())))}`;
-      processResumeData(plainTextDataUri, 'Pasted Resume');
-    } else {
-      toast({
-        title: 'No Resume Provided',
-        description: 'Please upload a file or paste your resume text.',
-        variant: 'destructive',
+      success = await processResume({
+        dataUri: plainTextDataUri,
+        sourceName: 'Pasted Resume',
+        user,
+        updateUserProfile,
+        toast,
+        pastedResume,
       });
+      if (success) {
+        setFile(null);
+        setPastedResume('');
+      }
+      setIsProcessing(false);
     }
   };
 
-  const handleFormSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!file && !pastedResume.trim()) {
       toast({
@@ -229,24 +142,13 @@ export function ResumeUploadForm() {
     showConfirmationModal(
       'Process Resume?',
       `Are you sure you want to process the ${file ? `uploaded file (${file.name})` : 'pasted text'}? This may overwrite parts of your profile with parsed data.`,
-      handleSubmit,
+      performResumeProcessing,
       file ? 'Upload & Parse File' : 'Parse Pasted Text'
     );
   };
 
   const performRemoveResume = async () => {
-    if (!user) return;
-    await updateUserProfile({
-      resumeUrl: undefined,
-      resumeFileName: undefined,
-      parsedResumeText: undefined,
-    });
-
-    toast({
-      title: 'Resume Removed',
-      description:
-        'Your resume file and parsed summary have been removed from your profile.',
-    });
+    await removeResume({ user, updateUserProfile, toast });
   };
 
   const handleRemoveResume = () => {
@@ -321,7 +223,7 @@ export function ResumeUploadForm() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleFormSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label
                   htmlFor="resumeFile"
