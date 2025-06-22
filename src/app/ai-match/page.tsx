@@ -1,5 +1,5 @@
 'use client';
-import { AiJobMatcher } from '@/components/ai-job-matcher';
+import { AiJobMatcher } from '@/components/AiJobMatcher';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useEffect } from 'react';

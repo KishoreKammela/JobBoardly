@@ -26,7 +26,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { JobCard } from '@/components/JobCard';
+import { JobCard } from '@/components/job-card';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import {
@@ -50,6 +50,7 @@ export default function CompanyProfilePreviewPage() {
   const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingRecruiters, setIsFetchingRecruiters] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function CompanyProfilePreviewPage() {
           companyToDisplay.recruiterUids &&
           companyToDisplay.recruiterUids.length > 0
         ) {
+          setIsFetchingRecruiters(true);
           const recruitersQueryLimit = 30;
           const fetchedRecruiters: UserProfile[] = [];
           for (
@@ -144,6 +146,9 @@ export default function CompanyProfilePreviewPage() {
             }
           }
           setRecruiters(fetchedRecruiters);
+          setIsFetchingRecruiters(false);
+        } else {
+          setIsFetchingRecruiters(false);
         }
 
         const jobsQuery = query(

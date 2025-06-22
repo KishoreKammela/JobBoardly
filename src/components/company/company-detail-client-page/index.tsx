@@ -12,7 +12,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, UserProfile, Job } from '@/types';
+import type { Company, UserProfile, Job, UserRole } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -65,6 +65,10 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
   );
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
     if (!companyIdFromProps) {
       setError('No Company ID provided. Please ensure the URL is correct.');
       setIsCompanyDataLoading(false);
@@ -96,7 +100,14 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
             Company,
             'id'
           >;
-          if (companyDataFromDb.status !== 'approved') {
+
+          const isPrivilegedViewer =
+            user &&
+            (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role as UserRole) ||
+              (user.role === 'employer' &&
+                user.companyId === companyDocSnap.id));
+
+          if (companyDataFromDb.status !== 'approved' && !isPrivilegedViewer) {
             setAccessDeniedReason(
               'This company profile is currently under review or not publicly visible.'
             );
@@ -130,7 +141,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
     };
 
     fetchCompanyCoreDetails();
-  }, [companyIdFromProps]);
+  }, [companyIdFromProps, user, authLoading]);
 
   useEffect(() => {
     if (accessDeniedReason && !isCompanyDataLoading && !authLoading) {
@@ -143,7 +154,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
         if (user.role === 'jobSeeker') router.replace('/companies');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
-        else if (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role))
+        else if (ADMIN_LIKE_ROLES_COMPANY_PAGE.includes(user.role as UserRole))
           router.replace('/admin');
         else router.replace('/');
       } else {
