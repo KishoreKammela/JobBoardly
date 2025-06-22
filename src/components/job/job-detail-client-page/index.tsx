@@ -1,3 +1,4 @@
+// src/components/job/job-detail-client-page/index.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
