@@ -57,13 +57,22 @@ export default function AdminLoginPage() {
         const redirectPath = searchParams.get('redirect');
         router.replace(redirectPath || '/admin');
       } else {
+        // This is a controlled error for non-admin users.
         throw new Error('This login is for authorized platform staff only.');
       }
     } catch (error: unknown) {
       const typedError = error as FirebaseError | Error;
-      console.error('Admin Login error:', typedError.message);
       let friendlyMessage =
         typedError.message || 'Login failed. Please check your credentials.';
+
+      // Don't log our controlled error to the console as a system error.
+      // Only log actual unexpected errors.
+      if (
+        friendlyMessage !== 'This login is for authorized platform staff only.'
+      ) {
+        console.error('Admin Login error:', typedError.message);
+      }
+
       if ('code' in typedError) {
         if (
           typedError.code === 'auth/user-not-found' ||
@@ -73,6 +82,7 @@ export default function AdminLoginPage() {
           friendlyMessage = 'Invalid email or password.';
         }
       }
+
       toast({
         title: 'Login Failed',
         description: friendlyMessage,
