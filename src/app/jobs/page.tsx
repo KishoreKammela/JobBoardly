@@ -12,13 +12,6 @@ import {
   AlertCircle,
   Search as SearchIcon,
 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from '@/components/ui/card';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -34,6 +27,8 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { JOBS_PER_PAGE } from './_lib/constants';
+import { filterJobs } from './_lib/utils';
+import { JobSkeletonCard } from './_components/JobSkeletonCard';
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
@@ -141,131 +136,11 @@ export default function JobsPage() {
     if (isLoading) return;
 
     setIsFiltering(true);
-    const currentGlobalTerm = debouncedGlobalSearchTerm.toLowerCase();
-
-    const newFilteredJobs = allJobs.filter((job) => {
-      const searchTermMatch =
-        currentGlobalTerm === '' ||
-        (job.title && job.title.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.company &&
-          job.company.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.skills &&
-          job.skills.some((skill) =>
-            skill.toLowerCase().includes(currentGlobalTerm)
-          )) ||
-        (job.responsibilities &&
-          job.responsibilities.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.requirements &&
-          job.requirements.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.industry &&
-          job.industry.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.department &&
-          job.department.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.roleDesignation &&
-          job.roleDesignation.toLowerCase().includes(currentGlobalTerm)) ||
-        (job.educationQualification &&
-          job.educationQualification
-            .toLowerCase()
-            .includes(currentGlobalTerm)) ||
-        (job.benefits &&
-          typeof job.benefits === 'string' &&
-          job.benefits.toLowerCase().includes(currentGlobalTerm));
-
-      const locationMatch =
-        debouncedSidebarFilters.location.toLowerCase() === '' ||
-        (job.location &&
-          job.location
-            .toLowerCase()
-            .includes(debouncedSidebarFilters.location.toLowerCase()));
-
-      const roleTypeMatch =
-        debouncedSidebarFilters.roleType === 'all' ||
-        (job.type &&
-          job.type.toLowerCase() ===
-            debouncedSidebarFilters.roleType.toLowerCase());
-
-      const remoteMatch = !debouncedSidebarFilters.isRemote || job.isRemote;
-
-      const industryMatch =
-        !debouncedSidebarFilters.industry ||
-        (job.industry &&
-          job.industry
-            .toLowerCase()
-            .includes(debouncedSidebarFilters.industry.toLowerCase()));
-
-      const experienceLevelMatch =
-        !debouncedSidebarFilters.experienceLevel ||
-        debouncedSidebarFilters.experienceLevel === 'all' ||
-        (job.experienceLevel &&
-          job.experienceLevel.toLowerCase() ===
-            debouncedSidebarFilters.experienceLevel.toLowerCase());
-
-      let recentActivityMatch = true;
-      if (
-        debouncedSidebarFilters.recentActivity &&
-        debouncedSidebarFilters.recentActivity !== 'any'
-      ) {
-        const dateToCompareStr =
-          job.updatedAt || job.createdAt || job.postedDate;
-        const jobDate = new Date(dateToCompareStr as string);
-        const now = new Date();
-        const cutoffDate = new Date();
-        if (debouncedSidebarFilters.recentActivity === '24h')
-          cutoffDate.setDate(now.getDate() - 1);
-        else if (debouncedSidebarFilters.recentActivity === '7d')
-          cutoffDate.setDate(now.getDate() - 7);
-        else if (debouncedSidebarFilters.recentActivity === '30d')
-          cutoffDate.setDate(now.getDate() - 30);
-        recentActivityMatch = jobDate >= cutoffDate;
-      }
-
-      const minExpMatch =
-        debouncedSidebarFilters.minExperienceYears === undefined ||
-        debouncedSidebarFilters.minExperienceYears === null ||
-        (job.minExperienceYears !== null &&
-          job.minExperienceYears !== undefined &&
-          job.minExperienceYears >= debouncedSidebarFilters.minExperienceYears);
-
-      const salaryMinMatch =
-        debouncedSidebarFilters.salaryMin === undefined ||
-        debouncedSidebarFilters.salaryMin === null ||
-        (job.payTransparency !== false &&
-          job.salaryMax !== null &&
-          job.salaryMax !== undefined &&
-          job.salaryMax >= debouncedSidebarFilters.salaryMin);
-
-      const salaryMaxMatch =
-        debouncedSidebarFilters.salaryMax === undefined ||
-        debouncedSidebarFilters.salaryMax === null ||
-        (job.payTransparency !== false &&
-          job.salaryMin !== null &&
-          job.salaryMin !== undefined &&
-          job.salaryMin <= debouncedSidebarFilters.salaryMax);
-
-      const salaryFilterApplied =
-        debouncedSidebarFilters.salaryMin !== undefined ||
-        debouncedSidebarFilters.salaryMax !== undefined;
-
-      const hasSalaryInfo =
-        job.payTransparency !== false &&
-        (job.salaryMin !== undefined || job.salaryMax !== undefined);
-
-      const salaryMatch = !salaryFilterApplied || hasSalaryInfo;
-
-      return (
-        searchTermMatch &&
-        locationMatch &&
-        roleTypeMatch &&
-        remoteMatch &&
-        recentActivityMatch &&
-        industryMatch &&
-        experienceLevelMatch &&
-        minExpMatch &&
-        salaryMatch &&
-        salaryMinMatch &&
-        salaryMaxMatch
-      );
-    });
+    const activeFilters = {
+      searchTerm: debouncedGlobalSearchTerm,
+      ...debouncedSidebarFilters,
+    };
+    const newFilteredJobs = filterJobs(allJobs, activeFilters);
     setFilteredJobs(newFilteredJobs);
     setCurrentPage(1);
     setIsFiltering(false);
@@ -277,38 +152,6 @@ export default function JobsPage() {
   }, [filteredJobs, currentPage]);
 
   const totalPages = Math.ceil(filteredJobs.length / JOBS_PER_PAGE);
-
-  const JobSkeletonCard = () => (
-    <Card
-      className={`shadow-sm flex flex-col ${viewMode === 'list' ? '' : 'h-full'}`}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-4">
-          <Skeleton className="h-12 w-12 rounded-md" />
-          <div className="space-y-2 flex-1">
-            <Skeleton className="h-5 w-3/4 rounded" />
-            <Skeleton className="h-4 w-1/2 rounded" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3 pb-4 flex-grow">
-        <Skeleton className="h-4 w-full rounded" />
-        <Skeleton className="h-4 w-5/6 rounded" />
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-20 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-20 rounded-full" />
-        </div>
-      </CardContent>
-      <CardFooter className="pt-4 border-t">
-        <div className="flex justify-between items-center w-full">
-          <Skeleton className="h-4 w-24 rounded" />
-          <Skeleton className="h-8 w-20 rounded-md" />
-        </div>
-      </CardFooter>
-    </Card>
-  );
 
   return (
     <div className="flex flex-col md:flex-row gap-8">
@@ -378,7 +221,7 @@ export default function JobsPage() {
             {Array.from({
               length: viewMode === 'grid' ? JOBS_PER_PAGE : 4,
             }).map((_, index) => (
-              <JobSkeletonCard key={index} />
+              <JobSkeletonCard key={index} viewMode={viewMode} />
             ))}
           </div>
         ) : !error && paginatedJobs.length > 0 ? (
