@@ -31,39 +31,39 @@ export const fetchDataForAdminPage = async (
   setIsLoading: (section: string, value: boolean) => void
 ) => {
   try {
-    const stats = await getPlatformStats();
+    const [
+      stats,
+      pendingJobsData,
+      pendingCompaniesData,
+      allCompaniesData,
+      jobSeekersData,
+      platformUsersData,
+      allJobsData,
+    ] = await Promise.all([
+      getPlatformStats(),
+      getPendingJobs(),
+      getPendingCompanies(),
+      getAllCompaniesForAdmin(),
+      getAllJobSeekersForAdmin(),
+      getAllPlatformUsersForAdmin(),
+      getAllJobsForAdmin(),
+    ]);
+
     setPlatformStats(stats);
-    setIsLoading('stats', false);
-
-    const pendingJobsData = await getPendingJobs();
     setPendingJobs(pendingJobsData);
-    setIsLoading('pendingJobs', false);
-
-    const pendingCompaniesData = await getPendingCompanies();
     setPendingCompanies(pendingCompaniesData);
-    setIsLoading('pendingCompanies', false);
-
-    const allCompaniesData = await getAllCompaniesForAdmin();
     setAllCompanies(allCompaniesData);
-    setIsLoading('allCompanies', false);
-
-    const jobSeekersData = await getAllJobSeekersForAdmin();
     setAllJobSeekers(jobSeekersData);
-    const platformUsersData = await getAllPlatformUsersForAdmin();
     setAllPlatformUsers(platformUsersData);
-    setIsLoading('users', false);
-
-    const allJobsData = await getAllJobsForAdmin();
     setAllJobs(allJobsData);
-    setIsLoading('allJobs', false);
   } catch (error: unknown) {
     console.error('Error fetching admin data:', error);
     toast({
       title: 'Error',
-      description: `Failed to load some admin data. ${(error as Error).message}`,
+      description: `Failed to load admin dashboard data. ${(error as Error).message}`,
       variant: 'destructive',
     });
-    // Set all loading states to false on error
+  } finally {
     setIsLoading('stats', false);
     setIsLoading('pendingJobs', false);
     setIsLoading('pendingCompanies', false);
