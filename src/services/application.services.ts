@@ -11,11 +11,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type {
-  Application,
-  ApplicationAnswer,
-  ApplicationStatus,
-} from '@/types';
+import type { Application, ApplicationStatus } from '@/types';
 
 export const getUserApplications = async (
   userId: string

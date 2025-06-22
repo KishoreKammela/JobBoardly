@@ -14,13 +14,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type {
-  Company,
-  Job,
-  LegalDocument,
-  UserProfile,
-  UserRole,
-} from '@/types';
+import type { Company, Job, LegalDocument, UserProfile } from '@/types';
 import { ADMIN_LIKE_ROLES } from '@/app/admin/_lib/constants';
 
 export const getPlatformStats = async () => {

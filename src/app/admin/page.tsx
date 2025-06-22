@@ -51,7 +51,7 @@ import {
   updateCompanyStatusInDb,
   updateJobStatusInDb,
   updateUserStatusInDb,
-} from './_lib/services';
+} from '@/services/admin.services';
 import { getRoleBadgeVariant, getRoleDisplayName } from './_lib/utils';
 
 export default function AdminPage() {
