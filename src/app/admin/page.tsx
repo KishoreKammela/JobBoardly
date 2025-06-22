@@ -1,7 +1,5 @@
 'use client';
-import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,82 +10,50 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertCircle, ShieldCheck, Loader2, Gavel, Cpu } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
+import type {
+  Company,
+  Job,
+  LegalDocument,
+  UserProfile,
+  UserRole,
+} from '@/types';
 import {
   collection,
-  query,
-  where,
-  getDocs,
   doc,
-  updateDoc,
-  Timestamp,
-  orderBy,
-  serverTimestamp,
   getCountFromServer,
-  setDoc,
   getDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
-import type {
-  Job,
-  UserProfile,
-  Company,
-  UserRole,
-  LegalDocument,
-} from '@/types';
-
-import { useToast } from '@/hooks/use-toast';
-import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
-import AdminCompaniesTable from '@/components/admin/AdminCompaniesTable';
-import AdminJobsTable from '@/components/admin/AdminJobsTable';
-import AdminJobSeekersTable from '@/components/admin/AdminJobSeekersTable';
-import AdminPlatformUsersTable from '@/components/admin/AdminPlatformUsersTable';
-import AdminLegalEditor from '@/components/admin/AdminLegalEditor';
+import { AlertCircle, Cpu, Gavel, Loader2, ShieldCheck } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useState } from 'react';
 import AdminAiFeatures from '@/components/admin/AdminAiFeatures';
-
-interface JobWithApplicantCount extends Job {
-  applicantCount: number;
-}
-
-interface ModalState {
-  isOpen: boolean;
-  title: string;
-  description: React.ReactNode;
-  onConfirmAction: (() => Promise<void>) | null;
-  confirmText: string;
-  confirmVariant: 'default' | 'destructive';
-}
-
-const initialModalState: ModalState = {
-  isOpen: false,
-  title: '',
-  description: '',
-  onConfirmAction: null,
-  confirmText: 'Confirm',
-  confirmVariant: 'default',
-};
-
-interface PlatformStats {
-  totalJobSeekers: number;
-  totalCompanies: number;
-  totalJobs: number;
-  approvedJobs: number;
-  totalApplications: number;
-}
-
-const ADMIN_LIKE_ROLES: UserRole[] = [
-  'admin',
-  'superAdmin',
-  'moderator',
-  'supportAgent',
-  'dataAnalyst',
-  'complianceOfficer',
-  'systemMonitor',
-];
+import AdminCompaniesTable from '@/components/admin/AdminCompaniesTable';
+import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
+import AdminJobSeekersTable from '@/components/admin/AdminJobSeekersTable';
+import AdminJobsTable from '@/components/admin/AdminJobsTable';
+import AdminLegalEditor from '@/components/admin/AdminLegalEditor';
+import AdminPlatformUsersTable from '@/components/admin/AdminPlatformUsersTable';
+import { ADMIN_LIKE_ROLES } from './_lib/constants';
+import {
+  initialModalState,
+  type JobWithApplicantCount,
+  type ModalState,
+  type PlatformStats,
+} from './_lib/interfaces';
 
 export default function AdminPage() {
   const { user, loading } = useAuth();

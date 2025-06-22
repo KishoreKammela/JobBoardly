@@ -28,24 +28,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-interface ModalState {
-  isOpen: boolean;
-  title: string;
-  description: React.ReactNode;
-  onConfirmAction: (() => Promise<void>) | null;
-  confirmText: string;
-  confirmVariant: 'default' | 'destructive';
-}
-
-const defaultModalState: ModalState = {
-  isOpen: false,
-  title: '',
-  description: '',
-  onConfirmAction: null,
-  confirmText: 'Confirm',
-  confirmVariant: 'default',
-};
+import { SEARCH_HISTORY_STORAGE_KEY } from './_lib/constants';
+import { type ModalState, defaultModalState } from './_lib/interfaces';
 
 export default function SettingsPage() {
   const { user, loading, company } = useAuth();
