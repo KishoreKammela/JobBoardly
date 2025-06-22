@@ -1,4 +1,4 @@
-bi# JobBoardly - AI-Powered Job Portal
+# JobBoardly - AI-Powered Job Portal
 
 JobBoardly is a modern, AI-enhanced job board platform designed to connect job seekers with employers efficiently. It leverages cutting-edge technologies to provide features like resume parsing, AI-driven job matching, screening questions, and a seamless application process. Our vision is to create the most intelligent and automated job marketplace, where AI guides careers and optimizes hiring success.
 
