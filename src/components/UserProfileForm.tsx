@@ -4,6 +4,8 @@ import { useState, useEffect, type FormEvent } from 'react';
 import type { UserProfile, Company } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
+import { useCompany } from '@/contexts/Company/CompanyContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
 import {
@@ -120,13 +122,9 @@ const defaultModalState: ModalState = {
 };
 
 export function UserProfileForm() {
-  const {
-    user,
-    company,
-    updateUserProfile,
-    updateCompanyProfile,
-    loading: authLoading,
-  } = useAuth();
+  const { loading: authLoading } = useAuth();
+  const { user, updateUserProfile } = useUserProfile();
+  const { company, updateCompanyProfile } = useCompany();
   const { toast } = useToast();
 
   const [userFormData, setUserFormData] =
@@ -637,7 +635,10 @@ export function UserProfileForm() {
               [e.target.name]: e.target.value,
             }))
           }
-          recruiters={user.companyRecruiters || []}
+          recruiters={
+            (user as UserProfile & { companyRecruiters: UserProfile[] })
+              .companyRecruiters || []
+          }
           isFetchingRecruiters={false}
           isDisabled={isDisabledByStatus}
           companyStatus={company.status}
