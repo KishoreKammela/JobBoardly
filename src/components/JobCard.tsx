@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
-import type { Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
 import { format, isValid, parse } from 'date-fns';
 
 interface JobCardProps {
