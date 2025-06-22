@@ -1,3 +1,4 @@
+// src/components/profile/PersonalInformationSection.tsx
 'use client';
 import React from 'react';
 import type { UserProfile } from '@/types';
@@ -34,6 +35,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { format, parse, isValid } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface PersonalInformationSectionProps {
   userFormData: Partial<UserProfile>;
@@ -103,7 +105,12 @@ export function PersonalInformationSection({
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div
+            className={cn(
+              'grid gap-6',
+              isJobSeeker ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
+            )}
+          >
             <div>
               <Label
                 htmlFor="userAvatarUrl"
