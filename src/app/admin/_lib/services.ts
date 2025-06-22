@@ -1,6 +1,6 @@
 // src/app/admin/_lib/services.ts
 import { db } from '@/lib/firebase';
-import type { Company, UserRole } from '@/types';
+import type { Company } from '@/types';
 import { doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 export const updateJobStatusInDb = async (

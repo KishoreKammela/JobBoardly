@@ -28,7 +28,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { SEARCH_HISTORY_STORAGE_KEY } from './_lib/constants';
 import { type ModalState, defaultModalState } from './_lib/interfaces';
 
 export default function SettingsPage() {
