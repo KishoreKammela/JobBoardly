@@ -1,3 +1,4 @@
+// src/app/auth/login/page.tsx
 'use client';
 import Link from 'next/link';
 import { useState, type FormEvent, useEffect } from 'react';
@@ -10,6 +11,7 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,9 +24,7 @@ import {
   microsoftProvider,
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
-
-// Metadata for this page should be set in a server component or root layout
-// For client components, we can update document.title dynamically if needed.
+import { ADMIN_LIKE_ROLES } from '@/lib/constants';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -49,22 +49,40 @@ export default function LoginPage() {
         if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
-        else if (user.role === 'admin') router.replace('/admin');
+        else if (ADMIN_LIKE_ROLES.includes(user.role)) router.replace('/admin');
         else router.replace('/');
       }
     }
   }, [user, authLoading, router, searchParams]);
 
-  const handleLoginSuccess = () => {
-    toast({ title: 'Login Successful', description: `Welcome back!` });
+  const handleLoginSuccess = (userName: string) => {
+    toast({
+      title: 'Login Successful',
+      description: `Welcome back, ${userName}!`,
+    });
+  };
+
+  const redirectAfterLogin = (
+    userRole: string,
+    redirectParam: string | null
+  ) => {
+    if (redirectParam) {
+      router.replace(redirectParam);
+    } else {
+      if (userRole === 'jobSeeker') router.replace('/jobs');
+      else if (userRole === 'employer') router.replace('/employer/posted-jobs');
+      else if (ADMIN_LIKE_ROLES.includes(userRole)) router.replace('/admin');
+      else router.replace('/');
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await loginUser(email, password);
-      handleLoginSuccess();
+      const userProfile = await loginUser(email, password);
+      handleLoginSuccess(userProfile.name);
+      redirectAfterLogin(userProfile.role, searchParams.get('redirect'));
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error('Login error:', firebaseError.message);
@@ -81,8 +99,8 @@ export default function LoginPage() {
         description: friendlyMessage,
         variant: 'destructive',
       });
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSocialLogin = async (
@@ -96,8 +114,9 @@ export default function LoginPage() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'jobSeeker');
-      handleLoginSuccess();
+      const userProfile = await signInWithSocial(authProvider, 'jobSeeker');
+      handleLoginSuccess(userProfile.name);
+      // Redirection is handled by the useEffect hook
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
@@ -118,13 +137,15 @@ export default function LoginPage() {
     );
   }
 
-  if (user && !authLoading) return null; // Handled by useEffect
+  if (user && !authLoading) return null; // Let useEffect handle redirect
 
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <h1 className="text-2xl font-bold font-headline">Job Seeker Login</h1>
+          <CardTitle className="text-2xl font-bold font-headline">
+            Job Seeker Login
+          </CardTitle>
           <CardDescription>Sign in to continue to JobBoardly.</CardDescription>
         </CardHeader>
         <CardContent>

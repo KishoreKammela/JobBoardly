@@ -1,3 +1,4 @@
+// src/app/auth/register/page.tsx
 'use client';
 import Link from 'next/link';
 import { useState, type FormEvent, useEffect } from 'react';
@@ -10,6 +11,7 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -23,7 +25,6 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
-import type { UserRole } from '@/types';
 import type { FirebaseError } from 'firebase/app';
 import {
   googleProvider,
@@ -32,9 +33,7 @@ import {
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
 import { checkPasswordStrength, type PasswordStrength } from '@/lib/utils';
-
-// Metadata for this page should be set in a server component or root layout
-// For client components, we can update document.title dynamically if needed.
+import { ADMIN_LIKE_ROLES } from '@/lib/constants';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -68,8 +67,7 @@ export default function RegisterPage() {
         if (user.role === 'jobSeeker') router.replace('/jobs');
         else if (user.role === 'employer')
           router.replace('/employer/posted-jobs');
-        else if (user.role === 'admin' || user.role === 'superAdmin')
-          router.replace('/admin');
+        else if (ADMIN_LIKE_ROLES.includes(user.role)) router.replace('/admin');
         else router.replace('/');
       }
     }
@@ -81,10 +79,10 @@ export default function RegisterPage() {
     setPasswordStrength(checkPasswordStrength(pass));
   };
 
-  const handleRegisterSuccess = () => {
+  const handleRegisterSuccess = (userName: string) => {
     toast({
       title: 'Registration Successful',
-      description: `Welcome to JobBoardly! Complete your profile to get started.`,
+      description: `Welcome to JobBoardly, ${userName}! Complete your profile to get started.`,
     });
   };
 
@@ -100,8 +98,13 @@ export default function RegisterPage() {
     }
     setIsLoading(true);
     try {
-      await registerUser(email, password, name, 'jobSeeker' as UserRole);
-      handleRegisterSuccess();
+      const userProfile = await registerUser(
+        email,
+        password,
+        name,
+        'jobSeeker'
+      );
+      handleRegisterSuccess(userProfile.name);
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error('Registration error:', firebaseError.message);
@@ -132,8 +135,8 @@ export default function RegisterPage() {
       else if (providerName === 'microsoft') authProvider = microsoftProvider;
       else return;
 
-      await signInWithSocial(authProvider, 'jobSeeker');
-      handleRegisterSuccess();
+      const userProfile = await signInWithSocial(authProvider, 'jobSeeker');
+      handleRegisterSuccess(userProfile.name);
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} sign up error:`, firebaseError);
@@ -153,15 +156,15 @@ export default function RegisterPage() {
       </div>
     );
   }
-  if (user && !authLoading) return null; // Handled by useEffect
+  if (user && !authLoading) return null;
 
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <h1 className="text-2xl font-bold font-headline">
+          <CardTitle className="text-2xl font-bold font-headline">
             Create Job Seeker Account
-          </h1>
+          </CardTitle>
           <CardDescription>
             Join JobBoardly to find your next career opportunity.
           </CardDescription>

@@ -1,3 +1,4 @@
+// src/contexts/Auth/AuthContext.tsx
 'use client';
 import {
   createUserWithEmailAndPassword,
@@ -11,15 +12,7 @@ import {
   type AuthProvider as FirebaseAuthProvider,
   type User as FirebaseUser,
 } from 'firebase/auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-  Timestamp,
-  updateDoc,
-} from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import React, {
   createContext,
   useContext,
@@ -29,10 +22,12 @@ import React, {
 } from 'react';
 
 import { auth, db } from '@/lib/firebase';
-import type { Company, UserProfile, UserRole } from '@/types';
+import type { UserProfile, UserRole } from '@/types';
 import { toast as globalToast } from '@/hooks/use-toast';
-import { useJobSeekerActions } from '../JobSeekerActionsContext/JobSeekerActionsContext';
-import { useEmployerActions } from '../EmployerActionsContext/EmployerActionsContext';
+import {
+  createUserProfileInDb,
+  getUserProfile,
+} from '@/services/user.services';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -44,113 +39,27 @@ interface AuthContextType {
     name: string,
     role: UserRole,
     companyName?: string
-  ) => Promise<FirebaseUser>;
-  loginUser: (email: string, pass: string) => Promise<FirebaseUser>;
+  ) => Promise<UserProfile>;
+  loginUser: (email: string, pass: string) => Promise<UserProfile>;
   signInWithSocial: (
     provider: FirebaseAuthProvider,
     role: UserRole,
     companyName?: string
-  ) => Promise<FirebaseUser>;
+  ) => Promise<UserProfile>;
   changeUserPassword: (
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
+  // These will be provided by the UserProfileContext and other specific contexts
+  // and are removed from here to separate concerns.
   user: UserProfile | null;
-  company: Company | null;
-  notifications: Notification[];
-  unreadNotificationCount: number;
-  fetchNotifications: () => Promise<void>;
-  markNotificationAsRead: (notificationId: string) => Promise<void>;
-  markAllNotificationsAsRead: () => Promise<void>;
-  jobSeekerActions: ReturnType<typeof useJobSeekerActions>;
-  employerActions: ReturnType<typeof useEmployerActions>;
-  pendingJobsCount?: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_LIKE_ROLES: UserRole[] = [
-  'admin',
-  'superAdmin',
-  'moderator',
-  'supportAgent',
-  'dataAnalyst',
-  'complianceOfficer',
-  'systemMonitor',
-];
-
-async function createUserProfileInFirestore(
-  fbUser: FirebaseUser,
-  name: string,
-  role: UserRole,
-  companyNameForNewCompany?: string,
-  existingCompanyId?: string
-): Promise<Partial<UserProfile>> {
-  if (!db) throw new Error("Firestore 'db' instance is not available.");
-  const userDocRef = doc(db, 'users', fbUser.uid);
-  let userCompanyId = existingCompanyId;
-  let userIsCompanyAdmin = false;
-
-  if (role === 'employer' && !existingCompanyId) {
-    const newCompanyRef = doc(collection(db, 'companies'));
-    const newCompanyData: Omit<Company, 'id'> = {
-      name: companyNameForNewCompany || 'New Company',
-      adminUids: [fbUser.uid],
-      recruiterUids: [fbUser.uid],
-      createdAt: serverTimestamp() as Timestamp,
-      updatedAt: serverTimestamp() as Timestamp,
-      status: 'pending',
-      moderationReason: '',
-    };
-    await setDoc(newCompanyRef, newCompanyData);
-    userCompanyId = newCompanyRef.id;
-    userIsCompanyAdmin = true;
-  }
-
-  let defaultName = 'New User';
-  if (role === 'employer') defaultName = 'Recruiter';
-  else if (ADMIN_LIKE_ROLES.includes(role)) defaultName = 'Platform Staff';
-
-  const userProfileData: Partial<UserProfile> = {
-    uid: fbUser.uid,
-    email: fbUser.email,
-    name: name || fbUser.displayName || defaultName,
-    role: role,
-    avatarUrl: fbUser.photoURL || '',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    lastActive: serverTimestamp(),
-    status: 'active',
-    theme: 'system',
-    jobBoardDisplay: 'list',
-    itemsPerPage: 10,
-    jobAlerts: {
-      newJobsMatchingProfile: true,
-      savedSearchAlerts: false,
-      applicationStatusUpdates: true,
-    },
-  };
-
-  if (role === 'employer') {
-    userProfileData.companyId = userCompanyId;
-    userProfileData.isCompanyAdmin = userIsCompanyAdmin;
-  }
-
-  const finalProfileDataForFirestore: Record<string, unknown> = {};
-  for (const key in userProfileData) {
-    const typedKey = key as keyof UserProfile;
-    const value = userProfileData[typedKey];
-    if (value !== undefined) {
-      finalProfileDataForFirestore[key] = value;
-    }
-  }
-
-  await setDoc(userDocRef, finalProfileDataForFirestore, { merge: true });
-  return userProfileData;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null); // Keep a local copy for immediate use
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -160,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       setLoading(false);
       setFirebaseUser(null);
+      setUser(null);
       return;
     }
 
@@ -168,19 +78,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser && db) {
         const userDocRef = doc(db, 'users', fbUser.uid);
         const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists() && userDoc.data().status === 'deleted') {
-          await signOut(auth);
-          setFirebaseUser(null);
-          globalToast({
-            title: 'Account Deactivated',
-            description:
-              'Your account has been deactivated. Please contact support for assistance.',
-            variant: 'destructive',
-            duration: Infinity,
-          });
-        } else {
-          await updateDoc(userDocRef, { lastActive: serverTimestamp() });
+        if (userDoc.exists()) {
+          const userProfile = userDoc.data() as UserProfile;
+          if (userProfile.status === 'deleted') {
+            await signOut(auth);
+            setFirebaseUser(null);
+            setUser(null);
+            globalToast({
+              title: 'Account Deactivated',
+              description:
+                'Your account has been deactivated. Please contact support for assistance.',
+              variant: 'destructive',
+              duration: Infinity,
+            });
+          } else {
+            await updateDoc(userDocRef, { lastActive: serverTimestamp() });
+            setUser({ uid: fbUser.uid, ...userProfile });
+          }
         }
+      } else {
+        setUser(null);
       }
       setLoading(false);
     });
@@ -194,54 +111,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: string,
     role: UserRole,
     companyName?: string
-  ): Promise<FirebaseUser> => {
+  ): Promise<UserProfile> => {
     if (!auth) throw new Error('Firebase Authentication is not configured.');
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
       pass
     );
-    await createUserProfileInFirestore(
+    const profile = await createUserProfileInDb(
       userCredential.user,
       name,
       role,
       companyName
     );
-    return userCredential.user;
+    const fullProfile = {
+      ...profile,
+      uid: userCredential.user.uid,
+    } as UserProfile;
+    setUser(fullProfile);
+    return fullProfile;
   };
 
   const loginUser = async (
     email: string,
     pass: string
-  ): Promise<FirebaseUser> => {
+  ): Promise<UserProfile> => {
     if (!auth) throw new Error('Firebase Authentication is not configured.');
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    return userCredential.user;
+    const profile = await getUserProfile(userCredential.user.uid);
+    if (!profile) {
+      await signOut(auth);
+      throw new Error('User profile not found in database.');
+    }
+    setUser(profile);
+    return profile;
   };
 
   const signInWithSocial = async (
     provider: FirebaseAuthProvider,
     role: UserRole,
     companyName?: string
-  ): Promise<FirebaseUser> => {
+  ): Promise<UserProfile> => {
     if (!auth || !db)
       throw new Error(
         'Firebase Authentication or Firestore is not configured.'
       );
     const result = await signInWithPopup(auth, provider);
     const fbUser = result.user;
-    const userDocRef = doc(db, 'users', fbUser.uid);
-    const userDocSnap = await getDoc(userDocRef);
+    let profile = await getUserProfile(fbUser.uid);
 
-    if (!userDocSnap.exists()) {
-      await createUserProfileInFirestore(
+    if (!profile) {
+      const newProfile = await createUserProfileInDb(
         fbUser,
         fbUser.displayName || 'New User',
         role,
         companyName
       );
+      profile = { ...newProfile, uid: fbUser.uid } as UserProfile;
     }
-    return fbUser;
+    setUser(profile);
+    return profile;
   };
 
   const logout = async () => {
@@ -252,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     await signOut(auth);
     setFirebaseUser(null);
+    setUser(null);
   };
 
   const changeUserPassword = async (
@@ -279,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginUser,
         signInWithSocial,
         changeUserPassword,
+        user,
       }}
     >
       {children}

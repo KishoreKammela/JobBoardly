@@ -1,3 +1,4 @@
+// src/app/auth/admin/login/page.tsx
 'use client';
 import Link from 'next/link';
 import { useState, type FormEvent, useEffect } from 'react';
@@ -10,21 +11,19 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck } from 'lucide-react';
 import type { FirebaseError } from 'firebase/app';
-import { ADMIN_ROLES } from './_lib/constants';
-
-// Metadata for this page should be set in a server component or root layout
-// For client components, we can update document.title dynamically if needed.
+import { ADMIN_LIKE_ROLES } from '@/lib/constants';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Start true to wait for auth check
+  const [isLoading, setIsLoading] = useState(false);
   const { user, loading: authLoading, loginUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,53 +34,44 @@ export default function AdminLoginPage() {
   }, []);
 
   useEffect(() => {
-    if (authLoading) {
-      setIsLoading(true); // Page is loading if auth state is loading
-      return;
-    }
-
-    // Auth state is resolved (authLoading is false)
-    if (user) {
+    if (!authLoading && user) {
       const redirectPath = searchParams.get('redirect');
-      if (user.role && ADMIN_ROLES.includes(user.role)) {
-        toast({
-          title: 'Platform Management Login Successful',
-          description: 'Redirecting to dashboard...',
-        });
+      if (ADMIN_LIKE_ROLES.includes(user.role)) {
         router.replace(redirectPath || '/admin');
       } else {
-        toast({
-          title: 'Access Denied',
-          description:
-            'This login is for authorized platform staff only. Your account does not have these privileges.',
-          variant: 'destructive',
-        });
-        if (user.role === 'jobSeeker') router.replace('/jobs');
-        else if (user.role === 'employer')
-          router.replace('/employer/posted-jobs');
-        else router.replace('/');
+        router.replace('/');
       }
-    } else {
-      // No user, and auth state resolved, so show the login form
-      setIsLoading(false);
     }
-  }, [user, authLoading, router, searchParams, toast]);
+  }, [user, authLoading, router, searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setIsLoading(true); // Loading during form submission
+    setIsLoading(true);
     try {
-      await loginUser(email, password);
+      const userProfile = await loginUser(email, password);
+      if (ADMIN_LIKE_ROLES.includes(userProfile.role)) {
+        toast({
+          title: 'Login Successful',
+          description: `Welcome back, ${userProfile.name}!`,
+        });
+        const redirectPath = searchParams.get('redirect');
+        router.replace(redirectPath || '/admin');
+      } else {
+        throw new Error('This login is for authorized platform staff only.');
+      }
     } catch (error: unknown) {
-      const firebaseError = error as FirebaseError;
-      console.error('Admin Login error:', firebaseError.message);
-      let friendlyMessage = 'Login failed. Please check your credentials.';
-      if (
-        firebaseError.code === 'auth/user-not-found' ||
-        firebaseError.code === 'auth/wrong-password' ||
-        firebaseError.code === 'auth/invalid-credential'
-      ) {
-        friendlyMessage = 'Invalid email or password.';
+      const typedError = error as FirebaseError | Error;
+      console.error('Admin Login error:', typedError.message);
+      let friendlyMessage =
+        typedError.message || 'Login failed. Please check your credentials.';
+      if ('code' in typedError) {
+        if (
+          typedError.code === 'auth/user-not-found' ||
+          typedError.code === 'auth/wrong-password' ||
+          typedError.code === 'auth/invalid-credential'
+        ) {
+          friendlyMessage = 'Invalid email or password.';
+        }
       }
       toast({
         title: 'Login Failed',
@@ -92,7 +82,7 @@ export default function AdminLoginPage() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -100,14 +90,16 @@ export default function AdminLoginPage() {
     );
   }
 
+  if (user && !authLoading) return null; // Let useEffect handle redirect
+
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-150px)] py-12">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <ShieldCheck className="mx-auto h-12 w-12 text-primary mb-2" />
-          <h1 className="text-2xl font-bold font-headline">
+          <CardTitle className="text-2xl font-bold font-headline">
             Platform Management Login
-          </h1>
+          </CardTitle>
           <CardDescription>
             Access the JobBoardly Admin Dashboard.
           </CardDescription>

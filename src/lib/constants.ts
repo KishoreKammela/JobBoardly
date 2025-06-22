@@ -1,4 +1,7 @@
-export const ADMIN_ROLES: string[] = [
+// src/lib/constants.ts
+import type { UserRole } from '@/types';
+
+export const ADMIN_LIKE_ROLES: UserRole[] = [
   'admin',
   'superAdmin',
   'moderator',
