@@ -133,6 +133,7 @@ export function PostJobForm() {
   const [jobData, setJobData] = useState<Partial<Job>>(initialJobDataState);
   const [skillsInput, setSkillsInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [pastedJD, setPastedJD] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
@@ -309,110 +310,92 @@ export function PostJobForm() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setPastedJD('');
     }
   };
 
+  const handlePastedJDChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setPastedJD(e.target.value);
+    setFile(null);
+  };
+
   const handleParseDocument = async () => {
-    if (!file) {
+    if (!file && !pastedJD.trim()) {
       toast({
-        title: 'No file selected',
-        description: 'Please select a job description document to parse.',
+        title: 'No Job Description Provided',
+        description:
+          'Please upload a file or paste job description text to parse.',
         variant: 'destructive',
       });
       return;
     }
     setIsParsing(true);
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const dataUri = reader.result as string;
-        const parsedData: ParsedJobData = await parseJobDescriptionFlow({
-          jobDescriptionDataUri: dataUri,
+      let dataUri: string;
+      if (file) {
+        dataUri = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
         });
+      } else {
+        dataUri = `data:text/plain;base64,${btoa(unescape(encodeURIComponent(pastedJD.trim())))}`;
+      }
 
-        if (
-          parsedData.responsibilities &&
-          parsedData.responsibilities.startsWith('Parsing Error:')
-        ) {
-          toast({
-            title: 'Document Parsing Issue',
-            description: parsedData.responsibilities,
-            variant: 'destructive',
-            duration: 9000,
-          });
-          setJobData((prev) => ({
-            ...prev,
-            title: parsedData.title || prev.title,
-            skills: parsedData.skills || prev.skills,
-            location: parsedData.location || prev.location,
-            type: parsedData.jobType || prev.type,
-            salaryMin: parsedData.salaryMin ?? prev.salaryMin,
-            salaryMax: parsedData.salaryMax ?? prev.salaryMax,
-            industry: parsedData.industry || prev.industry,
-            department: parsedData.department || prev.department,
-            roleDesignation: parsedData.roleDesignation || prev.roleDesignation,
-            experienceLevel: parsedData.experienceLevel || prev.experienceLevel,
-            minExperienceYears:
-              parsedData.minExperienceYears ?? prev.minExperienceYears,
-            maxExperienceYears:
-              parsedData.maxExperienceYears ?? prev.maxExperienceYears,
-            educationQualification:
-              parsedData.educationQualification || prev.educationQualification,
-            applicationDeadline:
-              parsedData.applicationDeadline || prev.applicationDeadline,
-            payTransparency: parsedData.payTransparency ?? prev.payTransparency,
-            benefits: parsedData.benefits || prev.benefits,
-          }));
-        } else {
-          setJobData((prev) => ({
-            ...prev,
-            title: parsedData.title || prev.title,
-            responsibilities:
-              parsedData.responsibilities || prev.responsibilities,
-            requirements: parsedData.requirements || prev.requirements,
-            skills: parsedData.skills || prev.skills,
-            location: parsedData.location || prev.location,
-            type: parsedData.jobType || prev.type,
-            salaryMin: parsedData.salaryMin ?? prev.salaryMin,
-            salaryMax: parsedData.salaryMax ?? prev.salaryMax,
-            industry: parsedData.industry || prev.industry,
-            department: parsedData.department || prev.department,
-            roleDesignation: parsedData.roleDesignation || prev.roleDesignation,
-            experienceLevel:
-              parsedData.experienceLevel ||
-              prev.experienceLevel ||
-              'Entry-Level',
-            minExperienceYears:
-              parsedData.minExperienceYears ?? prev.minExperienceYears,
-            maxExperienceYears:
-              parsedData.maxExperienceYears ?? prev.maxExperienceYears,
-            educationQualification:
-              parsedData.educationQualification || prev.educationQualification,
-            applicationDeadline:
-              parsedData.applicationDeadline || prev.applicationDeadline,
-            payTransparency:
-              parsedData.payTransparency ?? prev.payTransparency ?? true,
-            benefits: parsedData.benefits || prev.benefits || '',
-          }));
-          toast({
-            title: 'Document Parsed',
-            description: 'Job details have been pre-filled from the document.',
-          });
-        }
+      const parsedData: ParsedJobData = await parseJobDescriptionFlow({
+        jobDescriptionDataUri: dataUri,
+      });
 
-        if (parsedData.skills && parsedData.skills.length > 0) {
-          setSkillsInput(parsedData.skills.join(', '));
-        }
-        setFile(null);
-      };
-      reader.onerror = () => {
+      if (
+        parsedData.responsibilities &&
+        parsedData.responsibilities.startsWith('Parsing Error:')
+      ) {
         toast({
-          title: 'File Reading Error',
-          description: 'Could not read the selected file.',
+          title: 'Document Parsing Issue',
+          description: parsedData.responsibilities,
           variant: 'destructive',
+          duration: 9000,
         });
-      };
+      } else {
+        setJobData((prev) => ({
+          ...prev,
+          title: parsedData.title || prev.title,
+          responsibilities:
+            parsedData.responsibilities || prev.responsibilities,
+          requirements: parsedData.requirements || prev.requirements,
+          skills: parsedData.skills || prev.skills,
+          location: parsedData.location || prev.location,
+          type: parsedData.jobType || prev.type,
+          salaryMin: parsedData.salaryMin ?? prev.salaryMin,
+          salaryMax: parsedData.salaryMax ?? prev.salaryMax,
+          industry: parsedData.industry || prev.industry,
+          department: parsedData.department || prev.department,
+          roleDesignation: parsedData.roleDesignation || prev.roleDesignation,
+          experienceLevel:
+            parsedData.experienceLevel || prev.experienceLevel || 'Entry-Level',
+          minExperienceYears:
+            parsedData.minExperienceYears ?? prev.minExperienceYears,
+          maxExperienceYears:
+            parsedData.maxExperienceYears ?? prev.maxExperienceYears,
+          educationQualification:
+            parsedData.educationQualification || prev.educationQualification,
+          applicationDeadline:
+            parsedData.applicationDeadline || prev.applicationDeadline,
+          payTransparency:
+            parsedData.payTransparency ?? prev.payTransparency ?? true,
+          benefits: parsedData.benefits || prev.benefits || '',
+        }));
+        toast({
+          title: 'Document Parsed',
+          description: 'Job details have been pre-filled from the document.',
+        });
+      }
+      if (parsedData.skills && parsedData.skills.length > 0) {
+        setSkillsInput(parsedData.skills.join(', '));
+      }
+      setFile(null);
+      setPastedJD('');
     } catch (error: unknown) {
       console.error('Error parsing job description:', error);
       const errorMessage =
@@ -685,9 +668,8 @@ export function PostJobForm() {
             <CardDescription>
               Provide the specifics for the job opening. New jobs will be
               submitted for admin approval. You can also upload a document
-              (e.g., PDF, DOCX, TXT) and our AI will try to parse and pre-fill
-              the fields for you. Plain text (.txt) files yield the best results
-              for AI parsing.
+              (e.g., PDF, DOCX, TXT) or paste text, and our AI will try to parse
+              and pre-fill the fields. Plain text yields the best results.
             </CardDescription>
           )}
           {editingJobId && jobData.status && (
@@ -721,58 +703,77 @@ export function PostJobForm() {
         <CardContent className="space-y-8">
           {!editingJobId && (
             <div className="space-y-4 p-4 border rounded-md bg-muted/20">
-              <Label
-                htmlFor="jobDescriptionFile"
-                className="text-base font-semibold"
-              >
+              <Label className="text-base font-semibold">
                 AI-Powered Parsing (Optional)
               </Label>
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="jobDescriptionFile"
-                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors`}
-                  aria-label="Upload job description file area"
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <UploadCloud className="w-8 h-8 mb-2 text-primary" />
-                    <p className="mb-1 text-sm text-foreground/80">
-                      <span className="font-semibold">
-                        Click to upload job description
-                      </span>{' '}
-                      or drag and drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PDF, DOCX, TXT (MAX. 2MB)
-                    </p>
-                  </div>
-                  <Input
-                    id="jobDescriptionFile"
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.txt"
-                  />
-                </label>
-              </div>
-              {file && (
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Selected file: {file.name}</span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleParseDocument}
-                    disabled={isParsing || !file}
-                    aria-label="Parse uploaded document"
+              <div>
+                <Label htmlFor="resumeFile">Upload Job Description File</Label>
+                <div className="flex items-center justify-center w-full mt-1">
+                  <label
+                    htmlFor="resumeFile"
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors ${file ? 'border-primary' : ''}`}
+                    aria-label="Upload job description file area"
                   >
-                    {isParsing ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="mr-2 h-4 w-4" />
-                    )}
-                    Parse Document
-                  </Button>
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <UploadCloud className="w-8 h-8 mb-2 text-primary" />
+                      <p className="mb-1 text-sm text-foreground/80">
+                        <span className="font-semibold">Click to upload</span>{' '}
+                        or drag and drop
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        TXT, PDF, DOCX (MAX. 2MB)
+                      </p>
+                    </div>
+                    <Input
+                      id="resumeFile"
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      accept=".pdf,.doc,.docx,.txt"
+                    />
+                  </label>
                 </div>
-              )}
+                {file && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Selected file: {file.name}
+                  </p>
+                )}
+              </div>
+              <div className="relative text-center my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-muted/20 px-2 text-muted-foreground">
+                    Or
+                  </span>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="pastedJD">Paste Job Description Text</Label>
+                <Textarea
+                  id="pastedJD"
+                  value={pastedJD}
+                  onChange={handlePastedJDChange}
+                  placeholder="Paste the job description content here..."
+                  rows={8}
+                  className={`mt-1 bg-card ${pastedJD ? 'border-primary' : ''}`}
+                  aria-label="Paste job description text area"
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={handleParseDocument}
+                disabled={isParsing || (!file && !pastedJD.trim())}
+                aria-label="Parse Job Description"
+              >
+                {isParsing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Parse Job Description
+              </Button>
             </div>
           )}
 
