@@ -565,7 +565,7 @@ export function UserProfileForm() {
           />
           <JobSeekerProfessionalSummarySection
             userFormData={userFormData}
-            onUserChange={onUserChange}
+            onUserChange={handleUserChange}
             onSkillsChange={(skills) =>
               setUserFormData((prev) => ({ ...prev, skills }))
             }
@@ -608,13 +608,13 @@ export function UserProfileForm() {
           />
           <JobSeekerCompensationSection
             userFormData={userFormData}
-            onUserChange={onUserChange}
+            onUserChange={handleUserChange}
             onSwitchChange={handleUserSwitchChange}
             isDisabled={isDisabledByStatus}
           />
           <JobSeekerPreferencesSection
             userFormData={userFormData}
-            onUserChange={onUserChange}
+            onUserChange={handleUserChange}
             onLocationsChange={(locations) =>
               setUserFormData((prev) => ({
                 ...prev,
