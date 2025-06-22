@@ -167,11 +167,23 @@ export function JobCard({
     !applicationStatus && job.status === 'approved' && !isJobSeekerSuspended;
   const canCurrentlySave =
     !applicationStatus && job.status === 'approved' && !isJobSeekerSuspended;
+
+  const finalApplicationStatuses: ApplicationStatus[] = [
+    'Hired',
+    'Rejected By Company',
+    'Withdrawn by Applicant',
+  ];
   const canCurrentlyWithdraw =
-    applicationStatus === 'Applied' && !isJobSeekerSuspended;
+    applicationStatus &&
+    !finalApplicationStatuses.includes(applicationStatus) &&
+    !isJobSeekerSuspended;
 
   const renderApplicationStatusBadge = () => {
-    if (!applicationStatus || applicationStatus === 'Applied') return null;
+    if (
+      !applicationStatus ||
+      !finalApplicationStatuses.includes(applicationStatus)
+    )
+      return null;
 
     let variant: 'default' | 'destructive' | 'secondary' | 'outline' =
       'secondary';
@@ -298,34 +310,47 @@ export function JobCard({
               />
             </Button>
 
-            {canCurrentlyWithdraw ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleWithdraw}
-                title="Withdraw Application"
-              >
-                <RotateCcw className="h-4 w-4 mr-1.5" /> Withdraw
-              </Button>
-            ) : applicationStatus && applicationStatus !== 'Applied' ? (
-              renderApplicationStatusBadge()
-            ) : canCurrentlyApply ? (
-              <Button
-                size="sm"
-                asChild
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <Link href={`/jobs/${job.id}`}>
-                  Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              job.status !== 'approved' && (
-                <Badge variant="outline" className="text-xs">
-                  <Ban className="mr-1 h-3 w-3" /> Not Available
-                </Badge>
-              )
-            )}
+            {(() => {
+              if (canCurrentlyWithdraw) {
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleWithdraw}
+                    title="Withdraw Application"
+                  >
+                    <RotateCcw className="mr-1.5 h-4 w-4" /> Withdraw
+                  </Button>
+                );
+              }
+              if (
+                applicationStatus &&
+                finalApplicationStatuses.includes(applicationStatus)
+              ) {
+                return renderApplicationStatusBadge();
+              }
+              if (canCurrentlyApply) {
+                return (
+                  <Button
+                    size="sm"
+                    asChild
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    <Link href={`/jobs/${job.id}`}>
+                      Apply Now <ExternalLink className="ml-1.5 h-4 w-4" />
+                    </Link>
+                  </Button>
+                );
+              }
+              if (job.status !== 'approved') {
+                return (
+                  <Badge variant="outline" className="text-xs">
+                    <Ban className="mr-1 h-3 w-3" /> Not Available
+                  </Badge>
+                );
+              }
+              return null;
+            })()}
           </div>
         )}
         {!user && job.status === 'approved' && (

@@ -343,7 +343,7 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   };
 
   const handleWithdrawApplication = async () => {
-    if (!jobData || !user || applicationStatus !== 'Applied') return;
+    if (!jobData || !user || !applicationStatus) return;
     if (isJobSeekerSuspended) {
       toast({
         title: 'Account Suspended',
@@ -534,30 +534,43 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
         </Badge>
       );
     }
+    const finalApplicationStatuses: ApplicationStatus[] = [
+      'Hired',
+      'Rejected By Company',
+      'Withdrawn by Applicant',
+    ];
+    const canWithdraw =
+      applicationStatus &&
+      !finalApplicationStatuses.includes(applicationStatus);
 
-    if (applicationStatus === 'Applied') {
+    if (canWithdraw) {
       return (
-        <Button
-          size="lg"
-          variant="outline"
-          className="w-full"
-          onClick={() => setShowWithdrawConfirm(true)}
-          disabled={isJobSeekerSuspended || isWithdrawing}
-        >
-          {isWithdrawing ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          ) : (
-            <RotateCcw className="mr-2 h-5 w-5" />
-          )}
-          Withdraw Application
-        </Button>
+        <div className="space-y-2">
+          <p className="text-center text-sm text-muted-foreground">
+            Current status:{' '}
+            <Badge variant="secondary">{applicationStatus}</Badge>
+          </p>
+          <Button
+            size="lg"
+            variant="outline"
+            className="w-full"
+            onClick={() => setShowWithdrawConfirm(true)}
+            disabled={isJobSeekerSuspended || isWithdrawing}
+          >
+            {isWithdrawing ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <RotateCcw className="mr-2 h-5 w-5" />
+            )}
+            Withdraw Application
+          </Button>
+        </div>
       );
     }
 
     if (
-      applicationStatus === 'Withdrawn by Applicant' ||
-      applicationStatus === 'Rejected By Company' ||
-      applicationStatus === 'Hired'
+      applicationStatus &&
+      finalApplicationStatuses.includes(applicationStatus)
     ) {
       let badgeVariant: 'default' | 'destructive' | 'secondary' | 'outline' =
         'secondary';
