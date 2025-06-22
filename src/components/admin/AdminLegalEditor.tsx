@@ -19,7 +19,7 @@ interface AdminLegalEditorProps {
     docId: 'privacyPolicy' | 'termsOfService',
     content: string
   ) => Promise<void>;
-  isContentLoaded: { privacy: boolean; terms: boolean };
+  isLoading: boolean;
   isSaving: 'privacy' | 'terms' | null;
 }
 
@@ -29,7 +29,7 @@ const AdminLegalEditor: React.FC<AdminLegalEditorProps> = ({
   onPrivacyPolicyChange,
   onTermsOfServiceChange,
   onSaveLegalDocument,
-  isContentLoaded,
+  isLoading,
   isSaving,
 }) => {
   return (
@@ -46,7 +46,7 @@ const AdminLegalEditor: React.FC<AdminLegalEditorProps> = ({
       <CardContent className="space-y-6">
         <div className="space-y-3 p-4 border rounded-md">
           <h3 className="text-lg font-semibold">Privacy Policy</h3>
-          {!isContentLoaded.privacy ? (
+          {isLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading Privacy Policy...
@@ -64,7 +64,7 @@ const AdminLegalEditor: React.FC<AdminLegalEditorProps> = ({
             onClick={() =>
               onSaveLegalDocument('privacyPolicy', privacyPolicyContent)
             }
-            disabled={isSaving === 'privacy' || !isContentLoaded.privacy}
+            disabled={isSaving === 'privacy' || isLoading}
           >
             {isSaving === 'privacy' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -77,7 +77,7 @@ const AdminLegalEditor: React.FC<AdminLegalEditorProps> = ({
 
         <div className="space-y-3 p-4 border rounded-md">
           <h3 className="text-lg font-semibold">Terms of Service</h3>
-          {!isContentLoaded.terms ? (
+          {isLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading Terms of Service...
@@ -95,7 +95,7 @@ const AdminLegalEditor: React.FC<AdminLegalEditorProps> = ({
             onClick={() =>
               onSaveLegalDocument('termsOfService', termsOfServiceContent)
             }
-            disabled={isSaving === 'terms' || !isContentLoaded.terms}
+            disabled={isSaving === 'terms' || isLoading}
           >
             {isSaving === 'terms' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

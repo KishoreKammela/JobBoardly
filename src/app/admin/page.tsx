@@ -32,6 +32,7 @@ import {
   getAllJobsForAdmin,
   getAllJobSeekersForAdmin,
   getAllPlatformUsersForAdmin,
+  getLegalDocumentContent,
   getPendingCompanies,
   getPendingJobs,
   getPlatformStats,
@@ -44,7 +45,6 @@ import type {
 } from './_lib/interfaces';
 import { initialModalState } from './_lib/interfaces';
 import {
-  fetchLegalContentForAdmin,
   handleCompanyStatusUpdateAction,
   handleJobStatusUpdateAction,
   handleSaveLegalDocumentAction,
@@ -58,6 +58,7 @@ export default function AdminPage() {
   const pathname = usePathname();
   const { toast } = useToast();
 
+  // Data states
   const [pendingJobs, setPendingJobs] = useState<JobWithApplicantCount[]>([]);
   const [pendingCompanies, setPendingCompanies] = useState<Company[]>([]);
   const [allCompanies, setAllCompanies] = useState<Company[]>([]);
@@ -67,7 +68,10 @@ export default function AdminPage() {
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(
     null
   );
+  const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
+  const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
 
+  // Loading and UI states
   const [loadingStates, setLoadingStates] = useState({
     stats: true,
     pendingJobs: true,
@@ -75,23 +79,18 @@ export default function AdminPage() {
     allCompanies: true,
     users: true,
     allJobs: true,
+    legal: true,
   });
-
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
   >(null);
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
-  const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
-  const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
-  const [isLegalContentLoaded, setIsLegalContentLoaded] = useState({
-    privacy: false,
-    terms: false,
-  });
   const [isSavingLegal, setIsSavingLegal] = useState<
     'privacy' | 'terms' | null
   >(null);
 
+  // Effect for handling auth state and redirection
   useEffect(() => {
     if (loading || isLoggingOut) return;
     if (!user) {
@@ -106,9 +105,15 @@ export default function AdminPage() {
             ? '/employer/posted-jobs'
             : '/'
       );
-    } else {
+    }
+  }, [user, loading, isLoggingOut, router, pathname]);
+
+  // Effect for fetching data once the admin user is confirmed
+  useEffect(() => {
+    if (user && ADMIN_LIKE_ROLES.includes(user.role)) {
       const loadAdminData = async () => {
         try {
+          // Fetch all data in parallel
           const [
             stats,
             pendingJobsData,
@@ -127,6 +132,7 @@ export default function AdminPage() {
             getAllJobsForAdmin(),
           ]);
 
+          // Set all states
           setPlatformStats(stats);
           setPendingJobs(pendingJobsData);
           setPendingCompanies(pendingCompaniesData);
@@ -134,14 +140,23 @@ export default function AdminPage() {
           setAllJobSeekers(jobSeekersData);
           setAllPlatformUsers(platformUsersData);
           setAllJobs(allJobsData);
+
+          // Fetch legal content only for superAdmin
+          if (user.role === 'superAdmin') {
+            const privacyDoc = await getLegalDocumentContent('privacyPolicy');
+            if (privacyDoc) setPrivacyPolicyContent(privacyDoc.content);
+            const termsDoc = await getLegalDocumentContent('termsOfService');
+            if (termsDoc) setTermsOfServiceContent(termsDoc.content);
+          }
         } catch (error: unknown) {
           console.error('Error fetching admin data:', error);
           toast({
-            title: 'Error',
-            description: `Failed to load admin dashboard data. ${(error as Error).message}`,
+            title: 'Error Loading Dashboard',
+            description: `Failed to load some dashboard data. ${(error as Error).message}`,
             variant: 'destructive',
           });
         } finally {
+          // Ensure all loading states are turned off
           setLoadingStates({
             stats: false,
             pendingJobs: false,
@@ -149,21 +164,16 @@ export default function AdminPage() {
             allCompanies: false,
             users: false,
             allJobs: false,
+            legal: false,
           });
         }
       };
 
       loadAdminData();
-      if (user.role === 'superAdmin') {
-        fetchLegalContentForAdmin(
-          setPrivacyPolicyContent,
-          setTermsOfServiceContent,
-          setIsLegalContentLoaded
-        );
-      }
     }
-  }, [user, loading, router, pathname, isLoggingOut, toast]);
+  }, [user?.uid, toast]); // Re-run only if the user ID changes
 
+  // Modal logic using useCallback for stability
   const showConfirmationModal = useCallback(
     (
       title: string,
@@ -203,23 +213,10 @@ export default function AdminPage() {
     }
   };
 
-  if (loading || (!user && !loading)) {
+  if (loading || !user || !ADMIN_LIKE_ROLES.includes(user.role)) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
-  if (user && !ADMIN_LIKE_ROLES.includes(user.role)) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Access Denied</AlertTitle>
-          <AlertDescription>
-            You do not have permission to view this page. Redirecting...
-          </AlertDescription>
-        </Alert>
       </div>
     );
   }
@@ -434,7 +431,7 @@ export default function AdminPage() {
                   setIsSavingLegal
                 )
               }
-              isContentLoaded={isLegalContentLoaded}
+              isLoading={loadingStates.legal}
               isSaving={isSavingLegal}
             />
           </TabsContent>
