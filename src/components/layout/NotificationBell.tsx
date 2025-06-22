@@ -10,19 +10,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useNotification } from '@/contexts/Notification/NotificationContext';
 import { useEffect } from 'react';
 import { NotificationItem } from './NotificationItem';
 import { ScrollArea } from '../ui/scroll-area';
 
 export function NotificationBell() {
+  const { user } = useAuth();
   const {
     notifications,
     unreadNotificationCount,
     fetchNotifications,
     markNotificationAsRead,
     markAllNotificationsAsRead,
-    user,
-  } = useAuth();
+  } = useNotification();
 
   useEffect(() => {
     if (user) {
