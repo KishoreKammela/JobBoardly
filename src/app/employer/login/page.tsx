@@ -31,6 +31,7 @@ export default function EmployerLoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const { user, loading: authLoading, loginUser, signInWithSocial } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,22 +58,9 @@ export default function EmployerLoginPage() {
   const handleLoginSuccess = (userName: string) => {
     toast({
       title: 'Login Successful',
-      description: `Welcome back, ${userName}!`,
+      description: `Welcome back, ${userName}! Redirecting...`,
     });
-  };
-
-  const redirectAfterLogin = (
-    userRole: string,
-    redirectParam: string | null
-  ) => {
-    if (redirectParam) {
-      router.replace(redirectParam);
-    } else {
-      if (userRole === 'employer') router.replace('/employer/posted-jobs');
-      else if (userRole === 'jobSeeker') router.replace('/jobs');
-      else if (ADMIN_LIKE_ROLES.includes(userRole)) router.replace('/admin');
-      else router.replace('/');
-    }
+    setLoginSuccess(true);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -81,7 +69,6 @@ export default function EmployerLoginPage() {
     try {
       const userProfile = await loginUser(email, password);
       handleLoginSuccess(userProfile.name);
-      redirectAfterLogin(userProfile.role, searchParams.get('redirect'));
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error('Login error:', firebaseError.message);
@@ -128,7 +115,7 @@ export default function EmployerLoginPage() {
     setIsSocialLoading(null);
   };
 
-  if (authLoading) {
+  if (authLoading || loginSuccess) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

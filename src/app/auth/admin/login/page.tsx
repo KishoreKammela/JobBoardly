@@ -24,6 +24,7 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const { user, loading: authLoading, loginUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,10 +53,9 @@ export default function AdminLoginPage() {
       if (ADMIN_LIKE_ROLES.includes(userProfile.role)) {
         toast({
           title: 'Login Successful',
-          description: `Welcome back, ${userProfile.name}!`,
+          description: `Welcome back, ${userProfile.name}! Redirecting...`,
         });
-        const redirectPath = searchParams.get('redirect');
-        router.replace(redirectPath || '/admin');
+        setLoginSuccess(true);
       } else {
         // This is a controlled error for non-admin users.
         throw new Error('This login is for authorized platform staff only.');
@@ -92,7 +92,7 @@ export default function AdminLoginPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || loginSuccess) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
