@@ -24,7 +24,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getJobsByPosterId } from '@/services/job.services';
+import { getCompanyJobsForDashboard } from '@/services/job.services';
 
 interface JobWithApplicantCount extends Job {
   applicantCount: number;
@@ -38,7 +38,7 @@ export function PostedJobsDisplay() {
 
   useEffect(() => {
     const fetchPostedJobs = async () => {
-      if (!user || user.role !== 'employer' || !user.uid) {
+      if (!user || user.role !== 'employer' || !user.companyId) {
         setIsLoading(false);
         setPostedJobs([]);
         return;
@@ -46,7 +46,7 @@ export function PostedJobsDisplay() {
       setIsLoading(true);
       setError(null);
       try {
-        const jobsData = await getJobsByPosterId(user.uid);
+        const jobsData = await getCompanyJobsForDashboard(user.companyId);
         setPostedJobs(jobsData);
       } catch (e: unknown) {
         console.error('Error fetching posted jobs:', e);

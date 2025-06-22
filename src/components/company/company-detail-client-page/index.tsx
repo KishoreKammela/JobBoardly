@@ -507,11 +507,11 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
               <div className="text-center py-6 border rounded-md bg-muted/30">
                 <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">
-                  {company.name} currently has no approved open positions listed
-                  on JobBoardly.
+                  {company.name} currently has no open positions listed on
+                  JobBoardly.
                 </p>
                 <Button variant="link" asChild className="mt-2">
-                  <Link href="/jobs">Explore other jobs</Link>
+                  <Link href="/employer/post-job">Post a Job</Link>
                 </Button>
               </div>
             )}

@@ -72,15 +72,7 @@ export default function AdminPage() {
   const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
 
   // Loading and UI states
-  const [loadingStates, setLoadingStates] = useState({
-    stats: true,
-    pendingJobs: true,
-    pendingCompanies: true,
-    allCompanies: true,
-    users: true,
-    allJobs: true,
-    legal: true,
-  });
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
   >(null);
@@ -89,6 +81,7 @@ export default function AdminPage() {
   const [isSavingLegal, setIsSavingLegal] = useState<
     'privacy' | 'terms' | null
   >(null);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   // Effect for handling auth state and redirection
   useEffect(() => {
@@ -108,10 +101,12 @@ export default function AdminPage() {
     }
   }, [user, loading, isLoggingOut, router, pathname]);
 
-  // Effect for fetching data once the admin user is confirmed
+  // Effect for fetching all dashboard data
   useEffect(() => {
-    if (user && ADMIN_LIKE_ROLES.includes(user.role)) {
+    if (user?.uid && ADMIN_LIKE_ROLES.includes(user.role)) {
       const loadAdminData = async () => {
+        setIsDataLoading(true);
+        setDataError(null);
         try {
           // Fetch all data in parallel
           const [
@@ -122,6 +117,8 @@ export default function AdminPage() {
             jobSeekersData,
             platformUsersData,
             allJobsData,
+            privacyDoc,
+            termsDoc,
           ] = await Promise.all([
             getPlatformStats(),
             getPendingJobs(),
@@ -130,9 +127,15 @@ export default function AdminPage() {
             getAllJobSeekersForAdmin(),
             getAllPlatformUsersForAdmin(),
             getAllJobsForAdmin(),
+            user.role === 'superAdmin'
+              ? getLegalDocumentContent('privacyPolicy')
+              : Promise.resolve(null),
+            user.role === 'superAdmin'
+              ? getLegalDocumentContent('termsOfService')
+              : Promise.resolve(null),
           ]);
 
-          // Set all states
+          // Set all states after all promises resolve
           setPlatformStats(stats);
           setPendingJobs(pendingJobsData);
           setPendingCompanies(pendingCompaniesData);
@@ -140,38 +143,28 @@ export default function AdminPage() {
           setAllJobSeekers(jobSeekersData);
           setAllPlatformUsers(platformUsersData);
           setAllJobs(allJobsData);
-
-          // Fetch legal content only for superAdmin
-          if (user.role === 'superAdmin') {
-            const privacyDoc = await getLegalDocumentContent('privacyPolicy');
-            if (privacyDoc) setPrivacyPolicyContent(privacyDoc.content);
-            const termsDoc = await getLegalDocumentContent('termsOfService');
-            if (termsDoc) setTermsOfServiceContent(termsDoc.content);
-          }
+          if (privacyDoc) setPrivacyPolicyContent(privacyDoc.content);
+          if (termsDoc) setTermsOfServiceContent(termsDoc.content);
         } catch (error: unknown) {
           console.error('Error fetching admin data:', error);
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : 'An unexpected error occurred.';
+          setDataError(`Failed to load some dashboard data: ${errorMessage}`);
           toast({
             title: 'Error Loading Dashboard',
-            description: `Failed to load some dashboard data. ${(error as Error).message}`,
+            description: `Failed to load some dashboard data. ${errorMessage}`,
             variant: 'destructive',
           });
         } finally {
-          // Ensure all loading states are turned off
-          setLoadingStates({
-            stats: false,
-            pendingJobs: false,
-            pendingCompanies: false,
-            allCompanies: false,
-            users: false,
-            allJobs: false,
-            legal: false,
-          });
+          setIsDataLoading(false);
         }
       };
 
       loadAdminData();
     }
-  }, [user?.uid, toast]); // Re-run only if the user ID changes
+  }, [user?.uid, user?.role, toast]);
 
   // Modal logic using useCallback for stability
   const showConfirmationModal = useCallback(
@@ -213,10 +206,31 @@ export default function AdminPage() {
     }
   };
 
-  if (loading || !user || !ADMIN_LIKE_ROLES.includes(user.role)) {
+  if (loading || isDataLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <div className="container mx-auto py-10">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Dashboard Load Error</AlertTitle>
+          <AlertDescription>{dataError}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!user || !ADMIN_LIKE_ROLES.includes(user.role)) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <span className="ml-2">Redirecting...</span>
       </div>
     );
   }
@@ -275,16 +289,17 @@ export default function AdminPage() {
 
       <AdminDashboardOverview
         platformStats={platformStats}
-        isStatsLoading={loadingStates.stats}
+        isStatsLoading={isDataLoading}
         pendingJobs={pendingJobs}
-        isPendingJobsLoading={loadingStates.pendingJobs}
+        isPendingJobsLoading={isDataLoading}
         pendingCompanies={pendingCompanies}
-        isPendingCompaniesLoading={loadingStates.pendingCompanies}
+        isPendingCompaniesLoading={isDataLoading}
         canModerateContent={canModerateContent}
         specificActionLoading={specificActionLoading}
-        handleJobStatusUpdate={(jobId, newStatus, reason) =>
+        handleJobStatusUpdate={(jobId, jobTitle, newStatus, reason) =>
           handleJobStatusUpdateAction(
             jobId,
+            jobTitle,
             newStatus,
             user,
             setSpecificActionLoading,
@@ -293,9 +308,15 @@ export default function AdminPage() {
             reason
           )
         }
-        handleCompanyStatusUpdate={(companyId, intendedStatus, reason) =>
+        handleCompanyStatusUpdate={(
+          companyId,
+          companyName,
+          intendedStatus,
+          reason
+        ) =>
           handleCompanyStatusUpdateAction(
             companyId,
+            companyName,
             intendedStatus,
             user,
             setSpecificActionLoading,
@@ -329,11 +350,17 @@ export default function AdminPage() {
         <TabsContent value="companies">
           <AdminCompaniesTable
             companies={allCompanies}
-            isLoading={loadingStates.allCompanies}
+            isLoading={isDataLoading}
             showConfirmationModal={showConfirmationModal}
-            handleCompanyStatusUpdate={(companyId, intendedStatus, reason) =>
+            handleCompanyStatusUpdate={(
+              companyId,
+              companyName,
+              intendedStatus,
+              reason
+            ) =>
               handleCompanyStatusUpdateAction(
                 companyId,
+                companyName,
                 intendedStatus,
                 user,
                 setSpecificActionLoading,
@@ -350,12 +377,13 @@ export default function AdminPage() {
         <TabsContent value="allJobs">
           <AdminJobsTable
             jobs={allJobs}
-            isLoading={loadingStates.allJobs}
+            isLoading={isDataLoading}
             currentUserRole={user?.role}
             showConfirmationModal={showConfirmationModal}
-            handleJobStatusUpdate={(jobId, newStatus, reason) =>
+            handleJobStatusUpdate={(jobId, jobTitle, newStatus, reason) =>
               handleJobStatusUpdateAction(
                 jobId,
+                jobTitle,
                 newStatus,
                 user,
                 setSpecificActionLoading,
@@ -372,18 +400,18 @@ export default function AdminPage() {
         <TabsContent value="jobSeekers">
           <AdminJobSeekersTable
             jobSeekers={allJobSeekers}
-            isLoading={loadingStates.users}
+            isLoading={isDataLoading}
             showConfirmationModal={showConfirmationModal}
             handleUserStatusUpdate={(userId, newStatus) =>
               handleUserStatusUpdateAction(
                 userId,
-                newStatus,
                 user,
                 allJobSeekers,
                 allPlatformUsers,
                 setSpecificActionLoading,
                 setAllJobSeekers,
-                setAllPlatformUsers
+                setAllPlatformUsers,
+                newStatus
               )
             }
             specificActionLoading={specificActionLoading}
@@ -395,19 +423,19 @@ export default function AdminPage() {
           <TabsContent value="platformUsers">
             <AdminPlatformUsersTable
               platformUsers={allPlatformUsers}
-              isLoading={loadingStates.users}
+              isLoading={isDataLoading}
               currentUser={user}
               showConfirmationModal={showConfirmationModal}
               handleUserStatusUpdate={(userId, newStatus) =>
                 handleUserStatusUpdateAction(
                   userId,
-                  newStatus,
                   user,
                   allJobSeekers,
                   allPlatformUsers,
                   setSpecificActionLoading,
                   setAllJobSeekers,
-                  setAllPlatformUsers
+                  setAllPlatformUsers,
+                  newStatus
                 )
               }
               specificActionLoading={specificActionLoading}
@@ -431,7 +459,7 @@ export default function AdminPage() {
                   setIsSavingLegal
                 )
               }
-              isLoading={loadingStates.legal}
+              isLoading={isDataLoading}
               isSaving={isSavingLegal}
             />
           </TabsContent>

@@ -44,6 +44,7 @@ interface AdminCompaniesTableProps {
   ) => void;
   handleCompanyStatusUpdate: (
     companyId: string,
+    companyName: string,
     newStatus: 'approved' | 'rejected' | 'suspended' | 'active' | 'deleted',
     reason?: string
   ) => Promise<void>;
@@ -230,7 +231,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                                 `Approve Company "${c.name}"?`,
                                 `Are you sure you want to approve ${c.name}? The company will become active.`,
                                 async () =>
-                                  handleCompanyStatusUpdate(c.id, 'approved'),
+                                  handleCompanyStatusUpdate(
+                                    c.id,
+                                    c.name,
+                                    'approved'
+                                  ),
                                 'Approve Company'
                               )
                             }
@@ -249,7 +254,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                                 `Reject Company "${c.name}"?`,
                                 `Are you sure you want to reject ${c.name}?`,
                                 async () =>
-                                  handleCompanyStatusUpdate(c.id, 'rejected'),
+                                  handleCompanyStatusUpdate(
+                                    c.id,
+                                    c.name,
+                                    'rejected'
+                                  ),
                                 'Reject Company',
                                 'destructive'
                               )
@@ -273,7 +282,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                                 `Suspend Company "${c.name}"?`,
                                 `Are you sure you want to suspend ${c.name}? Recruiters from this company will have limited access.`,
                                 async () =>
-                                  handleCompanyStatusUpdate(c.id, 'suspended'),
+                                  handleCompanyStatusUpdate(
+                                    c.id,
+                                    c.name,
+                                    'suspended'
+                                  ),
                                 'Suspend Company',
                                 'destructive'
                               )
@@ -297,7 +310,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                                 `Activate Company "${c.name}"?`,
                                 `Are you sure you want to reactivate ${c.name}? This will restore full access for its recruiters.`,
                                 async () =>
-                                  handleCompanyStatusUpdate(c.id, 'active'),
+                                  handleCompanyStatusUpdate(
+                                    c.id,
+                                    c.name,
+                                    'active'
+                                  ),
                                 'Activate Company'
                               )
                             }
@@ -318,7 +335,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                               `Re-Activate Company "${c.name}"?`,
                               `Are you sure you want to re-activate this previously deleted company? It will be set to 'active'.`,
                               async () =>
-                                handleCompanyStatusUpdate(c.id, 'active'),
+                                handleCompanyStatusUpdate(
+                                  c.id,
+                                  c.name,
+                                  'active'
+                                ),
                               'Re-Activate Company'
                             )
                           }
@@ -337,7 +358,11 @@ export const AdminCompaniesTable: React.FC<AdminCompaniesTableProps> = ({
                               `Delete Company "${c.name}"?`,
                               `Are you sure you want to delete ${c.name}? This is a soft delete. Recruiters will lose access. This action can be undone by re-activating.`,
                               async () =>
-                                handleCompanyStatusUpdate(c.id, 'deleted'),
+                                handleCompanyStatusUpdate(
+                                  c.id,
+                                  c.name,
+                                  'deleted'
+                                ),
                               'Delete Company',
                               'destructive'
                             )

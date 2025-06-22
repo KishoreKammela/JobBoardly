@@ -139,13 +139,13 @@ export const getJobsByIds = async (
   return jobsMap;
 };
 
-export const getJobsByPosterId = async (
-  posterId: string
+export const getCompanyJobsForDashboard = async (
+  companyId: string
 ): Promise<(Job & { applicantCount: number })[]> => {
   const jobsCollectionRef = collection(db, 'jobs');
   const q = query(
     jobsCollectionRef,
-    where('postedById', '==', posterId),
+    where('companyId', '==', companyId),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -163,6 +163,18 @@ export const getJobsByPosterId = async (
       id: doc.id,
       ...data,
       applicantCount,
+      postedDate:
+        data.postedDate instanceof Timestamp
+          ? data.postedDate.toDate().toISOString().split('T')[0]
+          : data.postedDate,
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+      updatedAt:
+        data.updatedAt instanceof Timestamp
+          ? data.updatedAt.toDate().toISOString()
+          : data.updatedAt,
     } as Job & { applicantCount: number };
   });
 

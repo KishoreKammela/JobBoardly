@@ -4,6 +4,7 @@ import { UserProfileForm } from '@/components/UserProfileForm';
 import { ResumeUploadForm } from '@/components/resume-upload-form';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
+import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
 import { Loader2, Download, Eye, AlertTriangle } from 'lucide-react';
 import React, { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -15,7 +16,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { user, company, loading, isLoggingOut } = useAuth();
+  const { user, loading: profileLoading } = useUserProfile();
+  const { company, isLoggingOut, loading: authLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const printableProfileRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,8 @@ export default function ProfilePage() {
     onPrintError: (_error: Error) =>
       alert('There was an error printing the profile. Please try again.'),
   });
+
+  const loading = profileLoading || authLoading;
 
   useEffect(() => {
     if (loading || isLoggingOut) return;
@@ -61,7 +65,7 @@ export default function ProfilePage() {
   };
 
   const pageDescription = () => {
-    if (!user) return 'Please log in to view your profile.';
+    if (!user) return 'Please log in to view and edit your profile.';
     if (user.role === 'jobSeeker') {
       if (user.status === 'suspended') {
         return 'Your account is suspended. Some profile editing features are disabled.';

@@ -49,6 +49,7 @@ interface AdminJobsTableProps {
   ) => void;
   handleJobStatusUpdate: (
     jobId: string,
+    jobTitle: string,
     newStatus: 'approved' | 'rejected' | 'suspended',
     reason?: string
   ) => Promise<void>;
@@ -226,7 +227,11 @@ export const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
                               `Suspend Job "${job.title}"?`,
                               `Are you sure you want to suspend this job? It will be hidden from public view and recruiters won't be able to manage it or its applicants.`,
                               async () =>
-                                handleJobStatusUpdate(job.id, 'suspended'),
+                                handleJobStatusUpdate(
+                                  job.id,
+                                  job.title,
+                                  'suspended'
+                                ),
                               'Suspend Job',
                               'destructive'
                             )
@@ -253,7 +258,11 @@ export const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
                                 `Activate Job "${job.title}"?`,
                                 `Are you sure you want to activate this job? It will become approved and publicly visible.`,
                                 async () =>
-                                  handleJobStatusUpdate(job.id, 'approved'),
+                                  handleJobStatusUpdate(
+                                    job.id,
+                                    job.title,
+                                    'approved'
+                                  ),
                                 'Activate Job'
                               )
                             }
@@ -277,7 +286,11 @@ export const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
                                 `Approve Job "${job.title}"?`,
                                 `Are you sure you want to approve this job posting? It will become publicly visible.`,
                                 async () =>
-                                  handleJobStatusUpdate(job.id, 'approved'),
+                                  handleJobStatusUpdate(
+                                    job.id,
+                                    job.title,
+                                    'approved'
+                                  ),
                                 'Approve Job'
                               )
                             }
@@ -298,7 +311,11 @@ export const AdminJobsTable: React.FC<AdminJobsTableProps> = ({
                                 `Reject Job "${job.title}"?`,
                                 'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
                                 async () =>
-                                  handleJobStatusUpdate(job.id, 'rejected'),
+                                  handleJobStatusUpdate(
+                                    job.id,
+                                    job.title,
+                                    'rejected'
+                                  ),
                                 'Reject Job',
                                 'destructive'
                               )

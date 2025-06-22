@@ -12,37 +12,9 @@ import type { Company, Job, UserProfile } from '@/types';
 
 type JobWithApplicantCount = Job & { applicantCount: number };
 
-export const fetchLegalContentForAdmin = async (
-  setPrivacyPolicyContent: Dispatch<SetStateAction<string>>,
-  setTermsOfServiceContent: Dispatch<SetStateAction<string>>,
-  setIsLegalContentLoaded: Dispatch<
-    SetStateAction<{ privacy: boolean; terms: boolean }>
-  >
-) => {
-  try {
-    const privacyDoc = await getLegalDocumentContent('privacyPolicy');
-    if (privacyDoc) {
-      setPrivacyPolicyContent(privacyDoc.content);
-    }
-    setIsLegalContentLoaded((prev) => ({ ...prev, privacy: true }));
-
-    const termsDoc = await getLegalDocumentContent('termsOfService');
-    if (termsDoc) {
-      setTermsOfServiceContent(termsDoc.content);
-    }
-    setIsLegalContentLoaded((prev) => ({ ...prev, terms: true }));
-  } catch (error: unknown) {
-    console.error('Error fetching legal content:', error);
-    toast({
-      title: 'Error Fetching Legal Docs',
-      description: 'Could not load legal documents for editing.',
-      variant: 'destructive',
-    });
-  }
-};
-
 export const handleJobStatusUpdateAction = async (
   jobId: string,
+  jobTitle: string,
   newStatus: 'approved' | 'rejected' | 'suspended',
   currentUser: UserProfile | null,
   setSpecificActionLoading: Dispatch<SetStateAction<string | null>>,
@@ -95,7 +67,7 @@ export const handleJobStatusUpdateAction = async (
     );
     toast({
       title: 'Success',
-      description: `Job ${jobId} status updated to ${newStatus}.`,
+      description: `Job "${jobTitle}" status updated to ${newStatus}.`,
     });
   } catch (error: unknown) {
     console.error(`Error updating job ${jobId}:`, error);
@@ -111,6 +83,7 @@ export const handleJobStatusUpdateAction = async (
 
 export const handleCompanyStatusUpdateAction = async (
   companyId: string,
+  companyName: string,
   intendedStatus: 'approved' | 'rejected' | 'suspended' | 'active' | 'deleted',
   currentUser: UserProfile | null,
   setSpecificActionLoading: Dispatch<SetStateAction<string | null>>,
@@ -153,7 +126,7 @@ export const handleCompanyStatusUpdateAction = async (
     }
     toast({
       title: 'Success',
-      description: `Company ${companyId} status updated to ${finalStatus}.`,
+      description: `Company "${companyName}" status updated to ${finalStatus}.`,
     });
     if (finalStatus === 'suspended' || finalStatus === 'deleted') {
       toast({
@@ -176,13 +149,13 @@ export const handleCompanyStatusUpdateAction = async (
 
 export const handleUserStatusUpdateAction = async (
   userId: string,
-  newStatus: 'active' | 'suspended' | 'deleted',
   currentUser: UserProfile,
   allJobSeekers: UserProfile[],
   allPlatformUsers: UserProfile[],
   setSpecificActionLoading: Dispatch<SetStateAction<string | null>>,
   setAllJobSeekers: Dispatch<SetStateAction<UserProfile[]>>,
-  setAllPlatformUsers: Dispatch<SetStateAction<UserProfile[]>>
+  setAllPlatformUsers: Dispatch<SetStateAction<UserProfile[]>>,
+  newStatus: 'active' | 'suspended' | 'deleted'
 ) => {
   const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
     (u) => u.uid === userId

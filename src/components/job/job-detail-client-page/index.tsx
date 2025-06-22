@@ -41,6 +41,7 @@ import {
   Award,
   Sparkles as BenefitsIcon,
   Clock,
+  Eye,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -498,7 +499,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
 
   let salaryDisplay = 'Not Disclosed';
   if (jobData.payTransparency !== false) {
-    // Show if true or undefined (default to show)
     if (jobData.salaryMin && jobData.salaryMax) {
       salaryDisplay = `${formatCurrencyINR(jobData.salaryMin)} - ${formatCurrencyINR(jobData.salaryMax)} p.a.`;
     } else if (jobData.salaryMin) {
@@ -520,6 +520,48 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
   const isPrivilegedViewer =
     (user?.role && ADMIN_LIKE_ROLES.includes(user.role as UserRole)) ||
     (user?.role === 'employer' && user.companyId === jobData.companyId);
+
+  const experienceYearsText = () => {
+    const { minExperienceYears, maxExperienceYears } = jobData;
+
+    if (
+      (minExperienceYears === null || minExperienceYears === undefined) &&
+      (maxExperienceYears === null || maxExperienceYears === undefined)
+    ) {
+      return null;
+    }
+
+    const min = minExperienceYears;
+    const max = maxExperienceYears;
+
+    if (
+      min !== undefined &&
+      min !== null &&
+      (max === undefined || max === null)
+    ) {
+      return `From ${min} years`;
+    }
+    if (
+      (min === undefined || min === null) &&
+      max !== undefined &&
+      max !== null
+    ) {
+      return `Up to ${max} years`;
+    }
+    if (
+      min !== undefined &&
+      min !== null &&
+      max !== undefined &&
+      max !== null
+    ) {
+      if (min === max) {
+        return `${min} years`;
+      }
+      return `${min} - ${max} years`;
+    }
+    return null;
+  };
+  const experienceDisplay = experienceYearsText();
 
   const renderJobSeekerActions = () => {
     if (!user || user.role !== 'jobSeeker') return null;
@@ -730,18 +772,12 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                     </strong>{' '}
                     {jobData.experienceLevel}
                   </p>
-                  {(jobData.minExperienceYears !== undefined ||
-                    jobData.maxExperienceYears !== undefined) && (
+                  {experienceDisplay && (
                     <p>
                       <strong className="text-foreground/80">
                         Years of Experience:
-                      </strong>
-                      {jobData.minExperienceYears !== undefined
-                        ? `${jobData.minExperienceYears} `
-                        : 'Up to '}
-                      {jobData.maxExperienceYears !== undefined
-                        ? `- ${jobData.maxExperienceYears} years`
-                        : `${jobData.minExperienceYears ? 'years' : ' years'}`}
+                      </strong>{' '}
+                      {experienceDisplay}
                     </p>
                   )}
                   {jobData.educationQualification && (
@@ -860,21 +896,21 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                     {saved ? 'Job Saved' : 'Save Job'}
                   </Button>
                 )}
-              {user &&
-                user.role !== 'jobSeeker' &&
-                jobData.status !== 'approved' &&
-                isPrivilegedViewer && (
-                  <div className="p-3 border rounded-md text-center bg-accent/10">
-                    <HelpCircle className="mx-auto h-8 w-8 text-accent mb-2" />
-                    <p className="text-sm text-accent-foreground font-medium">
-                      This is a preview for{' '}
-                      {user.role === 'employer'
-                        ? 'your company'
-                        : 'administrative'}{' '}
-                      purposes.
-                    </p>
-                  </div>
-                )}
+              {isPrivilegedViewer && jobData.status !== 'approved' && (
+                <Alert
+                  variant="default"
+                  className="bg-primary/10 border-primary/20"
+                >
+                  <Eye className="h-5 w-5 text-primary" />
+                  <AlertTitle className="font-semibold text-primary/90">
+                    Preview Mode
+                  </AlertTitle>
+                  <AlertDescription className="text-primary/80">
+                    This job is not public. Status:{' '}
+                    <strong>{jobData.status.toUpperCase()}</strong>.
+                  </AlertDescription>
+                </Alert>
+              )}
               <Button
                 variant="outline"
                 size="lg"

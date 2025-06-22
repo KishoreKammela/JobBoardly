@@ -897,9 +897,7 @@ export function PostJobForm() {
                     name="salaryMin"
                     type="number"
                     placeholder="e.g., 800000"
-                    value={
-                      jobData.salaryMin === undefined ? '' : jobData.salaryMin
-                    }
+                    value={jobData.salaryMin ?? ''}
                     onChange={handleChange}
                     aria-label="Minimum Salary"
                   />
@@ -916,9 +914,7 @@ export function PostJobForm() {
                     name="salaryMax"
                     type="number"
                     placeholder="e.g., 1200000"
-                    value={
-                      jobData.salaryMax === undefined ? '' : jobData.salaryMax
-                    }
+                    value={jobData.salaryMax ?? ''}
                     onChange={handleChange}
                     aria-label="Maximum Salary"
                   />
@@ -1048,11 +1044,7 @@ export function PostJobForm() {
                     name="minExperienceYears"
                     type="number"
                     placeholder="e.g., 2"
-                    value={
-                      jobData.minExperienceYears === undefined
-                        ? ''
-                        : jobData.minExperienceYears
-                    }
+                    value={jobData.minExperienceYears ?? ''}
                     onChange={handleChange}
                     min="0"
                     aria-label="Minimum Years of Experience"
@@ -1067,11 +1059,7 @@ export function PostJobForm() {
                     name="maxExperienceYears"
                     type="number"
                     placeholder="e.g., 5"
-                    value={
-                      jobData.maxExperienceYears === undefined
-                        ? ''
-                        : jobData.maxExperienceYears
-                    }
+                    value={jobData.maxExperienceYears ?? ''}
                     onChange={handleChange}
                     min="0"
                     aria-label="Maximum Years of Experience"

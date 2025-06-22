@@ -42,11 +42,13 @@ interface AdminDashboardOverviewProps {
   specificActionLoading: string | null;
   handleJobStatusUpdate: (
     jobId: string,
+    jobTitle: string,
     newStatus: 'approved' | 'rejected' | 'suspended',
     reason?: string
   ) => Promise<void>;
   handleCompanyStatusUpdate: (
     companyId: string,
+    companyName: string,
     newStatus: 'approved' | 'rejected' | 'suspended' | 'active' | 'deleted',
     reason?: string
   ) => Promise<void>;
@@ -202,7 +204,11 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                               `Reject Job "${job.title}"?`,
                               'Are you sure you want to reject this job posting? It will not be visible to job seekers.',
                               async () =>
-                                handleJobStatusUpdate(job.id, 'rejected'),
+                                handleJobStatusUpdate(
+                                  job.id,
+                                  job.title,
+                                  'rejected'
+                                ),
                               'Reject Job',
                               'destructive'
                             )
@@ -224,7 +230,11 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                               `Approve Job "${job.title}"?`,
                               'Are you sure you want to approve this job posting? It will become publicly visible.',
                               async () =>
-                                handleJobStatusUpdate(job.id, 'approved'),
+                                handleJobStatusUpdate(
+                                  job.id,
+                                  job.title,
+                                  'approved'
+                                ),
                               'Approve Job'
                             )
                           }
@@ -300,7 +310,11 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                               `Reject Company "${c.name}"?`,
                               'Are you sure you want to reject this company profile? It will not be publicly visible.',
                               async () =>
-                                handleCompanyStatusUpdate(c.id, 'rejected'),
+                                handleCompanyStatusUpdate(
+                                  c.id,
+                                  c.name,
+                                  'rejected'
+                                ),
                               'Reject Company',
                               'destructive'
                             )
@@ -322,7 +336,11 @@ const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                               `Approve Company "${c.name}"?`,
                               'Are you sure you want to approve this company profile? It will become publicly visible and operational.',
                               async () =>
-                                handleCompanyStatusUpdate(c.id, 'approved'),
+                                handleCompanyStatusUpdate(
+                                  c.id,
+                                  c.name,
+                                  'approved'
+                                ),
                               'Approve Company'
                             )
                           }
