@@ -42,7 +42,7 @@ import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
-import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import { PrintableProfileComponent } from '@/components/printable-profile';
 import React from 'react';
 import { format, isValid, parse } from 'date-fns';
 import { cn } from '@/lib/utils';

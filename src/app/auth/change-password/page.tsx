@@ -1,5 +1,6 @@
+// src/app/auth/change-password/page.tsx
 'use client';
-import { ChangePasswordForm } from '@/components/ChangePasswordForm';
+import { ChangePasswordForm } from '@/components/change-password-form';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';

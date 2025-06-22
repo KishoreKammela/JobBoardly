@@ -44,7 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useReactToPrint } from 'react-to-print';
-import { PrintableProfileComponent } from '@/components/PrintableProfile';
+import { PrintableProfileComponent } from '@/components/printable-profile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';

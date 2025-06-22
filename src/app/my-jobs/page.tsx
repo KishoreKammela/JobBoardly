@@ -1,5 +1,5 @@
 'use client';
-import { MyJobsDisplay } from '@/components/MyJobsDisplay';
+import { MyJobsDisplay } from '@/components/my-jobs-display';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
