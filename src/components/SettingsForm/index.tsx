@@ -22,15 +22,14 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Trash2 } from 'lucide-react';
-import { useAuth } from '@/contexts/Auth/AuthContext';
+import { Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
 import { SEARCH_HISTORY_STORAGE_KEY } from './_lib/constants';
 import { saveSettings } from './_lib/actions';
 
 export function SettingsForm() {
-  const { user, updateUserProfile, loading: authLoading } = useAuth();
+  const { user, updateUserProfile, loading: profileLoading } = useUserProfile();
   const [settings, setSettings] = useState<Partial<UserProfile>>({
     theme: 'system',
     jobBoardDisplay: 'list',
@@ -156,7 +155,7 @@ export function SettingsForm() {
     setIsLoading(false);
   };
 
-  if (authLoading || !user) {
+  if (profileLoading || !user) {
     return (
       <Card>
         <CardHeader>
@@ -366,11 +365,11 @@ export function SettingsForm() {
               type="submit"
               disabled={
                 isLoading ||
-                authLoading ||
+                profileLoading ||
                 (isJobSeekerSuspended && user.role === 'jobSeeker')
               }
             >
-              {(isLoading || authLoading) && (
+              {(isLoading || profileLoading) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save Settings
