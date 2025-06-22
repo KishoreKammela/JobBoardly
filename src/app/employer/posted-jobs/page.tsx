@@ -1,5 +1,5 @@
 'use client';
-import { PostedJobsDisplay } from '@/components/employer/PostedJobsDisplay';
+import { PostedJobsDisplay } from '@/components/employer/posted-jobs-display';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { Loader2, AlertTriangle } from 'lucide-react';

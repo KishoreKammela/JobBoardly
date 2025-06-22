@@ -1,4 +1,4 @@
-import JobDetailClientPage from '@/components/job/JobDetailClientPage';
+import JobDetailClientPage from '@/components/job/job-detail-client-page';
 import type { Metadata } from 'next';
 
 // Using static metadata for now to ensure page loads correctly.

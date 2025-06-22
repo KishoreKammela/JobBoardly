@@ -42,21 +42,21 @@ import Link from 'next/link';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useReactToPrint } from 'react-to-print';
-import { PrintableProfileComponent } from '@/components/printable-profile';
+import { PrintableProfile } from '@/components/printable-profile';
 import React from 'react';
 import { format, isValid, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast'; // Added
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePreviewPage() {
   const { user: currentUser, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { toast } = useToast(); // Added
+  const { toast } = useToast();
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error] = useState<string | null>(null); // Kept for actual data errors if any
+  const [error] = useState<string | null>(null);
   const printableProfileRef = React.useRef<HTMLDivElement>(null);
 
   const handlePrintProfile = useReactToPrint({
@@ -601,7 +601,7 @@ export default function ProfilePreviewPage() {
         </CardFooter>
       </Card>
       <div style={{ display: 'none' }}>
-        <PrintableProfileComponent ref={printableProfileRef} user={candidate} />
+        <PrintableProfile ref={printableProfileRef} user={candidate} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import CompanyDetailClientPage from '@/components/company/CompanyDetailClientPage';
+import CompanyDetailClientPage from '@/components/company/company-detail-client-page';
 import type { Metadata } from 'next';
 
 // Using static metadata for now to ensure page loads correctly.

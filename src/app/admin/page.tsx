@@ -32,9 +32,9 @@ import {
 import { AlertCircle, Cpu, Gavel, Loader2, ShieldCheck } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
-import AdminAiFeatures from '@/components/admin/AdminAiFeatures';
-import AdminDashboardOverview from '@/components/admin/AdminDashboardOverview';
-import AdminLegalEditor from '@/components/admin/AdminLegalEditor';
+import AdminAiFeatures from '@/components/admin/admin-ai-features';
+import AdminDashboardOverview from '@/components/admin/admin-dashboard-overview';
+import AdminLegalEditor from '@/components/admin/admin-legal-editor';
 import { AdminCompaniesTable } from '@/components/admin/admin-companies-table';
 import { AdminJobSeekersTable } from '@/components/admin/admin-job-seekers-table';
 import { AdminJobsTable } from '@/components/admin/admin-jobs-table';

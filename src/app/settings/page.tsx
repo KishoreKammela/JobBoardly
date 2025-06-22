@@ -1,5 +1,5 @@
 'use client';
-import { SettingsForm } from '@/components/SettingsForm';
+import { SettingsForm } from '@/components/settings-form';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';

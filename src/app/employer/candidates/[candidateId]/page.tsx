@@ -44,7 +44,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { formatCurrencyINR } from '@/lib/utils';
 import { useReactToPrint } from 'react-to-print';
-import { PrintableProfileComponent } from '@/components/printable-profile';
+import { PrintableProfile } from '@/components/printable-profile';
 import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -433,7 +433,9 @@ export default function CandidateDetailPage() {
 
           {candidate.parsedResumeText && isJobSeekerProfile && (
             <section>
-              {totalExperienceDisplay && <Separator className="my-6" />}
+              {(totalExperienceDisplay || hasProfessionalInfo) && (
+                <Separator className="my-6" />
+              )}
               <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-2">
                 <Sparkles className="text-accent" /> Professional Summary
               </h2>
@@ -815,10 +817,7 @@ export default function CandidateDetailPage() {
       </Card>
       {isJobSeekerProfile && (
         <div style={{ display: 'none' }}>
-          <PrintableProfileComponent
-            ref={printableProfileRef}
-            user={candidate}
-          />
+          <PrintableProfile ref={printableProfileRef} user={candidate} />
         </div>
       )}
     </div>
