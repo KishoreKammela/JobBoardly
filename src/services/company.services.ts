@@ -1,11 +1,13 @@
 // src/services/company.services.ts
 import {
+  arrayUnion,
   collection,
   doc,
   getDoc,
   getDocs,
   orderBy,
   query,
+  serverTimestamp,
   Timestamp,
   updateDoc,
   where,
@@ -61,13 +63,17 @@ export const getApprovedCompanies = async (): Promise<Company[]> => {
   });
 };
 
-export const updateCompanyProfileInDb = async (
+export const updateCompanyProfileAndSetPending = async (
   companyId: string,
   updatedData: Partial<Company>
 ) => {
   if (!db) throw new Error('Firestore db instance not available.');
-  const companyDocRef = doc(db, 'companies', companyId);
-  await updateDoc(companyDocRef, updatedData);
+  const companyRef = doc(db, 'companies', companyId);
+  await updateDoc(companyRef, {
+    ...updatedData,
+    status: 'pending',
+    updatedAt: serverTimestamp(),
+  });
 };
 
 export const getCompanyRecruiters = async (
@@ -90,4 +96,22 @@ export const getCompanyRecruiters = async (
     }
   }
   return fetchedRecruiters;
+};
+
+export const inviteRecruiterToCompany = async (
+  companyId: string,
+  recruiterName: string,
+  recruiterEmail: string
+) => {
+  if (!db) throw new Error('Firestore db instance not available.');
+  const companyRef = doc(db, 'companies', companyId);
+  const newInvitation = {
+    email: recruiterEmail,
+    name: recruiterName,
+    status: 'pending' as const,
+  };
+  await updateDoc(companyRef, {
+    invitations: arrayUnion(newInvitation),
+    pendingInvitationEmails: arrayUnion(recruiterEmail.toLowerCase()),
+  });
 };

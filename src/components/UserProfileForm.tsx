@@ -1,7 +1,7 @@
 // src/components/UserProfileForm.tsx
 'use client';
 import { useState, useEffect, type FormEvent } from 'react';
-import type { UserProfile, Company } from '@/types';
+import type { UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
@@ -29,7 +29,8 @@ import { JobSeekerEducationSection } from './profile/JobSeekerEducationSection';
 import { JobSeekerLanguagesSection } from './profile/JobSeekerLanguagesSection';
 import { JobSeekerCompensationSection } from './profile/JobSeekerCompensationSection';
 import { JobSeekerPreferencesSection } from './profile/JobSeekerPreferencesSection';
-import { EmployerCompanyProfileFormSection } from './profile/EmployerCompanyProfileFormSection';
+import { EmployerCompanyInfoSection } from './profile/EmployerCompanyInfoSection';
+import { EmployerRecruiterManagement } from './profile/EmployerRecruiterManagement';
 
 import type { ExperienceEntry, EducationEntry, LanguageEntry } from '@/types';
 
@@ -94,15 +95,6 @@ const initialUserFormData: Partial<UserProfile> = {
   totalMonthsExperience: 0,
 };
 
-const initialCompanyFormData: Partial<Company> = {
-  name: '',
-  description: '',
-  websiteUrl: '',
-  logoUrl: '',
-  bannerImageUrl: '',
-  status: 'pending',
-};
-
 interface ModalState {
   isOpen: boolean;
   title: string;
@@ -124,14 +116,11 @@ const defaultModalState: ModalState = {
 export function UserProfileForm() {
   const { loading: authLoading } = useAuth();
   const { user, updateUserProfile } = useUserProfile();
-  const { company, updateCompanyProfile } = useCompany();
+  const { company } = useCompany();
   const { toast } = useToast();
 
   const [userFormData, setUserFormData] =
     useState<Partial<UserProfile>>(initialUserFormData);
-  const [companyFormData, setCompanyFormData] = useState<Partial<Company>>(
-    initialCompanyFormData
-  );
   const [isLoading, setIsLoading] = useState(false);
   const [modalState, setModalState] = useState<ModalState>(defaultModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
@@ -210,22 +199,10 @@ export function UserProfileForm() {
         totalYearsExperience: user.totalYearsExperience || 0,
         totalMonthsExperience: user.totalMonthsExperience || 0,
       });
-
-      if (user.role === 'employer' && company) {
-        setCompanyFormData({
-          name: company.name || '',
-          description: company.description || '',
-          websiteUrl: company.websiteUrl || '',
-          logoUrl: company.logoUrl || '',
-          bannerImageUrl: company.bannerImageUrl || '',
-          status: company.status || 'pending',
-        });
-      }
     } else {
       setUserFormData(initialUserFormData);
-      setCompanyFormData(initialCompanyFormData);
     }
-  }, [user, company]);
+  }, [user]);
 
   const handleUserChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -389,7 +366,7 @@ export function UserProfileForm() {
       setIsModalActionLoading(true);
       try {
         await modalState.onConfirmAction();
-      } catch (e: unknown) {
+      } catch (e) {
         toast({
           title: 'Error',
           description: 'An unexpected error occurred.',
@@ -479,17 +456,6 @@ export function UserProfileForm() {
         });
       }
       await updateUserProfile(userUpdatePayload);
-
-      if (user.role === 'employer' && user.isCompanyAdmin && user.companyId) {
-        const companyUpdatePayload: Partial<Company> = {
-          name: companyFormData.name || '',
-          description: companyFormData.description || '',
-          websiteUrl: companyFormData.websiteUrl || '',
-          logoUrl: companyFormData.logoUrl || '',
-          bannerImageUrl: companyFormData.bannerImageUrl || '',
-        };
-        await updateCompanyProfile(user.companyId, companyUpdatePayload);
-      }
 
       toast({
         title: 'Profile Updated',
@@ -626,24 +592,20 @@ export function UserProfileForm() {
         </>
       )}
 
-      {isCompanyAdmin && company && (
-        <EmployerCompanyProfileFormSection
-          companyFormData={companyFormData}
-          onCompanyChange={(e) =>
-            setCompanyFormData((prev) => ({
-              ...prev,
-              [e.target.name]: e.target.value,
-            }))
-          }
-          recruiters={
-            (user as UserProfile & { companyRecruiters: UserProfile[] })
-              .companyRecruiters || []
-          }
-          isFetchingRecruiters={false}
-          isDisabled={isDisabledByStatus}
-          companyStatus={company.status}
-          moderationReason={company.moderationReason}
-        />
+      {user.role === 'employer' && (
+        <>
+          <EmployerCompanyInfoSection
+            company={company}
+            isDisabled={isDisabledByStatus}
+            isCompanyAdmin={isCompanyAdmin}
+          />
+          {isCompanyAdmin && (
+            <EmployerRecruiterManagement
+              company={company}
+              isDisabled={isDisabledByStatus}
+            />
+          )}
+        </>
       )}
 
       <div className="flex justify-end pt-4">

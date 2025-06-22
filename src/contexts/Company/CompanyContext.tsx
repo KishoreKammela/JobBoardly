@@ -1,7 +1,7 @@
+// src/contexts/Company/CompanyContext.tsx
 'use client';
-import { db } from '@/lib/firebase';
-import { type Company } from '@/types';
 import {
+  arrayUnion,
   doc,
   getDoc,
   serverTimestamp,
@@ -14,16 +14,22 @@ import React, {
   useEffect,
   useState,
   type ReactNode,
+  useCallback,
 } from 'react';
+import { db } from '@/lib/firebase';
+import type { Company, UserProfile } from '@/types';
 import { useUserProfile } from '../UserProfile/UserProfileContext';
+import { getCompanyRecruiters } from '@/services/company.services';
 
 interface CompanyContextType {
   company: Company | null;
+  recruiters: UserProfile[];
   loading: boolean;
   updateCompanyProfile: (
     companyId: string,
     updatedData: Partial<Company>
   ) => Promise<void>;
+  inviteRecruiter: (name: string, email: string) => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
@@ -31,21 +37,17 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const { user, loading: userLoading } = useUserProfile();
   const [company, setCompany] = useState<Company | null>(null);
+  const [recruiters, setRecruiters] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCompany = async () => {
-      if (!user || !user.companyId) {
-        setCompany(null);
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const companyDocRef = doc(db, 'companies', user.companyId);
+  const fetchCompanyAndRecruiters = useCallback(async (companyId: string) => {
+    setLoading(true);
+    const companyDocRef = doc(db, 'companies', companyId);
+    try {
       const companyDocSnap = await getDoc(companyDocRef);
       if (companyDocSnap.exists()) {
         const companyRawData = companyDocSnap.data();
-        setCompany({
+        const processedCompanyData = {
           id: companyDocSnap.id,
           ...companyRawData,
           createdAt:
@@ -56,18 +58,45 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
             companyRawData.updatedAt instanceof Timestamp
               ? companyRawData.updatedAt.toDate().toISOString()
               : companyRawData.updatedAt,
-        } as Company);
+        } as Company;
+        setCompany(processedCompanyData);
+
+        if (
+          processedCompanyData.recruiterUids &&
+          processedCompanyData.recruiterUids.length > 0
+        ) {
+          const fetchedRecruiters = await getCompanyRecruiters(
+            processedCompanyData.recruiterUids
+          );
+          setRecruiters(fetchedRecruiters);
+        } else {
+          setRecruiters([]);
+        }
       } else {
         setCompany(null);
-        console.warn(`Company with ID ${user.companyId} not found.`);
+        setRecruiters([]);
+        console.warn(`Company with ID ${companyId} not found.`);
       }
+    } catch (error) {
+      console.error('Error fetching company and recruiters:', error);
+      setCompany(null);
+      setRecruiters([]);
+    } finally {
       setLoading(false);
-    };
-
-    if (!userLoading) {
-      fetchCompany();
     }
-  }, [user, userLoading]);
+  }, []);
+
+  useEffect(() => {
+    if (!userLoading) {
+      if (user && user.companyId) {
+        fetchCompanyAndRecruiters(user.companyId);
+      } else {
+        setCompany(null);
+        setRecruiters([]);
+        setLoading(false);
+      }
+    }
+  }, [user, userLoading, fetchCompanyAndRecruiters]);
 
   const updateCompanyProfile = async (
     companyId: string,
@@ -93,8 +122,46 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const inviteRecruiter = useCallback(
+    async (name: string, email: string) => {
+      if (!company) {
+        throw new Error('No company context available for invitation.');
+      }
+      const companyRef = doc(db, 'companies', company.id);
+      const newInvitation = {
+        email: email,
+        name: name,
+        status: 'pending' as const,
+      };
+      await updateDoc(companyRef, {
+        invitations: arrayUnion(newInvitation),
+        pendingInvitationEmails: arrayUnion(email),
+      });
+      setCompany(
+        (prev) =>
+          ({
+            ...prev,
+            invitations: [...(prev?.invitations || []), newInvitation],
+            pendingInvitationEmails: [
+              ...(prev?.pendingInvitationEmails || []),
+              email,
+            ],
+          }) as Company
+      );
+    },
+    [company]
+  );
+
   return (
-    <CompanyContext.Provider value={{ company, loading, updateCompanyProfile }}>
+    <CompanyContext.Provider
+      value={{
+        company,
+        recruiters,
+        loading,
+        updateCompanyProfile,
+        inviteRecruiter,
+      }}
+    >
       {children}
     </CompanyContext.Provider>
   );

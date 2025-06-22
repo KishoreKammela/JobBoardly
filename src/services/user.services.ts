@@ -11,9 +11,11 @@ import {
   updateDoc,
   where,
   orderBy,
+  arrayUnion,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { UserProfile, UserRole } from '@/types';
+import type { Company, UserProfile, UserRole } from '@/types';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 export const getUserProfile = async (
@@ -58,12 +60,13 @@ export const createUserProfileInDb = async (
   fbUser: FirebaseUser,
   name: string,
   role: UserRole,
-  companyNameForNewCompany?: string,
-  existingCompanyId?: string
+  companyNameForNewCompany?: string
 ): Promise<Partial<UserProfile>> => {
   if (!db) throw new Error("Firestore 'db' instance is not available.");
+  if (!fbUser.email) throw new Error('User email is not available.');
+
   const userDocRef = doc(db, 'users', fbUser.uid);
-  let userCompanyId = existingCompanyId;
+  let userCompanyId: string | undefined = undefined;
   let userIsCompanyAdmin = false;
 
   const ADMIN_LIKE_ROLES: UserRole[] = [
@@ -76,7 +79,42 @@ export const createUserProfileInDb = async (
     'systemMonitor',
   ];
 
-  if (role === 'employer' && !existingCompanyId) {
+  // Check for pending invitations
+  const invitationsQuery = query(
+    collection(db, 'companies'),
+    where(
+      'pendingInvitationEmails',
+      'array-contains',
+      fbUser.email.toLowerCase()
+    )
+  );
+  const invitationSnapshot = await getDocs(invitationsQuery);
+
+  if (!invitationSnapshot.empty && role === 'employer') {
+    // User is accepting an invitation
+    const companyDoc = invitationSnapshot.docs[0];
+    userCompanyId = companyDoc.id;
+    const companyData = companyDoc.data() as Company;
+
+    await runTransaction(db, async (transaction) => {
+      const companyRef = doc(db, 'companies', userCompanyId!);
+      const newInvitations = (companyData.invitations || []).map((inv) =>
+        inv.email.toLowerCase() === fbUser.email!.toLowerCase()
+          ? { ...inv, status: 'accepted' as const }
+          : inv
+      );
+      const newPendingEmails = (
+        companyData.pendingInvitationEmails || []
+      ).filter((email) => email.toLowerCase() !== fbUser.email!.toLowerCase());
+
+      transaction.update(companyRef, {
+        recruiterUids: arrayUnion(fbUser.uid),
+        invitations: newInvitations,
+        pendingInvitationEmails: newPendingEmails,
+      });
+    });
+  } else if (role === 'employer' && companyNameForNewCompany) {
+    // User is registering a new company
     const newCompanyRef = doc(collection(db, 'companies'));
     const newCompanyData = {
       name: companyNameForNewCompany || 'New Company',
@@ -86,6 +124,8 @@ export const createUserProfileInDb = async (
       updatedAt: serverTimestamp(),
       status: 'pending',
       moderationReason: '',
+      invitations: [],
+      pendingInvitationEmails: [],
     };
     await setDoc(newCompanyRef, newCompanyData);
     userCompanyId = newCompanyRef.id;

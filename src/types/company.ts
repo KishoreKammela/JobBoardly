@@ -21,4 +21,10 @@ export interface Company {
   moderationReason?: string;
   jobCount?: number;
   applicationCount?: number;
+  invitations?: {
+    email: string;
+    name: string;
+    status: 'pending' | 'accepted';
+  }[];
+  pendingInvitationEmails?: string[];
 }
