@@ -19,7 +19,7 @@ Forward-looking documents that outline the future direction of JobBoardly.
 - [\*\*Future Development Roadmap](./planning/01-future-development-roadmap.md)\*\*: A comprehensive, phased plan for general platform enhancements and new functionalities.
 - [\*\*AI Features Roadmap](./planning/02-ai-features-roadmap.md)\*\*: A detailed roadmap for all current and future AI-powered features, transforming the platform into an intelligent career marketplace.
 - [\*\*Notification System Plan](./planning/03-notification-system-plan.md)\*\*: The complete plan for the user notification and email alert system, including triggers, content, and personalization.
-- [\*\*SEO & Ranking Plan](./planning/alanning/04-seo-ranking-plan.md)\*\*: A strategic plan covering technical SEO, on-page optimizations, content strategy, and backlinking to improve organic visibility.
+- [\*\*SEO & Ranking Plan](./planning/04-seo-ranking-plan.md)\*\*: A strategic plan covering technical SEO, on-page optimizations, content strategy, and backlinking to improve organic visibility.
 
 ---
 
@@ -30,4 +30,5 @@ Detailed technical specifications and references for developers.
 - [\*\*Platform Features Overview](./reference/01-platform-features-overview.md)\*\*: A high-level summary of all currently implemented features across the platform.
 - [\*\*Application Routes Documentation](./reference/02-routes-documentation.md)\*\*: A complete list and description of all page routes in the Next.js application, including access levels.
 - [\*\*Folder Structure Deep Dive](./reference/04-folder-structure-deep-dive.md)\*\*: A detailed explanation of the project's file and folder structure.
+- [\*\*Code Cleaning & Refactoring Strategies](./reference/05-code-cleaning-strategies.md)\*\*: A summary of the architectural improvements made to the codebase.
 - [\*\*Backend API Specification](./api/v1/README.md)\*\*: The complete blueprint for the backend API, including endpoints for authentication, data management, and AI services. This is the primary resource for backend developers.
