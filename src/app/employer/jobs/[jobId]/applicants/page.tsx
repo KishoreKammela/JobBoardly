@@ -9,13 +9,13 @@ import { useToast } from '@/hooks/use-toast';
 export default function JobApplicantsPage() {
   const params = useParams();
   const jobId = params.jobId as string;
-  const { user, loading } = useAuth();
+  const { user, loading, isLoggingOut } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -33,7 +33,7 @@ export default function JobApplicantsPage() {
       });
       router.replace('/');
     }
-  }, [user, loading, router, currentPathname, toast]);
+  }, [user, loading, router, currentPathname, toast, isLoggingOut]);
 
   if (loading || !user || user.role !== 'employer') {
     return (

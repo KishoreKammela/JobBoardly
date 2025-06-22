@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { user, company, loading } = useAuth();
+  const { user, company, loading, isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const printableProfileRef = useRef<HTMLDivElement>(null);
@@ -29,7 +29,7 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -38,7 +38,7 @@ export default function ProfilePage() {
       });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname, toast]);
+  }, [user, loading, router, pathname, toast, isLoggingOut]);
 
   if (loading || !user) {
     return (

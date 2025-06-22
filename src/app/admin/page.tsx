@@ -16,19 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
-import type { Company, LegalDocument, UserProfile } from '@/types';
-import {
-  collection,
-  doc,
-  getCountFromServer,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from 'firebase/firestore';
+import type { Company, UserProfile } from '@/types';
 import { AlertCircle, Cpu, Gavel, Loader2, ShieldCheck } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -47,15 +35,17 @@ import type {
 } from './_lib/interfaces';
 import { initialModalState } from './_lib/interfaces';
 import {
-  saveLegalDocumentInDb,
-  updateCompanyStatusInDb,
-  updateJobStatusInDb,
-  updateUserStatusInDb,
-} from '@/services/admin.services';
+  fetchDataForAdminPage,
+  fetchLegalContentForAdmin,
+  handleCompanyStatusUpdateAction,
+  handleJobStatusUpdateAction,
+  handleSaveLegalDocumentAction,
+  handleUserStatusUpdateAction,
+} from './_lib/actions';
 import { getRoleBadgeVariant, getRoleDisplayName } from './_lib/utils';
 
 export default function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -70,21 +60,27 @@ export default function AdminPage() {
     null
   );
 
-  const [isPendingJobsLoading, setIsPendingJobsLoading] = useState(true);
-  const [isPendingCompaniesLoading, setIsPendingCompaniesLoading] =
-    useState(true);
-  const [isAllCompaniesLoading, setIsAllCompaniesLoading] = useState(true);
-  const [isUsersLoading, setIsUsersLoading] = useState(true);
-  const [isAllJobsLoading, setIsAllJobsLoading] = useState(true);
-  const [isStatsLoading, setIsStatsLoading] = useState(true);
+  const [loadingStates, setLoadingStates] = useState({
+    stats: true,
+    pendingJobs: true,
+    pendingCompanies: true,
+    allCompanies: true,
+    users: true,
+    allJobs: true,
+  });
+
+  const setIsLoading = (
+    section: keyof typeof loadingStates,
+    value: boolean
+  ) => {
+    setLoadingStates((prev) => ({ ...prev, [section]: value }));
+  };
 
   const [specificActionLoading, setSpecificActionLoading] = useState<
     string | null
   >(null);
-
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
-
   const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
   const [termsOfServiceContent, setTermsOfServiceContent] = useState('');
   const [isLegalContentLoaded, setIsLegalContentLoaded] = useState({
@@ -95,227 +91,8 @@ export default function AdminPage() {
     'privacy' | 'terms' | null
   >(null);
 
-  const fetchLegalContent = useCallback(async () => {
-    if (user?.role !== 'superAdmin') return;
-    try {
-      const privacyDocRef = doc(db, 'legalContent', 'privacyPolicy');
-      const privacyDocSnap = await getDoc(privacyDocRef);
-      if (privacyDocSnap.exists()) {
-        setPrivacyPolicyContent(
-          (privacyDocSnap.data() as LegalDocument).content
-        );
-      }
-      setIsLegalContentLoaded((prev) => ({ ...prev, privacy: true }));
-
-      const termsDocRef = doc(db, 'legalContent', 'termsOfService');
-      const termsDocSnap = await getDoc(termsDocRef);
-      if (termsDocSnap.exists()) {
-        setTermsOfServiceContent(
-          (termsDocSnap.data() as LegalDocument).content
-        );
-      }
-      setIsLegalContentLoaded((prev) => ({ ...prev, terms: true }));
-    } catch (error: unknown) {
-      console.error('Error fetching legal content:', error);
-      toast({
-        title: 'Error Fetching Legal Docs',
-        description: 'Could not load legal documents for editing.',
-        variant: 'destructive',
-      });
-    }
-  }, [user?.role, toast]);
-
-  const fetchData = useCallback(async () => {
-    setIsPendingJobsLoading(true);
-    setIsPendingCompaniesLoading(true);
-    setIsAllCompaniesLoading(true);
-    setIsUsersLoading(true);
-    setIsAllJobsLoading(true);
-    setIsStatsLoading(true);
-
-    try {
-      const jobSeekersCountSnap = await getCountFromServer(
-        query(collection(db, 'users'), where('role', '==', 'jobSeeker'))
-      );
-      const companiesCountSnap = await getCountFromServer(
-        collection(db, 'companies')
-      );
-      const totalJobsCountSnap = await getCountFromServer(
-        collection(db, 'jobs')
-      );
-      const approvedJobsCountSnap = await getCountFromServer(
-        query(collection(db, 'jobs'), where('status', '==', 'approved'))
-      );
-      const applicationsCountSnap = await getCountFromServer(
-        collection(db, 'applications')
-      );
-
-      setPlatformStats({
-        totalJobSeekers: jobSeekersCountSnap.data().count,
-        totalCompanies: companiesCountSnap.data().count,
-        totalJobs: totalJobsCountSnap.data().count,
-        approvedJobs: approvedJobsCountSnap.data().count,
-        totalApplications: applicationsCountSnap.data().count,
-      });
-      setIsStatsLoading(false);
-
-      const pendingJobsQuery = query(
-        collection(db, 'jobs'),
-        where('status', '==', 'pending'),
-        orderBy('createdAt', 'desc')
-      );
-      const pendingJobsSnapshot = await getDocs(pendingJobsQuery);
-      setPendingJobs(
-        pendingJobsSnapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            ...data,
-            id: d.id,
-            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-          } as JobWithApplicantCount;
-        })
-      );
-      setIsPendingJobsLoading(false);
-
-      const pendingCompaniesQuery = query(
-        collection(db, 'companies'),
-        where('status', '==', 'pending'),
-        orderBy('createdAt', 'desc')
-      );
-      const pendingCompaniesSnapshot = await getDocs(pendingCompaniesQuery);
-      setPendingCompanies(
-        pendingCompaniesSnapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            ...data,
-            id: d.id,
-            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-          } as Company;
-        })
-      );
-      setIsPendingCompaniesLoading(false);
-
-      const allCompaniesQuery = query(
-        collection(db, 'companies'),
-        orderBy('createdAt', 'desc')
-      );
-      const allCompaniesSnapshot = await getDocs(allCompaniesQuery);
-      const companiesData = await Promise.all(
-        allCompaniesSnapshot.docs.map(async (companyDoc) => {
-          const companyData = companyDoc.data();
-          const company = {
-            ...companyData,
-            id: companyDoc.id,
-            createdAt: (companyData.createdAt as Timestamp)
-              ?.toDate()
-              .toISOString(),
-            updatedAt: (companyData.updatedAt as Timestamp)
-              ?.toDate()
-              .toISOString(),
-          } as Company;
-
-          const jobCountQuery = query(
-            collection(db, 'jobs'),
-            where('companyId', '==', company.id)
-          );
-          const jobCountSnap = await getCountFromServer(jobCountQuery);
-          company.jobCount = jobCountSnap.data().count;
-
-          const appCountQuery = query(
-            collection(db, 'applications'),
-            where('companyId', '==', company.id)
-          );
-          const appCountSnap = await getCountFromServer(appCountQuery);
-          company.applicationCount = appCountSnap.data().count;
-          return company;
-        })
-      );
-      setAllCompanies(companiesData);
-      setIsAllCompaniesLoading(false);
-
-      const jobSeekersQuery = query(
-        collection(db, 'users'),
-        where('role', '==', 'jobSeeker'),
-        orderBy('createdAt', 'desc')
-      );
-      const jobSeekersSnapshot = await getDocs(jobSeekersQuery);
-      setAllJobSeekers(
-        jobSeekersSnapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            ...data,
-            uid: d.id,
-            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
-            lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
-            jobsAppliedCount: (data.appliedJobIds || []).length,
-          } as UserProfile;
-        })
-      );
-
-      const platformUsersQuery = query(
-        collection(db, 'users'),
-        where('role', 'in', ADMIN_LIKE_ROLES),
-        orderBy('createdAt', 'desc')
-      );
-      const platformUsersSnapshot = await getDocs(platformUsersQuery);
-      setAllPlatformUsers(
-        platformUsersSnapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            ...data,
-            uid: d.id,
-            createdAt: (data.createdAt as Timestamp)?.toDate().toISOString(),
-            updatedAt: (data.updatedAt as Timestamp)?.toDate().toISOString(),
-            lastActive: (data.lastActive as Timestamp)?.toDate().toISOString(),
-          } as UserProfile;
-        })
-      );
-      setIsUsersLoading(false);
-
-      const allJobsQuery = query(
-        collection(db, 'jobs'),
-        orderBy('createdAt', 'desc')
-      );
-      const allJobsSnapshot = await getDocs(allJobsQuery);
-      const jobsData = await Promise.all(
-        allJobsSnapshot.docs.map(async (jobDoc) => {
-          const jobData = jobDoc.data();
-          const job = {
-            ...jobData,
-            id: jobDoc.id,
-          } as JobWithApplicantCount;
-          const appCountQuery = query(
-            collection(db, 'applications'),
-            where('jobId', '==', job.id)
-          );
-          const applicantCountSnap = await getCountFromServer(appCountQuery);
-          job.applicantCount = applicantCountSnap.data().count;
-          job.createdAt = (job.createdAt as Timestamp)?.toDate().toISOString();
-          job.updatedAt = (job.updatedAt as Timestamp)?.toDate().toISOString();
-          return job;
-        })
-      );
-      setAllJobs(jobsData);
-      setIsAllJobsLoading(false);
-    } catch (error: unknown) {
-      console.error('Error fetching admin data:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to load some admin data. ${(error as Error).message}`,
-        variant: 'destructive',
-      });
-      setIsPendingJobsLoading(false);
-      setIsPendingCompaniesLoading(false);
-      setIsAllCompaniesLoading(false);
-      setIsUsersLoading(false);
-      setIsAllJobsLoading(false);
-      setIsStatsLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       router.replace(
         `/auth/admin/login?redirect=${encodeURIComponent(pathname)}`
@@ -329,29 +106,45 @@ export default function AdminPage() {
             : '/'
       );
     } else {
-      fetchData();
+      fetchDataForAdminPage(
+        setPlatformStats,
+        setPendingJobs,
+        setPendingCompanies,
+        setAllCompanies,
+        setAllJobSeekers,
+        setAllPlatformUsers,
+        setAllJobs,
+        setIsLoading
+      );
       if (user.role === 'superAdmin') {
-        fetchLegalContent();
+        fetchLegalContentForAdmin(
+          setPrivacyPolicyContent,
+          setTermsOfServiceContent,
+          setIsLegalContentLoaded
+        );
       }
     }
-  }, [user, loading, router, pathname, fetchData, fetchLegalContent]);
+  }, [user, loading, router, pathname, isLoggingOut]);
 
-  const showConfirmationModal = (
-    title: string,
-    description: React.ReactNode,
-    action: () => Promise<void>,
-    confirmText = 'Confirm',
-    confirmVariant: 'default' | 'destructive' = 'default'
-  ) => {
-    setModalState({
-      isOpen: true,
-      title,
-      description,
-      onConfirmAction: action,
-      confirmText,
-      confirmVariant,
-    });
-  };
+  const showConfirmationModal = useCallback(
+    (
+      title: string,
+      description: React.ReactNode,
+      action: () => Promise<void>,
+      confirmText = 'Confirm',
+      confirmVariant: 'default' | 'destructive' = 'default'
+    ) => {
+      setModalState({
+        isOpen: true,
+        title,
+        description,
+        onConfirmAction: action,
+        confirmText,
+        confirmVariant,
+      });
+    },
+    []
+  );
 
   const executeConfirmedAction = async () => {
     if (modalState.onConfirmAction) {
@@ -369,278 +162,6 @@ export default function AdminPage() {
         setIsModalActionLoading(false);
         setModalState(initialModalState);
       }
-    }
-  };
-
-  const handleJobStatusUpdate = async (
-    jobId: string,
-    newStatus: 'approved' | 'rejected' | 'suspended',
-    reason?: string
-  ) => {
-    if (user?.role === 'moderator' && newStatus === 'suspended') {
-      toast({
-        title: 'Permission Denied',
-        description: 'Moderators cannot suspend jobs.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (
-      (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') &&
-      newStatus !== 'pending'
-    ) {
-      toast({
-        title: 'Permission Denied',
-        description: 'You do not have permission to change job statuses.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSpecificActionLoading(`job-${jobId}`);
-    try {
-      const { moderationReason } = await updateJobStatusInDb(
-        jobId,
-        newStatus,
-        reason
-      );
-
-      if (newStatus !== 'pending') {
-        setPendingJobs((prev) => prev.filter((job) => job.id !== jobId));
-      }
-
-      setAllJobs((prevJobs) =>
-        prevJobs.map((j) =>
-          j.id === jobId
-            ? {
-                ...j,
-                status: newStatus,
-                moderationReason,
-                updatedAt: new Date().toISOString(),
-              }
-            : j
-        )
-      );
-
-      toast({
-        title: 'Success',
-        description: `Job ${jobId} status updated to ${newStatus}.`,
-      });
-    } catch (error: unknown) {
-      console.error(`Error updating job ${jobId}:`, error);
-      toast({
-        title: 'Error',
-        description: `Failed to update job ${jobId}. Error: ${(error as Error).message}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setSpecificActionLoading(null);
-    }
-  };
-
-  const handleCompanyStatusUpdate = async (
-    companyId: string,
-    intendedStatus:
-      | 'approved'
-      | 'rejected'
-      | 'suspended'
-      | 'active'
-      | 'deleted',
-    reason?: string
-  ) => {
-    if (user?.role === 'supportAgent' || user?.role === 'dataAnalyst') {
-      toast({
-        title: 'Permission Denied',
-        description: 'You do not have permission to change company statuses.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setSpecificActionLoading(`company-${companyId}`);
-
-    try {
-      const { finalStatus, moderationReason } = await updateCompanyStatusInDb(
-        companyId,
-        intendedStatus,
-        reason
-      );
-
-      setAllCompanies((prev) =>
-        prev.map((c) =>
-          c.id === companyId
-            ? {
-                ...c,
-                status: finalStatus,
-                moderationReason,
-                updatedAt: new Date().toISOString(),
-              }
-            : c
-        )
-      );
-      if (finalStatus !== 'pending') {
-        setPendingCompanies((prev) => prev.filter((c) => c.id !== companyId));
-      }
-
-      toast({
-        title: 'Success',
-        description: `Company ${companyId} status updated to ${finalStatus}.`,
-      });
-
-      if (finalStatus === 'suspended' || finalStatus === 'deleted') {
-        toast({
-          title: 'Note',
-          description: `Associated recruiters' access will be limited based on the new company status ('${finalStatus}').`,
-          duration: 7000,
-        });
-      }
-    } catch (error: unknown) {
-      console.error(`Error updating company ${companyId}:`, error);
-      toast({
-        title: 'Error',
-        description: `Failed to update company ${companyId}. Error: ${(error as Error).message}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setSpecificActionLoading(null);
-    }
-  };
-
-  const handleUserStatusUpdate = async (
-    userId: string,
-    newStatus: 'active' | 'suspended' | 'deleted'
-  ) => {
-    if (!user) return;
-
-    const targetUser = [...allJobSeekers, ...allPlatformUsers].find(
-      (u) => u.uid === userId
-    );
-    if (!targetUser) {
-      toast({
-        title: 'Error',
-        description: 'User not found.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const isTargetListedAsJobSeeker = allJobSeekers.some(
-      (js) => js.uid === userId
-    );
-
-    if (user.uid === userId) {
-      if (!isTargetListedAsJobSeeker) {
-        toast({
-          title: 'Action Denied',
-          description:
-            'You cannot change your own status as a platform user. This action targets your admin/moderator account.',
-          variant: 'destructive',
-        });
-        return;
-      } else {
-        toast({
-          title: 'Caution: Self-Action',
-          description:
-            'You are attempting to modify your own job seeker record. Proceed with caution if this is intended.',
-          variant: 'default',
-          duration: 5000,
-        });
-      }
-    }
-
-    if (
-      user.role === 'moderator' ||
-      user.role === 'supportAgent' ||
-      user.role === 'dataAnalyst'
-    ) {
-      toast({
-        title: 'Permission Denied',
-        description: 'You do not have permission to change user statuses.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (user.role === 'admin') {
-      if (
-        !isTargetListedAsJobSeeker &&
-        targetUser.uid !== user.uid &&
-        (targetUser.role === 'admin' || targetUser.role === 'superAdmin')
-      ) {
-        toast({
-          title: 'Action Denied',
-          description:
-            'Admins cannot suspend or delete other Admins or SuperAdmins. This can only be done by a SuperAdmin.',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-
-    setSpecificActionLoading(`user-${userId}`);
-    try {
-      await updateUserStatusInDb(userId, newStatus);
-      const updatedTime = new Date().toISOString();
-      if (isTargetListedAsJobSeeker) {
-        setAllJobSeekers((prev) =>
-          prev.map((u) =>
-            u.uid === userId
-              ? { ...u, status: newStatus, updatedAt: updatedTime }
-              : u
-          )
-        );
-      } else {
-        setAllPlatformUsers((prev) =>
-          prev.map((u) =>
-            u.uid === userId
-              ? { ...u, status: newStatus, updatedAt: updatedTime }
-              : u
-          )
-        );
-      }
-      toast({
-        title: 'Success',
-        description: `User ${userId} status updated to ${newStatus}.`,
-      });
-    } catch (e: unknown) {
-      console.error('Error updating user status:', e);
-      toast({
-        title: 'Error',
-        description: `Failed to update user status. Error: ${(e as Error).message}`,
-        variant: 'destructive',
-      });
-    } finally {
-      setSpecificActionLoading(null);
-    }
-  };
-
-  const handleSaveLegalDocument = async (
-    docId: 'privacyPolicy' | 'termsOfService',
-    content: string
-  ) => {
-    if (user?.role !== 'superAdmin') {
-      toast({
-        title: 'Permission Denied',
-        description: 'Only Super Admins can update legal documents.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsSavingLegal(docId);
-    try {
-      await saveLegalDocumentInDb(docId, content);
-      toast({
-        title: 'Success',
-        description: `${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'} updated successfully.`,
-      });
-    } catch (error: unknown) {
-      console.error(`Error saving ${docId}:`, error);
-      toast({
-        title: 'Error Saving Document',
-        description: `Could not save ${docId === 'privacyPolicy' ? 'Privacy Policy' : 'Terms of Service'}.`,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSavingLegal(null);
     }
   };
 
@@ -719,15 +240,35 @@ export default function AdminPage() {
 
       <AdminDashboardOverview
         platformStats={platformStats}
-        isStatsLoading={isStatsLoading}
+        isStatsLoading={loadingStates.stats}
         pendingJobs={pendingJobs}
-        isPendingJobsLoading={isPendingJobsLoading}
+        isPendingJobsLoading={loadingStates.pendingJobs}
         pendingCompanies={pendingCompanies}
-        isPendingCompaniesLoading={isPendingCompaniesLoading}
+        isPendingCompaniesLoading={loadingStates.pendingCompanies}
         canModerateContent={canModerateContent}
         specificActionLoading={specificActionLoading}
-        handleJobStatusUpdate={handleJobStatusUpdate}
-        handleCompanyStatusUpdate={handleCompanyStatusUpdate}
+        handleJobStatusUpdate={(jobId, newStatus, reason) =>
+          handleJobStatusUpdateAction(
+            jobId,
+            newStatus,
+            user,
+            setSpecificActionLoading,
+            setPendingJobs,
+            setAllJobs,
+            reason
+          )
+        }
+        handleCompanyStatusUpdate={(companyId, intendedStatus, reason) =>
+          handleCompanyStatusUpdateAction(
+            companyId,
+            intendedStatus,
+            user,
+            setSpecificActionLoading,
+            setAllCompanies,
+            setPendingCompanies,
+            reason
+          )
+        }
         showConfirmationModal={showConfirmationModal}
         showQuickModeration={showQuickModeration}
         canViewAnalytics={
@@ -753,9 +294,19 @@ export default function AdminPage() {
         <TabsContent value="companies">
           <AdminCompaniesTable
             companies={allCompanies}
-            isLoading={isAllCompaniesLoading}
+            isLoading={loadingStates.allCompanies}
             showConfirmationModal={showConfirmationModal}
-            handleCompanyStatusUpdate={handleCompanyStatusUpdate}
+            handleCompanyStatusUpdate={(companyId, intendedStatus, reason) =>
+              handleCompanyStatusUpdateAction(
+                companyId,
+                intendedStatus,
+                user,
+                setSpecificActionLoading,
+                setAllCompanies,
+                setPendingCompanies,
+                reason
+              )
+            }
             specificActionLoading={specificActionLoading}
             canModerateContent={canModerateContent}
           />
@@ -764,10 +315,20 @@ export default function AdminPage() {
         <TabsContent value="allJobs">
           <AdminJobsTable
             jobs={allJobs}
-            isLoading={isAllJobsLoading}
+            isLoading={loadingStates.allJobs}
             currentUserRole={user?.role}
             showConfirmationModal={showConfirmationModal}
-            handleJobStatusUpdate={handleJobStatusUpdate}
+            handleJobStatusUpdate={(jobId, newStatus, reason) =>
+              handleJobStatusUpdateAction(
+                jobId,
+                newStatus,
+                user,
+                setSpecificActionLoading,
+                setPendingJobs,
+                setAllJobs,
+                reason
+              )
+            }
             specificActionLoading={specificActionLoading}
             canModerateContent={canModerateContent}
           />
@@ -776,9 +337,20 @@ export default function AdminPage() {
         <TabsContent value="jobSeekers">
           <AdminJobSeekersTable
             jobSeekers={allJobSeekers}
-            isLoading={isUsersLoading}
+            isLoading={loadingStates.users}
             showConfirmationModal={showConfirmationModal}
-            handleUserStatusUpdate={handleUserStatusUpdate}
+            handleUserStatusUpdate={(userId, newStatus) =>
+              handleUserStatusUpdateAction(
+                userId,
+                newStatus,
+                user,
+                allJobSeekers,
+                allPlatformUsers,
+                setSpecificActionLoading,
+                setAllJobSeekers,
+                setAllPlatformUsers
+              )
+            }
             specificActionLoading={specificActionLoading}
             canPerformUserActions={canPerformUserActions}
           />
@@ -788,10 +360,21 @@ export default function AdminPage() {
           <TabsContent value="platformUsers">
             <AdminPlatformUsersTable
               platformUsers={allPlatformUsers}
-              isLoading={isUsersLoading}
+              isLoading={loadingStates.users}
               currentUser={user}
               showConfirmationModal={showConfirmationModal}
-              handleUserStatusUpdate={handleUserStatusUpdate}
+              handleUserStatusUpdate={(userId, newStatus) =>
+                handleUserStatusUpdateAction(
+                  userId,
+                  newStatus,
+                  user,
+                  allJobSeekers,
+                  allPlatformUsers,
+                  setSpecificActionLoading,
+                  setAllJobSeekers,
+                  setAllPlatformUsers
+                )
+              }
               specificActionLoading={specificActionLoading}
               getRoleDisplayName={getRoleDisplayName}
               getRoleBadgeVariant={getRoleBadgeVariant}
@@ -805,7 +388,14 @@ export default function AdminPage() {
               termsOfServiceContent={termsOfServiceContent}
               onPrivacyPolicyChange={setPrivacyPolicyContent}
               onTermsOfServiceChange={setTermsOfServiceContent}
-              onSaveLegalDocument={handleSaveLegalDocument}
+              onSaveLegalDocument={(docId, content) =>
+                handleSaveLegalDocumentAction(
+                  docId,
+                  content,
+                  user,
+                  setIsSavingLegal
+                )
+              }
               isContentLoaded={isLegalContentLoaded}
               isSaving={isSavingLegal}
             />

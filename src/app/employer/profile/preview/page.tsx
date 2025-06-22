@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchCompanyAndRelatedData } from './_lib/actions';
 
 export default function CompanyProfilePreviewPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isLoggingOut } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -45,7 +45,7 @@ export default function CompanyProfilePreviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isLoggingOut) return;
 
     if (!user) {
       toast({
@@ -80,7 +80,7 @@ export default function CompanyProfilePreviewPage() {
       setIsLoading,
       setIsFetchingRecruiters,
     });
-  }, [user, authLoading, router, toast]);
+  }, [user, authLoading, router, toast, isLoggingOut]);
 
   if (authLoading || isLoading) {
     return (

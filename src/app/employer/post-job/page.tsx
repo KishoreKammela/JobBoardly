@@ -11,13 +11,13 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
 export default function PostJobPage() {
-  const { user, company, loading } = useAuth();
+  const { user, company, loading, isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -35,7 +35,7 @@ export default function PostJobPage() {
       });
       router.replace('/');
     }
-  }, [user, loading, router, pathname, toast]);
+  }, [user, loading, router, pathname, toast, isLoggingOut]);
 
   if (loading || !user || user.role !== 'employer') {
     return (

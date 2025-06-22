@@ -35,7 +35,7 @@ import { formatCandidatesForAI } from './_lib/utils';
 import { fetchCandidatesForAIMatcher } from './_lib/actions';
 
 export default function AiCandidateMatchPage() {
-  const { user, company, loading: authLoading } = useAuth();
+  const { user, company, loading: authLoading, isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -57,7 +57,7 @@ export default function AiCandidateMatchPage() {
   >([]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -76,7 +76,7 @@ export default function AiCandidateMatchPage() {
       });
       router.replace('/');
     }
-  }, [user, authLoading, router, pathname, toast]);
+  }, [user, authLoading, router, pathname, toast, isLoggingOut]);
 
   useEffect(() => {
     if (user && user.role === 'employer') {

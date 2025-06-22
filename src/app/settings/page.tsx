@@ -31,7 +31,7 @@ import {
 import { type ModalState, defaultModalState } from './_lib/interfaces';
 
 export default function SettingsPage() {
-  const { user, loading, company } = useAuth();
+  const { user, loading, company, isLoggingOut } = useAuth();
   const { deleteSearch: deleteJobSearch } = useJobSeekerActions();
   const { deleteCandidateSearch } = useEmployerActions();
 
@@ -42,7 +42,7 @@ export default function SettingsPage() {
   const [isModalActionLoading, setIsModalActionLoading] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -51,7 +51,7 @@ export default function SettingsPage() {
       });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname, toast]);
+  }, [user, loading, router, pathname, toast, isLoggingOut]);
 
   const showConfirmationModal = (
     title: string,

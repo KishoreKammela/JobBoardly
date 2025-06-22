@@ -53,7 +53,12 @@ import { fetchCandidateProfile } from './_lib/actions';
 export default function CandidateDetailPage() {
   const params = useParams();
   const candidateId = params.candidateId as string;
-  const { user: currentUser, company, loading: authLoading } = useAuth();
+  const {
+    user: currentUser,
+    company,
+    loading: authLoading,
+    isLoggingOut,
+  } = useAuth();
   const router = useRouter();
   const currentPathname = usePathname();
   const { toast } = useToast();
@@ -71,7 +76,7 @@ export default function CandidateDetailPage() {
   });
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || isLoggingOut) return;
     if (!currentUser) {
       toast({
         title: 'Authentication Required',
@@ -113,7 +118,15 @@ export default function CandidateDetailPage() {
       router.replace('/employer/posted-jobs');
       return;
     }
-  }, [currentUser, company, authLoading, router, currentPathname, toast]);
+  }, [
+    currentUser,
+    company,
+    authLoading,
+    router,
+    currentPathname,
+    toast,
+    isLoggingOut,
+  ]);
 
   useEffect(() => {
     if (

@@ -39,6 +39,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import type { UserRole } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { NotificationBell } from './NotificationBell';
+import { useToast } from '@/hooks/use-toast';
 
 interface NavLinkConfig {
   href: string;
@@ -311,10 +312,24 @@ export function Navbar() {
   const { user, company, logout, loading, pendingJobsCount } = useAuth(); // Added pendingJobsCount
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/');
+    try {
+      await logout();
+      toast({
+        title: 'Logout Successful',
+        description: 'You have been logged out.',
+      });
+      router.push('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast({
+        title: 'Logout Failed',
+        description: 'There was an error logging you out. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getAvatarFallback = () => {

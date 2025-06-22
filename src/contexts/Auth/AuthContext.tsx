@@ -50,9 +50,8 @@ interface AuthContextType {
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
-  // These will be provided by the UserProfileContext and other specific contexts
-  // and are removed from here to separate concerns.
   user: UserProfile | null;
+  isLoggingOut: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null); // Keep a local copy for immediate use
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!auth) {
@@ -179,9 +179,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(null);
       return;
     }
-    await signOut(auth);
-    setFirebaseUser(null);
-    setUser(null);
+    setIsLoggingOut(true);
+    try {
+      await signOut(auth);
+      setFirebaseUser(null);
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+      throw error;
+    }
   };
 
   const changeUserPassword = async (
@@ -210,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithSocial,
         changeUserPassword,
         user,
+        isLoggingOut,
       }}
     >
       {children}

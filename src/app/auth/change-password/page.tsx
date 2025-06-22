@@ -13,11 +13,8 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
-// Metadata for this page should be set in a server component or root layout
-// For client components, we can update document.title dynamically if needed.
-
 export default function ChangePasswordPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -27,7 +24,7 @@ export default function ChangePasswordPage() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || isLoggingOut) return;
     if (!user) {
       toast({
         title: 'Authentication Required',
@@ -36,7 +33,7 @@ export default function ChangePasswordPage() {
       });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname, toast]);
+  }, [user, loading, router, pathname, toast, isLoggingOut]);
 
   if (loading || !user) {
     return (
