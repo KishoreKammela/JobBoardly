@@ -241,8 +241,8 @@ export function PersonalInformationSection({
             </div>
           </div>
         ) : (
-          // Single-column layout for Admin/Employer
-          <div className="space-y-6">
+          // Two-column layout for Admin/Employer
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor="userName">Full Name</Label>
               <Input
@@ -270,7 +270,7 @@ export function PersonalInformationSection({
                 className="bg-muted/50"
               />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <Label
                 htmlFor="userAvatarUrl"
                 className="flex items-center gap-1"
