@@ -12,6 +12,7 @@ import {
   updateDoc,
   serverTimestamp,
   getCountFromServer,
+  documentId,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Job } from '@/types';
@@ -117,7 +118,7 @@ export const getJobsByIds = async (
     if (batchIds.length > 0) {
       const q = query(
         collection(db, 'jobs'),
-        where(doc(db, 'jobs', 'dummy').id, 'in', batchIds)
+        where(documentId(), 'in', batchIds)
       );
       const querySnapshot = await getDocs(q);
       querySnapshot.forEach((docSnap) => {

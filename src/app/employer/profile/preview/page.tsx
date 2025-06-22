@@ -28,21 +28,12 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { JobCard } from '@/components/JobCard';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  Timestamp,
-  orderBy,
-  doc,
-  getDoc,
-} from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { fetchCompanyAndRelatedData } from './_lib/actions';
+
 export default function CompanyProfilePreviewPage() {
-  const { user, company: authCompany, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -80,118 +71,16 @@ export default function CompanyProfilePreviewPage() {
       setIsLoading(false);
       return;
     }
-
-    const fetchCompanyAndRelatedData = async (companyId: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        let companyToDisplay: Company | null = null;
-        if (authCompany && authCompany.id === companyId) {
-          companyToDisplay = authCompany;
-        } else {
-          const companyDocRef = doc(db, 'companies', companyId);
-          const companyDocSnap = await getDoc(companyDocRef);
-          if (companyDocSnap.exists()) {
-            const rawData = companyDocSnap.data();
-            companyToDisplay = {
-              id: companyDocSnap.id,
-              ...rawData,
-              createdAt:
-                rawData.createdAt instanceof Timestamp
-                  ? rawData.createdAt.toDate().toISOString()
-                  : rawData.createdAt,
-              updatedAt:
-                rawData.updatedAt instanceof Timestamp
-                  ? rawData.updatedAt.toDate().toISOString()
-                  : rawData.updatedAt,
-            } as Company;
-          }
-        }
-
-        if (!companyToDisplay) {
-          setError('Company details not found.');
-          setIsLoading(false);
-          return;
-        }
-        setCompanyDetails(companyToDisplay);
-
-        if (
-          companyToDisplay.recruiterUids &&
-          companyToDisplay.recruiterUids.length > 0
-        ) {
-          setIsFetchingRecruiters(true);
-          const recruitersQueryLimit = 30;
-          const fetchedRecruiters: UserProfile[] = [];
-          for (
-            let i = 0;
-            i < companyToDisplay.recruiterUids.length;
-            i += recruitersQueryLimit
-          ) {
-            const batchUids = companyToDisplay.recruiterUids.slice(
-              i,
-              i + recruitersQueryLimit
-            );
-            if (batchUids.length > 0) {
-              const recruitersQuery = query(
-                collection(db, 'users'),
-                where('__name__', 'in', batchUids)
-              );
-              const recruitersSnap = await getDocs(recruitersQuery);
-              recruitersSnap.docs.forEach((d) =>
-                fetchedRecruiters.push({
-                  uid: d.id,
-                  ...d.data(),
-                } as UserProfile)
-              );
-            }
-          }
-          setRecruiters(fetchedRecruiters);
-          setIsFetchingRecruiters(false);
-        } else {
-          setIsFetchingRecruiters(false);
-        }
-
-        const jobsQuery = query(
-          collection(db, 'jobs'),
-          where('companyId', '==', companyId),
-          where('status', '==', 'approved'),
-          orderBy('postedDate', 'desc')
-        );
-        const jobsSnap = await getDocs(jobsQuery);
-        const fetchedJobs = jobsSnap.docs.map((d) => {
-          const jobData = d.data();
-          return {
-            id: d.id,
-            ...jobData,
-            postedDate:
-              jobData.postedDate instanceof Timestamp
-                ? jobData.postedDate.toDate().toISOString().split('T')[0]
-                : jobData.postedDate,
-            createdAt:
-              jobData.createdAt instanceof Timestamp
-                ? jobData.createdAt.toDate().toISOString()
-                : jobData.createdAt,
-            updatedAt:
-              jobData.updatedAt instanceof Timestamp
-                ? jobData.updatedAt.toDate().toISOString()
-                : jobData.updatedAt,
-          } as Job;
-        });
-        setJobs(fetchedJobs);
-      } catch (e: unknown) {
-        console.error('Error fetching company preview data:', e);
-        setError(
-          `Failed to load company preview. Error: ${(e as Error).message}`
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user.companyId) {
-      fetchCompanyAndRelatedData(user.companyId);
-    }
-  }, [user, authCompany, authLoading, router, toast]);
+    fetchCompanyAndRelatedData({
+      companyId: user.companyId,
+      setCompanyDetails,
+      setRecruiters,
+      setJobs,
+      setError,
+      setIsLoading,
+      setIsFetchingRecruiters,
+    });
+  }, [user, authLoading, router, toast]);
 
   if (authLoading || isLoading) {
     return (

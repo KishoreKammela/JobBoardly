@@ -25,14 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import type { UserProfile } from '@/types';
 import { CandidateCard } from '@/components/employer/CandidateCard';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  getDocs,
-  query as firestoreQuery,
-  where,
-  Timestamp,
-} from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { useRouter, usePathname } from 'next/navigation';
@@ -40,6 +32,7 @@ import { formatCurrencyINR } from '@/lib/utils';
 import Link from 'next/link';
 import { format, isValid, parse } from 'date-fns';
 import { formatCandidatesForAI } from './_lib/utils';
+import { fetchCandidatesForAIMatcher } from './_lib/actions';
 
 export default function AiCandidateMatchPage() {
   const { user, company, loading: authLoading } = useAuth();
@@ -87,50 +80,11 @@ export default function AiCandidateMatchPage() {
 
   useEffect(() => {
     if (user && user.role === 'employer') {
-      const fetchCandidates = async () => {
-        setCandidatesLoading(true);
-        setCandidatesError(null);
-        try {
-          const usersCollectionRef = collection(db, 'users');
-          const q = firestoreQuery(
-            usersCollectionRef,
-            where('role', '==', 'jobSeeker'),
-            where('isProfileSearchable', '==', true)
-          );
-          const querySnapshot = await getDocs(q);
-          const candidatesData = querySnapshot.docs.map((docSnap) => {
-            const data = docSnap.data();
-            return {
-              uid: docSnap.id,
-              ...data,
-              createdAt:
-                data.createdAt instanceof Timestamp
-                  ? data.createdAt.toDate().toISOString()
-                  : data.createdAt,
-              updatedAt:
-                data.updatedAt instanceof Timestamp
-                  ? data.updatedAt.toDate().toISOString()
-                  : data.updatedAt,
-              lastActive:
-                data.lastActive instanceof Timestamp
-                  ? data.lastActive.toDate().toISOString()
-                  : data.lastActive,
-            } as UserProfile;
-          });
-          setAllCandidates(candidatesData);
-        } catch (e: unknown) {
-          console.error('Error fetching candidates for AI matcher:', e);
-          let message =
-            'Failed to load candidates for matching. Please try again later.';
-          if (e instanceof Error) {
-            message = `Failed to load candidates: ${e.message}`;
-          }
-          setCandidatesError(message);
-        } finally {
-          setCandidatesLoading(false);
-        }
-      };
-      fetchCandidates();
+      fetchCandidatesForAIMatcher(
+        setAllCandidates,
+        setCandidatesLoading,
+        setCandidatesError
+      );
     } else {
       setCandidatesLoading(false);
     }

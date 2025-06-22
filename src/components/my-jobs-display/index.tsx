@@ -10,15 +10,6 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import {
-  getDocs,
-  Timestamp,
-  collection,
-  query as firestoreQuery,
-  where,
-  documentId,
-} from 'firebase/firestore';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -32,7 +23,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { JobFilterType } from './_lib/interfaces';
-import { withdrawJobApplication } from './_lib/actions';
+import {
+  withdrawJobApplication,
+  fetchJobsDataForDisplay,
+} from './_lib/actions';
 
 export function MyJobsDisplay() {
   const { user } = useAuth();
@@ -56,73 +50,17 @@ export function MyJobsDisplay() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
-    const fetchJobsData = async () => {
-      if (!user || user.role !== 'jobSeeker') {
-        setIsLoading(false);
-        setDisplayedJobs([]);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      const appliedJobIds = Array.from(userApplications.keys());
-      const savedJobIds = user.savedJobIds || [];
-      const allUniqueJobIds = Array.from(
-        new Set([...appliedJobIds, ...savedJobIds])
+    if (user && user.role === 'jobSeeker') {
+      fetchJobsDataForDisplay(
+        user,
+        userApplications,
+        setAllFetchedJobsDetails,
+        setIsLoading,
+        setError
       );
-
-      if (allUniqueJobIds.length === 0) {
-        setAllFetchedJobsDetails(new Map());
-        setDisplayedJobs([]);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const jobsMap = new Map<string, Job>();
-        const batchSize = 30;
-        for (let i = 0; i < allUniqueJobIds.length; i += batchSize) {
-          const batchIds = allUniqueJobIds.slice(i, i + batchSize);
-          if (batchIds.length > 0) {
-            const q = firestoreQuery(
-              collection(db, 'jobs'),
-              where(documentId(), 'in', batchIds)
-            );
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((docSnap) => {
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                jobsMap.set(docSnap.id, {
-                  id: docSnap.id,
-                  ...data,
-                  postedDate:
-                    data.postedDate instanceof Timestamp
-                      ? data.postedDate.toDate().toISOString().split('T')[0]
-                      : data.postedDate,
-                  createdAt:
-                    data.createdAt instanceof Timestamp
-                      ? data.createdAt.toDate().toISOString()
-                      : data.createdAt,
-                  updatedAt:
-                    data.updatedAt instanceof Timestamp
-                      ? data.updatedAt.toDate().toISOString()
-                      : data.updatedAt,
-                } as Job);
-              }
-            });
-          }
-        }
-        setAllFetchedJobsDetails(jobsMap);
-      } catch (e) {
-        console.error('Error fetching jobs details:', e);
-        setError('Failed to load your jobs. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchJobsData();
+    } else if (!user) {
+      setIsLoading(false);
+    }
   }, [user, userApplications]);
 
   useEffect(() => {

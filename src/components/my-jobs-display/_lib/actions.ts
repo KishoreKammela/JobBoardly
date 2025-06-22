@@ -1,4 +1,5 @@
 // src/components/my-jobs-display/_lib/actions.ts
+import { getJobsByIds } from '@/services/job.services';
 import type { Job, UserProfile } from '@/types';
 import type { Toast } from '@/hooks/use-toast';
 
@@ -47,5 +48,38 @@ export const withdrawJobApplication = async ({
       variant: 'destructive',
     });
     return false;
+  }
+};
+
+export const fetchJobsDataForDisplay = async (
+  user: UserProfile,
+  userApplications: Map<string, any>,
+  setAllFetchedJobsDetails: (jobsMap: Map<string, Job>) => void,
+  setIsLoading: (loading: boolean) => void,
+  setError: (error: string | null) => void
+) => {
+  setIsLoading(true);
+  setError(null);
+
+  const appliedJobIds = Array.from(userApplications.keys());
+  const savedJobIds = user.savedJobIds || [];
+  const allUniqueJobIds = Array.from(
+    new Set([...appliedJobIds, ...savedJobIds])
+  );
+
+  if (allUniqueJobIds.length === 0) {
+    setAllFetchedJobsDetails(new Map());
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    const jobsMap = await getJobsByIds(allUniqueJobIds);
+    setAllFetchedJobsDetails(jobsMap);
+  } catch (e) {
+    console.error('Error fetching jobs details:', e);
+    setError('Failed to load your jobs. Please try again.');
+  } finally {
+    setIsLoading(false);
   }
 };

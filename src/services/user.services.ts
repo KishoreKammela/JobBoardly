@@ -10,6 +10,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  orderBy,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserProfile, UserRole } from '@/types';
@@ -21,9 +22,22 @@ export const getUserProfile = async (
   const userDocRef = doc(db, 'users', userId);
   const userDocSnap = await getDoc(userDocRef);
   if (userDocSnap.exists()) {
+    const data = userDocSnap.data();
     return {
       uid: userId,
-      ...userDocSnap.data(),
+      ...data,
+      createdAt:
+        data.createdAt instanceof Timestamp
+          ? data.createdAt.toDate().toISOString()
+          : data.createdAt,
+      updatedAt:
+        data.updatedAt instanceof Timestamp
+          ? data.updatedAt.toDate().toISOString()
+          : data.updatedAt,
+      lastActive:
+        data.lastActive instanceof Timestamp
+          ? data.lastActive.toDate().toISOString()
+          : data.lastActive,
     } as UserProfile;
   }
   return null;

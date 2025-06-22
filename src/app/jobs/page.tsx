@@ -12,15 +12,6 @@ import {
   AlertCircle,
   Search as SearchIcon,
 } from 'lucide-react';
-import { db } from '@/lib/firebase';
-import {
-  collection,
-  getDocs,
-  query as firestoreQuery,
-  Timestamp,
-  orderBy,
-  where,
-} from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Input } from '@/components/ui/input';
@@ -29,6 +20,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { JOBS_PER_PAGE } from './_lib/constants';
 import { filterJobs } from './_lib/utils';
 import { JobSkeletonCard } from './_components/JobSkeletonCard';
+import { fetchJobs } from './_lib/actions';
 
 export default function JobsPage() {
   const searchParams = useSearchParams();
@@ -87,49 +79,7 @@ export default function JobsPage() {
   }, [user?.jobBoardDisplay, isMobile]);
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      setIsLoading(true);
-      setIsFiltering(false);
-      setError(null);
-      try {
-        const jobsCollectionRef = collection(db, 'jobs');
-        const q = firestoreQuery(
-          jobsCollectionRef,
-          where('status', '==', 'approved'),
-          orderBy('postedDate', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const jobsData = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            postedDate:
-              data.postedDate instanceof Timestamp
-                ? data.postedDate.toDate().toISOString().split('T')[0]
-                : data.postedDate,
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate().toISOString()
-                : data.createdAt,
-            updatedAt:
-              data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate().toISOString()
-                : data.updatedAt,
-          } as Job;
-        });
-        setAllJobs(jobsData);
-        setFilteredJobs(jobsData);
-      } catch (e: unknown) {
-        console.error('Error fetching jobs:', e);
-        setError(
-          `Failed to load jobs. Please try again later. Error: ${(e as Error).message}`
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchJobs();
+    fetchJobs(setAllJobs, setFilteredJobs, setError, setIsLoading);
   }, []);
 
   useEffect(() => {

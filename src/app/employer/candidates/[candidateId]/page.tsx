@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 import type {
   UserProfile,
   ExperienceEntry,
@@ -49,6 +48,7 @@ import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ADMIN_LIKE_ROLES_CANDIDATE_PAGE } from './_lib/constants';
+import { fetchCandidateProfile } from './_lib/actions';
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -128,126 +128,26 @@ export default function CandidateDetailPage() {
       }
       return;
     }
+    fetchCandidateProfile(candidateId, setCandidate, setError, setIsLoading);
+  }, [candidateId, currentUser]);
 
-    const fetchCandidate = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const candidateDocRef = doc(db, 'users', candidateId);
-        const candidateDocSnap = await getDoc(candidateDocRef);
-
-        if (!candidateDocSnap.exists()) {
-          setError('User profile not found.');
-          setIsLoading(false);
-          return;
-        }
-
-        const data = candidateDocSnap.data();
-        const targetUserRole = data.role as UserRole;
-        let allowProfileLoad = false;
-        let accessDeniedMessage = '';
-        let redirectPath = '/';
-
-        if (currentUser.role === 'employer') {
-          if (targetUserRole === 'jobSeeker') {
-            allowProfileLoad = true;
-          } else {
-            accessDeniedMessage =
-              'Employers can only view job seeker profiles.';
-            redirectPath = '/employer/find-candidates';
-          }
-        } else if (
-          ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole)
-        ) {
-          allowProfileLoad = true;
-        } else {
-          accessDeniedMessage =
-            'You do not have permission to view this type of profile.';
-          if (currentUser.role === 'jobSeeker') redirectPath = '/jobs';
-        }
-
-        if (!allowProfileLoad) {
-          toast({
-            title: 'Access Denied',
-            description: accessDeniedMessage,
-            variant: 'destructive',
-          });
-          router.replace(redirectPath);
-          setIsLoading(false);
-          return;
-        }
-
-        let dobString: string | undefined = undefined;
-        if (data.dateOfBirth) {
-          if (
-            typeof data.dateOfBirth === 'string' &&
-            isValid(parse(data.dateOfBirth, 'yyyy-MM-dd', new Date()))
-          ) {
-            dobString = data.dateOfBirth;
-          } else if (data.dateOfBirth instanceof Timestamp) {
-            dobString = format(data.dateOfBirth.toDate(), 'yyyy-MM-dd');
-          } else if (
-            data.dateOfBirth instanceof Date &&
-            isValid(data.dateOfBirth)
-          ) {
-            dobString = format(data.dateOfBirth, 'yyyy-MM-dd');
-          }
-        }
-
-        setCandidate({
-          uid: candidateDocSnap.id,
-          ...data,
-          dateOfBirth: dobString,
-          createdAt:
-            data.createdAt instanceof Timestamp
-              ? data.createdAt.toDate().toISOString()
-              : data.createdAt,
-          updatedAt:
-            data.updatedAt instanceof Timestamp
-              ? data.updatedAt.toDate().toISOString()
-              : data.updatedAt,
-          lastActive:
-            data.lastActive instanceof Timestamp
-              ? data.lastActive.toDate().toISOString()
-              : data.lastActive,
-          totalYearsExperience:
-            data.totalYearsExperience === null ||
-            data.totalYearsExperience === undefined
-              ? undefined
-              : data.totalYearsExperience,
-          totalMonthsExperience:
-            data.totalMonthsExperience === null ||
-            data.totalMonthsExperience === undefined
-              ? undefined
-              : data.totalMonthsExperience,
-          skills: data.skills || [],
-          experiences: data.experiences || [],
-          educations: data.educations || [],
-          languages: data.languages || [],
-          appliedJobIds: data.appliedJobIds || [],
-          savedJobIds: data.savedJobIds || [],
-          savedSearches: data.savedSearches || [],
-          preferredLocations: data.preferredLocations || [],
-          companyId: data.companyId || undefined,
-          isCompanyAdmin: data.isCompanyAdmin || false,
-          savedCandidateSearches: data.savedCandidateSearches || [],
-        } as UserProfile);
-      } catch (e: unknown) {
-        console.error('Error fetching user/candidate details:', e);
-        let message = 'Failed to load user profile. Please try again.';
-        if (e instanceof Error) {
-          message = `Failed to load user profile: ${e.message}`;
-        }
-        setError(message);
-      } finally {
-        setIsLoading(false);
+  useEffect(() => {
+    if (
+      !isLoading &&
+      candidate &&
+      currentUser &&
+      currentUser.role === 'employer'
+    ) {
+      if (candidate.role !== 'jobSeeker') {
+        toast({
+          title: 'Access Denied',
+          description: 'Employers can only view job seeker profiles.',
+          variant: 'destructive',
+        });
+        router.replace('/employer/find-candidates');
       }
-    };
-
-    if (candidateId && currentUser) {
-      fetchCandidate();
     }
-  }, [candidateId, currentUser, toast, router]);
+  }, [isLoading, candidate, currentUser, router, toast]);
 
   if (authLoading || isLoading || (!currentUser && !authLoading)) {
     return (
