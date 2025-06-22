@@ -1,6 +1,6 @@
 // src/components/my-jobs-display/_lib/actions.ts
 import { getJobsByIds } from '@/services/job.services';
-import type { Job, UserProfile } from '@/types';
+import type { Job, UserProfile, Application } from '@/types';
 import type { Toast } from '@/hooks/use-toast';
 
 interface WithdrawParams {
@@ -53,7 +53,7 @@ export const withdrawJobApplication = async ({
 
 export const fetchJobsDataForDisplay = async (
   user: UserProfile,
-  userApplications: Map<string, any>,
+  userApplications: Map<string, Application>,
   setAllFetchedJobsDetails: (jobsMap: Map<string, Job>) => void,
   setIsLoading: (loading: boolean) => void,
   setError: (error: string | null) => void

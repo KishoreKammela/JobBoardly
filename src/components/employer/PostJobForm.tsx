@@ -1,3 +1,4 @@
+// src/components/employer/PostJobForm.tsx
 'use client';
 import React, {
   useState,
@@ -589,7 +590,8 @@ export function PostJobForm() {
     setJobData((prev) => {
       const updatedQuestions = [...(prev.screeningQuestions || [])];
       if (updatedQuestions[index]) {
-        (updatedQuestions[index] as any)[field] = value;
+        (updatedQuestions[index] as Record<string, unknown>)[field as string] =
+          value;
       }
       return { ...prev, screeningQuestions: updatedQuestions };
     });
@@ -728,7 +730,7 @@ export function PostJobForm() {
               <div className="flex items-center justify-center w-full">
                 <label
                   htmlFor="jobDescriptionFile"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors"
+                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-card hover:bg-muted/40 transition-colors`}
                   aria-label="Upload job description file area"
                 >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">

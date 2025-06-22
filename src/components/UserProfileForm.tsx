@@ -1,3 +1,4 @@
+// src/components/UserProfileForm.tsx
 'use client';
 import { useState, useEffect, type FormEvent } from 'react';
 import type { UserProfile, Company } from '@/types';
@@ -146,7 +147,7 @@ export function UserProfileForm() {
         skills: user.skills || [],
         experiences:
           user.experiences && user.experiences.length > 0
-            ? user.experiences.map((exp) => ({
+            ? user.experiences.map((exp: Partial<ExperienceEntry>) => ({
                 ...createEmptyExperience(),
                 ...exp,
                 companyName: exp.companyName || '',
@@ -166,7 +167,7 @@ export function UserProfileForm() {
             : [createEmptyExperience()],
         educations:
           user.educations && user.educations.length > 0
-            ? user.educations.map((edu) => ({
+            ? user.educations.map((edu: Partial<EducationEntry>) => ({
                 ...createEmptyEducation(),
                 ...edu,
                 degreeName: edu.degreeName || '',
@@ -177,7 +178,7 @@ export function UserProfileForm() {
             : [createEmptyEducation()],
         languages:
           user.languages && user.languages.length > 0
-            ? user.languages.map((lang) => ({
+            ? user.languages.map((lang: Partial<LanguageEntry>) => ({
                 ...createEmptyLanguage(),
                 ...lang,
                 languageName: lang.languageName || '',
@@ -283,16 +284,14 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
-      ? NonNullable<UserProfile[K]>[number]
-      : never,
   >(
     arrayName: K,
     index: number,
-    field: keyof T,
+    field: keyof NonNullable<UserProfile[K]>[number],
     value: string | boolean | number | undefined,
     inputType?: string
   ) => {
+    type T = NonNullable<UserProfile[K]>[number];
     setUserFormData((prev) => {
       const currentArray = prev[arrayName] as T[] | undefined;
       if (!currentArray || !currentArray[index]) return prev;
@@ -329,7 +328,8 @@ export function UserProfileForm() {
       } else {
         processedValueFinal = value as T[keyof T];
       }
-      (itemToUpdate as any)[field] = processedValueFinal;
+      (itemToUpdate as Record<string, unknown>)[field as string] =
+        processedValueFinal;
       newArray[index] = itemToUpdate;
       return { ...prev, [arrayName]: newArray };
     });
@@ -340,13 +340,11 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
-      ? NonNullable<UserProfile[K]>[number]
-      : never,
   >(
     arrayName: K,
-    creatorFunc: () => T
+    creatorFunc: () => NonNullable<UserProfile[K]>[number]
   ) => {
+    type T = NonNullable<UserProfile[K]>[number];
     setUserFormData((prev) => ({
       ...prev,
       [arrayName]: [...((prev[arrayName] as T[]) || []), creatorFunc()],
@@ -358,13 +356,11 @@ export function UserProfileForm() {
       UserProfile,
       'experiences' | 'educations' | 'languages'
     >,
-    T extends NonNullable<UserProfile[K]>[number] extends Record<string, any>
-      ? NonNullable<UserProfile[K]>[number]
-      : never,
   >(
     arrayName: K,
     idToRemove: string
   ) => {
+    type T = NonNullable<UserProfile[K]>[number];
     setUserFormData((prev) => ({
       ...prev,
       [arrayName]: ((prev[arrayName] as T[]) || []).filter(
@@ -419,8 +415,9 @@ export function UserProfileForm() {
         companyName: exp.companyName || '',
         jobRole: exp.jobRole || '',
         description: exp.description || '',
-        startDate: exp.startDate,
-        endDate: exp.endDate,
+        startDate: exp.startDate || null,
+        endDate: exp.endDate || null,
+        annualCTC: exp.annualCTC === undefined ? null : exp.annualCTC,
       }));
 
     const finalEducations = (userFormData.educations || [])
@@ -431,6 +428,8 @@ export function UserProfileForm() {
         instituteName: edu.instituteName || '',
         description: edu.description || '',
         specialization: edu.specialization || '',
+        startYear: edu.startYear === undefined ? null : edu.startYear,
+        endYear: edu.endYear === undefined ? null : edu.endYear,
       }));
 
     const finalLanguages = (userFormData.languages || [])
@@ -457,16 +456,28 @@ export function UserProfileForm() {
           jobSearchStatus: userFormData.jobSearchStatus || 'activelyLooking',
           isProfileSearchable: userFormData.isProfileSearchable,
           gender: userFormData.gender || 'Prefer not to say',
-          dateOfBirth: userFormData.dateOfBirth,
-          currentCTCValue: userFormData.currentCTCValue,
+          dateOfBirth: userFormData.dateOfBirth || null,
+          currentCTCValue:
+            userFormData.currentCTCValue === undefined
+              ? null
+              : userFormData.currentCTCValue,
           currentCTCConfidential: userFormData.currentCTCConfidential || false,
-          expectedCTCValue: userFormData.expectedCTCValue,
+          expectedCTCValue:
+            userFormData.expectedCTCValue === undefined
+              ? null
+              : userFormData.expectedCTCValue,
           expectedCTCNegotiable: userFormData.expectedCTCNegotiable || false,
           homeState: userFormData.homeState || '',
           homeCity: userFormData.homeCity || '',
           parsedResumeText: userFormData.parsedResumeText || '',
-          totalYearsExperience: userFormData.totalYearsExperience || 0,
-          totalMonthsExperience: userFormData.totalMonthsExperience || 0,
+          totalYearsExperience:
+            userFormData.totalYearsExperience === undefined
+              ? null
+              : userFormData.totalYearsExperience,
+          totalMonthsExperience:
+            userFormData.totalMonthsExperience === undefined
+              ? null
+              : userFormData.totalMonthsExperience,
         });
       }
       await updateUserProfile(userUpdatePayload);

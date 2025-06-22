@@ -1,6 +1,12 @@
+// src/contexts/UserProfile/UserProfileContext.tsx
 'use client';
 import { db } from '@/lib/firebase';
-import type { UserProfile } from '@/types';
+import type {
+  UserProfile,
+  ExperienceEntry,
+  EducationEntry,
+  LanguageEntry,
+} from '@/types';
 import {
   doc,
   getDoc,
@@ -29,7 +35,7 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(
   undefined
 );
 
-const createEmptyExperience = () => ({
+const createEmptyExperience = (): ExperienceEntry => ({
   id: uuidv4(),
   companyName: '',
   jobRole: '',
@@ -40,7 +46,7 @@ const createEmptyExperience = () => ({
   annualCTC: undefined,
 });
 
-const createEmptyEducation = () => ({
+const createEmptyEducation = (): EducationEntry => ({
   id: uuidv4(),
   level: 'Graduate' as const,
   degreeName: '',
@@ -53,7 +59,7 @@ const createEmptyEducation = () => ({
   description: '',
 });
 
-const createEmptyLanguage = () => ({
+const createEmptyLanguage = (): LanguageEntry => ({
   id: uuidv4(),
   languageName: '',
   proficiency: 'Beginner' as const,
@@ -105,17 +111,17 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
                 ? rawData.lastActive.toDate().toISOString()
                 : rawData.lastActive,
             experiences:
-              rawData.experiences?.map((e: any) => ({
+              rawData.experiences?.map((e: Partial<ExperienceEntry>) => ({
                 ...createEmptyExperience(),
                 ...e,
               })) || [],
             educations:
-              rawData.educations?.map((e: any) => ({
+              rawData.educations?.map((e: Partial<EducationEntry>) => ({
                 ...createEmptyEducation(),
                 ...e,
               })) || [],
             languages:
-              rawData.languages?.map((l: any) => ({
+              rawData.languages?.map((l: Partial<LanguageEntry>) => ({
                 ...createEmptyLanguage(),
                 ...l,
               })) || [],

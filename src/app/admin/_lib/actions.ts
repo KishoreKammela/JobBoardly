@@ -16,17 +16,18 @@ import {
 import { toast } from '@/hooks/use-toast';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Company, Job, UserProfile } from '@/types';
+import type { PlatformStats } from './interfaces';
 
 type JobWithApplicantCount = Job & { applicantCount: number };
 
 export const fetchDataForAdminPage = async (
-  setPlatformStats: Dispatch<SetStateAction<any>>,
-  setPendingJobs: Dispatch<SetStateAction<any>>,
-  setPendingCompanies: Dispatch<SetStateAction<any>>,
-  setAllCompanies: Dispatch<SetStateAction<any>>,
-  setAllJobSeekers: Dispatch<SetStateAction<any>>,
-  setAllPlatformUsers: Dispatch<SetStateAction<any>>,
-  setAllJobs: Dispatch<SetStateAction<any>>,
+  setPlatformStats: Dispatch<SetStateAction<PlatformStats | null>>,
+  setPendingJobs: Dispatch<SetStateAction<JobWithApplicantCount[]>>,
+  setPendingCompanies: Dispatch<SetStateAction<Company[]>>,
+  setAllCompanies: Dispatch<SetStateAction<Company[]>>,
+  setAllJobSeekers: Dispatch<SetStateAction<UserProfile[]>>,
+  setAllPlatformUsers: Dispatch<SetStateAction<UserProfile[]>>,
+  setAllJobs: Dispatch<SetStateAction<JobWithApplicantCount[]>>,
   setIsLoading: (section: string, value: boolean) => void
 ) => {
   try {
