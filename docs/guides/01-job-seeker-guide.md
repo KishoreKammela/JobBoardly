@@ -165,19 +165,6 @@ graph TD
     Back --> J
     
     F_deleted --> End[End Session]
-    
-    %% Style the nodes
-    classDef startEnd fill:#e1f5fe
-    classDef process fill:#f3e5f5
-    classDef decision fill:#fff3e0
-    classDef error fill:#ffebee
-    classDef success fill:#e8f5e8
-    
-    class A,End startEnd
-    class B,D,E,G,H,H_confirm,H_AI,I,J,K,L,N_pre,N,P,S,T process
-    class C,F_check,K_save,M,CheckApp,N_check,HasSQ,Q,Withdraw,Withdraw_confirm,S_check decision
-    class F_deleted,G_suspended,N_disabled,N_status,S_disabled error
-    class Withdraw_action success
 ```
 
 ### Journey 2: AI Job Matching
