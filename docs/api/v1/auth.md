@@ -47,16 +47,17 @@ These endpoints handle user registration, login, and password management for all
 ### Register Employer
 
 - **`POST /api/v1/auth/register/employer`**
-- **Description**: Registers a new employer and creates a corresponding company profile with `pending` status.
+- **Description**: Registers a new employer. If an `invitationId` is provided, it links the user to an existing company. Otherwise, it creates a new company profile with `pending` status, and the new user becomes its admin.
 - **Authorization**: `public`.
 - **Request Body**:
   | Field | Type | Rules | Description |
   |---|---|---|---|
   | `recruiterName`| `string`| `required` | The full name of the recruiter signing up. |
-  | `companyName`| `string`| `required` | The name of the company. |
+  | `companyName`| `string`| `required` if `invitationId` is absent | The name of the company to create. |
   | `email` | `string` | `required`, `email format` | The recruiter's email. |
   | `password`| `string` | `required`, `min:8`, strong password rules | The recruiter's password. |
-- **Mock Request Body**:
+  | `invitationId`|`string`|`optional`| The ID from the recruiter invitation link. |
+- **Mock Request Body (New Company)**:
   ```json
   {
     "recruiterName": "John Recruiter",
@@ -65,7 +66,7 @@ These endpoints handle user registration, login, and password management for all
     "password": "Password123!"
   }
   ```
-- **Success Response** (`201 Created`): Returns a JWT, user profile, and company object.
+- **Success Response (New Company)** (`201 Created`): Returns a JWT, user profile, and company object.
   ```json
   {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -84,6 +85,7 @@ These endpoints handle user registration, login, and password management for all
     }
   }
   ```
+- **Success Response (Via Invitation)** (`201 Created`): Similar to above, but `isCompanyAdmin` will be `false` and the company status will be its current state (e.g., `approved`).
 
 ---
 

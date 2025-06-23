@@ -11,6 +11,7 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 ### 2.1. Authentication & Account Management
 
 - **Secure Registration**: Sign up using Email/Password or social providers (Google, GitHub, Microsoft). Includes password strength indicators.
+- **Automatic Login**: After registering, you are automatically logged in and redirected to the appropriate starting page.
 - **Login**: Access your account securely. Post-login, you are correctly redirected to the appropriate page.
 - **Change Password**: A dedicated page to update your account password. This action requires confirmation.
 - **Account Status**: Your account can be 'active', 'suspended', or 'deleted' (by an admin).
@@ -105,6 +106,7 @@ graph TD
     B --> C{Has Account?}
     C -->|No| D[Register: /auth/register]
     D --> E[Complete Basic Info]
+<<<<<<< HEAD
     E --> F[Login: /auth/login]
     C -->|Yes| F
     F --> F_check{Account Status OK?}
@@ -117,6 +119,19 @@ graph TD
     H_confirm -->|Optional| H_AI[Use AI Summary Generator]
     H_AI --> I[Set Profile Visibility]
     H_confirm --> I
+=======
+    E --> E_auto_login[Auto Login & Redirecting...]
+    E_auto_login --> F_check_status{Account Status OK?}
+    C -->|Yes| F[Login: /auth/login]
+    F --> F_check_status
+    F_check_status -->|Deleted| F_deleted[Show Account Deactivated Message, Logout]
+    F_check_status -->|Suspended| G_suspended[Go to Profile, Limited Actions & Alert]
+    F_check_status -->|Active| G[Navigate to Profile: /profile]
+    G --> H[Upload/Paste Resume & Complete Profile Confirm resume process, confirm profile save]
+    H -->|Optional| H_AISummary[Use AI Summary Generator]
+    H_AISummary --> I
+    H --> I[Set Profile Visibility]
+>>>>>>> c34a2a8 (Can you update all the documentation with more detailed explanation and)
     I --> J[Search for Jobs: /jobs]
     
     G_suspended --> J
@@ -209,7 +224,7 @@ graph TD
 | :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
 | `/`                      | Home page, redirects to `/jobs` if logged in as job seeker.                                                                                                                                   | Public       |
 | `/auth/login`            | Job seeker login page. If account is 'deleted', login may fail post-auth check.                                                                                                               | Public       |
-| `/auth/register`         | Job seeker registration page.                                                                                                                                                                 | Public       |
+| `/auth/register`         | Job seeker registration page. Automatically logs user in on success.                                                                                                                          | Public       |
 | `/auth/change-password`  | Page to change account password. (Accessible if suspended). Requires confirmation.                                                                                                            | Job Seeker   |
 | `/profile`               | Manage profile. Editing restricted if account 'suspended'. Profile save requires confirmation. Resume processing/removal requires confirmation. AI Summary Generator available.               | Job Seeker   |
 | `/profile/preview`       | Preview profile. (Accessible if suspended).                                                                                                                                                   | Job Seeker   |

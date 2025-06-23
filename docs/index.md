@@ -29,6 +29,6 @@ Detailed technical specifications and references for developers.
 
 - [**Platform Features Overview**](./reference/01-platform-features-overview.md): A high-level summary of all currently implemented features across the platform.
 - [**Application Routes Documentation**](./reference/02-routes-documentation.md): A complete list and description of all page routes in the Next.js application, including access levels.
-- [**Folder Structure Deep Dive**](./reference/04-folder-structure-deep-dive.md): A detailed explanation of the project's file and folder structure.
-- [**Development Strategy & Architecture**](./reference/05-code-cleaning-strategies.md): The benchmark document explaining the architectural principles and development patterns for the platform.
-- [**Backend API Specification**](./api/v1/README.md): The complete blueprint for the backend API, including endpoints for authentication, data management, and AI services. This is the primary resource for backend developers.
+- [**Folder Structure Deep Dive**](./reference/03-folder-structure-deep-dive.md): A detailed explanation of the project's file and folder structure.
+- [**Development Strategy & Architecture**](./reference/04-development-strategy-architecture.md): The benchmark document explaining the architectural principles and development patterns for the platform.
+- [**Backend API Specification**](./api/v1/index.md): The complete blueprint for the backend API, including endpoints for authentication, data management, and AI services. This is the primary resource for backend developers.

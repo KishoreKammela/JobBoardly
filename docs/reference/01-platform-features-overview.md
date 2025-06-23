@@ -25,6 +25,7 @@ This document provides a detailed overview of all features currently implemented
 ### 2.1. Account Management
 
 - **Registration & Login**: Secure account creation and login via email/password or social providers.
+- **Automatic Login**: After registration, users are automatically logged in and redirected to the appropriate starting page.
 - **Change Password**: Ability to change account password securely.
 - **Account Status**: Awareness of account status (`active`, `suspended`). Suspended accounts have limited functionality. Deleted accounts cannot log in.
 
@@ -83,22 +84,22 @@ This document provides a detailed overview of all features currently implemented
 ### 3.1. Multi-Recruiter System
 
 - **Company Admin Role**: The first user to register a company becomes its admin.
-- **Recruiter Invitation**: Company Admins can invite new recruiters to their company via email (up to a limit of 3 total recruiters).
-- **Automated Linking**: New users registering with an invited email are automatically linked to the company as a standard recruiter.
+- **Recruiter Invitation**: Company Admins can invite new recruiters by generating a unique, shareable registration link.
+- **Automated Linking**: New users registering with an invitation link are automatically linked to the company as a standard recruiter.
 
 ### 3.2. Company Profile Management
 
 - **Admin-Only Editing (`/employer/company/edit`)**: A dedicated, protected page for Company Admins to edit company details.
 - **Re-Approval Workflow**: Submitting company profile edits sets the company status to 'pending' for admin review.
-- **Recruiter Management (`/profile`)**: Company Admins can view current recruiters, see pending invitations, and send new invites.
+- **Recruiter Management (`/profile`)**: Company Admins can view current recruiters, see pending invitations, and generate new invite links.
 - **Profile Preview (`/employer/profile/preview`)**: Company Admins can preview the public company page.
 
 ### 3.3. Job Posting & Management
 
-- **Collaborative Posting**: All recruiters in a company can create, edit, and manage job postings for that company.
+- **Collaborative Posting**: All recruiters in a company can create, edit, and manage job postings for that company, with all jobs visible on a unified dashboard.
 - **Create/Edit Job Postings (`/employer/post-job`)**:
   - Form for comprehensive job details, including `responsibilities`, `requirements`, `benefits`, salary, and an `applicationDeadline`.
-  - **AI Job Description Parsing**: Upload a document, and AI (`parseJobDescriptionFlow`) attempts to pre-fill these fields.
+  - **AI Job Description Parsing**: Upload a document or paste text, and AI (`parseJobDescriptionFlow`) attempts to pre-fill these fields.
   - **Screening Questions**: Add custom screening questions (text, yes/no) to job postings.
 - **Job Status**: New jobs are 'pending' approval. Edits resubmit job as 'pending'.
 - **View Posted Jobs (`/employer/posted-jobs`)**: Dashboard of all jobs posted by the company.
@@ -131,7 +132,8 @@ This document provides a detailed overview of all features currently implemented
 
 ## 4. Platform Staff / Admin Features (`/admin`)
 
-- **Dashboard Overview**: Key platform analytics and quick moderation cards.
+- **Role-Based Access Control**: Granular permissions for SuperAdmins, Admins, Moderators, Support Agents, and Data Analysts.
+- **Dashboard Overview**: Key platform analytics and quick moderation cards for pending jobs and companies.
 - **Content & User Management (Tab-Based)**:
   - **Companies Management**: Approve, reject, suspend, activate, and delete companies.
   - **All Jobs Management**: View all jobs, including screening questions on preview. Suspend, activate, approve, reject jobs.
