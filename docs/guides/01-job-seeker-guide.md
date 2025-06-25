@@ -106,6 +106,20 @@ graph TD
     B --> C{Has Account?}
     C -->|No| D[Register: /auth/register]
     D --> E[Complete Basic Info]
+<<<<<<< HEAD
+    E --> F[Login: /auth/login]
+    C -->|Yes| F
+    F --> F_check{Account Status OK?}
+    F_check -->|Deleted| F_deleted[Show Account Deactivated Message & Logout]
+    F_check -->|Suspended| G_suspended[Go to Profile with Limited Actions & Alert]
+    F_check -->|Active| G[Navigate to Profile: /profile]
+
+    G --> H[Upload/Paste Resume & Complete Profile]
+    H --> H_confirm[Confirm Resume Process & Profile Save]
+    H_confirm -->|Optional| H_AI[Use AI Summary Generator]
+    H_AI --> I[Set Profile Visibility]
+    H_confirm --> I
+=======
     E --> E_auto_login[Auto Login & Redirecting...]
     E_auto_login --> F_check_status{Account Status OK?}
     C -->|Yes| F[Login: /auth/login]
@@ -119,15 +133,15 @@ graph TD
     H_AISummary --> I[Set Profile Visibility]
     H --> I
     I --> J[Search for Jobs: /jobs]
-    
+
     G_suspended --> J
-    
+
     J --> K[Filter Jobs]
     K --> K_save{Want to Save Search?}
     K_save -->|Yes| K_action[Click Save Search, Name it, Confirm]
     K_action --> L[View Job Details: /jobs/jobId]
     K_save -->|No| L
-    
+
     L --> M{Interested in Job?}
     M -->|Yes| CheckApp{Already Applied/Rejected/Withdrawn?}
     CheckApp -->|No| N_pre[Initiate Apply]
@@ -139,10 +153,10 @@ graph TD
     SQ_modal --> SQ_submit[Submit Answers]
     SQ_submit --> N[Application Submitted with Answers!]
     HasSQ -->|No| N
-    
+
     CheckApp -->|Yes| N_status[Show Cannot Re-apply / Current App Status]
     N_status --> L
-    
+
     N --> P[View in My Jobs Applied: /my-jobs]
     P --> Q{Application Status Active?}
     Q -->|Yes| Withdraw{Want to Withdraw?}
@@ -153,7 +167,7 @@ graph TD
     Withdraw -->|No| P
     Q -->|No| P_view[View Final Status: Hired/Rejected]
     P_view --> P
-    
+
     M -->|Save for Later| S_check{Account Suspended OR Job Not Approved OR Already Applied?}
     S_check -->|Yes| S_disabled[Save Button Disabled]
     S_disabled --> L
@@ -161,10 +175,10 @@ graph TD
     S --> T[View in My Jobs Saved: /my-jobs]
     T --> T_back[Back to Job Search]
     T_back --> J
-    
+
     M -->|Not Interested| Back[Back to Job Search]
     Back --> J
-    
+
     F_deleted --> End[End Session]
 ```
 

@@ -1,6 +1,5 @@
 // src/app/admin/_lib/actions.ts
 import {
-  getLegalDocumentContent,
   saveLegalDocumentInDb,
   updateCompanyStatusInDb,
   updateJobStatusInDb,

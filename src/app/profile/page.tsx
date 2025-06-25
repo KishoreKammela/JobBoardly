@@ -5,8 +5,18 @@ import { ResumeUploadForm } from '@/components/resume-upload-form';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useUserProfile } from '@/contexts/UserProfile/UserProfileContext';
-import { Loader2, Download, Eye, AlertTriangle } from 'lucide-react';
-import React, { useEffect, useRef } from 'react';
+import {
+  Loader2,
+  Download,
+  Eye,
+  AlertTriangle,
+  Briefcase,
+  Users,
+  FileText,
+  Check,
+  BarChart,
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useReactToPrint } from 'react-to-print';
@@ -15,6 +25,173 @@ import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useCompany } from '@/contexts/Company/CompanyContext';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import { getCompanyJobStats } from '@/services/job.services';
+import {
+  getCompanyApplicationStats,
+  getRecentApplicationsByCompanyId,
+} from '@/services/application.services';
+import type { RecruitmentStats, Application } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+function RecruitmentManagerDashboard({ companyId }: { companyId: string }) {
+  const [stats, setStats] = useState<RecruitmentStats | null>(null);
+  const [recentApps, setRecentApps] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [jobStats, appStats, recentAppsData] = await Promise.all([
+          getCompanyJobStats(companyId),
+          getCompanyApplicationStats(companyId),
+          getRecentApplicationsByCompanyId(companyId, 5),
+        ]);
+        setStats({ ...jobStats, ...appStats });
+        setRecentApps(recentAppsData);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, [companyId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading Dashboard...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 mb-8">
+      <h2 className="text-2xl font-bold font-headline flex items-center gap-2">
+        <BarChart /> Recruitment Manager Dashboard
+      </h2>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Open Positions
+            </CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.openJobs ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Applications
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats?.totalApplications ?? 0}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">New Apps (7d)</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats?.newApplicationsLast7Days ?? 0}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Candidates Hired
+            </CardTitle>
+            <Check className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {stats?.applicationsByStatus?.Hired ?? 0}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>
+            The latest applications across all your company&apos;s job postings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recentApps.length > 0 ? (
+            <div className="space-y-4">
+              {recentApps.map((app) => (
+                <div key={app.id} className="flex items-center">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage
+                      src={
+                        app.applicantAvatarUrl ||
+                        `https://placehold.co/100x100.png`
+                      }
+                      alt={app.applicantName}
+                    />
+                    <AvatarFallback>
+                      {app.applicantName?.[0] || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      <Link
+                        href={`/employer/candidates/${app.applicantId}`}
+                        className="hover:underline text-primary"
+                      >
+                        {app.applicantName}
+                      </Link>{' '}
+                      applied for{' '}
+                      <Link
+                        href={`/employer/jobs/${app.jobId}/applicants`}
+                        className="hover:underline"
+                      >
+                        {app.jobTitle}
+                      </Link>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {app.applicantHeadline}
+                    </p>
+                  </div>
+                  <div className="ml-auto text-sm text-muted-foreground">
+                    {formatDistanceToNow(new Date(app.appliedAt as string), {
+                      addSuffix: true,
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No recent applications.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { user: userProfile, loading: profileLoading } = useUserProfile();
@@ -58,7 +235,7 @@ export default function ProfilePage() {
     if (!userProfile) return 'Profile';
     if (userProfile.role === 'jobSeeker') return 'My Profile';
     if (userProfile.role === 'employer' && userProfile.isCompanyAdmin)
-      return 'Manage Company Profile & Your Recruiter Info';
+      return 'Company Admin Hub';
     if (userProfile.role === 'employer') return 'My Recruiter Profile';
     if (userProfile.role === 'admin') return 'Admin Profile';
     if (userProfile.role === 'superAdmin') return 'Super Admin Profile';
@@ -75,7 +252,7 @@ export default function ProfilePage() {
       return 'View and manage your account details and professional information. Upload your resume first for AI parsing to help pre-fill sections.';
     }
     if (userProfile.role === 'employer' && userProfile.isCompanyAdmin)
-      return "Edit your company's public details and your personal recruiter information.";
+      return 'Oversee company-wide recruitment metrics and manage your personal recruiter information.';
     if (userProfile.role === 'employer')
       return 'Manage your personal recruiter details.';
     if (
@@ -129,7 +306,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <h1 className="text-3xl font-bold mb-2 font-headline">
@@ -159,6 +336,12 @@ export default function ProfilePage() {
       <Separator />
 
       {renderAccountStatusAlert()}
+
+      {userProfile.role === 'employer' &&
+        userProfile.isCompanyAdmin &&
+        userProfile.companyId && (
+          <RecruitmentManagerDashboard companyId={userProfile.companyId} />
+        )}
 
       {userProfile.role === 'jobSeeker' && (
         <>

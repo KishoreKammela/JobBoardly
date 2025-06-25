@@ -336,7 +336,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
         <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-lg overflow-hidden shadow-lg mb-[-50px] md:mb-[-75px] z-0">
           <Image
             src={company.bannerImageUrl}
-            alt={`${company.name} corporate banner image`}
+            alt={`${company.name} banner`}
             fill
             style={{ objectFit: 'cover' }}
             priority
@@ -399,7 +399,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
           {company.description && (
             <section>
               <h2 className="text-2xl font-semibold mb-3 font-headline text-center md:text-left">
-                About {company.name}
+                About Us
               </h2>
               <div className="prose prose-sm md:prose-base max-w-none text-foreground/90 whitespace-pre-wrap p-4 border rounded-md bg-background shadow-inner">
                 {company.description}
@@ -410,7 +410,7 @@ export default function CompanyDetailClientPage({ companyId }: Props) {
 
           <section>
             <h2 className="text-2xl font-semibold mb-4 font-headline text-center md:text-left">
-              Our Recruiters
+              Our Recruiters ({recruiters.length})
             </h2>
             {areRecruitersLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

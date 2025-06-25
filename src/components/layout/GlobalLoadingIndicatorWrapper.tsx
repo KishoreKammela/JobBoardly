@@ -16,23 +16,18 @@ export default function GlobalLoadingIndicatorWrapper({
     setHasMounted(true);
   }, []);
 
-  // On the server, authLoadingContext is true (initial state from AuthProvider).
-  // On the client, for the very first render before useEffect runs, hasMounted is false.
-  // So, `showLoader` will be true for both the server render and the initial client render if auth is still loading.
-  // This ensures the initial client render matches the server output.
   const showLoader = !hasMounted || authLoadingContext;
 
-  return (
-    <div className="flex-1 flex flex-col">
-      {showLoader ? (
-        // This inner div centers the spinner within the space provided by the outer div
-        <div className="flex-1 flex justify-center items-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      ) : (
-        // Children are rendered directly once loading is complete and component is mounted
-        children
-      )}
-    </div>
-  );
+  if (showLoader) {
+    // This container reserves a large vertical space to prevent layout shift
+    // when the actual content (which is typically long) loads.
+    // 250px is a general approximation for header + footer height.
+    return (
+      <div className="flex-1 flex justify-center items-center min-h-[calc(100vh-250px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }

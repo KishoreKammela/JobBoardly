@@ -1,6 +1,5 @@
 // src/services/company.services.ts
 import {
-  arrayUnion,
   collection,
   doc,
   getDoc,

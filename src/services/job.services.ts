@@ -181,6 +181,18 @@ export const getCompanyJobsForDashboard = async (
   return Promise.all(jobsDataPromises);
 };
 
+export const getCompanyJobStats = async (
+  companyId: string
+): Promise<{ openJobs: number }> => {
+  const q = query(
+    collection(db, 'jobs'),
+    where('companyId', '==', companyId),
+    where('status', '==', 'approved')
+  );
+  const snapshot = await getCountFromServer(q);
+  return { openJobs: snapshot.data().count };
+};
+
 export const saveJobInDb = async (
   jobPayload: Record<string, unknown>
 ): Promise<void> => {

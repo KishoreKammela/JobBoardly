@@ -47,7 +47,7 @@ export default function HomePage() {
       <section className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-br from-primary/10 via-background to-background">
         <div className="container px-4 md:px-6">
           <div className="grid gap-8 lg:grid-cols-[1fr_550px] lg:gap-12 xl:grid-cols-[1fr_650px]">
-            <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
+            <div className="flex flex-col justify-center space-y-6 text-center lg:text-left min-w-0">
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
                 Discover Your Next Opportunity with JobBoardly
               </h1>

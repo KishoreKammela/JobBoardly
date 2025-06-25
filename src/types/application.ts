@@ -54,3 +54,10 @@ export interface Application {
   employerNotes?: string;
   answers?: ApplicationAnswer[];
 }
+
+export interface RecruitmentStats {
+  openJobs: number;
+  totalApplications: number;
+  newApplicationsLast7Days: number;
+  applicationsByStatus: Partial<Record<ApplicationStatus, number>>;
+}

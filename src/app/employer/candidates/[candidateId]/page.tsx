@@ -1,3 +1,4 @@
+// src/app/employer/candidates/[candidateId]/page.tsx
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
@@ -8,6 +9,8 @@ import type {
   EducationEntry,
   LanguageEntry,
   UserRole,
+  Application,
+  ApplicationStatus,
 } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +19,8 @@ import {
   CardContent,
   CardHeader,
   CardFooter,
+  CardDescription,
+  CardTitle,
 } from '@/components/ui/card';
 import {
   Briefcase,
@@ -37,6 +42,7 @@ import {
   Users,
   DollarSign,
   Clock,
+  Workflow,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
@@ -48,7 +54,27 @@ import { format, isValid, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ADMIN_LIKE_ROLES_CANDIDATE_PAGE } from './_lib/constants';
-import { fetchCandidateProfile } from './_lib/actions';
+import { fetchCandidateAndInteractionData } from './_lib/actions';
+import Link from 'next/link';
+
+const getApplicationStatusBadgeVariant = (
+  status: ApplicationStatus
+): 'default' | 'destructive' | 'secondary' | 'outline' => {
+  switch (status) {
+    case 'Hired':
+    case 'Offer Made':
+      return 'default';
+    case 'Rejected By Company':
+      return 'destructive';
+    case 'Withdrawn by Applicant':
+      return 'outline';
+    case 'Applied':
+    case 'Reviewed':
+    case 'Interviewing':
+    default:
+      return 'secondary';
+  }
+};
 
 export default function CandidateDetailPage() {
   const params = useParams();
@@ -64,6 +90,7 @@ export default function CandidateDetailPage() {
   const { toast } = useToast();
 
   const [candidate, setCandidate] = useState<UserProfile | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const printableProfileRef = useRef<HTMLDivElement>(null);
@@ -118,20 +145,10 @@ export default function CandidateDetailPage() {
       router.replace('/employer/posted-jobs');
       return;
     }
-  }, [
-    currentUser,
-    company,
-    authLoading,
-    router,
-    currentPathname,
-    toast,
-    isLoggingOut,
-  ]);
 
-  useEffect(() => {
     if (
       !candidateId ||
-      !currentUser ||
+      !currentUser.companyId ||
       (currentUser.role !== 'employer' &&
         !ADMIN_LIKE_ROLES_CANDIDATE_PAGE.includes(currentUser.role as UserRole))
     ) {
@@ -141,8 +158,24 @@ export default function CandidateDetailPage() {
       }
       return;
     }
-    fetchCandidateProfile(candidateId, setCandidate, setError, setIsLoading);
-  }, [candidateId, currentUser]);
+    fetchCandidateAndInteractionData(
+      candidateId,
+      currentUser.companyId,
+      setCandidate,
+      setApplications,
+      setError,
+      setIsLoading
+    );
+  }, [
+    candidateId,
+    currentUser,
+    company,
+    authLoading,
+    router,
+    currentPathname,
+    toast,
+    isLoggingOut,
+  ]);
 
   useEffect(() => {
     if (
@@ -218,7 +251,7 @@ export default function CandidateDetailPage() {
     : null;
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="container mx-auto py-8 max-w-4xl space-y-8">
       <Card className="shadow-xl overflow-hidden">
         <CardHeader className="bg-muted/20 p-6 rounded-t-lg">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
@@ -728,6 +761,59 @@ export default function CandidateDetailPage() {
           </p>
         </CardFooter>
       </Card>
+
+      {currentUser?.role === 'employer' && isJobSeekerProfile && (
+        <Card className="shadow-xl mt-8">
+          <CardHeader>
+            <CardTitle className="text-xl font-headline flex items-center gap-2">
+              <Workflow className="text-primary" /> Interaction History
+            </CardTitle>
+            <CardDescription>
+              This candidate&apos;s application history with your company (
+              {company?.name || '...'})
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {applications.length > 0 ? (
+              <ul className="space-y-3">
+                {applications.map((app) => (
+                  <li
+                    key={app.id}
+                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 border rounded-md bg-muted/30"
+                  >
+                    <div>
+                      <Link
+                        href={`/employer/jobs/${app.jobId}/applicants`}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {app.jobTitle}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Applied on:{' '}
+                        {format(new Date(app.appliedAt as string), 'PPP')}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={getApplicationStatusBadgeVariant(app.status)}
+                      className="mt-2 sm:mt-0"
+                    >
+                      {app.status}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground">
+                  This candidate has not applied to any jobs at your company
+                  yet.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {isJobSeekerProfile && (
         <div style={{ display: 'none' }}>
           <PrintableProfile ref={printableProfileRef} user={candidate} />

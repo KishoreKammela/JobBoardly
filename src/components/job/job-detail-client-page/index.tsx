@@ -1,12 +1,10 @@
 // src/components/job/job-detail-client-page/index.tsx
 'use client';
 import { useEffect, useState } from 'react';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Timestamp } from 'firebase/firestore';
 import type {
   Job,
   ApplicationAnswer,
-  ScreeningQuestion,
   UserRole,
   ApplicationStatus,
 } from '@/types';
@@ -31,12 +29,10 @@ import {
   Building,
   CheckCircle,
   Loader2,
-  AlertCircle,
   Share2,
   CalendarDays,
   AlertTriangle,
   RotateCcw,
-  HelpCircle,
   Ban,
   Award,
   Sparkles as BenefitsIcon,
@@ -72,13 +68,12 @@ const ADMIN_LIKE_ROLES: UserRole[] = [
 ];
 
 type Props = {
-  jobId?: string;
+  initialJobData: Job | null;
 };
 
-export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
-  const [jobData, setJobData] = useState<Job | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function JobDetailClientPage({ initialJobData }: Props) {
+  const [jobData, setJobData] = useState<Job | null>(initialJobData);
+  const [isLoading, setIsLoading] = useState(!initialJobData);
   const [accessDeniedReason, setAccessDeniedReason] = useState<string | null>(
     null
   );
@@ -107,101 +102,39 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     user?.role === 'jobSeeker' && user.status === 'suspended';
 
   useEffect(() => {
-    if (jobIdFromProps) {
-      setError(null);
-      setAccessDeniedReason(null);
-    }
-
-    if (!jobIdFromProps) {
-      setError('No job ID provided. Please ensure the URL is correct.');
-      setIsLoading(false);
-      setJobData(null);
-      setAccessDeniedReason(null);
-      return;
-    }
-
-    setIsLoading(true);
-    setJobData(null);
-
-    const fetchJobDetails = async () => {
-      try {
-        const jobDocRef = doc(db, 'jobs', jobIdFromProps);
-        const jobDocSnap = await getDoc(jobDocRef);
-
-        if (!jobDocSnap.exists()) {
-          setError('Job not found.');
-          setJobData(null);
-          return;
-        }
-
-        const data = jobDocSnap.data() as Omit<Job, 'id'>;
-        const fetchedJobData: Job = {
-          id: jobDocSnap.id,
-          ...data,
-          postedDate:
-            data.postedDate instanceof Timestamp
-              ? data.postedDate.toDate().toISOString().split('T')[0]
-              : (data.postedDate as string),
-          createdAt:
-            data.createdAt instanceof Timestamp
-              ? data.createdAt.toDate().toISOString()
-              : (data.createdAt as string),
-          updatedAt:
-            data.updatedAt instanceof Timestamp
-              ? data.updatedAt.toDate().toISOString()
-              : (data.updatedAt as string),
-          applicationDeadline:
-            data.applicationDeadline instanceof Timestamp
-              ? data.applicationDeadline.toDate().toISOString().split('T')[0]
-              : (data.applicationDeadline as string | undefined),
-          screeningQuestions: data.screeningQuestions || [],
-          benefits: data.benefits || '',
-        };
-
-        let canView = false;
-        if (fetchedJobData.status === 'approved') {
-          canView = true;
-        } else if (
-          user?.role &&
-          ADMIN_LIKE_ROLES.includes(user.role as UserRole)
-        ) {
-          canView = true;
-        } else if (
-          user?.role === 'employer' &&
-          user.companyId === fetchedJobData.companyId
-        ) {
-          canView = true;
-        }
-
-        if (!canView) {
-          let reason = 'You do not have permission to view this job posting.';
-          if (fetchedJobData.status === 'pending') {
-            reason =
-              'This job is pending review and not yet publicly available.';
-          } else if (fetchedJobData.status === 'rejected') {
-            reason = 'This job posting is not available (rejected).';
-          } else if (fetchedJobData.status === 'suspended') {
-            reason = 'This job is currently suspended.';
-          }
-          setAccessDeniedReason(reason);
-          setJobData(null);
-        } else {
-          setJobData(fetchedJobData);
-          setAccessDeniedReason(null);
-        }
-      } catch (e: unknown) {
-        console.error('Error fetching job details:', e);
-        setError(
-          `Failed to load job details: ${(e as Error).message || 'Unknown error'}`
-        );
-        setJobData(null);
-      } finally {
-        setIsLoading(false);
+    if (jobData) {
+      let canView = false;
+      if (jobData.status === 'approved') {
+        canView = true;
+      } else if (
+        user?.role &&
+        ADMIN_LIKE_ROLES.includes(user.role as UserRole)
+      ) {
+        canView = true;
+      } else if (
+        user?.role === 'employer' &&
+        user.companyId === jobData.companyId
+      ) {
+        canView = true;
       }
-    };
 
-    fetchJobDetails();
-  }, [jobIdFromProps, user?.role, user?.companyId]);
+      if (!canView) {
+        let reason = 'You do not have permission to view this job posting.';
+        if (jobData.status === 'pending') {
+          reason = 'This job is pending review and not yet publicly available.';
+        } else if (jobData.status === 'rejected') {
+          reason = 'This job posting is not available (rejected).';
+        } else if (jobData.status === 'suspended') {
+          reason = 'This job is currently suspended.';
+        }
+        setAccessDeniedReason(reason);
+        setJobData(null);
+      } else {
+        setAccessDeniedReason(null);
+      }
+    }
+    setIsLoading(false);
+  }, [jobData, user]);
 
   useEffect(() => {
     if (accessDeniedReason && !isLoading && !authLoading) {
@@ -435,20 +368,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
     });
   };
 
-  if (!jobIdFromProps && !isLoading) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Job</AlertTitle>
-          <AlertDescription>
-            No job ID provided. Please ensure the URL is correct.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
@@ -463,18 +382,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
       <div className="flex justify-center items-center h-[calc(100vh-200px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="ml-3 text-lg">Redirecting...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto py-10">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error Loading Job</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
       </div>
     );
   }
@@ -837,35 +744,6 @@ export default function JobDetailClientPage({ jobId: jobIdFromProps }: Props) {
                   </div>
                 </section>
               )}
-              {isPrivilegedViewer &&
-                jobData.screeningQuestions &&
-                jobData.screeningQuestions.length > 0 && (
-                  <section>
-                    <Separator className="my-6" />
-                    <h2 className="text-xl font-semibold mb-3 font-headline flex items-center gap-1.5">
-                      <HelpCircle />
-                      Screening Questions (For Internal Review)
-                    </h2>
-                    <ul className="space-y-3 list-decimal list-inside text-sm text-foreground/90 pl-4">
-                      {jobData.screeningQuestions.map(
-                        (q: ScreeningQuestion) => (
-                          <li key={q.id}>
-                            {q.questionText}{' '}
-                            <Badge variant="outline" className="text-xs ml-1">
-                              Type:{' '}
-                              {q.type === 'yesNo' ? 'Yes/No' : 'Text Answer'}
-                              {q.isRequired && ', Required'}
-                            </Badge>
-                          </li>
-                        )
-                      )}
-                    </ul>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      These questions are presented to applicants during the
-                      application process.
-                    </p>
-                  </section>
-                )}
             </div>
             <aside className="w-full sm:w-64 space-y-4">
               {renderJobSeekerActions()}

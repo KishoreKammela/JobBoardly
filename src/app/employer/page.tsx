@@ -39,7 +39,7 @@ export default function EmployerLandingPage() {
       <section className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-br from-primary/10 via-background to-background">
         <div className="container px-4 md:px-6">
           <div className="grid gap-8 lg:grid-cols-[1fr_550px] lg:gap-12 xl:grid-cols-[1fr_650px]">
-            <div className="flex flex-col justify-center space-y-6 text-center lg:text-left">
+            <div className="flex flex-col justify-center space-y-6 text-center lg:text-left min-w-0">
               <div className="space-y-2">
                 <span className="inline-flex items-center gap-2 text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full mb-2">
                   <Building className="h-4 w-4" /> JobBoardly for Employers

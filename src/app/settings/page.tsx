@@ -3,7 +3,6 @@ import { SettingsForm } from '@/components/SettingsForm';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useJobSeekerActions } from '@/contexts/JobSeekerActionsContext/JobSeekerActionsContext';
-import { useEmployerActions } from '@/contexts/EmployerActionsContext/EmployerActionsContext';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -16,7 +15,7 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { Filters, CandidateFilters } from '@/types';
+import type { Filters } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -29,11 +28,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { type ModalState, defaultModalState } from './_lib/interfaces';
+import Link from 'next/link';
 
 export default function SettingsPage() {
-  const { user, loading, company, isLoggingOut } = useAuth();
+  const { user, loading, isLoggingOut } = useAuth();
   const { deleteSearch: deleteJobSearch } = useJobSeekerActions();
-  const { deleteCandidateSearch } = useEmployerActions();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -158,84 +157,6 @@ export default function SettingsPage() {
     router.push(`/jobs?${queryParams.toString()}`);
   };
 
-  const performDeleteCandidateSearch = async (searchId: string) => {
-    if (!user || user.role !== 'employer') return;
-    try {
-      await deleteCandidateSearch(searchId);
-      toast({
-        title: 'Candidate Search Deleted',
-        description: 'The saved candidate search has been removed.',
-      });
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: 'Could not delete the candidate search. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeleteCandidateSearch = (
-    searchId: string,
-    searchName: string
-  ) => {
-    if (company?.status === 'suspended' || company?.status === 'deleted') {
-      toast({
-        title: 'Company Account Restricted',
-        description:
-          'You cannot delete saved candidate searches while your company account is restricted.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    showConfirmationModal(
-      `Delete Saved Candidate Search "${searchName}"?`,
-      'Are you sure you want to delete this saved candidate search? This action cannot be undone.',
-      () => performDeleteCandidateSearch(searchId),
-      'Delete Candidate Search',
-      'destructive'
-    );
-  };
-
-  const handleApplySavedCandidateSearch = (filters: CandidateFilters) => {
-    if (company?.status === 'suspended' || company?.status === 'deleted') {
-      toast({
-        title: 'Company Account Restricted',
-        description:
-          'You cannot apply saved candidate searches while your company account is restricted.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    const queryParams = new URLSearchParams();
-    if (filters.searchTerm) queryParams.set('q', filters.searchTerm);
-    if (filters.location) queryParams.set('loc', filters.location);
-    if (filters.noticePeriod && filters.noticePeriod !== 'all')
-      queryParams.set('notice', filters.noticePeriod);
-    if (filters.jobSearchStatus && filters.jobSearchStatus !== 'all')
-      queryParams.set('status', filters.jobSearchStatus);
-
-    if (
-      filters.desiredSalaryMin !== undefined &&
-      filters.desiredSalaryMin !== null
-    )
-      queryParams.set('minSal', filters.desiredSalaryMin.toString());
-    if (
-      filters.desiredSalaryMax !== undefined &&
-      filters.desiredSalaryMax !== null
-    )
-      queryParams.set('maxSal', filters.desiredSalaryMax.toString());
-    if (filters.recentActivity && filters.recentActivity !== 'any')
-      queryParams.set('activity', filters.recentActivity);
-    if (
-      filters.minExperienceYears !== undefined &&
-      filters.minExperienceYears !== null
-    )
-      queryParams.set('minExp', filters.minExperienceYears.toString());
-
-    router.push(`/employer/find-candidates?${queryParams.toString()}`);
-  };
-
   if (loading || !user) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -340,90 +261,20 @@ export default function SettingsPage() {
       {user.role === 'employer' && (
         <>
           <Separator />
-          <Card className="w-full shadow-lg">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-headline">
-                My Saved Candidate Searches
-              </CardTitle>
+              <CardTitle>Saved Candidate Searches</CardTitle>
               <CardDescription>
-                Manage your saved candidate searches. Click a search to re-apply
-                its filters.
+                Manage your saved candidate searches on the dedicated dashboard.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {user.savedCandidateSearches &&
-              user.savedCandidateSearches.length > 0 ? (
-                <ul className="space-y-3">
-                  {user.savedCandidateSearches.map((search) => (
-                    <li
-                      key={search.id}
-                      className="flex items-center justify-between p-3 border rounded-md bg-muted/20 hover:bg-muted/30 transition-colors group"
-                    >
-                      <div>
-                        <button
-                          onClick={() =>
-                            handleApplySavedCandidateSearch(search.filters)
-                          }
-                          className="font-medium text-primary hover:underline text-left"
-                          title="Apply this candidate search"
-                          disabled={
-                            company?.status === 'suspended' ||
-                            company?.status === 'deleted'
-                          }
-                        >
-                          {search.name}
-                        </button>
-                        <p className="text-xs text-muted-foreground">
-                          Keywords: {search.filters.searchTerm || 'Any'} |
-                          Location: {search.filters.location || 'Any'} | Notice
-                          Period:{' '}
-                          {search.filters.noticePeriod === 'all'
-                            ? 'Any'
-                            : search.filters.noticePeriod}{' '}
-                          | Min Exp:{' '}
-                          {search.filters.minExperienceYears ?? 'Any'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Saved:{' '}
-                          {new Date(
-                            search.createdAt as string
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          handleDeleteCandidateSearch(search.id, search.name)
-                        }
-                        className="text-destructive opacity-50 group-hover:opacity-100 transition-opacity"
-                        aria-label={`Delete saved candidate search ${search.name}`}
-                        disabled={
-                          company?.status === 'suspended' ||
-                          company?.status === 'deleted'
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  You have no saved candidate searches yet. You can save a
-                  search from the find candidates page filter sidebar.
-                </p>
-              )}
+              <Button asChild>
+                <Link href="/employer/saved-searches">
+                  Go to Saved Searches Dashboard
+                </Link>
+              </Button>
             </CardContent>
-            {user.savedCandidateSearches &&
-              user.savedCandidateSearches.length > 0 && (
-                <CardFooter>
-                  <p className="text-xs text-muted-foreground">
-                    Click on a search name to apply it to the find candidates
-                    page.
-                  </p>
-                </CardFooter>
-              )}
           </Card>
         </>
       )}

@@ -1,4 +1,3 @@
-// src/components/layout/Navbar.tsx
 'use client';
 import Link from 'next/link';
 import {
@@ -23,6 +22,7 @@ import {
   Eye,
   AlertTriangle,
   Ban,
+  Bookmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/Auth/AuthContext';
@@ -175,6 +175,11 @@ const userAccountDropdownLinksConfig = {
       href: '/employer/ai-candidate-match',
       label: 'AI Candidate Matcher',
       icon: <Lightbulb className="h-4 w-4" />,
+    },
+    {
+      href: '/employer/saved-searches',
+      label: 'Saved Searches',
+      icon: <Bookmark className="h-4 w-4" />,
     },
     {
       href: '/auth/change-password',
@@ -424,7 +429,7 @@ export function Navbar() {
           <h1 className="text-2xl font-bold font-headline">JobBoardly</h1>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-2 md:gap-3">
+        <nav className="hidden lg:flex items-center gap-2 lg:gap-3">
           {renderedMainNavLinks.map((link) => {
             const isDisabledByStatus =
               (link.employerOnly && isCompanyActionDisabled) ||
@@ -526,6 +531,7 @@ export function Navbar() {
                         isCompanyActionDisabled &&
                         (item.href.includes('/employer/ai-candidate-match') ||
                           item.href.includes('/employer/profile/preview') ||
+                          item.href.includes('/employer/saved-searches') ||
                           (item.href === '/profile' &&
                             user.isCompanyAdmin &&
                             (company?.status === 'suspended' ||
@@ -561,62 +567,6 @@ export function Navbar() {
                     );
                   })}
 
-                  <div className="md:hidden">
-                    {renderedMainNavLinks.length > 0 && (
-                      <DropdownMenuSeparator />
-                    )}
-                    {renderedMainNavLinks.length > 0 && (
-                      <DropdownMenuLabel className="text-xs text-muted-foreground px-2">
-                        Navigation
-                      </DropdownMenuLabel>
-                    )}
-                    {renderedMainNavLinks.map((link) => {
-                      const isDisabledByStatus =
-                        (link.employerOnly && isCompanyActionDisabled) ||
-                        (link.jobSeekerOnly &&
-                          isJobSeekerSuspended &&
-                          !['/my-jobs', '/settings', '/profile'].includes(
-                            link.href
-                          ));
-
-                      const savedJobsCount =
-                        user?.role === 'jobSeeker' && link.href === '/my-jobs'
-                          ? user.savedJobIds?.length || 0
-                          : 0;
-
-                      return (
-                        <DropdownMenuItem
-                          key={`dd-main-${link.href}`}
-                          asChild
-                          disabled={isDisabledByStatus}
-                        >
-                          <Link
-                            href={link.href}
-                            className={`flex items-center gap-2 cursor-pointer w-full ${
-                              isDisabledByStatus
-                                ? 'pointer-events-none opacity-50'
-                                : ''
-                            }`}
-                            onClick={(e) => {
-                              if (isDisabledByStatus) e.preventDefault();
-                            }}
-                          >
-                            {link.icon}
-                            <span>{link.label}</span>
-                            {savedJobsCount > 0 && (
-                              <Badge
-                                variant="secondary"
-                                className="h-5 px-1.5 text-xs ml-auto"
-                              >
-                                {savedJobsCount}
-                              </Badge>
-                            )}
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </div>
-
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleLogout}
@@ -627,10 +577,46 @@ export function Navbar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <div className="lg:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Open menu">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    {renderedMainNavLinks.map((link) => {
+                      const isDisabledByStatus =
+                        (link.employerOnly && isCompanyActionDisabled) ||
+                        (link.jobSeekerOnly &&
+                          isJobSeekerSuspended &&
+                          !['/my-jobs', '/settings', '/profile'].includes(
+                            link.href
+                          ));
+                      return (
+                        <DropdownMenuItem
+                          key={`mobile-main-${link.href}`}
+                          asChild
+                          disabled={isDisabledByStatus}
+                        >
+                          <Link
+                            href={link.href}
+                            className="flex items-center gap-2 cursor-pointer w-full"
+                          >
+                            {link.icon}
+                            {link.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </>
           ) : (
             <>
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
                 <Button variant="ghost" asChild size="sm">
                   <Link href={loginLink}>
                     <LogIn className="h-4 w-4 mr-1.5" /> Login
@@ -642,7 +628,7 @@ export function Navbar() {
                   </Link>
                 </Button>
               </div>
-              <div className="md:hidden">
+              <div className="lg:hidden">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" aria-label="Open menu">

@@ -47,6 +47,7 @@ export default function EmployerRegisterPage() {
   );
 
   const invitationId = searchParams.get('invitation');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [invitation, setInvitation] = useState<RecruiterInvitation | null>(
     null
   );
