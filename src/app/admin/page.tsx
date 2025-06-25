@@ -335,7 +335,7 @@ export default function AdminPage() {
       />
 
       <Tabs defaultValue="companies" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
+        <TabsList className="flex flex-wrap h-auto justify-start">
           {visibleTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.value === 'legalContent' && (
