@@ -14,10 +14,12 @@ import { PrintableProfile } from '@/components/printable-profile';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useCompany } from '@/contexts/Company/CompanyContext';
 
 export default function ProfilePage() {
-  const { user, loading: profileLoading } = useUserProfile();
-  const { company, isLoggingOut, loading: authLoading } = useAuth();
+  const { user: userProfile, loading: profileLoading } = useUserProfile();
+  const { firebaseUser, isLoggingOut, loading: authLoading } = useAuth();
+  const { company } = useCompany();
   const router = useRouter();
   const pathname = usePathname();
   const printableProfileRef = useRef<HTMLDivElement>(null);
@@ -25,7 +27,7 @@ export default function ProfilePage() {
 
   const handlePrintProfile = useReactToPrint({
     content: () => printableProfileRef.current,
-    documentTitle: `${user?.name || 'UserProfile'}_JobBoardly`,
+    documentTitle: `${userProfile?.name || 'UserProfile'}_JobBoardly`,
     onPrintError: (_error: Error) =>
       alert('There was an error printing the profile. Please try again.'),
   });
@@ -33,8 +35,8 @@ export default function ProfilePage() {
   const loading = profileLoading || authLoading;
 
   useEffect(() => {
-    if (loading || isLoggingOut) return;
-    if (!user) {
+    if (authLoading || isLoggingOut) return;
+    if (!firebaseUser) {
       toast({
         title: 'Authentication Required',
         description: 'Please log in to view your profile.',
@@ -42,9 +44,9 @@ export default function ProfilePage() {
       });
       router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [user, loading, router, pathname, toast, isLoggingOut]);
+  }, [firebaseUser, authLoading, router, pathname, toast, isLoggingOut]);
 
-  if (loading || !user) {
+  if (loading || !userProfile) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -53,42 +55,42 @@ export default function ProfilePage() {
   }
 
   const pageTitle = () => {
-    if (!user) return 'Profile';
-    if (user.role === 'jobSeeker') return 'My Profile';
-    if (user.role === 'employer' && user.isCompanyAdmin)
+    if (!userProfile) return 'Profile';
+    if (userProfile.role === 'jobSeeker') return 'My Profile';
+    if (userProfile.role === 'employer' && userProfile.isCompanyAdmin)
       return 'Manage Company Profile & Your Recruiter Info';
-    if (user.role === 'employer') return 'My Recruiter Profile';
-    if (user.role === 'admin') return 'Admin Profile';
-    if (user.role === 'superAdmin') return 'Super Admin Profile';
-    if (user.role === 'moderator') return 'Moderator Profile';
+    if (userProfile.role === 'employer') return 'My Recruiter Profile';
+    if (userProfile.role === 'admin') return 'Admin Profile';
+    if (userProfile.role === 'superAdmin') return 'Super Admin Profile';
+    if (userProfile.role === 'moderator') return 'Moderator Profile';
     return 'Profile';
   };
 
   const pageDescription = () => {
-    if (!user) return 'Please log in to view and edit your profile.';
-    if (user.role === 'jobSeeker') {
-      if (user.status === 'suspended') {
+    if (!userProfile) return 'Please log in to view and edit your profile.';
+    if (userProfile.role === 'jobSeeker') {
+      if (userProfile.status === 'suspended') {
         return 'Your account is suspended. Some profile editing features are disabled.';
       }
       return 'View and manage your account details and professional information. Upload your resume first for AI parsing to help pre-fill sections.';
     }
-    if (user.role === 'employer' && user.isCompanyAdmin)
+    if (userProfile.role === 'employer' && userProfile.isCompanyAdmin)
       return "Edit your company's public details and your personal recruiter information.";
-    if (user.role === 'employer')
+    if (userProfile.role === 'employer')
       return 'Manage your personal recruiter details.';
     if (
-      user.role === 'admin' ||
-      user.role === 'superAdmin' ||
-      user.role === 'moderator'
+      userProfile.role === 'admin' ||
+      userProfile.role === 'superAdmin' ||
+      userProfile.role === 'moderator'
     )
-      return `Manage your ${user.role === 'superAdmin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'Moderator'} profile details.`;
+      return `Manage your ${userProfile.role === 'superAdmin' ? 'Super Admin' : userProfile.role === 'admin' ? 'Admin' : 'Moderator'} profile details.`;
     return 'Manage your account details.';
   };
 
   const renderAccountStatusAlert = () => {
-    if (user.status === 'suspended') {
+    if (userProfile.status === 'suspended') {
       const suspendMessage =
-        user.role === 'jobSeeker'
+        userProfile.role === 'jobSeeker'
           ? 'Your account is currently suspended by an administrator. You can still view your profile and access some settings, but actions like applying for jobs or full profile editing are disabled. Please contact support for assistance.'
           : 'Your account is currently suspended. Please contact platform administrators.';
       return (
@@ -100,7 +102,7 @@ export default function ProfilePage() {
       );
     }
     if (
-      user.role === 'employer' &&
+      userProfile.role === 'employer' &&
       company &&
       (company.status === 'suspended' || company.status === 'deleted')
     ) {
@@ -135,29 +137,30 @@ export default function ProfilePage() {
           </h1>
           <p className="text-muted-foreground">{pageDescription()}</p>
         </div>
-        {user.role === 'jobSeeker' && user.status !== 'suspended' && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button
-              onClick={handlePrintProfile}
-              variant="outline"
-              className="w-full sm:w-auto"
-              aria-label="Download profile as PDF"
-            >
-              <Download className="mr-2 h-4 w-4" /> Download PDF
-            </Button>
-            <Button asChild variant="default" className="w-full sm:w-auto">
-              <Link href="/profile/preview">
-                <Eye className="mr-2 h-4 w-4" /> Preview Profile
-              </Link>
-            </Button>
-          </div>
-        )}
+        {userProfile.role === 'jobSeeker' &&
+          userProfile.status !== 'suspended' && (
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                onClick={handlePrintProfile}
+                variant="outline"
+                className="w-full sm:w-auto"
+                aria-label="Download profile as PDF"
+              >
+                <Download className="mr-2 h-4 w-4" /> Download PDF
+              </Button>
+              <Button asChild variant="default" className="w-full sm:w-auto">
+                <Link href="/profile/preview">
+                  <Eye className="mr-2 h-4 w-4" /> Preview Profile
+                </Link>
+              </Button>
+            </div>
+          )}
       </div>
       <Separator />
 
       {renderAccountStatusAlert()}
 
-      {user.role === 'jobSeeker' && (
+      {userProfile.role === 'jobSeeker' && (
         <>
           <ResumeUploadForm />
           <Separator />
@@ -166,9 +169,9 @@ export default function ProfilePage() {
 
       <UserProfileForm />
 
-      {user.role === 'jobSeeker' && (
+      {userProfile.role === 'jobSeeker' && (
         <div style={{ display: 'none' }}>
-          <PrintableProfile ref={printableProfileRef} user={user} />
+          <PrintableProfile ref={printableProfileRef} user={userProfile} />
         </div>
       )}
     </div>

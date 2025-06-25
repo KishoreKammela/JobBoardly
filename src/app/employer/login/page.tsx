@@ -25,8 +25,6 @@ import {
 } from '@/lib/firebase';
 import { Separator } from '@/components/ui/separator';
 import { ADMIN_LIKE_ROLES } from '@/lib/constants';
-import { useCompany } from '@/contexts/Company/CompanyContext';
-import { getJobsByCompany } from '@/services/job.services';
 
 export default function EmployerLoginPage() {
   const [email, setEmail] = useState('');
@@ -35,8 +33,6 @@ export default function EmployerLoginPage() {
   const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const { user, loading: authLoading, loginUser, signInWithSocial } = useAuth();
-  const { company, loading: companyLoading } = useCompany();
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,70 +43,41 @@ export default function EmployerLoginPage() {
   }, []);
 
   useEffect(() => {
-    if (authLoading || !user || isRedirecting) {
+    if (authLoading || !user) {
       return;
     }
 
     const redirectPath = searchParams.get('redirect');
     if (redirectPath) {
-      setIsRedirecting(true);
       router.replace(redirectPath);
       return;
     }
 
-    if (user.role !== 'employer') {
-      setIsRedirecting(true);
-      if (user.role === 'jobSeeker') router.replace('/jobs');
-      else if (ADMIN_LIKE_ROLES.includes(user.role)) router.replace('/admin');
-      else router.replace('/');
-      return;
+    if (user.role === 'employer') {
+      router.replace('/profile');
+    } else if (user.role === 'jobSeeker') {
+      router.replace('/jobs');
+    } else if (ADMIN_LIKE_ROLES.includes(user.role)) {
+      router.replace('/admin');
+    } else {
+      router.replace('/');
     }
+  }, [user, authLoading, router, searchParams]);
 
-    if (companyLoading) {
-      return;
-    }
-
-    const redirectEmployer = async () => {
-      setIsRedirecting(true);
-      if (!company || company.status !== 'approved') {
-        router.replace('/profile');
-        return;
-      }
-
-      try {
-        const approvedJobs = await getJobsByCompany(company.id);
-        if (approvedJobs.length > 0) {
-          router.replace('/employer/posted-jobs');
-        } else {
-          router.replace('/employer/post-job');
-        }
-      } catch (e) {
-        console.error('Failed to fetch jobs for redirect logic:', e);
-        router.replace('/employer/posted-jobs');
-      }
-    };
-
-    redirectEmployer();
-  }, [
-    user,
-    authLoading,
-    company,
-    companyLoading,
-    router,
-    searchParams,
-    isRedirecting,
-  ]);
+  const handleLoginSuccess = (userName: string) => {
+    toast({
+      title: 'Login Successful',
+      description: `Welcome back, ${userName}! Redirecting...`,
+    });
+    setLoginSuccess(true);
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       const userProfile = await loginUser(email, password);
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${userProfile.name}! Redirecting...`,
-      });
-      setLoginSuccess(true);
+      handleLoginSuccess(userProfile.name);
     } catch (error) {
       const firebaseError = error as FirebaseError;
       console.error('Login error:', firebaseError.message);
@@ -143,11 +110,7 @@ export default function EmployerLoginPage() {
       else return;
 
       const userProfile = await signInWithSocial(authProvider, 'employer');
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${userProfile.name}! Redirecting...`,
-      });
-      setLoginSuccess(true);
+      handleLoginSuccess(userProfile.name);
     } catch (error: unknown) {
       const firebaseError = error as FirebaseError;
       console.error(`${providerName} login error:`, firebaseError);
@@ -160,7 +123,7 @@ export default function EmployerLoginPage() {
     setIsSocialLoading(null);
   };
 
-  if (authLoading || loginSuccess || (user && !company && companyLoading)) {
+  if (authLoading || loginSuccess) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -168,7 +131,7 @@ export default function EmployerLoginPage() {
     );
   }
 
-  if (user && !authLoading && !isRedirecting) {
+  if (user && !authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
