@@ -93,15 +93,19 @@ export const getJobsByCompany = async (companyId: string): Promise<Job[]> => {
       postedDate:
         jobData.postedDate instanceof Timestamp
           ? jobData.postedDate.toDate().toISOString().split('T')[0]
-          : jobData.postedDate,
+          : (jobData.postedDate as string),
       createdAt:
         jobData.createdAt instanceof Timestamp
           ? jobData.createdAt.toDate().toISOString()
-          : jobData.createdAt,
+          : (jobData.createdAt as string),
       updatedAt:
         jobData.updatedAt instanceof Timestamp
           ? jobData.updatedAt.toDate().toISOString()
-          : jobData.updatedAt,
+          : (jobData.updatedAt as string),
+      applicationDeadline:
+        jobData.applicationDeadline instanceof Timestamp
+          ? jobData.applicationDeadline.toDate().toISOString().split('T')[0]
+          : (jobData.applicationDeadline as string | undefined),
     } as Job;
   });
 };

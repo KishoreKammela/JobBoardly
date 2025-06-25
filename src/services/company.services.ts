@@ -13,7 +13,7 @@ import {
   addDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Company, RecruiterInvitation } from '@/types';
+import type { Company, RecruiterInvitation, UserProfile } from '@/types';
 
 export const getCompanyProfile = async (
   companyId: string
@@ -92,9 +92,25 @@ export const getCompanyRecruiters = async (
         where('__name__', 'in', batchUids)
       );
       const recruitersSnap = await getDocs(recruitersQuery);
-      recruitersSnap.docs.forEach((d) =>
-        fetchedRecruiters.push({ uid: d.id, ...d.data() } as UserProfile)
-      );
+      recruitersSnap.docs.forEach((d) => {
+        const data = d.data();
+        fetchedRecruiters.push({
+          uid: d.id,
+          ...data,
+          createdAt:
+            data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate().toISOString()
+              : data.createdAt,
+          updatedAt:
+            data.updatedAt instanceof Timestamp
+              ? data.updatedAt.toDate().toISOString()
+              : data.updatedAt,
+          lastActive:
+            data.lastActive instanceof Timestamp
+              ? data.lastActive.toDate().toISOString()
+              : data.lastActive,
+        } as UserProfile);
+      });
     }
   }
   return fetchedRecruiters;

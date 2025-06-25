@@ -29,7 +29,6 @@ import { useAuth } from '@/contexts/Auth/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { ADMIN_LIKE_ROLES_COMPANY_PAGE } from './_lib/constants';
-import { Timestamp } from 'firebase/firestore';
 
 type Props = {
   initialCompanyData: Company | null;
@@ -283,11 +282,7 @@ export default function CompanyDetailClientPage({
           <p className="text-xs text-muted-foreground text-center w-full">
             Joined JobBoardly on:{' '}
             {company.createdAt
-              ? typeof company.createdAt === 'string'
-                ? new Date(company.createdAt).toLocaleDateString()
-                : (company.createdAt as Timestamp)
-                    ?.toDate()
-                    .toLocaleDateString()
+              ? new Date(company.createdAt as string).toLocaleDateString()
               : 'N/A'}
           </p>
         </CardFooter>
