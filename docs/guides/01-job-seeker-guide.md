@@ -102,32 +102,18 @@ To provide job seekers with a comprehensive, AI-enhanced platform to manage thei
 
 ```mermaid
 graph TD
-    A[Start: Needs a Job] --> B[Visit JobBoardly]
+    A[Start: Needs a Job] --> B[Visit site]
     B --> C{Has Account?}
     C -->|No| D[Register: /auth/register]
     D --> E[Complete Basic Info]
-<<<<<<< HEAD
-    E --> F[Login: /auth/login]
-    C -->|Yes| F
-    F --> F_check{Account Status OK?}
-    F_check -->|Deleted| F_deleted[Show Account Deactivated Message & Logout]
-    F_check -->|Suspended| G_suspended[Go to Profile with Limited Actions & Alert]
-    F_check -->|Active| G[Navigate to Profile: /profile]
-
-    G --> H[Upload/Paste Resume & Complete Profile]
-    H --> H_confirm[Confirm Resume Process & Profile Save]
-    H_confirm -->|Optional| H_AI[Use AI Summary Generator]
-    H_AI --> I[Set Profile Visibility]
-    H_confirm --> I
-=======
     E --> E_auto_login[Auto Login & Redirecting...]
     E_auto_login --> F_check_status{Account Status OK?}
     C -->|Yes| F[Login: /auth/login]
     F --> F_check_status
-    F_check_status -->|Deleted| F_deleted[Show Account Deactivated Message, Logout]
-    F_check_status -->|Suspended| G_suspended[Go to Profile, Limited Actions & Alert]
+    F_check_status -->|Deleted| F_deleted[Show Account Deactivated Message & Logout]
+    F_check_status -->|Suspended| G_suspended[Go to Profile with Limited Actions & Alert]
     F_check_status -->|Active| G[Navigate to Profile: /profile]
-    
+
     G --> H[Upload/Paste Resume & Complete Profile<br/>Confirm resume process, confirm profile save]
     H -->|Optional| H_AISummary[Use AI Summary Generator]
     H_AISummary --> I[Set Profile Visibility]
